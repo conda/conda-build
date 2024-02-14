@@ -74,7 +74,7 @@ filetypes_for_platform = {
 
 def fix_shebang(f, prefix, build_python, osx_is_app=False):
     path = join(prefix, f)
-    if codefile_class(path):
+    if codefile_class(path, skip_symlinks=True):
         return
     elif islink(path):
         return
@@ -413,7 +413,7 @@ def osx_ch_link(path, link_dict, host_prefix, build_prefix, files):
             ".. seems to be linking to a compiler runtime, replacing build prefix with "
             "host prefix and"
         )
-        if not codefile_class(link):
+        if not codefile_class(link, skip_symlinks=True):
             sys.exit(
                 "Error: Compiler runtime library in build prefix not found in host prefix %s"
                 % link
@@ -653,7 +653,7 @@ def get_dsos(prec: PrefixRecord, prefix: str | os.PathLike | Path) -> set[str]:
     return {
         file
         for file in prec["files"]
-        if codefile_class(Path(prefix, file))
+        if codefile_class(Path(prefix, file), skip_symlinks=True)
         # codefile_class already filters by extension/binary type, do we need this second filter?
         for ext in (".dylib", ".so", ".dll", ".pyd")
         if ext in file
@@ -836,7 +836,7 @@ def _collect_needed_dsos(
         sysroots = list(sysroots_files.keys())[0]
     for f in files:
         path = join(run_prefix, f)
-        if not codefile_class(path):
+        if not codefile_class(path, skip_symlinks=True):
             continue
         build_prefix = build_prefix.replace(os.sep, "/")
         run_prefix = run_prefix.replace(os.sep, "/")
@@ -1174,7 +1174,7 @@ def _show_linking_messages(
             )
     for f in files:
         path = join(run_prefix, f)
-        codefile = codefile_class(path)
+        codefile = codefile_class(path, skip_symlinks=True)
         if codefile not in filetypes_for_platform[subdir.split("-")[0]]:
             continue
         warn_prelude = "WARNING ({},{})".format(pkg_name, f.replace(os.sep, "/"))
@@ -1273,7 +1273,7 @@ def check_overlinking_impl(
     filesu = []
     for file in files:
         path = join(run_prefix, file)
-        codefile = codefile_class(path)
+        codefile = codefile_class(path, skip_symlinks=True)
         if codefile in filetypes_for_platform[subdir.split("-")[0]]:
             files_to_inspect.append(file)
         filesu.append(file.replace("\\", "/"))
@@ -1578,7 +1578,7 @@ def post_process_shared_lib(m, f, files, host_prefix=None):
     if not host_prefix:
         host_prefix = m.config.host_prefix
     path = join(host_prefix, f)
-    codefile = codefile_class(path)
+    codefile = codefile_class(path, skip_symlinks=True)
     if not codefile or path.endswith(".debug"):
         return
     rpaths = m.get_value("build/rpaths", ["lib"])
@@ -1737,7 +1737,9 @@ def check_symlinks(files, prefix, croot):
             # symlinks to binaries outside of the same dir don't work.  RPATH stuff gets confused
             #    because ld.so follows symlinks in RPATHS
             #    If condition exists, then copy the file rather than symlink it.
-            if not dirname(link_path) == dirname(real_link_path) and codefile_class(f):
+            if not dirname(link_path) == dirname(real_link_path) and codefile_class(
+                f, skip_symlinks=True
+            ):
                 os.remove(path)
                 utils.copy_into(real_link_path, path)
             elif real_link_path.startswith(real_build_prefix):
