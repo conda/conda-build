@@ -91,6 +91,9 @@ show_missing = true
 sort = "Miss"
 skip_covered = true
 omit = ["conda_build/skeletons/_example_skeleton.py"]
+exclude_lines = [
+  "if TYPE_CHECKING:",  # ignoring type checking imports
+]
 
 [tool.ruff]
 target-version = "py38"
