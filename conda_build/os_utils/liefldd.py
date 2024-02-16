@@ -504,7 +504,8 @@ def inspect_linkages_lief(
                     while tmp_filename:
                         if (
                             not parent_exe_dirname
-                            and codefile_class(tmp_filename) == EXEfile
+                            and codefile_class(tmp_filename, skip_symlinks=True)
+                            == EXEfile
                         ):
                             parent_exe_dirname = os.path.dirname(tmp_filename)
                         tmp_filename = parents_by_filename[tmp_filename]
@@ -600,7 +601,8 @@ def get_linkages(
     result_pyldd = []
     debug = False
     if not have_lief or debug:
-        if codefile_class(filename) not in (DLLfile, EXEfile):
+        codefile = codefile_class(filename, skip_symlinks=True)
+        if codefile not in (DLLfile, EXEfile):
             result_pyldd = inspect_linkages_pyldd(
                 filename,
                 resolve_filenames=resolve_filenames,
@@ -612,7 +614,7 @@ def get_linkages(
                 return result_pyldd
         else:
             print(
-                f"WARNING: failed to get_linkages, codefile_class('{filename}')={codefile_class(filename)}"
+                f"WARNING: failed to get_linkages, codefile_class('{filename}', True)={codefile}"
             )
             return {}
     result_lief = inspect_linkages_lief(
