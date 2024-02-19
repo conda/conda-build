@@ -1,3 +1,3 @@
 ### Bug fixes
 
-* Fix build error on Windows, when paths are too long, or package contains too many files, by allowing users to set the chunk size for regex operation on Windows using environment variable `CONDA_BLD_REGEX_CHUNK_SIZE`. 
+* Fix build error on Windows, when paths are too long, or package contains too many files, by allowing users to set the chunk size for regex operation on Windows using environment variable `CONDA_BLD_REGEX_CHUNK_SIZE`.
