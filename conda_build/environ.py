@@ -16,10 +16,15 @@ from glob import glob
 from logging import getLogger
 from os.path import join, normpath
 
-from conda.base.constants import DEFAULTS_CHANNEL_NAME, UNKNOWN_CHANNEL
+from conda.base.constants import (
+    CONDA_PACKAGE_EXTENSIONS,
+    DEFAULTS_CHANNEL_NAME,
+    UNKNOWN_CHANNEL,
+)
 from conda.common.io import env_vars
 from conda.core.index import LAST_CHANNEL_URLS
 from conda.core.link import PrefixSetup, UnlinkLinkTransaction
+from conda.core.package_cache_data import PackageCacheData
 from conda.core.prefix_data import PrefixData
 from conda.models.channel import prioritize_channels
 
@@ -43,6 +48,7 @@ from .conda_interface import (
     reset_context,
     root_dir,
 )
+from .config import Config
 from .deprecations import deprecated
 from .exceptions import BuildLockError, DependencyNeedsBuildingError
 from .features import feature_list
@@ -1262,6 +1268,29 @@ def create_env(
 
 def get_pkg_dirs_locks(dirs, config):
     return [utils.get_lock(folder, timeout=config.timeout) for folder in dirs]
+
+
+def clean_pkg_cache(dist: str, config: Config) -> None:
+    with utils.LoggingContext(logging.DEBUG if config.debug else logging.WARN):
+        locks = get_pkg_dirs_locks([config.bldpkgs_dir] + pkgs_dirs, config)
+        with utils.try_acquire_locks(locks, timeout=config.timeout):
+            for pkgs_dir in pkgs_dirs:
+                if any(
+                    os.path.exists(os.path.join(pkgs_dir, f"{dist}{ext}"))
+                    for ext in ("", *CONDA_PACKAGE_EXTENSIONS)
+                ):
+                    log.debug(
+                        "Conda caching error: %s package remains in cache after removal",
+                        dist,
+                    )
+                    log.debug("manually removing to compensate")
+                    package_cache = PackageCacheData.first_writable([pkgs_dir])
+                    for cache_pkg_id in package_cache.query(dist):
+                        package_cache.remove(cache_pkg_id)
+
+        # Note that this call acquires the relevant locks, so this must be called
+        # outside the lock context above.
+        remove_existing_packages(pkgs_dirs, [dist], config)
 
 
 def remove_existing_packages(dirs, fns, config):

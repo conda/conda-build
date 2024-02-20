@@ -38,6 +38,7 @@ from .conda_interface import (
     env_path_backup_var_exists,
     get_conda_channel,
     get_rc_urls,
+    pkgs_dirs,
     prefix_placeholder,
     reset_context,
     root_dir,
@@ -3393,6 +3394,25 @@ def test(
     # Must download *after* computing build id, or else computing build id will change
     #     folder destination
     _extract_test_files_from_package(metadata)
+
+    # Remove any previously cached build from the package cache to ensure we
+    # really test the requested build and not some clashing or corrupted build.
+    # (Corruption of the extracted package can happen, e.g., in multi-output
+    # builds if one of the subpackages overwrites files from the other.)
+    # Special case:
+    #   If test is requested for .tar.bz2/.conda file from the pkgs dir itself,
+    #   clean_pkg_cache() will remove it; don't call that function in this case.
+    in_pkg_cache = (
+        not hasattr(recipedir_or_package_or_metadata, "config")
+        and os.path.isfile(recipedir_or_package_or_metadata)
+        and recipedir_or_package_or_metadata.endswith(CONDA_PACKAGE_EXTENSIONS)
+        and any(
+            os.path.dirname(recipedir_or_package_or_metadata) in pkgs_dir
+            for pkgs_dir in pkgs_dirs
+        )
+    )
+    if not in_pkg_cache:
+        environ.clean_pkg_cache(metadata.dist(), metadata.config)
 
     copy_test_source_files(metadata, metadata.config.test_dir)
     # this is also copying tests/source_files from work_dir to testing workdir

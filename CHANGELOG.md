@@ -1,5 +1,18 @@
 [//]: # (current developments)
 
+## 24.1.2 (2024-02-15)
+
+### Bug fixes
+
+* Fix rpaths patcher being run on symbolic links. (#5179 via #5181)
+* Fix corrupted package cache for outputs in subpackage tests. (#5184)
+
+### Contributors
+
+* @mbargull
+
+
+
 ## 24.1.1 (2024-02-07)
 
 ### Bug fixes
