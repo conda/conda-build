@@ -233,16 +233,16 @@ def test_compiler_metadata_cross_compiler():
 
 
 @pytest.mark.parametrize(
-    "platform,arch,stdlibs",
+    "platform,arch,stdlib,stdlib_version",
     [
-        ("linux", "64", {"sysroot_linux-64 2.12.*"}),
-        ("linux", "aarch64", {"sysroot_linux-aarch64 2.17.*"}),
-        ("osx", "64", {"macosx_deployment_target_osx-64 10.13.*"}),
-        ("osx", "arm64", {"macosx_deployment_target_osx-arm64 11.0.*"}),
+        ("linux", "64", "sysroot", "2.12"),
+        ("linux", "aarch64", "sysroot", "2.17"),
+        ("osx", "64", "macosx_deployment_target", "10.13"),
+        ("osx", "arm64", "macosx_deployment_target", "11.0"),
     ],
 )
 def test_native_stdlib_metadata(
-    platform: str, arch: str, stdlibs: set[str], testing_config
+    platform: str, arch: str, stdlib: str, stdlib_version: str, testing_config
 ):
     testing_config.platform = platform
     metadata = api.render(
@@ -256,7 +256,11 @@ def test_native_stdlib_metadata(
         bypass_env_check=True,
         python="3.11",  # irrelevant
     )[0][0]
-    assert stdlibs <= set(metadata.meta["requirements"]["host"])
+    stdlib_req = f"{stdlib}_{platform}-{arch} {stdlib_version}.*"
+    assert stdlib_req in metadata.meta["requirements"]["host"]
+    hash_contents = metadata.get_hash_contents()
+    assert stdlib == hash_contents["c_stdlib"]
+    assert stdlib_version == hash_contents["c_stdlib_version"]
 
 
 def test_hash_build_id(testing_metadata):
