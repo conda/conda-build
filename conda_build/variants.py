@@ -727,15 +727,15 @@ def find_used_variables_in_text(variant, recipe_text, selectors_only=False):
     recipe_lines = recipe_text.splitlines()
     for v in variant:
         all_res = []
-        compiler_match = re.match(r"(.*?)_compiler(_version)?$", v)
-        if compiler_match and not selectors_only:
-            compiler_lang = compiler_match.group(1)
-            compiler_regex = r"\{\s*compiler\([\'\"]%s[\"\'][^\{]*?\}" % re.escape(
-                compiler_lang
-            )
-            all_res.append(compiler_regex)
+        target_match = re.match(r"(.*?)_(compiler|stdlib)(_version)?$", v)
+        if target_match and not selectors_only:
+            target_lang = target_match.group(1)
+            target_kind = target_match.group(2)
+            target_lang_regex = re.escape(target_lang)
+            target_regex = rf"\{{\s*{target_kind}\([\'\"]{target_lang_regex}[\"\'][^\{{]*?\}}"
+            all_res.append(target_regex)
             variant_lines = [
-                line for line in recipe_lines if v in line or compiler_lang in line
+                line for line in recipe_lines if v in line or target_lang in line
             ]
         else:
             variant_lines = [
@@ -760,7 +760,7 @@ def find_used_variables_in_text(variant, recipe_text, selectors_only=False):
         all_res = r"|".join(all_res)
         if any(re.search(all_res, line) for line in variant_lines):
             used_variables.add(v)
-            if v in ("c_compiler", "cxx_compiler"):
+            if v in ("c_stdlib", "c_compiler", "cxx_compiler"):
                 if "CONDA_BUILD_SYSROOT" in variant:
                     used_variables.add("CONDA_BUILD_SYSROOT")
     return used_variables
