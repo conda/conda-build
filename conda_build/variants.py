@@ -732,7 +732,9 @@ def find_used_variables_in_text(variant, recipe_text, selectors_only=False):
             target_lang = target_match.group(1)
             target_kind = target_match.group(2)
             target_lang_regex = re.escape(target_lang)
-            target_regex = rf"\{{\s*{target_kind}\([\'\"]{target_lang_regex}[\"\'][^\{{]*?\}}"
+            target_regex = (
+                rf"\{{\s*{target_kind}\([\'\"]{target_lang_regex}[\"\'][^\{{]*?\}}"
+            )
             all_res.append(target_regex)
             variant_lines = [
                 line for line in recipe_lines if v in line or target_lang in line
