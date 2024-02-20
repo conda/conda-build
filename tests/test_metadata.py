@@ -258,6 +258,7 @@ def test_native_stdlib_metadata(
     )[0][0]
     stdlib_req = f"{stdlib}_{platform}-{arch} {stdlib_version}.*"
     assert stdlib_req in metadata.meta["requirements"]["host"]
+    assert {"c_stdlib", "c_stdlib_version"} <= metadata.get_used_vars()
     hash_contents = metadata.get_hash_contents()
     assert stdlib == hash_contents["c_stdlib"]
     assert stdlib_version == hash_contents["c_stdlib_version"]
