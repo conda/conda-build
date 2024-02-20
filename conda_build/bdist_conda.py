@@ -12,10 +12,11 @@ from . import api
 from .build import handle_anaconda_upload
 from .conda_interface import StringIO, configparser, spec_from_line
 from .config import Config
+from .deprecations import deprecated
 from .metadata import MetaData
 from .skeletons import pypi
 
-# TODO: Add support for all the options that conda build has
+deprecated.module("24.3", "24.5")
 
 
 class GetoptError(BaseError):
