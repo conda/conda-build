@@ -9,9 +9,12 @@ import json
 import os
 from os.path import basename, exists, isfile, join
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-from .metadata import MetaData
 from .utils import copy_into, ensure_list, on_win, rm_rf
+
+if TYPE_CHECKING:
+    from .metadata import MetaData
 
 
 def create_files(m: MetaData, test_dir: Path) -> bool:
@@ -47,7 +50,7 @@ def _get_output_script_name(
     src_name = dst_name
     if m.is_output:
         src_name = "no-file"
-        for out in m.meta.get("outputs", []):
+        for out in m.get_section("outputs"):
             if m.name() == out.get("name"):
                 out_test_script = out.get("test", {}).get("script", "no-file")
                 if os.path.splitext(out_test_script)[1].lower() == ext:
@@ -103,7 +106,7 @@ def _create_test_files(
         name = ""
         # the way this works is that each output needs to explicitly define a test script to run
         #   They do not automatically pick up run_test.*, but can be pointed at that explicitly.
-        for out in m.meta.get("outputs", []):
+        for out in m.get_section("outputs"):
             if m.name() == out.get("name"):
                 out_test_script = out.get("test", {}).get("script", "no-file")
                 if out_test_script.endswith(ext):
@@ -229,16 +232,14 @@ def create_pl_files(m: MetaData, test_dir: os.PathLike) -> bool:
                     # Don't try to print version for complex imports
                     if " " not in name:
                         print(
-                            (
-                                "if (defined {0}->VERSION) {{\n"
-                                + "\tmy $given_version = {0}->VERSION;\n"
-                                + "\t$given_version =~ s/0+$//;\n"
-                                + "\tdie('Expected version ' . $expected_version . ' but"
-                                + " found ' . $given_version) unless ($expected_version "
-                                + "eq $given_version);\n"
-                                + "\tprint('\tusing version ' . {0}->VERSION . '\n');\n"
-                                + "\n}}"
-                            ).format(name),
+                            f"if (defined {name}->VERSION) {{\n"
+                            f"\tmy $given_version = {name}->VERSION;\n"
+                            f"\t$given_version =~ s/0+$//;\n"
+                            f"\tdie('Expected version ' . $expected_version . ' but"
+                            f" found ' . $given_version) unless ($expected_version "
+                            f"eq $given_version);\n"
+                            f"\tprint('\tusing version ' . {name}->VERSION . '\n');\n"
+                            f"\n}}",
                             file=fo,
                         )
     return tf if (tf_exists or imports) else False

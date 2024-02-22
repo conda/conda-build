@@ -1,21 +1,29 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
+
 import importlib
 import logging
 import os
 import pkgutil
 import sys
+from typing import TYPE_CHECKING
 
-import conda_build.api as api
-from conda_build.conda_interface import ArgumentParser
-from conda_build.config import Config
+from .. import api
+from ..conda_interface import ArgumentParser
+from ..config import Config
+
+if TYPE_CHECKING:
+    from argparse import Namespace
+    from typing import Sequence
 
 thisdir = os.path.dirname(os.path.abspath(__file__))
 logging.basicConfig(level=logging.INFO)
 
 
-def parse_args(args):
-    p = ArgumentParser(
+def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
+    parser = ArgumentParser(
+        prog="conda skeleton",
         description="""
 Generates a boilerplate/skeleton recipe, which you can then edit to create a
 full recipe. Some simple skeleton recipes may not even need edits.
@@ -26,7 +34,7 @@ options available.
         """,
     )
 
-    repos = p.add_subparsers(dest="repo")
+    repos = parser.add_subparsers(dest="repo")
 
     skeletons = [
         name
@@ -38,31 +46,24 @@ options available.
         module = importlib.import_module("conda_build.skeletons." + skeleton)
         module.add_parser(repos)
 
-    args = p.parse_args(args)
-    return p, args
+    return parser, parser.parse_args(args)
 
 
-def execute(args):
-    parser, args = parse_args(args)
-    config = Config(**args.__dict__)
+def execute(args: Sequence[str] | None = None) -> int:
+    parser, parsed = parse_args(args)
+    config = Config(**parsed.__dict__)
 
-    if not args.repo:
+    if not parsed.repo:
         parser.print_help()
         sys.exit()
 
     api.skeletonize(
-        args.packages,
-        args.repo,
-        output_dir=args.output_dir,
-        recursive=args.recursive,
-        version=args.version,
+        parsed.packages,
+        parsed.repo,
+        output_dir=parsed.output_dir,
+        recursive=parsed.recursive,
+        version=parsed.version,
         config=config,
     )
 
-
-def main():
-    return execute(sys.argv[1:])
-
-
-if __name__ == "__main__":
-    main()
+    return 0

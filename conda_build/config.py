@@ -3,17 +3,17 @@
 """
 Module to store conda build settings.
 """
+from __future__ import annotations
 
 import copy
 import math
 import os
 import re
 import shutil
-import sys
 import time
-import warnings
 from collections import namedtuple
 from os.path import abspath, expanduser, expandvars, join
+from typing import TYPE_CHECKING
 
 from .conda_interface import (
     binstar_upload,
@@ -24,10 +24,18 @@ from .conda_interface import (
     subdir,
     url_path,
 )
-from .utils import get_build_folders, get_conda_operation_locks, get_logger, rm_rf
+from .utils import (
+    get_build_folders,
+    get_conda_operation_locks,
+    get_logger,
+    on_win,
+    rm_rf,
+)
 from .variants import get_default_variant
 
-on_win = sys.platform == "win32"
+if TYPE_CHECKING:
+    from pathlib import Path
+
 invocation_time = ""
 
 
@@ -50,37 +58,12 @@ _src_cache_root_default = None
 error_overlinking_default = "false"
 error_overdepending_default = "false"
 noarch_python_build_age_default = 0
-enable_static_default = "true"
+enable_static_default = "false"
 no_rewrite_stdout_env_default = "false"
 ignore_verify_codes_default = []
 exit_on_verify_error_default = False
 conda_pkg_format_default = None
 zstd_compression_level_default = 19
-
-
-def python2_fs_encode(strin):
-    warnings.warn(
-        "`conda_build.config.python2_fs_encode` is pending deprecation and will be removed in a future release.",
-        PendingDeprecationWarning,
-    )
-    return strin
-
-
-def _ensure_dir(path: os.PathLike):
-    """Try to ensure a directory exists
-
-    Args:
-        path (os.PathLike): Path to directory
-    """
-    # this can fail in parallel operation, depending on timing.  Just try to make the dir,
-    #    but don't bail if fail.
-    warnings.warn(
-        "`conda_build.config._ensure_dir` is pending deprecation and will be removed "
-        "in a future release. Please use `pathlib.Path.mkdir(exist_ok=True)` or "
-        "`os.makedirs(exist_ok=True)` instead",
-        PendingDeprecationWarning,
-    )
-    os.makedirs(path, exist_ok=True)
 
 
 # we need this to be accessible to the CLI, so it needs to be more static.
@@ -260,19 +243,6 @@ def _get_default_settings():
         Setting("suppress_variables", False),
         Setting("build_id_pat", cc_conda_build.get("build_id_pat", "{n}_{t}")),
     ]
-
-
-def print_function_deprecation_warning(func):
-    def func_wrapper(*args, **kw):
-        log = get_logger(__name__)
-        log.warn(
-            "WARNING: attribute {} is deprecated and will be removed in conda-build 4.0.  "
-            "Please update your code - file issues on the conda-build issue tracker "
-            "if you need help.".format(func.__name__)
-        )
-        return func(*args, **kw)
-
-    return func_wrapper
 
 
 class Config:
@@ -480,7 +450,7 @@ class Config:
         self._src_cache_root = value
 
     @property
-    def croot(self):
+    def croot(self) -> str:
         """This is where source caches and work folders live"""
         if not self._croot:
             _bld_root_env = os.getenv("CONDA_BLD_PATH")
@@ -496,9 +466,9 @@ class Config:
         return self._croot
 
     @croot.setter
-    def croot(self, croot):
+    def croot(self, croot: str | os.PathLike | Path) -> None:
         """Set croot - if None is passed, then the default value will be used"""
-        self._croot = croot
+        self._croot = str(croot) if croot else None
 
     @property
     def output_folder(self):
@@ -514,65 +484,8 @@ class Config:
         It has the environments and work directories."""
         return os.path.join(self.croot, self.build_id)
 
-    # back compat for conda-build-all - expects CONDA_* vars to be attributes of the config object
-    @property
-    @print_function_deprecation_warning
-    def CONDA_LUA(self):
-        return self.variant.get("lua", get_default_variant(self)["lua"])
-
-    @CONDA_LUA.setter
-    @print_function_deprecation_warning
-    def CONDA_LUA(self, value):
-        self.variant["lua"] = value
-
-    @property
-    @print_function_deprecation_warning
-    def CONDA_PY(self):
-        value = self.variant.get("python", get_default_variant(self)["python"])
-        return int("".join(value.split(".")))
-
-    @CONDA_PY.setter
-    @print_function_deprecation_warning
-    def CONDA_PY(self, value):
-        value = str(value)
-        self.variant["python"] = ".".join((value[0], value[1:]))
-
-    @property
-    @print_function_deprecation_warning
-    def CONDA_NPY(self):
-        value = self.variant.get("numpy", get_default_variant(self)["numpy"])
-        return int("".join(value.split(".")))
-
-    @CONDA_NPY.setter
-    @print_function_deprecation_warning
-    def CONDA_NPY(self, value):
-        value = str(value)
-        self.variant["numpy"] = ".".join((value[0], value[1:]))
-
-    @property
-    @print_function_deprecation_warning
-    def CONDA_PERL(self):
-        return self.variant.get("perl", get_default_variant(self)["perl"])
-
-    @CONDA_PERL.setter
-    @print_function_deprecation_warning
-    def CONDA_PERL(self, value):
-        self.variant["perl"] = value
-
-    @property
-    @print_function_deprecation_warning
-    def CONDA_R(self):
-        return self.variant.get("r_base", get_default_variant(self)["r_base"])
-
-    @CONDA_R.setter
-    @print_function_deprecation_warning
-    def CONDA_R(self, value):
-        self.variant["r_base"] = value
-
     def _get_python(self, prefix, platform):
-        if platform.startswith("win") or (
-            platform == "noarch" and sys.platform == "win32"
-        ):
+        if platform.startswith("win") or (platform == "noarch" and on_win):
             if os.path.isfile(os.path.join(prefix, "python_d.exe")):
                 res = join(prefix, "python_d.exe")
             else:
@@ -599,9 +512,7 @@ class Config:
         return res
 
     def _get_r(self, prefix, platform):
-        if platform.startswith("win") or (
-            platform == "noarch" and sys.platform == "win32"
-        ):
+        if platform.startswith("win") or (platform == "noarch" and on_win):
             res = join(prefix, "Scripts", "R.exe")
             # MRO test:
             if not os.path.exists(res):
@@ -890,11 +801,11 @@ class Config:
                 rm_rf(os.path.join(self.build_folder, "prefix_files"))
         else:
             print(
-                "\nLeaving build/test directories:" "\n  Work:\n",
+                "\nLeaving build/test directories:\n  Work:\n",
                 self.work_dir,
                 "\n  Test:\n",
                 self.test_dir,
-                "\nLeaving build/test environments:" "\n  Test:\nsource activate ",
+                "\nLeaving build/test environments:\n  Test:\nsource activate ",
                 self.test_prefix,
                 "\n  Build:\nsource activate ",
                 self.build_prefix,
@@ -935,8 +846,9 @@ class Config:
             self.clean(remove_folders=False)
 
 
-def get_or_merge_config(config, variant=None, **kwargs):
-    """Always returns a new object - never changes the config that might be passed in."""
+def _get_or_merge_config(config, variant=None, **kwargs):
+    # This function should only ever be called via get_or_merge_config.
+    # It only exists for us to monkeypatch a default config when running tests.
     if not config:
         config = Config(variant=variant)
     else:
@@ -948,6 +860,11 @@ def get_or_merge_config(config, variant=None, **kwargs):
     if variant:
         config.variant.update(variant)
     return config
+
+
+def get_or_merge_config(config, variant=None, **kwargs):
+    """Always returns a new object - never changes the config that might be passed in."""
+    return _get_or_merge_config(config, variant=variant, **kwargs)
 
 
 def get_channel_urls(args):

@@ -1,13 +1,22 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+import json
+import logging
 import os
 import shutil
 import sys
+from pathlib import Path
 
 import pytest
 
 from conda_build import api, post
-from conda_build.utils import get_site_packages, on_win, package_has_file
+from conda_build.utils import (
+    get_site_packages,
+    on_linux,
+    on_mac,
+    on_win,
+    package_has_file,
+)
 
 from .utils import add_mangling, metadata_dir
 
@@ -91,3 +100,73 @@ def test_pypi_installer_metadata(testing_config):
         get_site_packages("", "3.9")
     )
     assert "conda" == (package_has_file(pkg, expected_installer, refresh_mode="forced"))
+
+
+def test_menuinst_validation_ok(testing_config, caplog, tmp_path):
+    "1st check - validation passes with recipe as is"
+    recipe = Path(metadata_dir, "_menu_json_validation")
+    recipe_tmp = tmp_path / "_menu_json_validation"
+    shutil.copytree(recipe, recipe_tmp)
+
+    with caplog.at_level(logging.INFO):
+        pkg = api.build(str(recipe_tmp), config=testing_config, notest=True)[0]
+
+    captured_text = caplog.text
+    assert "Found 'Menu/*.json' files but couldn't validate:" not in captured_text
+    assert "not a valid menuinst JSON file" not in captured_text
+    assert "is a valid menuinst JSON document" in captured_text
+    assert package_has_file(pkg, "Menu/menu_json_validation.json")
+
+
+def test_menuinst_validation_fails_bad_schema(testing_config, caplog, tmp_path):
+    "2nd check - valid JSON but invalid content fails validation"
+    recipe = Path(metadata_dir, "_menu_json_validation")
+    recipe_tmp = tmp_path / "_menu_json_validation"
+    shutil.copytree(recipe, recipe_tmp)
+    menu_json = recipe_tmp / "menu.json"
+    menu_json_contents = menu_json.read_text()
+
+    bad_data = json.loads(menu_json_contents)
+    bad_data["menu_items"][0]["osx"] = ["bad", "schema"]
+    menu_json.write_text(json.dumps(bad_data, indent=2))
+    with caplog.at_level(logging.WARNING):
+        api.build(str(recipe_tmp), config=testing_config, notest=True)
+
+    captured_text = caplog.text
+    assert "Found 'Menu/*.json' files but couldn't validate:" not in captured_text
+    assert "not a valid menuinst JSON document" in captured_text
+    assert "ValidationError" in captured_text
+
+
+def test_menuinst_validation_fails_bad_json(testing_config, caplog, tmp_path):
+    "3rd check - non-parsable JSON fails validation"
+    recipe = Path(metadata_dir, "_menu_json_validation")
+    recipe_tmp = tmp_path / "_menu_json_validation"
+    shutil.copytree(recipe, recipe_tmp)
+    menu_json = recipe_tmp / "menu.json"
+    menu_json_contents = menu_json.read_text()
+    menu_json.write_text(menu_json_contents + "Make this an invalid JSON")
+
+    with caplog.at_level(logging.WARNING):
+        api.build(str(recipe_tmp), config=testing_config, notest=True)
+
+    captured_text = caplog.text
+    assert "Found 'Menu/*.json' files but couldn't validate:" not in captured_text
+    assert "not a valid menuinst JSON document" in captured_text
+    assert "JSONDecodeError" in captured_text
+
+
+@pytest.mark.skipif(on_win, reason="rpath fixup not done on Windows.")
+def test_rpath_symlink(mocker, testing_config):
+    if on_linux:
+        mk_relative = mocker.spy(post, "mk_relative_linux")
+    elif on_mac:
+        mk_relative = mocker.spy(post, "mk_relative_osx")
+    api.build(
+        os.path.join(metadata_dir, "_rpath_symlink"),
+        config=testing_config,
+        variants={"rpaths_patcher": ["patchelf", "LIEF"]},
+        activate=True,
+    )
+    # Should only be called on the actual binary, not its symlinks. (once per variant)
+    assert mk_relative.call_count == 2

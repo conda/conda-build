@@ -3,8 +3,6 @@
 """
 Tools for converting PyPI packages to conda recipes.
 """
-
-
 import keyword
 import logging
 import os
@@ -23,7 +21,7 @@ import requests
 import yaml
 from requests.packages.urllib3.util.url import parse_url
 
-from conda_build.conda_interface import (
+from ..conda_interface import (
     StringIO,
     configparser,
     default_python,
@@ -34,20 +32,21 @@ from conda_build.conda_interface import (
     normalized_version,
     spec_from_line,
 )
-from conda_build.config import Config
-from conda_build.environ import create_env
-from conda_build.license_family import allowed_license_families, guess_license_family
-from conda_build.metadata import MetaData
-from conda_build.render import FIELDS as EXPECTED_SECTION_ORDER
-from conda_build.source import apply_patch
-from conda_build.utils import (
+from ..config import Config
+from ..environ import create_env
+from ..license_family import allowed_license_families, guess_license_family
+from ..metadata import MetaData
+from ..render import FIELDS as EXPECTED_SECTION_ORDER
+from ..source import apply_patch
+from ..utils import (
     check_call_env,
     decompressible_exts,
     ensure_list,
+    on_win,
     rm_rf,
     tar_xf,
 )
-from conda_build.version import _parse as parse_version
+from ..version import _parse as parse_version
 
 pypi_example = """
 Examples:
@@ -336,8 +335,7 @@ def skeletonize(
             if version:
                 if version not in versions:
                     sys.exit(
-                        "Error: Version %s of %s is not available on PyPI."
-                        % (version, package)
+                        f"Error: Version {version} of {package} is not available on PyPI."
                     )
                 d["version"] = version
             else:
@@ -431,7 +429,9 @@ def skeletonize(
             if noarch_python:
                 ordered_recipe["build"]["noarch"] = "python"
 
-            recipe_script_cmd = ["{{ PYTHON }} -m pip install . -vv"]
+            recipe_script_cmd = [
+                "{{ PYTHON }} -m pip install . -vv --no-deps --no-build-isolation"
+            ]
             ordered_recipe["build"]["script"] = " ".join(
                 recipe_script_cmd + setup_options
             )
@@ -558,7 +558,7 @@ def add_parser(repos):
         action="store",
         default=default_python,
         help="""Version of Python to use to run setup.py. Default is %(default)s.""",
-        choices=["2.7", "3.5", "3.6", "3.7", "3.8", "3.9", "3.10", "3.11"],
+        choices=["2.7", "3.5", "3.6", "3.7", "3.8", "3.9", "3.10", "3.11", "3.12"],
     )
 
     pypi.add_argument(
@@ -865,7 +865,6 @@ def get_package_metadata(
     metadata["home"] = get_home(pkginfo, data)
 
     if not metadata.get("summary"):
-        metadata["summary"] = get_summary(pkginfo)
         metadata["summary"] = get_summary(pkginfo)
 
     license_name = get_license_name(package, pkginfo, no_prompt, data)
@@ -1282,9 +1281,9 @@ def get_pkginfo(
             download(pypiurl, join(config.src_cache, filename))
             if hashsum_file(download_path, hash_type) != hash_value:
                 raise RuntimeError(
-                    " Download of {} failed"
-                    " checksum type {} expected value {}. Please"
-                    " try again.".format(package, hash_type, hash_value)
+                    f" Download of {package} failed"
+                    f" checksum type {hash_type} expected value {hash_value}. Please"
+                    " try again."
                 )
         else:
             print("Using cached download")
@@ -1365,46 +1364,47 @@ def run_setuppy(src_dir, temp_dir, python_version, extra_specs, config, setup_op
     )
     stdlib_dir = join(
         config.host_prefix,
-        "Lib" if sys.platform == "win32" else "lib/python%s" % python_version,
+        "Lib" if on_win else "lib/python%s" % python_version,
     )
 
     patch = join(temp_dir, "pypi-distutils.patch")
     with open(patch, "wb") as f:
         f.write(DISTUTILS_PATCH.format(temp_dir.replace("\\", "\\\\")).encode("utf-8"))
 
-    if exists(join(stdlib_dir, "distutils", "core.py-copy")):
-        rm_rf(join(stdlib_dir, "distutils", "core.py"))
-        copy2(
-            join(stdlib_dir, "distutils", "core.py-copy"),
-            join(stdlib_dir, "distutils", "core.py"),
-        )
-        # Avoid race conditions. Invalidate the cache.
-        rm_rf(
-            join(
-                stdlib_dir,
-                "distutils",
-                "__pycache__",
-                "core.cpython-%s%s.pyc" % sys.version_info[:2],
+    # distutils deprecated in Python 3.10+, removed in Python 3.12+
+    distutils = join(stdlib_dir, "distutils")
+    if isdir(distutils):
+        if exists(join(distutils, "core.py-copy")):
+            rm_rf(join(distutils, "core.py"))
+            copy2(
+                join(distutils, "core.py-copy"),
+                join(distutils, "core.py"),
             )
-        )
-        rm_rf(
-            join(
-                stdlib_dir,
-                "distutils",
-                "__pycache__",
-                "core.cpython-%s%s.pyo" % sys.version_info[:2],
+            # Avoid race conditions. Invalidate the cache.
+            rm_rf(
+                join(
+                    distutils,
+                    "__pycache__",
+                    f"core.cpython-{sys.version_info[0]}{sys.version_info[1]}.pyc",
+                )
             )
-        )
-    else:
-        copy2(
-            join(stdlib_dir, "distutils", "core.py"),
-            join(stdlib_dir, "distutils", "core.py-copy"),
-        )
-    apply_patch(join(stdlib_dir, "distutils"), patch, config=config)
+            rm_rf(
+                join(
+                    distutils,
+                    "__pycache__",
+                    f"core.cpython-{sys.version_info[0]}{sys.version_info[1]}.pyo",
+                )
+            )
+        else:
+            copy2(
+                join(distutils, "core.py"),
+                join(distutils, "core.py-copy"),
+            )
+        apply_patch(distutils, patch, config=config)
 
-    vendored = join(stdlib_dir, "site-packages", "setuptools", "_distutils")
-    if os.path.isdir(vendored):
-        apply_patch(vendored, patch, config=config)
+    setuptools = join(stdlib_dir, "site-packages", "setuptools", "_distutils")
+    if isdir(setuptools):
+        apply_patch(setuptools, patch, config=config)
 
     # Save PYTHONPATH for later
     env = os.environ.copy()

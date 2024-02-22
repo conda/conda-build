@@ -16,6 +16,7 @@ from conda_build.utils import ensure_list, package_has_file
 from conda_build.variants import (
     combine_specs,
     dict_of_lists_to_list_of_dicts,
+    filter_combined_spec_to_used_keys,
     get_package_variants,
     validate_spec,
 )
@@ -59,7 +60,7 @@ def test_python_variants(testing_workdir, testing_config, as_yaml):
     python 3.5 -> python >=3.5,<3.6.0a0
     otherPackages 3.5 -> otherPackages 3.5
     """
-    variants = {"python": ["3.10", "3.11"]}
+    variants = {"python": ["3.11", "3.12"]}
     testing_config.ignore_system_config = True
 
     # write variants to disk
@@ -86,7 +87,7 @@ def test_python_variants(testing_workdir, testing_config, as_yaml):
     assert {
         *metadata[0][0].meta["requirements"]["run"],
         *metadata[1][0].meta["requirements"]["run"],
-    } == {"python >=3.10,<3.11.0a0", "python >=3.11,<3.12.0a0"}
+    } == {"python >=3.11,<3.12.0a0", "python >=3.12,<3.13.0a0"}
 
 
 def test_use_selectors_in_variants(testing_workdir, testing_config):
@@ -657,3 +658,45 @@ def test_variant_subkeys_retained():
     m.final = False
     outputs = m.get_output_metadata_set(permit_unsatisfiable_variants=False)
     get_all_replacements(outputs[0][1].config.variant)
+
+
+@pytest.mark.parametrize(
+    "internal_defaults, low_prio_config, high_prio_config, expected",
+    [
+        pytest.param(
+            {"pkg_1": "1.0"},
+            {"pkg_1": "1.1"},
+            {"pkg_1": ["1.1", "1.2"], "pkg_2": ["1.1"]},
+            [{"pkg_1": "1.1", "pkg_2": "1.1"}, {"pkg_1": "1.2", "pkg_2": "1.1"}],
+            id="basic",
+        ),
+        pytest.param(
+            {"pkg_1": "1.0"},
+            {"pkg_1": "1.1"},
+            {
+                "pkg_1": ["1.1", "1.2"],
+                "pkg_2": ["1.1", "1.2"],
+                "zip_keys": [["pkg_1", "pkg_2"]],
+            },
+            [
+                {"pkg_1": "1.1", "pkg_2": "1.1", "zip_keys": [["pkg_1", "pkg_2"]]},
+                {"pkg_1": "1.2", "pkg_2": "1.2", "zip_keys": [["pkg_1", "pkg_2"]]},
+            ],
+            id="zip_keys",
+        ),
+    ],
+)
+def test_zip_key_filtering(
+    internal_defaults, low_prio_config, high_prio_config, expected
+):
+    combined_spec = {
+        **low_prio_config,
+        **high_prio_config,
+    }
+    specs = {
+        "internal_defaults": internal_defaults,
+        "low_prio_config": low_prio_config,
+        "high_prio_config": high_prio_config,
+    }
+
+    assert filter_combined_spec_to_used_keys(combined_spec, specs=specs) == expected

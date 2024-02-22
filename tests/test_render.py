@@ -4,14 +4,18 @@ from __future__ import annotations
 
 import json
 import os
-from pathlib import Path
+from typing import TYPE_CHECKING
 from uuid import uuid4
 
 import pytest
 
 from conda_build import api, render
-from conda_build.metadata import MetaData
 from conda_build.utils import CONDA_PACKAGE_EXTENSION_V1
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from conda_build.metadata import MetaData
 
 
 @pytest.mark.parametrize(

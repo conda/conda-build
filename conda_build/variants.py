@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: BSD-3-Clause
 """This file handles the parsing of feature specifications from files,
 ending up with a configuration matrix"""
-
 import os.path
 import re
 import sys
@@ -13,20 +12,30 @@ from itertools import product
 
 import yaml
 
-from conda_build.conda_interface import cc_conda_build, subdir
-from conda_build.utils import ensure_list, get_logger, islist, on_win, trim_empty_keys
-from conda_build.version import _parse as parse_version
+from .conda_interface import cc_conda_build, subdir
+from .utils import ensure_list, get_logger, islist, on_win, trim_empty_keys
+from .version import _parse as parse_version
 
 DEFAULT_VARIANTS = {
     "python": f"{sys.version_info.major}.{sys.version_info.minor}",
-    "numpy": "1.22",
+    "numpy": {
+        # (python): numpy_version,  # range of versions built for given python
+        (3, 8): "1.22",  # 1.19-1.24
+        (3, 9): "1.22",  # 1.19-1.26
+        (3, 10): "1.22",  # 1.21-1.26
+        (3, 11): "1.23",  # 1.23-1.26
+        (3, 12): "1.26",  # 1.26-
+    }.get(sys.version_info[:2], "1.26"),
     # this one actually needs to be pretty specific.  The reason is that cpan skeleton uses the
     #    version to say what's in their standard library.
     "perl": "5.26.2",
     "lua": "5",
     "r_base": "3.4" if on_win else "3.5",
     "cpu_optimization_target": "nocona",
-    "pin_run_as_build": OrderedDict(python=OrderedDict(min_pin="x.x", max_pin="x.x")),
+    "pin_run_as_build": {
+        "python": {"min_pin": "x.x", "max_pin": "x.x"},
+        "r-base": {"min_pin": "x.x", "max_pin": "x.x"},
+    },
     "ignore_version": [],
     "ignore_build_only_deps": ["python", "numpy"],
     "extend_keys": [
@@ -37,11 +46,6 @@ DEFAULT_VARIANTS = {
     ],
     "cran_mirror": "https://cran.r-project.org",
 }
-
-# set this outside the initialization because of the dash in the key
-DEFAULT_VARIANTS["pin_run_as_build"]["r-base"] = OrderedDict(
-    min_pin="x.x", max_pin="x.x"
-)
 
 # map python version to default compiler on windows, to match upstream python
 #    This mapping only sets the "native" compiler, and can be overridden by specifying a compiler
@@ -125,7 +129,7 @@ def get_default_variant(config):
 
 
 def parse_config_file(path, config):
-    from conda_build.metadata import get_selectors, select_lines
+    from .metadata import get_selectors, select_lines
 
     with open(path) as f:
         contents = f.read()
@@ -161,10 +165,11 @@ def validate_spec(src, spec):
         # check for duplicate keys
         unique = set()
         errors.extend(
-            "  zip_key entry {} in group {} is a duplicate, keys can only occur "
-            "in one group".format(k, zg)
+            f"  zip_key entry {k} in group {zg} is a duplicate, keys can only occur "
+            "in one group"
             # include error if key has already been seen, otherwise add to unique keys
-            if k in unique else unique.add(k)
+            if k in unique
+            else unique.add(k)
             for zg in zip_keys
             for k in zg
         )
@@ -497,13 +502,8 @@ def filter_by_key_value(variants, key, values, source_name):
             else:
                 log = get_logger(__name__)
                 log.debug(
-                    "Filtering variant with key {key} not matching target value(s) "
-                    "({tgt_vals}) from {source_name}, actual {actual_val}".format(
-                        key=key,
-                        tgt_vals=values,
-                        source_name=source_name,
-                        actual_val=variant.get(key),
-                    )
+                    f"Filtering variant with key {key} not matching target value(s) "
+                    f"({values}) from {source_name}, actual {variant.get(key)}"
                 )
     return reduced_variants
 
@@ -645,7 +645,7 @@ def get_package_combined_spec(recipedir_or_metadata, config=None, variants=None)
     if hasattr(recipedir_or_metadata, "config"):
         config = recipedir_or_metadata.config
     if not config:
-        from conda_build.config import Config
+        from .config import Config
 
         config = Config()
     files = find_config_files(recipedir_or_metadata, config)
@@ -679,9 +679,13 @@ def filter_combined_spec_to_used_keys(combined_spec, specs):
 
     # TODO: act here?
     combined_spec = explode_variants(combined_spec)
+    # seen_keys makes sure that a setting from a lower-priority spec doesn't clobber
+    # the same setting that has been redefined in a higher-priority spec.
+    seen_keys = set()
+    # The specs are checked from high to low priority order.
     for source, source_specs in reversed(specs.items()):
         for k, vs in source_specs.items():
-            if k not in extend_keys:
+            if k not in extend_keys and k not in seen_keys:
                 # when filtering ends up killing off all variants, we just ignore that.  Generally,
                 #    this arises when a later variant config overrides, rather than selects a
                 #    subspace of earlier configs
@@ -689,6 +693,7 @@ def filter_combined_spec_to_used_keys(combined_spec, specs):
                     filter_by_key_value(combined_spec, k, vs, source_name=source)
                     or combined_spec
                 )
+                seen_keys.add(k)
     return combined_spec
 
 

@@ -1,0 +1,9 @@
+package:
+  name: test_build_script_in_output
+  version: 1.0
+
+outputs:
+  - name: test_1
+    build:
+      script_env:
+        - TEST_FN_DOESNT_EXIST

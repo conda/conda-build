@@ -3,6 +3,8 @@
 """
 This module tests the build API.  These are high-level integration tests.
 """
+from __future__ import annotations
+
 import json
 import logging
 import os
@@ -12,9 +14,11 @@ import sys
 import tarfile
 import uuid
 from collections import OrderedDict
+from contextlib import nullcontext
 from glob import glob
 from pathlib import Path
 from shutil import which
+from typing import TYPE_CHECKING
 
 # for version
 import conda
@@ -24,13 +28,13 @@ from binstar_client.commands import remove, show
 from binstar_client.errors import NotFound
 from conda.common.compat import on_linux, on_mac, on_win
 from conda.exceptions import ClobberError, CondaMultiError
+from conda_index.api import update_index
 
-import conda_build
 from conda_build import __version__, api, exceptions
 from conda_build.conda_interface import (
     CondaError,
     LinkError,
-    cc_conda_build,
+    context,
     reset_context,
     url_path,
 )
@@ -44,7 +48,6 @@ from conda_build.exceptions import (
 from conda_build.os_utils.external import find_executable
 from conda_build.render import finalize_metadata
 from conda_build.utils import (
-    FileNotFoundError,
     check_call_env,
     check_output_env,
     convert_path_for_cygwin_or_msys2,
@@ -63,7 +66,14 @@ from .utils import (
     get_valid_recipes,
     metadata_dir,
     metadata_path,
+    reset_config,
 )
+
+if TYPE_CHECKING:
+    from pytest import FixtureRequest, MonkeyPatch
+    from pytest_mock import MockerFixture
+
+    from conda_build.metadata import MetaData
 
 
 def represent_ordereddict(dumper, data):
@@ -123,6 +133,9 @@ def test_recipe_builds(
     #   ``source_setup_py_data_subdir`` reproduces the problem.
     if recipe.name == "source_setup_py_data_subdir":
         pytest.xfail("Issue related to #3754 on conda-build.")
+    elif recipe.name == "unicode_all_over" and context.solver == "libmamba":
+        pytest.xfail("Unicode package names not supported in libmamba.")
+
     # These variables are defined solely for testing purposes,
     # so they can be checked within build scripts
     testing_config.activate = True
@@ -393,14 +406,12 @@ def dummy_executable(folder, exename):
     with open(dummyfile, "w") as f:
         f.write(
             prefix
-            + """
-    echo ******* You have reached the dummy {}. It is likely there is a bug in
+            + f"""
+    echo ******* You have reached the dummy {exename}. It is likely there is a bug in
     echo ******* conda that makes it not add the _build/bin directory onto the
     echo ******* PATH before running the source checkout tool
     exit -1
-    """.format(
-                exename
-            )
+    """
         )
     if sys.platform != "win32":
         import stat
@@ -410,6 +421,9 @@ def dummy_executable(folder, exename):
     return exename
 
 
+@pytest.mark.skip(
+    reason="GitHub discontinued SVN, see https://github.com/conda/conda-build/issues/5098"
+)
 def test_checkout_tool_as_dependency(testing_workdir, testing_config, monkeypatch):
     # "hide" svn by putting a known bad one on PATH
     exename = dummy_executable(testing_workdir, "svn")
@@ -430,7 +444,7 @@ def test_checkout_tool_as_dependency(testing_workdir, testing_config, monkeypatc
 platforms = ["64" if sys.maxsize > 2**32 else "32"]
 if sys.platform == "win32":
     platforms = sorted({"32", *platforms})
-    compilers = ["3.10", "3.11"]
+    compilers = ["3.10", "3.11", "3.12"]
     msvc_vers = ["14.0"]
 else:
     msvc_vers = []
@@ -522,7 +536,7 @@ def test_skip_existing_url(testing_metadata, testing_workdir, capfd):
     copy_into(outputs[0], os.path.join(platform, os.path.basename(outputs[0])))
 
     # create the index so conda can find the file
-    api.update_index(output_dir)
+    update_index(output_dir)
 
     testing_metadata.config.skip_existing = True
     testing_metadata.config.channel_urls = [url_path(output_dir)]
@@ -592,6 +606,10 @@ def test_build_metadata_object(testing_metadata):
 
 
 @pytest.mark.serial
+@pytest.mark.skipif(
+    sys.version_info >= (3, 12),
+    reason="numpy.distutils deprecated in Python 3.12+",
+)
 def test_numpy_setup_py_data(testing_config):
     recipe_path = os.path.join(metadata_dir, "_numpy_setup_py_data")
     # this shows an error that is OK to ignore:
@@ -606,10 +624,9 @@ def test_numpy_setup_py_data(testing_config):
     subprocess.check_call(["conda", "install", "-y", "cython"])
     m = api.render(recipe_path, config=testing_config, numpy="1.16")[0][0]
     _hash = m.hash_dependencies()
-    assert os.path.basename(
-        api.get_output_file_path(m)[0]
-    ) == "load_setup_py_test-0.1.0-np116py{}{}{}_0.tar.bz2".format(
-        sys.version_info.major, sys.version_info.minor, _hash
+    assert (
+        os.path.basename(api.get_output_file_path(m)[0])
+        == f"load_setup_py_test-0.1.0-np116py{sys.version_info.major}{sys.version_info.minor}{_hash}_0.tar.bz2"
     )
 
 
@@ -684,6 +701,8 @@ def test_relative_git_url_submodule_clone(testing_workdir, testing_config, monke
             check_call_env(
                 [
                     git,
+                    # CVE-2022-39253
+                    *("-c", "protocol.file.allow=always"),
                     "submodule",
                     "add",
                     convert_path_for_cygwin_or_msys2(git, absolute_sub),
@@ -692,14 +711,33 @@ def test_relative_git_url_submodule_clone(testing_workdir, testing_config, monke
                 env=sys_git_env,
             )
             check_call_env(
-                [git, "submodule", "add", "../relative_sub", "relative"],
+                [
+                    git,
+                    # CVE-2022-39253
+                    *("-c", "protocol.file.allow=always"),
+                    "submodule",
+                    "add",
+                    "../relative_sub",
+                    "relative",
+                ],
                 env=sys_git_env,
             )
         else:
             # Once we use a more recent Git for Windows than 2.6.4 on Windows or m2-git we
             # can change this to `git submodule update --recursive`.
             gits = git.replace("\\", "/")
-            check_call_env([git, "submodule", "foreach", gits, "pull"], env=sys_git_env)
+            check_call_env(
+                [
+                    git,
+                    # CVE-2022-39253
+                    *("-c", "protocol.file.allow=always"),
+                    "submodule",
+                    "foreach",
+                    gits,
+                    "pull",
+                ],
+                env=sys_git_env,
+            )
         check_call_env(
             [git, "commit", "-am", f"added submodules@{tag}"], env=sys_git_env
         )
@@ -713,77 +751,41 @@ def test_relative_git_url_submodule_clone(testing_workdir, testing_config, monke
         #
         # Also, git is set to False here because it needs to be rebuilt with the longer prefix. As
         # things stand, my _b_env folder for this test contains more than 80 characters.
-        requirements = (
-            "requirements",
-            OrderedDict(
-                [
-                    (
-                        "build",
-                        [
-                            "git            # [False]",
-                            "m2-git         # [win]",
-                            "m2-filesystem  # [win]",
-                        ],
-                    )
-                ]
-            ),
-        )
 
         recipe_dir = os.path.join(testing_workdir, "recipe")
         if not os.path.exists(recipe_dir):
             os.makedirs(recipe_dir)
         filename = os.path.join(testing_workdir, "recipe", "meta.yaml")
-        data = OrderedDict(
-            [
-                (
-                    "package",
-                    OrderedDict(
-                        [
-                            ("name", "relative_submodules"),
-                            ("version", "{{ GIT_DESCRIBE_TAG }}"),
-                        ]
-                    ),
-                ),
-                ("source", OrderedDict([("git_url", toplevel), ("git_tag", str(tag))])),
-                requirements,
-                (
-                    "build",
-                    OrderedDict(
-                        [
-                            (
-                                "script",
-                                [
-                                    "git --no-pager submodule --quiet foreach git log -n 1 --pretty=format:%%s > "
-                                    "%PREFIX%\\summaries.txt  # [win]",
-                                    "git --no-pager submodule --quiet foreach git log -n 1 --pretty=format:%s > "
-                                    "$PREFIX/summaries.txt   # [not win]",
-                                ],
-                            )
-                        ]
-                    ),
-                ),
-                (
-                    "test",
-                    OrderedDict(
-                        [
-                            (
-                                "commands",
-                                [
-                                    "echo absolute{}relative{} > %PREFIX%\\expected_summaries.txt       # [win]".format(
-                                        tag, tag
-                                    ),
-                                    "fc.exe /W %PREFIX%\\expected_summaries.txt %PREFIX%\\summaries.txt # [win]",
-                                    "echo absolute{}relative{} > $PREFIX/expected_summaries.txt         # [not win]".format(
-                                        tag, tag
-                                    ),
-                                    "diff -wuN ${PREFIX}/expected_summaries.txt ${PREFIX}/summaries.txt # [not win]",
-                                ],
-                            )
-                        ]
-                    ),
-                ),
-            ]
-        )
+        data = {
+            "package": {
+                "name": "relative_submodules",
+                "version": "{{ GIT_DESCRIBE_TAG }}",
+            },
+            "source": {"git_url": toplevel, "git_tag": str(tag)},
+            "requirements": {
+                "build": [
+                    "git            # [False]",
+                    "m2-git         # [win]",
+                    "m2-filesystem  # [win]",
+                ],
+            },
+            "build": {
+                "script": [
+                    "git --no-pager submodule --quiet foreach git log -n 1 --pretty=format:%%s > "
+                    "%PREFIX%\\summaries.txt  # [win]",
+                    "git --no-pager submodule --quiet foreach git log -n 1 --pretty=format:%s > "
+                    "$PREFIX/summaries.txt   # [not win]",
+                ],
+            },
+            "test": {
+                "commands": [
+                    f"echo absolute{tag}relative{tag} > %PREFIX%\\expected_summaries.txt # [win]",
+                    "fc.exe /W %PREFIX%\\expected_summaries.txt %PREFIX%\\summaries.txt # [win]",
+                    f"echo absolute{tag}relative{tag} > $PREFIX/expected_summaries.txt # [not win]",
+                    "diff -wuN ${PREFIX}/expected_summaries.txt ${PREFIX}/summaries.txt # [not win]",
+                ],
+            },
+        }
 
         with open(filename, "w") as outfile:
             outfile.write(yaml.dump(data, default_flow_style=False, width=999999999))
@@ -823,9 +825,9 @@ def test_disable_pip(testing_metadata):
     with pytest.raises(subprocess.CalledProcessError):
         api.build(testing_metadata)
 
-    testing_metadata.meta["build"]["script"] = (
-        'python -c "import setuptools; ' 'print(setuptools.__version__)"'
-    )
+    testing_metadata.meta["build"][
+        "script"
+    ] = 'python -c "import setuptools; print(setuptools.__version__)"'
     with pytest.raises(subprocess.CalledProcessError):
         api.build(testing_metadata)
 
@@ -1406,7 +1408,7 @@ def test_recursion_layers(testing_config):
 @pytest.mark.sanity
 @pytest.mark.skipif(
     sys.platform != "win32",
-    reason=("spaces break openssl prefix " "replacement on *nix"),
+    reason="spaces break openssl prefix replacement on *nix",
 )
 def test_croot_with_spaces(testing_metadata, testing_workdir):
     testing_metadata.config.croot = os.path.join(testing_workdir, "space path")
@@ -1468,7 +1470,7 @@ def test_run_constrained_stores_constrains_info(testing_config):
 @pytest.mark.sanity
 def test_no_locking(testing_config):
     recipe = os.path.join(metadata_dir, "source_git_jinja2")
-    api.update_index(os.path.join(testing_config.croot))
+    update_index(os.path.join(testing_config.croot))
     api.build(recipe, config=testing_config, locking=False)
 
 
@@ -1495,17 +1497,44 @@ def test_runtime_dependencies(testing_config):
 
 
 @pytest.mark.sanity
-def test_no_force_upload_condarc_setting(mocker, testing_workdir, testing_metadata):
-    testing_metadata.config.anaconda_upload = True
-    del testing_metadata.meta["test"]
+def test_no_force_upload(
+    mocker: MockerFixture,
+    monkeypatch: MonkeyPatch,
+    testing_workdir: str | os.PathLike | Path,
+    testing_metadata: MetaData,
+    request: FixtureRequest,
+):
+    # this is nearly identical to tests/cli/test_main_build.py::test_no_force_upload
+    # only difference is this tests `conda_build.api.build`
+    request.addfinalizer(reset_config)
+    call = mocker.patch("subprocess.call")
+    anaconda = find_executable("anaconda")
+
+    # render recipe
     api.output_yaml(testing_metadata, "meta.yaml")
-    call = mocker.patch.object(conda_build.build.subprocess, "call")
-    cc_conda_build["force_upload"] = False
+
+    # mock Config.set_keys to always set anaconda_upload to True
+    # conda's Context + conda_build's MetaData & Config objects interact in such an
+    # awful way that mocking these configurations is ugly and confusing, all of it
+    # needs major refactoring
+    set_keys = Config.set_keys  # store original method
+    override = {"anaconda_upload": True}
+    monkeypatch.setattr(
+        Config,
+        "set_keys",
+        lambda self, **kwargs: set_keys(self, **{**kwargs, **override}),
+    )
+
+    # check for normal upload
+    override["force_upload"] = False
     pkg = api.build(testing_workdir)
-    assert call.called_once_with(["anaconda", "upload", pkg])
-    del cc_conda_build["force_upload"]
+    call.assert_called_once_with([anaconda, "upload", *pkg])
+    call.reset_mock()
+
+    # check for force upload
+    override["force_upload"] = True
     pkg = api.build(testing_workdir)
-    assert call.called_once_with(["anaconda", "upload", "--force", pkg])
+    call.assert_called_once_with([anaconda, "upload", "--force", *pkg])
 
 
 @pytest.mark.sanity
@@ -1593,9 +1622,10 @@ def test_copy_test_source_files(testing_config):
                 found = True
                 break
         if found:
-            assert (
-                copy
-            ), "'info/test/test_files_folder/text.txt' found in tar.bz2 but not copying test source files"
+            assert copy, (
+                "'info/test/test_files_folder/text.txt' found in tar.bz2 "
+                "but not copying test source files"
+            )
             if copy:
                 api.test(outputs[0])
             else:
@@ -1603,8 +1633,8 @@ def test_copy_test_source_files(testing_config):
                     api.test(outputs[0])
         else:
             assert not copy, (
-                "'info/test/test_files_folder/text.txt' not found in tar.bz2 but copying test source files. File list: %r"
-                % files
+                "'info/test/test_files_folder/text.txt' not found in tar.bz2 "
+                f"but copying test source files. File list: {files!r}"
             )
 
 
@@ -1667,15 +1697,17 @@ def test_provides_features_metadata(testing_config):
     assert index["provides_features"] == {"test2": "also_ok"}
 
 
-# using different MACOSX_DEPLOYMENT_TARGET in parallel causes some SDK race condition
-# https://github.com/conda/conda-build/issues/4708
-@pytest.mark.serial
-@pytest.mark.flaky(reruns=5, reruns_delay=2)
-def test_overlinking_detection(testing_config, variants_conda_build_sysroot):
+def test_overlinking_detection(
+    testing_config, testing_workdir, variants_conda_build_sysroot
+):
     testing_config.activate = True
     testing_config.error_overlinking = True
     testing_config.verify = False
-    recipe = os.path.join(metadata_dir, "_overlinking_detection")
+    recipe = os.path.join(testing_workdir, "recipe")
+    copy_into(
+        os.path.join(metadata_dir, "_overlinking_detection"),
+        recipe,
+    )
     dest_sh = os.path.join(recipe, "build.sh")
     dest_bat = os.path.join(recipe, "bld.bat")
     copy_into(
@@ -1697,17 +1729,17 @@ def test_overlinking_detection(testing_config, variants_conda_build_sysroot):
     rm_rf(dest_bat)
 
 
-# using different MACOSX_DEPLOYMENT_TARGET in parallel causes some SDK race condition
-# https://github.com/conda/conda-build/issues/4708
-@pytest.mark.serial
-@pytest.mark.flaky(reruns=5, reruns_delay=2)
 def test_overlinking_detection_ignore_patterns(
-    testing_config, variants_conda_build_sysroot
+    testing_config, testing_workdir, variants_conda_build_sysroot
 ):
     testing_config.activate = True
     testing_config.error_overlinking = True
     testing_config.verify = False
-    recipe = os.path.join(metadata_dir, "_overlinking_detection_ignore_patterns")
+    recipe = os.path.join(testing_workdir, "recipe")
+    copy_into(
+        os.path.join(metadata_dir, "_overlinking_detection_ignore_patterns"),
+        recipe,
+    )
     dest_sh = os.path.join(recipe, "build.sh")
     dest_bat = os.path.join(recipe, "bld.bat")
     copy_into(
@@ -1826,12 +1858,17 @@ def test_ignore_verify_codes(testing_config):
 
 
 @pytest.mark.sanity
-def test_extra_meta(testing_config):
+def test_extra_meta(testing_config, caplog):
     recipe_dir = os.path.join(metadata_dir, "_extra_meta")
-    testing_config.extra_meta = {"foo": "bar"}
+    extra_meta_data = {"foo": "bar"}
+    testing_config.extra_meta = extra_meta_data
     outputs = api.build(recipe_dir, config=testing_config)
     about = json.loads(package_has_file(outputs[0], "info/about.json"))
     assert "foo" in about["extra"] and about["extra"]["foo"] == "bar"
+    assert (
+        f"Adding the following extra-meta data to about.json: {extra_meta_data}"
+        in caplog.text
+    )
 
 
 def test_symlink_dirs_in_always_include_files(testing_config):
@@ -1904,3 +1941,33 @@ def test_activated_prefixes_in_actual_path(testing_metadata):
         if path in expected_paths
     ]
     assert actual_paths == expected_paths
+
+
+@pytest.mark.parametrize("add_pip_as_python_dependency", [False, True])
+def test_add_pip_as_python_dependency_from_condarc_file(
+    testing_metadata, testing_workdir, add_pip_as_python_dependency, monkeypatch
+):
+    """
+    Test whether settings from .condarc files are heeded.
+    ref: https://github.com/conda/conda-libmamba-solver/issues/393
+    """
+    # TODO: SubdirData._cache_ clearing might not be needed for future conda versions.
+    #       See https://github.com/conda/conda/pull/13365 for proposed changes.
+    from conda.core.subdir_data import SubdirData
+
+    # SubdirData's cache doesn't distinguish on add_pip_as_python_dependency.
+    SubdirData._cache_.clear()
+
+    testing_metadata.meta["build"]["script"] = ['python -c "import pip"']
+    testing_metadata.meta["requirements"]["host"] = ["python"]
+    del testing_metadata.meta["test"]
+    if add_pip_as_python_dependency:
+        check_build_fails = nullcontext()
+    else:
+        check_build_fails = pytest.raises(subprocess.CalledProcessError)
+
+    conda_rc = Path(testing_workdir, ".condarc")
+    conda_rc.write_text(f"add_pip_as_python_dependency: {add_pip_as_python_dependency}")
+    with env_var("CONDARC", conda_rc, reset_context):
+        with check_build_fails:
+            api.build(testing_metadata)

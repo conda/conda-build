@@ -50,6 +50,7 @@ extensions = [
     "sphinx.ext.todo",
     "sphinx.ext.coverage",
     "sphinx_sitemap",
+    "sphinx_design",
 ]
 
 myst_heading_anchors = 3
@@ -88,7 +89,7 @@ master_doc = "index"
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+language = "en"
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -104,23 +105,62 @@ pygments_style = "sphinx"
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = "sphinx_rtd_theme"
+html_theme = "conda_sphinx_theme"
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
-# html_theme_options = {}
+html_theme_options = {
+    # The maximum depth of the table of contents tree. Set this to -1 to allow
+    # unlimited depth.
+    "navigation_depth": -1,
+    "show_prev_next": False,
+    # Navbar icon links
+    "navbar_start": ["navbar-logo"],
+    "use_edit_page_button": True,
+    "goatcounter_url": "https://docs-conda-io.goatcounter.com/count",
+    "icon_links": [
+        {
+            "name": "GitHub",
+            "url": "https://github.com/conda/conda-build",
+            "icon": "fa-brands fa-square-github",
+            "type": "fontawesome",
+        },
+        {
+            "name": "Element",
+            "url": "https://matrix.to/#/#conda-build:matrix.org",
+            "icon": "_static/element_logo.svg",
+            "type": "local",
+        },
+        {
+            "name": "Discourse",
+            "url": "https://conda.discourse.group/",
+            "icon": "fa-brands fa-discourse",
+            "type": "fontawesome",
+        },
+    ],
+}
+
+html_context = {
+    "github_user": "conda",
+    "github_repo": "conda-build",
+    "github_version": "main",
+    "doc_path": "docs/source",
+    "goatcounter_dashboard_url": "https://docs-conda-io.goatcounter.com",
+}
 
 html_short_title = "conda-build"
-html_show_sourcelink = False
-html_favicon = "conda-logo.png"
+# html_show_sourcelink = False
 html_extra_path = ["robots.txt"]
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ["_static"]
+# html_static_path = ["_static"]
+
+# Custom CSS rules
+# html_style = "css/custom.css"
 
 # Custom sidebar templates, must be a dictionary that maps document names
 # to template names.
@@ -206,11 +246,9 @@ texinfo_documents = [
 # -- Options for intersphinx extension ---------------------------------------
 
 # Example configuration for intersphinx: refer to the Python standard library.
-intersphinx_mapping = {"https://docs.python.org/": None}
+intersphinx_mapping = {"python": ("https://docs.python.org/3", None)}
 
 # -- Options for todo extension ----------------------------------------------
 
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = True
-
-html_style = "css/custom.css"

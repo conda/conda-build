@@ -6,11 +6,16 @@ import os
 import shlex
 import sys
 from pathlib import Path
-from typing import Generator
+from typing import TYPE_CHECKING
 
+from conda.base.context import context, reset_context
 from conda.common.compat import on_mac
 
+from conda_build.conda_interface import cc_conda_build
 from conda_build.metadata import MetaData
+
+if TYPE_CHECKING:
+    from typing import Generator
 
 tests_path = Path(__file__).parent
 metadata_path = tests_path / "test-recipes" / "metadata"
@@ -53,8 +58,9 @@ def get_valid_recipes(*parts: Path | str) -> Generator[Path, None, None]:
 
 
 def add_mangling(filename):
-    filename = os.path.splitext(filename)[0] + ".cpython-{}{}.py".format(
-        sys.version_info.major, sys.version_info.minor
+    filename = (
+        os.path.splitext(filename)[0]
+        + f".cpython-{sys.version_info.major}{sys.version_info.minor}.py"
     )
     filename = os.path.join(
         os.path.dirname(filename), "__pycache__", os.path.basename(filename)
@@ -143,3 +149,11 @@ def get_noarch_python_meta(meta):
     d = meta.meta
     d["build"]["noarch"] = "python"
     return MetaData.fromdict(d, config=meta.config)
+
+
+def reset_config(search_path=None):
+    reset_context(search_path)
+    cc_conda_build.clear()
+    cc_conda_build.update(
+        context.conda_build if hasattr(context, "conda_build") else {}
+    )

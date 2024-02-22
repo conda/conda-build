@@ -2,13 +2,16 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING
 
 import pytest
 
 from conda_build import jinja_context
 from conda_build.utils import HashableDict
+
+if TYPE_CHECKING:
+    from pathlib import Path
+    from typing import Any
 
 
 def test_pin_default(testing_metadata, mocker):
@@ -126,7 +129,7 @@ def test_load_setup_py_data_from_setup_cfg(testing_metadata, tmp_path: Path):
     setup_py = tmp_path / "setup.py"
     setup_cfg = tmp_path / "setup.cfg"
     setup_py.write_text(
-        "from setuptools import setup\n" 'setup(name="name_from_setup_py")\n'
+        'from setuptools import setup\nsetup(name="name_from_setup_py")\n'
     )
     setup_cfg.write_text(
         "[metadata]\n"

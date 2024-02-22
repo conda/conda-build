@@ -2,11 +2,6 @@
 Building a package without a recipe (bdist_conda)
 =================================================
 
-.. contents::
-   :local:
-   :depth: 2
-
-
 You can use conda-build to build packages for Python to install
 rather than conda by using ``setup.py bdist_conda``. This is a
 quick way to build packages without using a recipe, but it has

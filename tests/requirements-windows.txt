@@ -1,4 +1,2 @@
-# conda-build supplemental test dependencies
-# run as 'conda install -c defaults --file tests/requirements-windows.txt'
 m2-git
 m2-patch

@@ -4,7 +4,7 @@ SHELL := /bin/bash -o pipefail -o errexit
 # ENV_NAME=dev TMPDIR=$HOME make test
 ENV_NAME ?= conda-build
 DOC_ENV_NAME ?= conda-build-docs
-PYTHON_VERSION ?= 3.8
+PYTHON_VERSION ?= 3.11
 TMPDIR := $(shell if test -w $(TMPDIR); then echo $(TMPDIR); else echo ./tmp/ ; fi)conda-build-testing
 
 # We want to bypass the shell wrapper function and use the binary directly for conda-run specifically
@@ -13,7 +13,7 @@ CONDA := $(shell which conda)
 
 # Setup env for documents
 env-docs:
-	conda create --name $(DOC_ENV_NAME) --channel defaults python=$(PYTHON_VERSION) --yes
+	conda create --name $(DOC_ENV_NAME) --channel defaults python=$(PYTHON_VERSION) pip --yes
 	$(CONDA) run --name $(DOC_ENV_NAME) pip install -r ./docs/requirements.txt
 
 .PHONY: $(MAKECMDGOALS)

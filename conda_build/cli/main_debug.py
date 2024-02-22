@@ -1,16 +1,19 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
+
 import logging
 import sys
-from argparse import ArgumentParser
+from typing import TYPE_CHECKING
 
-from conda_build import api
-from conda_build.cli import validators as valid
+from .. import api
+from ..utils import on_win
+from . import validators as valid
+from .main_render import get_render_parser
 
-# we extend the render parser because we basically need to render the recipe before
-#       we can say what env to create.  This is not really true for debugging tests, but meh...
-from conda_build.cli.main_render import get_render_parser
-from conda_build.utils import on_win
+if TYPE_CHECKING:
+    from argparse import ArgumentParser
+    from typing import Sequence
 
 logging.basicConfig(level=logging.INFO)
 
@@ -18,6 +21,7 @@ logging.basicConfig(level=logging.INFO)
 def get_parser() -> ArgumentParser:
     """Returns a parser object for this command"""
     p = get_render_parser()
+    p.prog = "conda debug"
     p.description = """
 
 Set up environments and activation scripts to debug your build or test phase.
@@ -87,25 +91,25 @@ Set up environments and activation scripts to debug your build or test phase.
     return p
 
 
-def execute():
+def execute(args: Sequence[str] | None = None) -> int:
     parser = get_parser()
-    args = parser.parse_args()
+    parsed = parser.parse_args(args)
 
     try:
         activation_string = api.debug(
-            args.recipe_or_package_file_path,
-            verbose=(not args.activate_string_only),
-            **args.__dict__,
+            parsed.recipe_or_package_file_path,
+            verbose=(not parsed.activate_string_only),
+            **parsed.__dict__,
         )
 
-        if not args.activate_string_only:
+        if not parsed.activate_string_only:
             print("#" * 80)
             print(
                 "Test environment created for debugging.  To enter a debugging environment:\n"
             )
 
         print(activation_string)
-        if not args.activate_string_only:
+        if not parsed.activate_string_only:
             test_file = "conda_test_runner.bat" if on_win else "conda_test_runner.sh"
             print(
                 f"To run your tests, you might want to start with running the {test_file} file."
@@ -118,6 +122,4 @@ def execute():
         )
         sys.exit(1)
 
-
-def main():
-    return execute()
+    return 0
