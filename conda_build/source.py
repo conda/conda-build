@@ -120,13 +120,13 @@ def download_to_cache(cache_folder, recipe_path, source_dict, verbose=False):
 
     hashed = None
 
-    for tp in set(source_dict).intersection(ACCEPTED_HASH_TYPES):
-        expected_hash = source_dict[tp]
-        hashed = hashsum_file(path, tp)
+    for hash_type in set(source_dict).intersection(ACCEPTED_HASH_TYPES):
+        expected_hash = source_dict[hash_type]
+        hashed = hashsum_file(path, hash_type)
         if expected_hash != hashed:
             rm_rf(path)
             raise RuntimeError(
-                f"{tp.upper()} mismatch: '{hashed}' != '{expected_hash}'"
+                f"{hash_type.upper()} mismatch: '{hashed}' != '{expected_hash}'"
             )
 
     # this is really a fallback.  If people don't provide the hash, we still need to prevent
