@@ -72,10 +72,10 @@ def download_to_cache(cache_folder, recipe_path, source_dict, verbose=False):
     hash_added = False
 
     for hash_type in set(source_dict).intersection(ACCEPTED_HASH_TYPES):
-            if source_dict[hash_type] in (None, ""):
-                raise ValueError(f"Empty {hash_type} hash provided for {fn}")
-            fn = append_hash_to_fn(fn, source_dict[hash_type])
-            hash_added = True
+        if source_dict[hash_type] in (None, ""):
+            raise ValueError(f"Empty {hash_type} hash provided for {fn}")
+        fn = append_hash_to_fn(fn, source_dict[hash_type])
+        hash_added = True
     else:
         log.warn(
             f"No hash {ACCEPTED_HASH_TYPES} provided for {unhashed_fn}.  Source download forced.  "
@@ -121,13 +121,13 @@ def download_to_cache(cache_folder, recipe_path, source_dict, verbose=False):
     hashed = None
 
     for tp in set(source_dict).intersection(ACCEPTED_HASH_TYPES):
-            expected_hash = source_dict[tp]
-            hashed = hashsum_file(path, tp)
-            if expected_hash != hashed:
-                rm_rf(path)
-                raise RuntimeError(
-                    f"{tp.upper()} mismatch: '{hashed}' != '{expected_hash}'"
-                )
+        expected_hash = source_dict[tp]
+        hashed = hashsum_file(path, tp)
+        if expected_hash != hashed:
+            rm_rf(path)
+            raise RuntimeError(
+                f"{tp.upper()} mismatch: '{hashed}' != '{expected_hash}'"
+            )
 
     # this is really a fallback.  If people don't provide the hash, we still need to prevent
     #    collisions in our source cache, but the end user will get no benefit from the cache.
