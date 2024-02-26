@@ -1,17 +1,21 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
-from collections import defaultdict
 import os
 import subprocess
 import sys
+import tempfile
+from collections import defaultdict
+from pathlib import Path
+from typing import Iterator
 
 import pytest
+from conda.common.compat import on_mac, on_win
+from pytest import MonkeyPatch
 
-from conda.common.compat import on_mac
 import conda_build.config
 from conda_build.config import (
     Config,
-    get_or_merge_config,
+    _get_or_merge_config,
     _src_cache_root_default,
     conda_pkg_format_default,
     enable_static_default,
@@ -29,67 +33,43 @@ from conda_build.variants import get_default_variant
 
 
 @pytest.fixture(scope="function")
-def testing_workdir(tmpdir, request):
+def testing_workdir(monkeypatch: MonkeyPatch, tmp_path: Path) -> Iterator[str]:
     """Create a workdir in a safe temporary folder; cd into dir above before test, cd out after
 
     :param tmpdir: py.test fixture, will be injected
     :param request: py.test fixture-related, will be injected (see pytest docs)
     """
+    saved_path = Path.cwd()
+    monkeypatch.chdir(tmp_path)
 
-    saved_path = os.getcwd()
-
-    tmpdir.chdir()
     # temporary folder for profiling output, if any
-    tmpdir.mkdir("prof")
+    prof = tmp_path / "prof"
+    prof.mkdir(parents=True)
 
-    def return_to_saved_path():
-        if os.path.isdir(os.path.join(saved_path, "prof")):
-            profdir = tmpdir.join("prof")
-            files = profdir.listdir("*.prof") if profdir.isdir() else []
+    yield str(tmp_path)
 
-            for f in files:
-                copy_into(str(f), os.path.join(saved_path, "prof", f.basename))
-        os.chdir(saved_path)
-
-    request.addfinalizer(return_to_saved_path)
-
-    return str(tmpdir)
+    # if the original CWD has a prof folder, copy any new prof files into it
+    if (saved_path / "prof").is_dir() and prof.is_dir():
+        for file in prof.glob("*.prof"):
+            copy_into(str(file), str(saved_path / "prof" / file.name))
 
 
 @pytest.fixture(scope="function")
-def testing_homedir(tmpdir, request):
-    """Create a homedir in the users home directory; cd into dir above before test, cd out after
-
-    :param tmpdir: py.test fixture, will be injected
-    :param request: py.test fixture-related, will be injected (see pytest docs)
-    """
-
-    saved_path = os.getcwd()
-    d1 = os.path.basename(tmpdir)
-    d2 = os.path.basename(os.path.dirname(tmpdir))
-    d3 = os.path.basename(os.path.dirname(os.path.dirname(tmpdir)))
-    new_dir = os.path.join(os.path.expanduser("~"), d1, d2, d3, "pytest.conda-build")
-    # While pytest will make sure a folder in unique
-    if os.path.exists(new_dir):
-        import shutil
-
-        try:
-            shutil.rmtree(new_dir)
-        except:
-            pass
+def testing_homedir() -> Iterator[Path]:
+    """Create a temporary testing directory in the users home directory; cd into dir before test, cd out after."""
+    saved = Path.cwd()
     try:
-        os.makedirs(new_dir)
-    except:
-        print(f"Failed to create {new_dir}")
-        return None
-    os.chdir(new_dir)
+        with tempfile.TemporaryDirectory(dir=Path.home(), prefix=".pytest_") as home:
+            os.chdir(home)
 
-    def return_to_saved_path():
-        os.chdir(saved_path)
+            yield home
 
-    request.addfinalizer(return_to_saved_path)
-
-    return str(new_dir)
+            os.chdir(saved)
+    except OSError:
+        pytest.xfail(
+            f"failed to create temporary directory () in {'%HOME%' if on_win else '${HOME}'} "
+            "(tmpfs inappropriate for xattrs)"
+        )
 
 
 @pytest.fixture(scope="function")
@@ -97,13 +77,12 @@ def testing_config(testing_workdir):
     def boolify(v):
         return v == "true"
 
-    result = Config(
+    testing_config_kwargs = dict(
         croot=testing_workdir,
         anaconda_upload=False,
         verbose=True,
         activate=False,
         debug=False,
-        variant=None,
         test_run_post=False,
         # These bits ensure that default values are used instead of any
         # present in ~/.condarc
@@ -118,6 +97,8 @@ def testing_config(testing_workdir):
         exit_on_verify_error=exit_on_verify_error_default,
         conda_pkg_format=conda_pkg_format_default,
     )
+    result = Config(variant=None, **testing_config_kwargs)
+    result._testing_config_kwargs = testing_config_kwargs
     assert result.no_rewrite_stdout_env is False
     assert result._src_cache_root is None
     assert result.src_cache_root == testing_workdir
@@ -137,11 +118,21 @@ def default_testing_config(testing_config, monkeypatch, request):
         return
 
     def get_or_merge_testing_config(config, variant=None, **kwargs):
-        return get_or_merge_config(config or testing_config, variant, **kwargs)
+        if not config:
+            # If no existing config, override kwargs that are None with testing config defaults.
+            # (E.g., "croot" is None if called via "(..., *args.__dict__)" in cli.main_build.)
+            kwargs.update(
+                {
+                    key: value
+                    for key, value in testing_config._testing_config_kwargs.items()
+                    if kwargs.get(key) is None
+                }
+            )
+        return _get_or_merge_config(config, variant, **kwargs)
 
     monkeypatch.setattr(
         conda_build.config,
-        "get_or_merge_config",
+        "_get_or_merge_config",
         get_or_merge_testing_config,
     )
 
@@ -225,3 +216,29 @@ def variants_conda_build_sysroot(monkeypatch, request):
         ).stdout.strip(),
     )
     return request.param
+
+
+@pytest.fixture(scope="session")
+def conda_build_test_recipe_path(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """Clone conda_build_test_recipe.
+
+    This exposes the special dummy package "source code" used to test various git/svn/local recipe configurations.
+    """
+    # clone conda_build_test_recipe locally
+    repo = tmp_path_factory.mktemp("conda_build_test_recipe", numbered=False)
+    subprocess.run(
+        ["git", "clone", "https://github.com/conda/conda_build_test_recipe", str(repo)],
+        check=True,
+    )
+    return repo
+
+
+@pytest.fixture
+def conda_build_test_recipe_envvar(
+    conda_build_test_recipe_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> str:
+    """Exposes the cloned conda_build_test_recipe as an environment variable."""
+    name = "CONDA_BUILD_TEST_RECIPE_PATH"
+    monkeypatch.setenv(name, str(conda_build_test_recipe_path))
+    return name

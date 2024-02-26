@@ -6,14 +6,14 @@ and is more unit-test oriented.
 """
 import json
 import os
-from pathlib import Path
 import sys
+from pathlib import Path
 
 from conda.common.compat import on_win
 
-from conda_build import build, api
+from conda_build import api, build
 
-from .utils import metadata_dir, get_noarch_python_meta
+from .utils import get_noarch_python_meta, metadata_dir
 
 PREFIX_TESTS = {"normal": os.path.sep}
 if on_win:
@@ -36,17 +36,22 @@ def test_find_prefix_files(testing_workdir):
 
 
 def test_build_preserves_PATH(testing_config):
-    m = api.render(os.path.join(metadata_dir, 'source_git'), config=testing_config)[0][0]
-    ref_path = os.environ['PATH']
+    m = api.render(os.path.join(metadata_dir, "source_git"), config=testing_config)[0][
+        0
+    ]
+    ref_path = os.environ["PATH"]
     build.build(m, stats=None)
-    assert os.environ['PATH'] == ref_path
+    assert os.environ["PATH"] == ref_path
 
 
 def test_sanitize_channel():
-    test_url = 'https://conda.anaconda.org/t/ms-534991f2-4123-473a-b512-42025291b927/somechannel'
-    assert build.sanitize_channel(test_url) == 'https://conda.anaconda.org/somechannel'
-    test_url_auth = 'https://myuser:mypass@conda.anaconda.org/somechannel'
-    assert build.sanitize_channel(test_url_auth) == 'https://conda.anaconda.org/somechannel'
+    test_url = "https://conda.anaconda.org/t/ms-534991f2-4123-473a-b512-42025291b927/somechannel"
+    assert build.sanitize_channel(test_url) == "https://conda.anaconda.org/somechannel"
+    test_url_auth = "https://myuser:mypass@conda.anaconda.org/somechannel"
+    assert (
+        build.sanitize_channel(test_url_auth)
+        == "https://conda.anaconda.org/somechannel"
+    )
 
 
 def test_get_short_path(testing_metadata):
@@ -61,9 +66,14 @@ def test_get_short_path(testing_metadata):
 
 
 def test_has_prefix():
-    files_with_prefix = [("prefix/path", "text", "short/path/1"),
-                         ("prefix/path", "text", "short/path/2")]
-    assert build.has_prefix("short/path/1", files_with_prefix) == ("prefix/path", "text")
+    files_with_prefix = [
+        ("prefix/path", "text", "short/path/1"),
+        ("prefix/path", "text", "short/path/2"),
+    ]
+    assert build.has_prefix("short/path/1", files_with_prefix) == (
+        "prefix/path",
+        "text",
+    )
     assert build.has_prefix("short/path/nope", files_with_prefix) == (None, None)
 
 
@@ -97,21 +107,35 @@ def test_create_info_files_json(testing_workdir, testing_metadata):
 
     files_with_prefix = [("prefix/path", "text", "foo")]
     files = ["one", "two", "foo"]
-    build.create_info_files_json_v1(testing_metadata, info_dir, testing_workdir, files,
-                                    files_with_prefix)
+    build.create_info_files_json_v1(
+        testing_metadata, info_dir, testing_workdir, files, files_with_prefix
+    )
 
     assert json.loads((info_dir / "paths.json").read_text()) == {
-        "paths": [{"file_mode": "text", "path_type": "hardlink", "_path": "foo",
-                   "prefix_placeholder": "prefix/path",
-                   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-                   "size_in_bytes": 0},
-                  {"path_type": "hardlink", "_path": "one",
-                   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-                   "size_in_bytes": 0},
-                  {"path_type": "hardlink", "_path": "two",
-                   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-                   "size_in_bytes": 0}],
-        "paths_version": 1}
+        "paths": [
+            {
+                "file_mode": "text",
+                "path_type": "hardlink",
+                "_path": "foo",
+                "prefix_placeholder": "prefix/path",
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "size_in_bytes": 0,
+            },
+            {
+                "path_type": "hardlink",
+                "_path": "one",
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "size_in_bytes": 0,
+            },
+            {
+                "path_type": "hardlink",
+                "_path": "two",
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "size_in_bytes": 0,
+            },
+        ],
+        "paths_version": 1,
+    }
 
 
 def test_create_info_files_json_symlinks(testing_workdir, testing_metadata):
@@ -139,38 +163,75 @@ def test_create_info_files_json_symlinks(testing_workdir, testing_metadata):
     os.symlink(cycle2_symlink, cycle1_symlink)
 
     files_with_prefix = [("prefix/path", "text", "foo")]
-    files = ["one", "two", "foo", "two_sl", "nowhere_sl", "recursive_sl", "cycle1_sl", "cycle2_sl"]
+    files = [
+        "one",
+        "two",
+        "foo",
+        "two_sl",
+        "nowhere_sl",
+        "recursive_sl",
+        "cycle1_sl",
+        "cycle2_sl",
+    ]
 
-    build.create_info_files_json_v1(testing_metadata, info_dir, testing_workdir, files,
-                                    files_with_prefix)
+    build.create_info_files_json_v1(
+        testing_metadata, info_dir, testing_workdir, files, files_with_prefix
+    )
     assert json.loads((info_dir / "paths.json").read_text()) == {
         "paths": [
-                  {"path_type": "softlink", "_path": "cycle1_sl",
-                   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-                   "size_in_bytes": 0},
-                  {"path_type": "softlink", "_path": "cycle2_sl",
-                   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-                   "size_in_bytes": 0},
-                  {"file_mode": "text", "path_type": "hardlink", "_path": "foo",
-                   "prefix_placeholder": "prefix/path",
-                   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-                   "size_in_bytes": 0},
-                  {"path_type": "softlink", "_path": "nowhere_sl",
-                   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-                   "size_in_bytes": 0},
-                  {"path_type": "hardlink", "_path": "one",
-                   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-                   "size_in_bytes": 0},
-                  {"path_type": "softlink", "_path": "recursive_sl",
-                   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-                   "size_in_bytes": 0},
-                  {"path_type": "hardlink", "_path": "two",
-                   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-                   "size_in_bytes": 0},
-                  {"path_type": "softlink", "_path": "two_sl",
-                   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-                   "size_in_bytes": 0}],
-        "paths_version": 1}
+            {
+                "path_type": "softlink",
+                "_path": "cycle1_sl",
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "size_in_bytes": 0,
+            },
+            {
+                "path_type": "softlink",
+                "_path": "cycle2_sl",
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "size_in_bytes": 0,
+            },
+            {
+                "file_mode": "text",
+                "path_type": "hardlink",
+                "_path": "foo",
+                "prefix_placeholder": "prefix/path",
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "size_in_bytes": 0,
+            },
+            {
+                "path_type": "softlink",
+                "_path": "nowhere_sl",
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "size_in_bytes": 0,
+            },
+            {
+                "path_type": "hardlink",
+                "_path": "one",
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "size_in_bytes": 0,
+            },
+            {
+                "path_type": "softlink",
+                "_path": "recursive_sl",
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "size_in_bytes": 0,
+            },
+            {
+                "path_type": "hardlink",
+                "_path": "two",
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "size_in_bytes": 0,
+            },
+            {
+                "path_type": "softlink",
+                "_path": "two_sl",
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "size_in_bytes": 0,
+            },
+        ],
+        "paths_version": 1,
+    }
 
 
 def test_create_info_files_json_no_inodes(testing_workdir, testing_metadata):
@@ -188,30 +249,49 @@ def test_create_info_files_json_no_inodes(testing_workdir, testing_metadata):
 
     files_with_prefix = [("prefix/path", "text", "foo")]
     files = ["one", "two", "one_hl", "foo"]
-    build.create_info_files_json_v1(testing_metadata, info_dir, testing_workdir, files,
-                                    files_with_prefix)
+    build.create_info_files_json_v1(
+        testing_metadata, info_dir, testing_workdir, files, files_with_prefix
+    )
     assert json.loads((info_dir / "paths.json").read_text()) == {
-        "paths": [{"file_mode": "text", "path_type": "hardlink", "_path": "foo",
-                   "prefix_placeholder": "prefix/path",
-                   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-                   "size_in_bytes": 0},
-                  {"path_type": "hardlink", "_path": "one", "inode_paths": ["one", "one_hl"],
-                   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-                   "size_in_bytes": 0},
-                  {"path_type": "hardlink", "_path": "one_hl", "inode_paths": ["one", "one_hl"],
-                   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-                   "size_in_bytes": 0},
-                  {"path_type": "hardlink", "_path": "two",
-                   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-                   "size_in_bytes": 0}],
-        "paths_version": 1}
+        "paths": [
+            {
+                "file_mode": "text",
+                "path_type": "hardlink",
+                "_path": "foo",
+                "prefix_placeholder": "prefix/path",
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "size_in_bytes": 0,
+            },
+            {
+                "path_type": "hardlink",
+                "_path": "one",
+                "inode_paths": ["one", "one_hl"],
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "size_in_bytes": 0,
+            },
+            {
+                "path_type": "hardlink",
+                "_path": "one_hl",
+                "inode_paths": ["one", "one_hl"],
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "size_in_bytes": 0,
+            },
+            {
+                "path_type": "hardlink",
+                "_path": "two",
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "size_in_bytes": 0,
+            },
+        ],
+        "paths_version": 1,
+    }
 
 
 def test_rewrite_output(testing_config, capsys):
     api.build(os.path.join(metadata_dir, "_rewrite_env"), config=testing_config)
     captured = capsys.readouterr()
     stdout = captured.out
-    if sys.platform == 'win32':
+    if sys.platform == "win32":
         assert "PREFIX=%PREFIX%" in stdout
         assert "LIBDIR=%PREFIX%\\lib" in stdout
         assert "PWD=%SRC_DIR%" in stdout

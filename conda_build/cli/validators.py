@@ -5,8 +5,7 @@ from __future__ import annotations
 import os
 from argparse import ArgumentError
 
-from conda_build.utils import CONDA_PACKAGE_EXTENSIONS
-from conda_build import utils
+from ..utils import CONDA_PACKAGE_EXTENSIONS, is_conda_pkg
 
 CONDA_PKG_OR_RECIPE_ERROR_MESSAGE = (
     "\nUnable to parse provided recipe directory or package file.\n\n"
@@ -21,7 +20,7 @@ def validate_is_conda_pkg_or_recipe_dir(arg_val: str) -> str:
     """
     if os.path.isdir(arg_val):
         return arg_val
-    elif utils.is_conda_pkg(arg_val):
+    elif is_conda_pkg(arg_val):
         return arg_val
     else:
         raise ArgumentError(None, CONDA_PKG_OR_RECIPE_ERROR_MESSAGE)

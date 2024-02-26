@@ -50,7 +50,7 @@ impact the functionality of `conda/conda-build` installed in your base environme
 
 ``` bash
     # create/activate standalone dev env
-    $ CONDA_ENV=conda-build make setup
+    $ ENV_NAME=conda-build make setup
     $ conda activate conda-build
 
     # Run all tests on Linux and Mac OS X systems (this can take a long time)
@@ -63,10 +63,6 @@ impact the functionality of `conda/conda-build` installed in your base environme
 ```
 
 ## Testing
-
-Running our test suite requires cloning one other repo at the same level as `conda-build`:
-https://github.com/conda/conda_build_test_recipe - this is necessary for relative path tests
-outside of `conda-build`'s build tree.
 
 Follow the installation instructions above to properly set up your environment for testing.
 

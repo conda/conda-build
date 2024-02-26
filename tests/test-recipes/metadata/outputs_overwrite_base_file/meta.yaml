@@ -1,0 +1,40 @@
+{% set name = "outputs_overwrite_base_file" %}
+
+package:
+  name: {{ name }}
+  version: 1.0
+
+outputs:
+  - name: base-{{ name }}
+    script: install.sh  # [unix]
+    script: install.bat  # [win]
+
+  - name: first-{{ name }}
+    script: install.sh  # [unix]
+    script: install.bat  # [win]
+    requirements:
+      host:
+        - {{ pin_subpackage("base-" + name) }}
+      run:
+        - {{ pin_subpackage("base-" + name) }}
+    test:
+      commands:
+        - content="$(cat "${PREFIX}/file")"  # [unix]
+        - test "${content}" = base  # [unix]
+        - < "%PREFIX%\file%" set /p content=  # [win]
+        - if not "%content%" == "base" exit 1  # [win]
+
+  - name: second-{{ name }}
+    script: install.sh  # [unix]
+    script: install.bat  # [win]
+    requirements:
+      host:
+        - {{ pin_subpackage("base-" + name) }}
+      run:
+        - {{ pin_subpackage("base-" + name) }}
+    test:
+      commands:
+        - content="$(cat "${PREFIX}/file")"  # [unix]
+        - test "${content}" = "base"  # [unix]
+        - < "%PREFIX%\file%" set /p content=  # [win]
+        - if not "%content%" == "base" exit 1  # [win]

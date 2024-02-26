@@ -1,13 +1,14 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
-from pathlib import Path
 import sys
+from pathlib import Path
 from unittest import mock
 
 import pytest
 from pytest import CaptureFixture, MonkeyPatch
 
-from conda_build.cli import main_debug as debug, validators as valid
+from conda_build.cli import main_debug as debug
+from conda_build.cli import validators as valid
 
 
 def test_main_debug_help_message(capsys: CaptureFixture, monkeypatch: MonkeyPatch):
@@ -15,7 +16,7 @@ def test_main_debug_help_message(capsys: CaptureFixture, monkeypatch: MonkeyPatc
     help_blurb = debug.get_parser().format_help()
 
     with pytest.raises(SystemExit):
-        debug.main()
+        debug.execute()
 
     captured = capsys.readouterr()
     assert help_blurb in captured.out
@@ -27,7 +28,7 @@ def test_main_debug_file_does_not_exist(
     monkeypatch.setattr(sys, "argv", ["conda-debug", "file-does-not-exist"])
 
     with pytest.raises(SystemExit):
-        debug.main()
+        debug.execute()
 
     captured = capsys.readouterr()
     assert valid.CONDA_PKG_OR_RECIPE_ERROR_MESSAGE in captured.err
@@ -44,9 +45,9 @@ def test_main_debug_happy_path(
     monkeypatch.setattr(sys, "argv", ["conda-debug", str(fake)])
 
     with mock.patch("conda_build.api.debug") as mock_debug:
-        debug.main()
+        debug.execute()
 
         captured = capsys.readouterr()
-        assert captured.err == ''
+        assert captured.err == ""
 
         assert len(mock_debug.mock_calls) == 2

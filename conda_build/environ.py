@@ -10,37 +10,65 @@ import re
 import subprocess
 import sys
 import warnings
+from collections import defaultdict
 from functools import lru_cache
 from glob import glob
+from logging import getLogger
 from os.path import join, normpath
 
+from conda.base.constants import (
+    CONDA_PACKAGE_EXTENSIONS,
+    DEFAULTS_CHANNEL_NAME,
+    UNKNOWN_CHANNEL,
+)
+from conda.common.io import env_vars
+from conda.core.index import LAST_CHANNEL_URLS
+from conda.core.link import PrefixSetup, UnlinkLinkTransaction
+from conda.core.package_cache_data import PackageCacheData
+from conda.core.prefix_data import PrefixData
+from conda.models.channel import prioritize_channels
+
+from . import utils
 from .conda_interface import (
+    Channel,
     CondaError,
     LinkError,
     LockError,
+    MatchSpec,
     NoPackagesFoundError,
+    PackageRecord,
     PaddingError,
+    ProgressiveFetchExtract,
+    TemporaryDirectory,
     UnsatisfiableError,
+    context,
+    create_default_packages,
+    get_version_from_git_tag,
+    pkgs_dirs,
+    reset_context,
+    root_dir,
 )
-from .conda_interface import (
-    display_actions,
-    execute_actions,
-    execute_plan,
-    install_actions,
+from .config import Config
+from .deprecations import deprecated
+from .exceptions import BuildLockError, DependencyNeedsBuildingError
+from .features import feature_list
+from .index import get_build_index
+from .metadata import MetaData
+from .os_utils import external
+from .utils import (
+    ensure_list,
+    env_var,
+    on_mac,
+    on_win,
+    package_record_to_requirement,
+    prepend_bin_path,
 )
-from .conda_interface import package_cache, TemporaryDirectory
-from .conda_interface import pkgs_dirs, root_dir, create_default_packages
-from .conda_interface import reset_context
-from .conda_interface import get_version_from_git_tag
+from .variants import get_default_variant
 
-from conda_build import utils
-from conda_build.exceptions import BuildLockError, DependencyNeedsBuildingError
-from conda_build.features import feature_list
-from conda_build.index import get_build_index
-from conda_build.os_utils import external
-from conda_build.utils import ensure_list, prepend_bin_path, env_var
-from conda_build.variants import get_default_variant
+log = getLogger(__name__)
 
+PREFIX_ACTION = "PREFIX"
+LINK_ACTION = "LINK"
 
 # these are things that we provide env vars for more explicitly.  This list disables the
 #    pass-through of variant values to env vars for these keys.
@@ -147,7 +175,7 @@ def verify_git_repo(
                 stderr=stderr,
             )
         except subprocess.CalledProcessError:
-            if sys.platform == "win32" and cache_dir.startswith("/"):
+            if on_win and cache_dir.startswith("/"):
                 cache_dir = utils.convert_unix_path_to_win(cache_dir)
             remote_details = utils.check_output_env(
                 [git_exe, "--git-dir", cache_dir, "remote", "-v"],
@@ -159,7 +187,7 @@ def verify_git_repo(
 
         # on windows, remote URL comes back to us as cygwin or msys format.  Python doesn't
         # know how to normalize it.  Need to convert it to a windows path.
-        if sys.platform == "win32" and remote_url.startswith("/"):
+        if on_win and remote_url.startswith("/"):
             remote_url = utils.convert_unix_path_to_win(git_url)
 
         if os.path.exists(remote_url):
@@ -387,7 +415,7 @@ def python_vars(metadata, prefix, escape_backslash):
     }
     build_or_host = "host" if metadata.is_cross else "build"
     deps = [str(ms.name) for ms in metadata.ms_depends(build_or_host)]
-    if "python" in deps or metadata.name(fail_ok=True) == "python":
+    if "python" in deps or metadata.name() == "python":
         python_bin = metadata.config.python_bin(prefix, metadata.config.host_subdir)
 
         if utils.on_win and escape_backslash:
@@ -416,7 +444,7 @@ def perl_vars(metadata, prefix, escape_backslash):
     }
     build_or_host = "host" if metadata.is_cross else "build"
     deps = [str(ms.name) for ms in metadata.ms_depends(build_or_host)]
-    if "perl" in deps or metadata.name(fail_ok=True) == "perl":
+    if "perl" in deps or metadata.name() == "perl":
         perl_bin = metadata.config.perl_bin(prefix, metadata.config.host_subdir)
 
         if utils.on_win and escape_backslash:
@@ -463,10 +491,7 @@ def r_vars(metadata, prefix, escape_backslash):
 
     build_or_host = "host" if metadata.is_cross else "build"
     deps = [str(ms.name) for ms in metadata.ms_depends(build_or_host)]
-    if (
-        any(r_pkg in deps for r_pkg in R_PACKAGES)
-        or metadata.name(fail_ok=True) in R_PACKAGES
-    ):
+    if any(r_pkg in deps for r_pkg in R_PACKAGES) or metadata.name() in R_PACKAGES:
         r_bin = metadata.config.r_bin(prefix, metadata.config.host_subdir)
         # set R_USER explicitly to prevent crosstalk with existing R_LIBS_USER packages
         r_user = join(prefix, "Libs", "R")
@@ -483,7 +508,7 @@ def r_vars(metadata, prefix, escape_backslash):
     return vars_
 
 
-def meta_vars(meta, skip_build_id=False):
+def meta_vars(meta: MetaData, skip_build_id=False):
     d = {}
     for var_name in ensure_list(meta.get_value("build/script_env", [])):
         if "=" in var_name:
@@ -492,15 +517,17 @@ def meta_vars(meta, skip_build_id=False):
             value = os.getenv(var_name)
         if value is None:
             warnings.warn(
-                "The environment variable '%s' is undefined." % var_name, UserWarning
+                "The environment variable '%s' specified in script_env is undefined."
+                % var_name,
+                UserWarning,
             )
         else:
             d[var_name] = value
             warnings.warn(
-                "The environment variable '%s' is being passed through with value '%s'.  "
+                f"The environment variable '{var_name}' is being passed through with value "
+                f"'{'<hidden>' if meta.config.suppress_variables else value}'.  "
                 "If you are splitting build and test phases with --no-test, please ensure "
-                "that this value is also set similarly at test time."
-                % (var_name, "<hidden>" if meta.config.suppress_variables else value),
+                "that this value is also set similarly at test time.",
                 UserWarning,
             )
 
@@ -519,7 +546,7 @@ def meta_vars(meta, skip_build_id=False):
         git_url = meta.get_value("source/0/git_url")
 
         if os.path.exists(git_url):
-            if sys.platform == "win32":
+            if on_win:
                 git_url = utils.convert_unix_path_to_win(git_url)
             # If git_url is a relative path instead of a url, convert it to an abspath
             git_url = normpath(join(meta.path, git_url))
@@ -544,12 +571,11 @@ def meta_vars(meta, skip_build_id=False):
     ):
         d.update(get_hg_build_info(hg_dir))
 
-    # use `get_value` to prevent early exit while name is still unresolved during rendering
-    d["PKG_NAME"] = meta.get_value("package/name")
+    d["PKG_NAME"] = meta.name()
     d["PKG_VERSION"] = meta.version()
     d["PKG_BUILDNUM"] = str(meta.build_number())
     if meta.final and not skip_build_id:
-        d["PKG_BUILD_STRING"] = str(meta.build_id())
+        d["PKG_BUILD_STRING"] = meta.build_id()
         d["PKG_HASH"] = meta.hash_dependencies()
     else:
         d["PKG_BUILD_STRING"] = "placeholder"
@@ -560,7 +586,7 @@ def meta_vars(meta, skip_build_id=False):
 
 @lru_cache(maxsize=None)
 def get_cpu_count():
-    if sys.platform == "darwin":
+    if on_mac:
         # multiprocessing.cpu_count() is not reliable on OSX
         # See issue #645 on github.com/conda/conda-build
         out, _ = subprocess.Popen(
@@ -580,7 +606,7 @@ def get_shlib_ext(host_platform):
         return ".dll"
     elif host_platform in ["osx", "darwin"]:
         return ".dylib"
-    elif host_platform.startswith("linux"):
+    elif host_platform.startswith("linux") or host_platform.endswith("-wasm32"):
         return ".so"
     elif host_platform == "noarch":
         # noarch packages should not contain shared libraries, use the system
@@ -756,7 +782,7 @@ def os_vars(m, prefix):
     if not m.config.activate:
         d = prepend_bin_path(d, m.config.host_prefix)
 
-    if sys.platform == "win32":
+    if on_win:
         windows_vars(m, get_default, prefix)
     else:
         unix_vars(m, get_default, prefix)
@@ -830,7 +856,7 @@ cached_actions = {}
 last_index_ts = 0
 
 
-def get_install_actions(
+def get_package_records(
     prefix,
     specs,
     env,
@@ -888,8 +914,8 @@ def get_install_actions(
         disable_pip,
     ) in cached_actions and last_index_ts >= index_ts:
         actions = cached_actions[(specs, env, subdir, channel_urls, disable_pip)].copy()
-        if "PREFIX" in actions:
-            actions["PREFIX"] = prefix
+        if PREFIX_ACTION in actions:
+            actions[PREFIX_ACTION] = prefix
     elif specs:
         # this is hiding output like:
         #    Fetching package metadata ...........
@@ -897,7 +923,7 @@ def get_install_actions(
         with utils.LoggingContext(conda_log_level):
             with capture():
                 try:
-                    actions = install_actions(prefix, index, specs, force=True)
+                    actions = _install_actions(prefix, index, specs)
                 except (NoPackagesFoundError, UnsatisfiableError) as exc:
                     raise DependencyNeedsBuildingError(exc, subdir=subdir)
                 except (
@@ -971,18 +997,55 @@ def get_install_actions(
                 if not any(
                     re.match(r"^%s(?:$|[\s=].*)" % pkg, str(dep)) for dep in specs
                 ):
-                    actions["LINK"] = [
-                        spec for spec in actions["LINK"] if spec.name != pkg
+                    actions[LINK_ACTION] = [
+                        prec for prec in actions[LINK_ACTION] if prec.name != pkg
                     ]
         utils.trim_empty_keys(actions)
         cached_actions[(specs, env, subdir, channel_urls, disable_pip)] = actions.copy()
         last_index_ts = index_ts
-    return actions
+    return actions.get(LINK_ACTION, [])
 
 
+@deprecated("24.1.0", "24.3.0", addendum="Use `get_package_records` instead.")
+def get_install_actions(
+    prefix,
+    specs,
+    env,
+    retries=0,
+    subdir=None,
+    verbose=True,
+    debug=False,
+    locking=True,
+    bldpkgs_dirs=None,
+    timeout=900,
+    disable_pip=False,
+    max_env_retry=3,
+    output_folder=None,
+    channel_urls=None,
+):
+    precs = get_package_records(
+        prefix=prefix,
+        specs=specs,
+        env=env,
+        retries=retries,
+        subdir=subdir,
+        verbose=verbose,
+        debug=debug,
+        locking=locking,
+        bldpkgs_dirs=bldpkgs_dirs,
+        timeout=timeout,
+        disable_pip=disable_pip,
+        max_env_retry=max_env_retry,
+        output_folder=output_folder,
+        channel_urls=channel_urls,
+    )
+    return {PREFIX_ACTION: prefix, LINK_ACTION: precs}
+
+
+@deprecated.argument("24.1.0", "24.3.0", "specs_or_actions", rename="specs_or_precs")
 def create_env(
     prefix,
-    specs_or_actions,
+    specs_or_precs,
     env,
     config,
     subdir,
@@ -1010,17 +1073,20 @@ def create_env(
         # if os.path.isdir(prefix):
         #     utils.rm_rf(prefix)
 
-        if specs_or_actions:  # Don't waste time if there is nothing to do
+        if specs_or_precs:  # Don't waste time if there is nothing to do
             log.debug("Creating environment in %s", prefix)
-            log.debug(str(specs_or_actions))
+            log.debug(str(specs_or_precs))
 
             if not locks:
                 locks = utils.get_conda_operation_locks(config)
             try:
                 with utils.try_acquire_locks(locks, timeout=config.timeout):
-                    # input is a list - it's specs in MatchSpec format
-                    if not hasattr(specs_or_actions, "keys"):
-                        specs = list(set(specs_or_actions))
+                    # input is a list of specs in MatchSpec format
+                    if not (
+                        hasattr(specs_or_precs, "keys")
+                        or isinstance(specs_or_precs[0], PackageRecord)
+                    ):
+                        specs = list(set(specs_or_precs))
                         actions = get_install_actions(
                             prefix,
                             tuple(specs),
@@ -1037,7 +1103,10 @@ def create_env(
                             channel_urls=tuple(config.channel_urls),
                         )
                     else:
-                        actions = specs_or_actions
+                        if not hasattr(specs_or_precs, "keys"):
+                            actions = {LINK_ACTION: specs_or_precs}
+                        else:
+                            actions = specs_or_precs
                     index, _, _ = get_build_index(
                         subdir=subdir,
                         bldpkgs_dir=config.bldpkgs_dir,
@@ -1049,13 +1118,13 @@ def create_env(
                         timeout=config.timeout,
                     )
                     utils.trim_empty_keys(actions)
-                    display_actions(actions, index)
+                    _display_actions(prefix, actions)
                     if utils.on_win:
                         for k, v in os.environ.items():
                             os.environ[k] = str(v)
                     with env_var("CONDA_QUIET", not config.verbose, reset_context):
                         with env_var("CONDA_JSON", not config.verbose, reset_context):
-                            execute_actions(actions, index)
+                            _execute_actions(prefix, actions)
             except (
                 SystemExit,
                 PaddingError,
@@ -1094,7 +1163,7 @@ def create_env(
                         # Set this here and use to create environ
                         #   Setting this here is important because we use it below (symlink)
                         prefix = config.host_prefix if host else config.build_prefix
-                        actions["PREFIX"] = prefix
+                        actions[PREFIX_ACTION] = prefix
 
                         create_env(
                             prefix,
@@ -1115,7 +1184,7 @@ def create_env(
                         )
                         create_env(
                             prefix,
-                            specs_or_actions,
+                            specs_or_precs,
                             config=config,
                             subdir=subdir,
                             env=env,
@@ -1146,7 +1215,7 @@ def create_env(
                         )
                         create_env(
                             prefix,
-                            specs_or_actions,
+                            specs_or_precs,
                             config=config,
                             subdir=subdir,
                             env=env,
@@ -1184,7 +1253,7 @@ def create_env(
                     )
                     create_env(
                         prefix,
-                        specs_or_actions,
+                        specs_or_precs,
                         config=config,
                         subdir=subdir,
                         env=env,
@@ -1201,6 +1270,29 @@ def get_pkg_dirs_locks(dirs, config):
     return [utils.get_lock(folder, timeout=config.timeout) for folder in dirs]
 
 
+def clean_pkg_cache(dist: str, config: Config) -> None:
+    with utils.LoggingContext(logging.DEBUG if config.debug else logging.WARN):
+        locks = get_pkg_dirs_locks([config.bldpkgs_dir] + pkgs_dirs, config)
+        with utils.try_acquire_locks(locks, timeout=config.timeout):
+            for pkgs_dir in pkgs_dirs:
+                if any(
+                    os.path.exists(os.path.join(pkgs_dir, f"{dist}{ext}"))
+                    for ext in ("", *CONDA_PACKAGE_EXTENSIONS)
+                ):
+                    log.debug(
+                        "Conda caching error: %s package remains in cache after removal",
+                        dist,
+                    )
+                    log.debug("manually removing to compensate")
+                    package_cache = PackageCacheData.first_writable([pkgs_dir])
+                    for cache_pkg_id in package_cache.query(dist):
+                        package_cache.remove(cache_pkg_id)
+
+        # Note that this call acquires the relevant locks, so this must be called
+        # outside the lock context above.
+        remove_existing_packages(pkgs_dirs, [dist], config)
+
+
 def remove_existing_packages(dirs, fns, config):
     locks = get_pkg_dirs_locks(dirs, config) if config.locking else []
 
@@ -1212,50 +1304,6 @@ def remove_existing_packages(dirs, fns, config):
                     all_files = glob(os.path.join(folder, fn + "*"))
                 for entry in all_files:
                     utils.rm_rf(entry)
-
-
-def clean_pkg_cache(dist, config):
-    locks = []
-
-    conda_log_level = logging.WARN
-    if config.debug:
-        conda_log_level = logging.DEBUG
-
-    with utils.LoggingContext(conda_log_level):
-        locks = get_pkg_dirs_locks([config.bldpkgs_dir] + pkgs_dirs, config)
-        with utils.try_acquire_locks(locks, timeout=config.timeout):
-            rmplan = [
-                "RM_EXTRACTED {0} local::{0}".format(dist),
-                "RM_FETCHED {0} local::{0}".format(dist),
-            ]
-            execute_plan(rmplan)
-
-            # Conda does not seem to do a complete cleanup sometimes.  This is supplemental.
-            #   Conda's cleanup is still necessary - it keeps track of its own in-memory
-            #   list of downloaded things.
-            for folder in pkgs_dirs:
-                if (
-                    os.path.exists(os.path.join(folder, dist))
-                    or os.path.exists(os.path.join(folder, dist + ".tar.bz2"))
-                    or any(
-                        pkg_id in package_cache() for pkg_id in [dist, "local::" + dist]
-                    )
-                ):
-                    log = utils.get_logger(__name__)
-                    log.debug(
-                        "Conda caching error: %s package remains in cache after removal",
-                        dist,
-                    )
-                    log.debug("manually removing to compensate")
-                    cache = package_cache()
-                    keys = [key for key in cache.keys() if dist in key]
-                    for pkg_id in keys:
-                        if pkg_id in cache:
-                            del cache[pkg_id]
-
-        # Note that this call acquires the relevant locks, so this must be called
-        # outside the lock context above.
-        remove_existing_packages(pkgs_dirs, [dist], config)
 
 
 def get_pinned_deps(m, section):
@@ -1276,6 +1324,166 @@ def get_pinned_deps(m, section):
             channel_urls=tuple(m.config.channel_urls),
         )
     runtime_deps = [
-        " ".join(link.dist_name.rsplit("-", 2)) for link in actions.get("LINK", [])
+        package_record_to_requirement(prec) for prec in actions.get(LINK_ACTION, [])
     ]
     return runtime_deps
+
+
+# NOTE: The function has to retain the "install_actions" name for now since
+#       conda_libmamba_solver.solver.LibMambaSolver._called_from_conda_build
+#       checks for this name in the call stack explicitly.
+def install_actions(prefix, index, specs):
+    # This is copied over from https://github.com/conda/conda/blob/23.11.0/conda/plan.py#L471
+    # but reduced to only the functionality actually used within conda-build.
+
+    with env_vars(
+        {
+            "CONDA_ALLOW_NON_CHANNEL_URLS": "true",
+            "CONDA_SOLVER_IGNORE_TIMESTAMPS": "false",
+        },
+        callback=reset_context,
+    ):
+        # a hack since in conda-build we don't track channel_priority_map
+        if LAST_CHANNEL_URLS:
+            channel_priority_map = prioritize_channels(LAST_CHANNEL_URLS)
+            # tuple(dict.fromkeys(...)) removes duplicates while preserving input order.
+            channels = tuple(
+                dict.fromkeys(Channel(url) for url in channel_priority_map)
+            )
+            subdirs = (
+                tuple(
+                    dict.fromkeys(
+                        subdir for subdir in (c.subdir for c in channels) if subdir
+                    )
+                )
+                or context.subdirs
+            )
+        else:
+            channels = subdirs = None
+
+        specs = tuple(MatchSpec(spec) for spec in specs)
+
+        PrefixData._cache_.clear()
+
+        solver_backend = context.plugin_manager.get_cached_solver_backend()
+        solver = solver_backend(prefix, channels, subdirs, specs_to_add=specs)
+        if index:
+            # Solver can modify the index (e.g., Solver._prepare adds virtual
+            # package) => Copy index (just outer container, not deep copy)
+            # to conserve it.
+            solver._index = index.copy()
+        txn = solver.solve_for_transaction(prune=False, ignore_pinned=False)
+        prefix_setup = txn.prefix_setups[prefix]
+        actions = {
+            PREFIX_ACTION: prefix,
+            LINK_ACTION: [prec for prec in prefix_setup.link_precs],
+        }
+        return actions
+
+
+_install_actions = install_actions
+del install_actions
+
+
+def _execute_actions(prefix, actions):
+    # This is copied over from https://github.com/conda/conda/blob/23.11.0/conda/plan.py#L575
+    # but reduced to only the functionality actually used within conda-build.
+
+    assert prefix
+
+    if LINK_ACTION not in actions:
+        log.debug(f"action {LINK_ACTION} not in actions")
+        return
+
+    link_precs = actions[LINK_ACTION]
+    if not link_precs:
+        log.debug(f"action {LINK_ACTION} has None value")
+        return
+
+    # Always link menuinst first/last on windows in case a subsequent
+    # package tries to import it to create/remove a shortcut
+    link_precs = [p for p in link_precs if p.name == "menuinst"] + [
+        p for p in link_precs if p.name != "menuinst"
+    ]
+
+    progressive_fetch_extract = ProgressiveFetchExtract(link_precs)
+    progressive_fetch_extract.prepare()
+
+    stp = PrefixSetup(prefix, (), link_precs, (), [], ())
+    unlink_link_transaction = UnlinkLinkTransaction(stp)
+
+    log.debug(" %s(%r)", "PROGRESSIVEFETCHEXTRACT", progressive_fetch_extract)
+    progressive_fetch_extract.execute()
+    log.debug(" %s(%r)", "UNLINKLINKTRANSACTION", unlink_link_transaction)
+    unlink_link_transaction.execute()
+
+
+def _display_actions(prefix, actions):
+    # This is copied over from https://github.com/conda/conda/blob/23.11.0/conda/plan.py#L58
+    # but reduced to only the functionality actually used within conda-build.
+
+    builder = ["", "## Package Plan ##\n"]
+    if prefix:
+        builder.append("  environment location: %s" % prefix)
+        builder.append("")
+    print("\n".join(builder))
+
+    show_channel_urls = context.show_channel_urls
+
+    def channel_str(rec):
+        if rec.get("schannel"):
+            return rec["schannel"]
+        if rec.get("url"):
+            return Channel(rec["url"]).canonical_name
+        if rec.get("channel"):
+            return Channel(rec["channel"]).canonical_name
+        return UNKNOWN_CHANNEL
+
+    def channel_filt(s):
+        if show_channel_urls is False:
+            return ""
+        if show_channel_urls is None and s == DEFAULTS_CHANNEL_NAME:
+            return ""
+        return s
+
+    packages = defaultdict(lambda: "")
+    features = defaultdict(lambda: "")
+    channels = defaultdict(lambda: "")
+
+    for prec in actions.get(LINK_ACTION, []):
+        assert isinstance(prec, PackageRecord)
+        pkg = prec["name"]
+        channels[pkg] = channel_filt(channel_str(prec))
+        packages[pkg] = prec["version"] + "-" + prec["build"]
+        features[pkg] = ",".join(prec.get("features") or ())
+
+    fmt = {}
+    if packages:
+        maxpkg = max(len(p) for p in packages) + 1
+        maxver = max(len(p) for p in packages.values())
+        maxfeatures = max(len(p) for p in features.values())
+        maxchannels = max(len(p) for p in channels.values())
+        for pkg in packages:
+            # That's right. I'm using old-style string formatting to generate a
+            # string with new-style string formatting.
+            fmt[pkg] = f"{{pkg:<{maxpkg}}} {{vers:<{maxver}}}"
+            if maxchannels:
+                fmt[pkg] += " {channel:<%s}" % maxchannels
+            if features[pkg]:
+                fmt[pkg] += " [{features:<%s}]" % maxfeatures
+
+    lead = " " * 4
+
+    def format(s, pkg):
+        return lead + s.format(
+            pkg=pkg + ":",
+            vers=packages[pkg],
+            channel=channels[pkg],
+            features=features[pkg],
+        )
+
+    if packages:
+        print("\nThe following NEW packages will be INSTALLED:\n")
+        for pkg in sorted(packages):
+            print(format(fmt[pkg], pkg))
+    print()

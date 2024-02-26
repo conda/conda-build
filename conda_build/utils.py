@@ -1,134 +1,97 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
-from collections import OrderedDict, defaultdict
+from __future__ import annotations
+
 import contextlib
 import fnmatch
-from functools import lru_cache
 import hashlib
-from itertools import filterfalse
 import json
-from locale import getpreferredencoding
-import libarchive
 import logging
 import logging.config
 import mmap
 import os
-from os.path import (
-    dirname,
-    getmtime,
-    getsize,
-    isdir,
-    join,
-    isfile,
-    abspath,
-    islink,
-    expanduser,
-    expandvars,
-)
 import re
+import shutil
 import stat
 import subprocess
 import sys
-import shutil
 import tarfile
 import tempfile
-from threading import Thread
 import time
-from pathlib import Path
-
-try:
-    from json.decoder import JSONDecodeError
-except ImportError:
-    JSONDecodeError = ValueError
-
-import yaml
-
-import filelock
-import conda_package_handling.api
-
-try:
-    from conda.base.constants import (
-        CONDA_PACKAGE_EXTENSIONS,
-        CONDA_PACKAGE_EXTENSION_V1,
-        CONDA_PACKAGE_EXTENSION_V2,
-    )
-except Exception:
-    from conda.base.constants import (
-        CONDA_TARBALL_EXTENSION as CONDA_PACKAGE_EXTENSION_V1,
-    )
-
-    CONDA_PACKAGE_EXTENSION_V2 = ".conda"
-    CONDA_PACKAGE_EXTENSIONS = (CONDA_PACKAGE_EXTENSION_V2, CONDA_PACKAGE_EXTENSION_V1)
-
-from conda.api import PackageCacheData  # noqa
-
-from .conda_interface import (
-    hashsum_file,
-    md5_file,
-    unix_path_to_win,
-    win_path_to_unix,
-)  # noqa
-from .conda_interface import root_dir, pkgs_dirs  # noqa
-from .conda_interface import StringIO  # noqa
-from .conda_interface import VersionOrder, MatchSpec  # noqa
-from .conda_interface import cc_conda_build  # noqa
-from .conda_interface import Dist  # noqa
-from .conda_interface import context  # noqa
-from .conda_interface import (
-    download,
-    TemporaryDirectory,
-    get_conda_channel,
-    CondaHTTPError,
-)  # noqa
-
-# NOQA because it is not used in this file.
-from conda_build.conda_interface import rm_rf as _rm_rf  # noqa
-from conda_build.exceptions import BuildLockError  # noqa
-from conda_build.os_utils import external  # noqa
-
 import urllib.parse as urlparse
 import urllib.request as urllib
+from collections import OrderedDict, defaultdict
+from functools import lru_cache
+from glob import glob
+from itertools import filterfalse
+from json.decoder import JSONDecodeError
+from locale import getpreferredencoding
+from os import walk
+from os.path import (
+    abspath,
+    dirname,
+    expanduser,
+    expandvars,
+    getmtime,
+    getsize,
+    isdir,
+    isfile,
+    islink,
+    join,
+)
+from pathlib import Path
+from threading import Thread
+from typing import TYPE_CHECKING, Iterable
 
-from glob import glob as glob_glob
+import conda_package_handling.api
+import filelock
+import libarchive
+import yaml
+from conda.base.constants import (
+    CONDA_PACKAGE_EXTENSION_V1,  # noqa: F401
+    CONDA_PACKAGE_EXTENSION_V2,  # noqa: F401
+    CONDA_PACKAGE_EXTENSIONS,
+    KNOWN_SUBDIRS,
+)
+from conda.core.prefix_data import PrefixData
+from conda.models.dist import Dist
 
+from .conda_interface import (
+    CondaHTTPError,
+    MatchSpec,
+    PackageRecord,
+    StringIO,
+    TemporaryDirectory,
+    VersionOrder,
+    cc_conda_build,
+    context,
+    download,
+    get_conda_channel,
+    hashsum_file,
+    md5_file,
+    pkgs_dirs,
+    root_dir,
+    unix_path_to_win,
+    win_path_to_unix,
+)
+from .conda_interface import rm_rf as _rm_rf
+from .deprecations import deprecated
+from .exceptions import BuildLockError
 
-# stdlib glob is less feature-rich but considerably faster than glob2
-def glob(pathname, recursive=True):
-    return glob_glob(pathname, recursive=recursive)
-
-
-# NOQA because it is not used in this file.
-from contextlib import ExitStack  # NOQA
-
-PermissionError = PermissionError  # NOQA
-FileNotFoundError = FileNotFoundError
+if TYPE_CHECKING:
+    from conda.models.records import PrefixRecord
 
 on_win = sys.platform == "win32"
+on_mac = sys.platform == "darwin"
+on_linux = sys.platform == "linux"
 
 codec = getpreferredencoding() or "utf-8"
-on_win = sys.platform == "win32"
 root_script_dir = os.path.join(root_dir, "Scripts" if on_win else "bin")
 mmap_MAP_PRIVATE = 0 if on_win else mmap.MAP_PRIVATE
 mmap_PROT_READ = 0 if on_win else mmap.PROT_READ
 mmap_PROT_WRITE = 0 if on_win else mmap.PROT_WRITE
 
-DEFAULT_SUBDIRS = {
-    "linux-64",
-    "linux-32",
-    "linux-s390x",
-    "linux-ppc64",
-    "linux-ppc64le",
-    "linux-armv6l",
-    "linux-armv7l",
-    "linux-aarch64",
-    "win-64",
-    "win-32",
-    "win-arm64",
-    "osx-64",
-    "osx-arm64",
-    "zos-z",
-    "noarch",
-}
+DEFAULT_SUBDIRS = set(KNOWN_SUBDIRS)
 
 RUN_EXPORTS_TYPES = {
     "weak",
@@ -152,11 +115,6 @@ if __name__ == '__main__':
 
 # filenames accepted as recipe meta files
 VALID_METAS = ("meta.yaml", "meta.yml", "conda.yaml", "conda.yml")
-
-try:
-    from os import scandir, walk  # NOQA
-except ImportError:
-    from scandir import walk
 
 
 @lru_cache(maxsize=None)
@@ -185,7 +143,6 @@ def directory_size_slow(path):
 
 
 def directory_size(path):
-    """ """
     try:
         if on_win:
             command = 'dir /s "{}"'  # Windows path can have spaces
@@ -246,7 +203,7 @@ def _setup_rewrite_pipe(env):
 
     r_fd, w_fd = os.pipe()
     r = os.fdopen(r_fd, "rt")
-    if sys.platform == "win32":
+    if on_win:
         replacement_t = "%{}%"
     else:
         replacement_t = "${}"
@@ -730,17 +687,15 @@ def merge_tree(
     assert not dst.startswith(src), (
         "Can't merge/copy source into subdirectory of itself.  "
         "Please create separate spaces for these things.\n"
-        "  src: {}\n"
-        "  dst: {}".format(src, dst)
+        f"  src: {src}\n"
+        f"  dst: {dst}"
     )
 
     new_files = copytree(src, dst, symlinks=symlinks, dry_run=True)
     existing = [f for f in new_files if isfile(f)]
 
     if existing and not clobber:
-        raise OSError(
-            "Can't merge {} into {}: file exists: " "{}".format(src, dst, existing[0])
-        )
+        raise OSError(f"Can't merge {src} into {dst}: file exists: {existing[0]}")
 
     locks = []
     if locking:
@@ -811,21 +766,6 @@ def get_conda_operation_locks(locking=True, bldpkgs_dirs=None, timeout=900):
     return locks
 
 
-def relative(f, d="lib"):
-    assert not f.startswith("/"), f
-    assert not d.startswith("/"), d
-    d = d.strip("/").split("/")
-    if d == ["."]:
-        d = []
-    f = dirname(f).split("/")
-    if f == [""]:
-        f = []
-    while d and f and d[0] == f[0]:
-        d.pop(0)
-        f.pop(0)
-    return "/".join((([".."] * len(f)) if f else ["."]) + d)
-
-
 # This is the lowest common denominator of the formats supported by our libarchive/python-libarchive-c
 # packages across all platforms
 decompressible_exts = (
@@ -846,10 +786,12 @@ decompressible_exts = (
 
 
 def _tar_xf_fallback(tarball, dir_path, mode="r:*"):
+    from .os_utils.external import find_executable
+
     if tarball.lower().endswith(".tar.z"):
-        uncompress = external.find_executable("uncompress")
+        uncompress = find_executable("uncompress")
         if not uncompress:
-            uncompress = external.find_executable("gunzip")
+            uncompress = find_executable("gunzip")
         if not uncompress:
             sys.exit(
                 """\
@@ -876,8 +818,6 @@ uncompress (or gunzip) is required to unarchive .z source files.
 
 
 def tar_xf_file(tarball, entries):
-    from conda_build.utils import ensure_list
-
     entries = ensure_list(entries)
     if not os.path.isabs(tarball):
         tarball = os.path.join(os.getcwd(), tarball)
@@ -942,7 +882,7 @@ def file_info(path):
     }
 
 
-def comma_join(items):
+def comma_join(items: Iterable[str], conjunction: str = "and") -> str:
     """
     Like ', '.join(items) but with and
 
@@ -955,11 +895,10 @@ def comma_join(items):
     >>> comma_join(['a', 'b', 'c'])
     'a, b, and c'
     """
-    return (
-        " and ".join(items)
-        if len(items) <= 2
-        else ", ".join(items[:-1]) + ", and " + items[-1]
-    )
+    items = tuple(items)
+    if len(items) <= 2:
+        return f"{items[0]} {conjunction} {items[1]}"
+    return f"{', '.join(items[:-1])}, {conjunction} {items[-1]}"
 
 
 def safe_print_unicode(*args, **kwargs):
@@ -1006,7 +945,9 @@ def rec_glob(path, patterns, ignores=None):
 
 
 def convert_unix_path_to_win(path):
-    if external.find_executable("cygpath"):
+    from .os_utils.external import find_executable
+
+    if find_executable("cygpath"):
         cmd = f"cygpath -w {path}"
         path = subprocess.getoutput(cmd)
 
@@ -1016,7 +957,9 @@ def convert_unix_path_to_win(path):
 
 
 def convert_win_path_to_unix(path):
-    if external.find_executable("cygpath"):
+    from .os_utils.external import find_executable
+
+    if find_executable("cygpath"):
         cmd = f"cygpath -u {path}"
         path = subprocess.getoutput(cmd)
 
@@ -1032,11 +975,11 @@ def path2url(path):
 
 
 def get_stdlib_dir(prefix, py_ver):
-    if sys.platform == "win32":
+    if on_win:
         lib_dir = os.path.join(prefix, "Lib")
     else:
         lib_dir = os.path.join(prefix, "lib")
-        python_folder = glob(os.path.join(lib_dir, "python?.*"))
+        python_folder = glob(os.path.join(lib_dir, "python?.*"), recursive=True)
         python_folder = sorted(filterfalse(islink, python_folder))
         if python_folder:
             lib_dir = os.path.join(lib_dir, python_folder[0])
@@ -1049,14 +992,14 @@ def get_site_packages(prefix, py_ver):
     return os.path.join(get_stdlib_dir(prefix, py_ver), "site-packages")
 
 
-def get_build_folders(croot):
+def get_build_folders(croot: str | os.PathLike | Path) -> list[str]:
     # remember, glob is not a regex.
-    return glob(os.path.join(croot, "*" + "[0-9]" * 10 + "*"))
+    return glob(os.path.join(croot, "*" + "[0-9]" * 10 + "*"), recursive=True)
 
 
 def prepend_bin_path(env, prefix, prepend_prefix=False):
     env["PATH"] = join(prefix, "bin") + os.pathsep + env["PATH"]
-    if sys.platform == "win32":
+    if on_win:
         env["PATH"] = (
             join(prefix, "Library", "mingw-w64", "bin")
             + os.pathsep
@@ -1084,7 +1027,7 @@ def sys_path_prepended(prefix):
         sys.path.insert(1, os.path.join(prefix, "lib", "site-packages"))
     else:
         lib_dir = os.path.join(prefix, "lib")
-        python_dir = glob(os.path.join(lib_dir, r"python[0-9\.]*"))
+        python_dir = glob(os.path.join(lib_dir, r"python[0-9\.]*"), recursive=True)
         if python_dir:
             python_dir = python_dir[0]
             sys.path.insert(1, os.path.join(python_dir, "site-packages"))
@@ -1107,7 +1050,7 @@ def path_prepended(prefix, prepend_prefix=True):
         os.environ["PATH"] = old_path
 
 
-bin_dirname = "Scripts" if sys.platform == "win32" else "bin"
+bin_dirname = "Scripts" if on_win else "bin"
 
 entry_pat = re.compile(r"\s*([\w\-\.]+)\s*=\s*([\w.]+):([\w.]+)\s*$")
 
@@ -1166,7 +1109,7 @@ _posix_exes_cache = {}
 
 def convert_path_for_cygwin_or_msys2(exe, path):
     "If exe is a Cygwin or MSYS2 executable then filters it through `cygpath -u`"
-    if sys.platform != "win32":
+    if not on_win:
         return path
     if exe not in _posix_exes_cache:
         with open(exe, "rb") as exe_file:
@@ -1269,7 +1212,7 @@ def islist(arg, uniform=False, include_dict=True):
     :return: Whether `arg` is a `list`
     :rtype: bool
     """
-    if isinstance(arg, str) or not hasattr(arg, "__iter__"):
+    if isinstance(arg, str) or not isinstance(arg, Iterable):
         # str and non-iterables are not lists
         return False
     elif not include_dict and isinstance(arg, dict):
@@ -1280,6 +1223,7 @@ def islist(arg, uniform=False, include_dict=True):
         return True
 
     # NOTE: not checking for Falsy arg since arg may be a generator
+    # WARNING: if uniform != False and arg is a generator then arg will be consumed
 
     if uniform is True:
         arg = iter(arg)
@@ -1289,7 +1233,7 @@ def islist(arg, uniform=False, include_dict=True):
             # StopIteration: list is empty, an empty list is still uniform
             return True
         # check for explicit type match, do not allow the ambiguity of isinstance
-        uniform = lambda e: type(e) == etype
+        uniform = lambda e: type(e) == etype  # noqa: E731
 
     try:
         return all(uniform(e) for e in arg)
@@ -1325,7 +1269,7 @@ def expand_globs(path_list, root_dir):
                         files.append(os.path.join(root, folder))
         else:
             # File compared to the globs use / as separator independently of the os
-            glob_files = glob(path)
+            glob_files = glob(path, recursive=True)
             if not glob_files:
                 log = get_logger(__name__)
                 log.error(f"Glob {path} did not match in root_dir {root_dir}")
@@ -1343,7 +1287,8 @@ def find_recipe(path):
 
     Returns full path to meta file to be built.
 
-    If we have a base level meta file and other supplemental (nested) ones, use the base level."""
+    If we have a base level meta file and other supplemental (nested) ones, use the base level.
+    """
     # if initial path is absolute then any path we find (via rec_glob)
     # will also be absolute
     if not os.path.isabs(path):
@@ -1373,8 +1318,8 @@ def find_recipe(path):
     if len(metas) == 1:
         get_logger(__name__).warn(
             "Multiple meta files found. "
-            "The %s file in the base directory (%s) "
-            "will be used." % (metas[0], path)
+            f"The {metas[0]} file in the base directory ({path}) "
+            "will be used."
         )
         return os.path.join(path, metas[0])
 
@@ -1404,6 +1349,9 @@ class LoggingContext:
         "conda_build.index",
         "conda_build.noarch_python",
         "urllib3.connectionpool",
+        "conda_index",
+        "conda_index.index",
+        "conda_index.index.convert_cache",
     ]
 
     def __init__(self, level=logging.WARN, handler=None, close=True, loggers=None):
@@ -1451,7 +1399,7 @@ def get_installed_packages(path):
     Files are assumed to be in 'index.json' format.
     """
     installed = dict()
-    for filename in glob(os.path.join(path, "conda-meta", "*.json")):
+    for filename in glob(os.path.join(path, "conda-meta", "*.json"), recursive=True):
         with open(filename) as file:
             data = json.load(file)
             installed[data["name"]] = data
@@ -1707,6 +1655,7 @@ class DuplicateFilter(logging.Filter):
 dedupe_filter = DuplicateFilter()
 info_debug_stdout_filter = LessThanFilter(logging.WARNING)
 warning_error_stderr_filter = GreaterThanFilter(logging.INFO)
+level_formatter = logging.Formatter("%(levelname)s: %(message)s")
 
 # set filelock's logger to only show warnings by default
 logging.getLogger("filelock").setLevel(logging.WARN)
@@ -1743,11 +1692,17 @@ def get_logger(name, level=logging.INFO, dedupe=True, add_stdout_stderr_handlers
         log.addFilter(dedupe_filter)
 
     # these are defaults.  They can be overridden by configuring a log config yaml file.
-    if not log.handlers and add_stdout_stderr_handlers:
+    top_pkg = name.split(".")[0]
+    if top_pkg == "conda_build":
+        # we don't want propagation in CLI, but we do want it in tests
+        # this is a pytest limitation: https://github.com/pytest-dev/pytest/issues/3697
+        logging.getLogger(top_pkg).propagate = "PYTEST_CURRENT_TEST" in os.environ
+    if add_stdout_stderr_handlers and not log.handlers:
         stdout_handler = logging.StreamHandler(sys.stdout)
         stderr_handler = logging.StreamHandler(sys.stderr)
         stdout_handler.addFilter(info_debug_stdout_filter)
         stderr_handler.addFilter(warning_error_stderr_filter)
+        stderr_handler.setFormatter(level_formatter)
         stdout_handler.setLevel(level)
         stderr_handler.setLevel(level)
         log.addHandler(stdout_handler)
@@ -1803,9 +1758,7 @@ def merge_or_update_dict(
                     and raise_on_clobber
                 ):
                     log.debug(
-                        "clobbering key {} (original value {}) with value {}".format(
-                            key, base_value, value
-                        )
+                        f"clobbering key {key} (original value {base_value}) with value {value}"
                     )
                 if value is None and key in base:
                     del base[key]
@@ -1959,14 +1912,12 @@ def ensure_valid_spec(spec, warn=False):
                     if match.group(1) not in ("python", "vc") and warn:
                         log = get_logger(__name__)
                         log.warn(
-                            "Adding .* to spec '{}' to ensure satisfiability.  Please "
+                            f"Adding .* to spec '{spec}' to ensure satisfiability.  Please "
                             "consider putting {{{{ var_name }}}}.* or some relational "
                             "operator (>/</>=/<=) on this spec in meta.yaml, or if req is "
                             "also a build req, using {{{{ pin_compatible() }}}} jinja2 "
                             "function instead.  See "
-                            "https://conda.io/docs/user-guide/tasks/build-packages/variants.html#pinning-at-the-variant-level".format(  # NOQA
-                                spec
-                            )
+                            "https://conda.io/docs/user-guide/tasks/build-packages/variants.html#pinning-at-the-variant-level"
                         )
                     spec = spec_needing_star_re.sub(r"\1 \2.*", spec)
     return spec
@@ -2009,13 +1960,11 @@ def match_peer_job(target_matchspec, other_m, this_m=None):
     for any keys that are shared between target_variant and m.config.variant"""
     name, version, build = other_m.name(), other_m.version(), ""
     matchspec_matches = target_matchspec.match(
-        Dist(
+        PackageRecord(
             name=name,
-            dist_name=f"{name}-{version}-{build}",
             version=version,
-            build_string=build,
+            build=build,
             build_number=other_m.build_number(),
-            channel=None,
         )
     )
 
@@ -2057,6 +2006,8 @@ def sha256_checksum(filename, buffersize=65536):
 
 
 def write_bat_activation_text(file_handle, m):
+    from .os_utils.external import find_executable
+
     file_handle.write(f'call "{root_script_dir}\\..\\condabin\\conda_hook.bat"\n')
     if m.is_cross:
         # HACK: we need both build and host envs "active" - i.e. on PATH,
@@ -2089,7 +2040,6 @@ def write_bat_activation_text(file_handle, m):
     file_handle.write(
         f'call "{root_script_dir}\\..\\condabin\\conda.bat" activate --stack "{m.config.build_prefix}"\n'
     )
-    from conda_build.os_utils.external import find_executable
 
     ccache = find_executable("ccache", m.config.build_prefix, False)
     if ccache:
@@ -2129,10 +2079,7 @@ def write_bat_activation_text(file_handle, m):
                         file_handle.write(f"mklink gcc-ranlib{ext} {ccache}\n")
                     file_handle.write("popd\n")
                     file_handle.write(
-                        "set PATH={dirname_ccache_ln};{dirname_ccache};%PATH%\n".format(
-                            dirname_ccache_ln=dirname_ccache_ln_bin,
-                            dirname_ccache=os.path.dirname(ccache),
-                        )
+                        f"set PATH={dirname_ccache_ln_bin};{os.path.dirname(ccache)};%PATH%\n"
                     )
                 elif method == "native":
                     pass
@@ -2165,17 +2112,18 @@ def download_channeldata(channel_url):
     return data
 
 
-def linked_data_no_multichannels(prefix):
+@deprecated("24.1.0", "24.3.0")
+def linked_data_no_multichannels(
+    prefix: str | os.PathLike | Path,
+) -> dict[Dist, PrefixRecord]:
     """
     Return a dictionary of the linked packages in prefix, with correct channels, hopefully.
     cc @kalefranz.
     """
-    from conda.core.prefix_data import PrefixData
-    from conda.models.dist import Dist
-
+    prefix = Path(prefix)
     return {
         Dist.from_string(prec.fn, channel_override=prec.channel.name): prec
-        for prec in PrefixData(prefix)._prefix_records.values()
+        for prec in PrefixData(str(prefix)).iter_records()
     }
 
 
@@ -2192,17 +2140,15 @@ def shutil_move_more_retrying(src, dest, debug_name):
             shutil.move(src, dest)
             if attempts_left != 5:
                 log.warning(
-                    "shutil.move({}={}, dest={}) succeeded on attempt number {}".format(
-                        debug_name, src, dest, 6 - attempts_left
-                    )
+                    f"shutil.move({debug_name}={src}, dest={dest}) succeeded on attempt number {6 - attempts_left}"
                 )
             attempts_left = -1
         except:
             attempts_left = attempts_left - 1
         if attempts_left > 0:
             log.warning(
-                "Failed to rename {} directory, check with strace, struss or procmon. "
-                "Will sleep for 3 seconds and try again!".format(debug_name)
+                f"Failed to rename {debug_name} directory, check with strace, struss or procmon. "
+                "Will sleep for 3 seconds and try again!"
             )
             import time
 
@@ -2222,3 +2168,7 @@ def is_conda_pkg(pkg_path: str) -> bool:
     return path.is_file() and (
         any(path.name.endswith(ext) for ext in CONDA_PACKAGE_EXTENSIONS)
     )
+
+
+def package_record_to_requirement(prec: PackageRecord) -> str:
+    return f"{prec.name} {prec.version} {prec.build}"

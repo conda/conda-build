@@ -3,16 +3,19 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING
 
 import pytest
 
 from conda_build.create_test import (
-    create_py_files,
     create_lua_files,
     create_pl_files,
+    create_py_files,
     create_r_files,
 )
+
+if TYPE_CHECKING:
+    from typing import Any
 
 
 @pytest.mark.parametrize(
@@ -129,10 +132,10 @@ def test_create_run_test(
 ):
     testing_metadata.meta["package"]["name"] = name
     testing_metadata.meta["test"]["imports"] = imports
-    create_py_files(testing_metadata)
-    create_r_files(testing_metadata)
-    create_pl_files(testing_metadata)
-    create_lua_files(testing_metadata)
+    create_py_files(testing_metadata, testing_metadata.config.test_dir)
+    create_r_files(testing_metadata, testing_metadata.config.test_dir)
+    create_pl_files(testing_metadata, testing_metadata.config.test_dir)
+    create_lua_files(testing_metadata, testing_metadata.config.test_dir)
 
     # assert expected test file exists
     for ext, tests in expected.items():

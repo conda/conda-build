@@ -1,10 +1,10 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
 import pytest
-
 from conda.auxlib.ish import dals
+
 from conda_build.skeletons import pypi
-from conda_build.skeletons.pypi import _print_dict, _formating_value
+from conda_build.skeletons.pypi import _formating_value, _print_dict
 
 
 @pytest.mark.parametrize(
@@ -58,7 +58,7 @@ def test_print_dict():
         },
         "build": {
             "number": 0,
-            "script": "{{ PYTHON }} -m pip install . -vv",
+            "script": "{{ PYTHON }} -m pip install . -vv --no-deps --no-build-isolation",
         },
     }
     recipe_order = ["package", "source", "build", "about"]
@@ -74,7 +74,7 @@ def test_print_dict():
 
         build:
           number: 0
-          script: "{{ PYTHON }} -m pip install . -vv"
+          script: "{{ PYTHON }} -m pip install . -vv --no-deps --no-build-isolation"
 
         about:
           home: "https://conda.io"

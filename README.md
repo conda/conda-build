@@ -18,7 +18,6 @@ $ conda info
 $ conda install -n base conda-build
 ```
 
-
 ## Building Your Own Packages
 
 You can easily build your own packages for `conda`, and upload them to

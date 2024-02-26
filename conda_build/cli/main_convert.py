@@ -1,12 +1,17 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
+
 import logging
 from os.path import abspath, expanduser
-import sys
+from typing import TYPE_CHECKING
 
-from conda_build.conda_interface import ArgumentParser
+from .. import api
+from ..conda_interface import ArgumentParser
 
-from conda_build import api
+if TYPE_CHECKING:
+    from argparse import Namespace
+    from typing import Sequence
 
 logging.basicConfig(level=logging.INFO)
 
@@ -35,8 +40,9 @@ install on Mac OS X):
 """
 
 
-def parse_args(args):
-    p = ArgumentParser(
+def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
+    parser = ArgumentParser(
+        prog="conda convert",
         description="""
 Various tools to convert conda packages. Takes a pure Python package build for
 one platform and converts it to work on one or more other platforms, or
@@ -45,77 +51,85 @@ all.""",
     )
 
     # TODO: Factor this into a subcommand, since it's python package specific
-    p.add_argument(
-        'files',
-        nargs='+',
-        help="Package files to convert."
-    )
-    p.add_argument(
-        '-p', "--platform",
-        dest='platforms',
+    parser.add_argument("files", nargs="+", help="Package files to convert.")
+    parser.add_argument(
+        "-p",
+        "--platform",
+        dest="platforms",
         action="append",
-        choices=['osx-64', 'osx-arm64',
-                 'linux-32', 'linux-64', 'linux-ppc64', 'linux-ppc64le',
-                 'linux-s390x', 'linux-armv6l', 'linux-armv7l', 'linux-aarch64',
-                 'win-32', 'win-64', 'win-arm64', 'all'],
+        choices=[
+            "osx-64",
+            "osx-arm64",
+            "linux-32",
+            "linux-64",
+            "linux-ppc64",
+            "linux-ppc64le",
+            "linux-s390x",
+            "linux-armv6l",
+            "linux-armv7l",
+            "linux-aarch64",
+            "win-32",
+            "win-64",
+            "win-arm64",
+            "all",
+        ],
         help="Platform to convert the packages to.",
-        default=None
+        default=None,
     )
-    p.add_argument(
-        "--dependencies", "-d",
-        nargs='*',
+    parser.add_argument(
+        "--dependencies",
+        "-d",
+        nargs="*",
         help="""Additional (besides python) dependencies of the converted
         package.  To specify a version restriction for a dependency, wrap
         the dependency in quotes, like 'package >=2.0'.""",
     )
-    p.add_argument(
-        '--show-imports',
-        action='store_true',
+    parser.add_argument(
+        "--show-imports",
+        action="store_true",
         default=False,
         help="Show Python imports for compiled parts of the package.",
     )
-    p.add_argument(
-        '-f', "--force",
+    parser.add_argument(
+        "-f",
+        "--force",
         action="store_true",
         help="Force convert, even when a package has compiled C extensions.",
     )
-    p.add_argument(
-        '-o', '--output-dir',
-        default='.',
+    parser.add_argument(
+        "-o",
+        "--output-dir",
+        default=".",
         help="""Directory to write the output files. The packages will be
         organized in platform/ subdirectories, e.g.,
-        win-32/package-1.0-py27_0.tar.bz2."""
+        win-32/package-1.0-py27_0.tar.bz2.""",
     )
-    p.add_argument(
-        '-v', '--verbose',
+    parser.add_argument(
+        "-v",
+        "--verbose",
         default=False,
-        action='store_true',
-        help="Print verbose output."
+        action="store_true",
+        help="Print verbose output.",
     )
-    p.add_argument(
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Only display what would have been done.",
     )
-    p.add_argument(
-        "-q", "--quiet",
-        action="store_true",
-        help="Don't print as much output."
+    parser.add_argument(
+        "-q", "--quiet", action="store_true", help="Don't print as much output."
     )
 
-    args = p.parse_args(args)
-    return p, args
+    return parser, parser.parse_args(args)
 
 
-def execute(args):
-    _, args = parse_args(args)
-    files = args.files
-    del args.__dict__['files']
+def execute(args: Sequence[str] | None = None) -> int:
+    _, parsed = parse_args(args)
+    files = parsed.files
+    del parsed.__dict__["files"]
 
     for f in files:
         f = abspath(expanduser(f))
-        api.convert(f, **args.__dict__)
+        api.convert(f, **parsed.__dict__)
 
-
-def main():
-    return execute(sys.argv[1:])
+    return 0

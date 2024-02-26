@@ -1,12 +1,12 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
 import json
-import os
 from pathlib import Path
 
 import pytest
+
 from conda_build._link import pyc_f
-from conda_build.conda_interface import PathType, EntityEncoder, CrossPlatformStLink
+from conda_build.conda_interface import EntityEncoder, PathType
 
 
 @pytest.mark.parametrize(
@@ -25,7 +25,7 @@ def test_pyc_f(source, python, compiled):
 def test_pathtype():
     hardlink = PathType("hardlink")
     assert str(hardlink) == "hardlink"
-    assert hardlink.__json__() == 'hardlink'
+    assert hardlink.__json__() == "hardlink"
 
     softlink = PathType("softlink")
     assert str(softlink) == "softlink"
@@ -39,17 +39,3 @@ def test_entity_encoder(tmp_path):
 
     json_file = json.loads(test_file.read_text())
     assert json_file == {"a": "hardlink", "b": 1}
-
-
-def test_crossplatform_st_link(tmp_path):
-    test_file = tmp_path / "test-file"
-    test_file_linked = tmp_path / "test-file-linked"
-    test_file_link = tmp_path / "test-file-link"
-
-    test_file.touch()
-    test_file_link.touch()
-    os.link(test_file_link, test_file_linked)
-
-    assert 1 == CrossPlatformStLink.st_nlink(test_file)
-    assert 2 == CrossPlatformStLink.st_nlink(test_file_link)
-    assert 2 == CrossPlatformStLink.st_nlink(test_file_linked)

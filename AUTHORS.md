@@ -53,9 +53,11 @@ Authors are sorted alphabetically.
 * Daniel Bast
 * Daniel Damiani
 * Daniel Holth
+* Daniel Petry
 * Darren Dale
 * Dave Clements
 * Dave Hirschfeld
+* Dave Karetnyk
 * David Froger
 * David Li
 * Derek Ludwig
@@ -67,8 +69,11 @@ Authors are sorted alphabetically.
 * Eli Rykoff
 * Elliot Hughes
 * Eric Dill
+* Ernst Luring
 * Evan Hubinger
 * Evan Klitzke
+* Felix Kühnl
+* Ferry Firmansjah
 * Filipe Fernandes
 * Floris Bruynooghe
 * Gabriel Reis
@@ -77,6 +82,7 @@ Authors are sorted alphabetically.
 * Greg Brener
 * Guilherme Quentel Melo
 * Guillaume Baty
+* H. Vetinari
 * Harsh Gupta
 * Harun Reşit Zafer
 * Heather Kelly
@@ -86,6 +92,7 @@ Authors are sorted alphabetically.
 * Ilan Schnell
 * Isuru Fernando
 * Ivan Kalev
+* Jack Olivieri
 * Jacob Walls
 * Jaime Rodríguez-Guerra
 * James Abbott
@@ -104,7 +111,9 @@ Authors are sorted alphabetically.
 * John Blischak
 * John Kirkham
 * John Omotani
+* Johnny
 * Jonathan J. Helmus
+* Jose Diaz-Gonzalez
 * Joseph Crail
 * Joseph Hunkeler
 * Juan Lasheras
@@ -156,6 +165,7 @@ Authors are sorted alphabetically.
 * Patrick Snape
 * Patrick Sodré
 * Paul Madden
+* Peet Whittaker
 * Peter Williams
 * Phil Elson
 * Phil Reinhold
@@ -164,10 +174,12 @@ Authors are sorted alphabetically.
 * Rachel Rigdon
 * Ray Donnelly
 * Remi Chateauneu
+* Riadh Fezzani
 * Riccardo Vianello
 * Richard Frank
 * Richard Hattersley
 * Rick Izzo
+* Rishabh Singh
 * Robert Coop
 * Robert Langlois
 * Robert T. McGibbon
@@ -176,6 +188,7 @@ Authors are sorted alphabetically.
 * Ruben Vorderman
 * Ryan Dale
 * Ryan Grout
+* Ryan Keith
 * Rylan Chord
 * Satoshi Yagi
 * Scheah
@@ -184,15 +197,18 @@ Authors are sorted alphabetically.
 * Sergio Oller
 * Serhii Kupriienko
 * Shaun Walbridge
+* Shaun Walbridge
 * Siu Kwan Lam
 * Sophia Castellarin
 * Sophian Guidara
+* Srivas Venkatesh
 * Stas Bekman
 * Stefan Scherfke
 * Stefan Zimmermann
 * Stephan Hoyer
 * Stephen Palmroth
 * Stuart Berg
+* T Coxon
 * Tadeu Manoel
 * Takafumi Arakaki
 * Teake Nutma
@@ -215,6 +231,7 @@ Authors are sorted alphabetically.
 * Vlad Frolov
 * Wes Turner
 * Wim Glenn
+* Wolf Vollprecht
 * Wolfgang Ulmer
 * Yann
 * Yoav Ram

@@ -3,11 +3,10 @@
 import os
 import sys
 
-
 env_vars = [
-    'FEATURE_DEBUG',
-    'FEATURE_NOMKL',
-    'FEATURE_OPT',
+    "FEATURE_DEBUG",
+    "FEATURE_NOMKL",
+    "FEATURE_OPT",
 ]
 
 # list of features, where each element is a tuple(name, boolean), i.e. having
@@ -15,7 +14,9 @@ env_vars = [
 feature_list = []
 for key, value in os.environ.items():
     if key in env_vars:
-        if value not in ('0', '1'):
-            sys.exit("Error: did not expect environment variable '%s' "
-                     "being set to '%s' (not '0' or '1')" % (key, value))
+        if value not in ("0", "1"):
+            sys.exit(
+                f"Error: did not expect environment variable '{key}' "
+                f"being set to '{value}' (not '0' or '1')"
+            )
         feature_list.append((key[8:].lower(), bool(int(value))))

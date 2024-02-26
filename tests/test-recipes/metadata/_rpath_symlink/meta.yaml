@@ -1,0 +1,39 @@
+{% set lib_file = "libthing.so.1.0.0" %}  # [linux]
+{% set lib_file = "libthing.1.0.0.dylib" %}  # [osx]
+
+package:
+  name: rpath_symlink
+  version: 1.0.0
+
+build:
+  skip: true  # [not (linux or osx)]
+  rpaths_patcher: {{ rpaths_patcher }}
+  script:
+    - mkdir -p "${PREFIX}/lib"
+    - >
+      < /dev/null ${CC} ${CPPFLAGS} ${CFLAGS} ${LDFLAGS}
+      -x c - -nostdlib -s -o "${PREFIX}/lib/{{ lib_file }}" "-Wl,-rpath,${PREFIX}/lib"
+      -shared -Wl,-soname,libthing.so.1  # [linux]
+      -dynamiclib -install_name libthing.1.dylib  # [osx]
+    - ln -s "${PREFIX}/lib/{{ lib_file }}" "${PREFIX}/lib/libthing.so.1"  # [linux]
+    - ln -s "${PREFIX}/lib/{{ lib_file }}" "${PREFIX}/lib/libthing.1.dylib"  # [osx]
+    - mkdir -p "${PREFIX}/lib/subfolder"
+    - ln -s "${PREFIX}/lib/{{ lib_file }}" "${PREFIX}/lib/subfolder/libthing-link.so"  # [linux]
+    - ln -s "${PREFIX}/lib/{{ lib_file }}" "${PREFIX}/lib/subfolder/libthing-link.dylib"  # [osx]
+
+requirements:
+  build:
+    - {{ compiler("c") }}
+
+test:
+  requires:
+    - py-lief
+  commands:
+    # Test that we get only a single entry that is the library's own directory.
+    - |
+      python -c '
+      import os, lief
+      lib = lief.parse(os.environ["PREFIX"] + "/lib/{{ lib_file }}")
+      assert {"$ORIGIN/."} == {e.rpath for e in lib.dynamic_entries if e.tag == lief.ELF.DYNAMIC_TAGS.RPATH}  # [linux]
+      assert {"@loader_path/"} == {command.path for command in lib.commands if command.command == lief.MachO.LOAD_COMMAND_TYPES.RPATH}  # [osx]
+      '
