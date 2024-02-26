@@ -1,10 +1,11 @@
 ### Enhancements
 
-* Added SHA224, SHA384 and SHA512 support for validating downloaded sources.
+* Added SHA224, SHA384 and SHA512 support for validating downloaded sources. (#4793)
 
 ### Bug fixes
 
-* If multiple hashing algorithms are used to validate a downloaded source, a `RuntimeError` will now be thrown if **any** of those hashes are incorrect. This is stricter and more consistent than the previous behaviour.
+* Verify all source hashes when multiple are defined (not just the first one). (#4793)
+
 ### Deprecations
 
 * <news item>
