@@ -9,8 +9,9 @@ from typing import NamedTuple
 import filelock
 import pytest
 from pytest import MonkeyPatch
+from pytest_mock import MockerFixture
 
-import conda_build.utils as utils
+from conda_build import utils
 from conda_build.exceptions import BuildLockError
 
 
@@ -433,3 +434,20 @@ def test_is_conda_pkg(tmpdir, value: str, expected: bool, is_dir: bool, create: 
                 fp.write("test")
 
     assert utils.is_conda_pkg(value) == expected
+
+
+def test_directory_size(tmp_path: Path, mocker: MockerFixture):
+    # mock the slow function so we can catch that it is not called
+    mock = mocker.patch("conda_build.utils.directory_size_slow")
+
+    assert utils.directory_size("fake") == 0
+
+    assert utils.directory_size(tmp_path) == 0
+
+    for i in range(10):
+        (tmp_path / f"file{i}").write_text("test" * 100)
+
+    expected = 4000 if utils.on_win else 80
+    assert utils.directory_size(tmp_path) == expected
+
+    assert not mock.called
