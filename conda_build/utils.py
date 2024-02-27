@@ -122,7 +122,7 @@ def stat_file(path):
     return os.stat(path)
 
 
-def directory_size_slow(path):
+def directory_size_slow(path: str | os.PathLike | Path) -> int:
     total_size = 0
     seen = set()
 
@@ -142,36 +142,31 @@ def directory_size_slow(path):
     return total_size
 
 
-def directory_size(path):
-    try:
-        if on_win:
-            command = 'dir /s "{}"'  # Windows path can have spaces
-            out = subprocess.check_output(command.format(path), shell=True)
-        else:
-            command = "du -s {}"
-            out = subprocess.check_output(
-                command.format(path).split(), stderr=subprocess.PIPE
-            )
+def directory_size(path: str | os.PathLike | Path) -> int:
+    if not Path(path).exists():
+        return 0
 
-        if hasattr(out, "decode"):
-            try:
-                out = out.decode(errors="ignore")
-            # This isn't important anyway so give up. Don't try search on bytes.
-            except (UnicodeDecodeError, IndexError):
-                if on_win:
-                    return 0
-                else:
-                    pass
-        if on_win:
-            # Windows can give long output, we need only 2nd to last line
-            out = out.strip().rsplit("\r\n", 2)[-2]
-            pattern = r"\s([\d\W]+).+"  # Language and punctuation neutral
-            out = re.search(pattern, out.strip()).group(1).strip()
-            out = out.replace(",", "").replace(".", "").replace(" ", "")
-        else:
-            out = out.split()[0]
+    try:
+        command = ["dir", "/s", path] if on_win else ["du", "-s", path]
+        out = subprocess.run(
+            command,
+            check=True,
+            shell=on_win,
+            text=True,
+            errors="ignore",
+            capture_output=True,
+        ).stdout
     except subprocess.CalledProcessError:
-        out = directory_size_slow(path)
+        return directory_size_slow(path)
+
+    if on_win:
+        # Windows can give long output, we need only 2nd to last line
+        out = out.strip().splitlines()[-2]
+        pattern = r"\s([\d\W]+).+"  # Language and punctuation neutral
+        out = re.search(pattern, out.strip()).group(1).strip()
+        out = out.replace(",", "").replace(".", "").replace(" ", "")
+    else:
+        out = out.split()[0]
 
     try:
         return int(out)  # size in bytes
