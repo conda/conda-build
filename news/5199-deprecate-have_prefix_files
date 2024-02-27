@@ -8,7 +8,7 @@
 
 ### Deprecations
 
-* Mark `conda_build.build.have_prefix_files` as deprecated.
+* Mark `conda_build.build.have_prefix_files` as deprecated. (#5199)
 
 ### Docs
 
