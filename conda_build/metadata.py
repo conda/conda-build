@@ -966,8 +966,8 @@ def get_output_dicts_from_metadata(metadata, outputs=None):
             outputs.append(OrderedDict(name=metadata.name()))
     for out in outputs:
         if (
-            "package:" in metadata.get_recipe_text()
-            and out.get("name") == metadata.name()
+            out.get("name") == metadata.name()
+            and "package:" in metadata.get_recipe_text()
         ):
             combine_top_level_metadata_with_output(metadata, out)
     return outputs
