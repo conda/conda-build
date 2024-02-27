@@ -46,6 +46,7 @@ from .conda_interface import (
 )
 from .config import Config
 from .create_test import create_all_test_files
+from .deprecations import deprecated
 from .exceptions import CondaBuildException, DependencyNeedsBuildingError
 from .index import _delegated_update_index, get_build_index
 from .metadata import FIELDS, MetaData
@@ -184,6 +185,7 @@ def prefix_replacement_excluded(path):
     return False
 
 
+@deprecated("24.3", "24.5")
 def have_prefix_files(files, prefix):
     """
     Yields files that contain the current prefix in them, and modifies them
@@ -1231,31 +1233,6 @@ def get_files_with_prefix(m, replacements, files_in, prefix):
             end - start,
         )
     )
-    """
-    # Keeping this around just for a while.
-    files_with_prefix2 = sorted(have_prefix_files(files_in, prefix))
-    end = time.time()
-    print("INFO :: Time taken to do replacements (prefix only) was: {}".format(end - start))
-
-    ignore_files = m.ignore_prefix_files()
-    ignore_types = set()
-    if not hasattr(ignore_files, "__iter__"):
-        if ignore_files is True:
-            ignore_types.update((FileMode.text.name, FileMode.binary.name))
-        ignore_files = []
-    if (not m.get_value('build/detect_binary_files_with_prefix', True) and
-        not m.get_value('build/binary_has_prefix_files', None)):
-        ignore_types.update((FileMode.binary.name,))
-    # files_with_prefix is a list of tuples containing (prefix_placeholder, file_type, file_path)
-    ignore_files.extend(
-        f[2] for f in files_with_prefix2 if f[1] in ignore_types and f[2] not in ignore_files)
-    files_with_prefix2 = [f for f in files_with_prefix2 if f[2] not in ignore_files]
-    end2 = time.time()
-    print("INFO :: Time taken to do replacements (prefix only) was: {}".format(end2 - start2))
-    files1 = set([f for _, _, f in files_with_prefix])
-    files2 = set([f for _, _, f in files_with_prefix2])
-    assert not (files2 - files1), "New ripgrep prefix search missed the following files:\n{}\n".format(files2 - files1)
-    """
     return sorted(files_with_prefix)
 
 
