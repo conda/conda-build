@@ -281,8 +281,8 @@ def select_lines(data, namespace, variants_in_place):
         if line.lstrip().startswith("#"):
             # Don't bother with comment only lines
             continue
-        m = sel_pat.match(line)
-        if m:
+        # Checking for "[" and "]" before regex matching every line is a bit faster.
+        if "[" in line and "]" in line and (m := sel_pat.match(line)):
             cond = m.group(3)
             try:
                 if eval_selector(cond, namespace, variants_in_place):
