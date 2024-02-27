@@ -1665,7 +1665,6 @@ class MetaData:
             raise RuntimeError(
                 f"Couldn't extract raw recipe text for {self.name()} output"
             )
-        raw_recipe_text = self.extract_package_and_build_text()
         raw_manual_build_string = re.search(r"\s*string:", raw_recipe_text)
         # user setting their own build string.  Don't modify it.
         if manual_build_string and not (
@@ -2641,12 +2640,13 @@ class MetaData:
         return variants.get_vars(_variants, loop_only=True)
 
     def get_used_loop_vars(self, force_top_level=False, force_global=False):
+        loop_vars = set(self.get_loop_vars())
         return {
             var
             for var in self.get_used_vars(
                 force_top_level=force_top_level, force_global=force_global
             )
-            if var in self.get_loop_vars()
+            if var in loop_vars
         }
 
     def get_rendered_recipe_text(
