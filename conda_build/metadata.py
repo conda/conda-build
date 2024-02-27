@@ -109,6 +109,10 @@ numpy_compatible_re = re.compile(r"pin_\w+\([\'\"]numpy[\'\"]")
 # used to avoid recomputing/rescanning recipe contents for used variables
 used_vars_cache = {}
 
+# Placeholders singletons for os/os.environ used to memoize select_lines().
+_selector_placeholder_os = object()
+_selector_placeholder_os_environ = object()
+
 
 @lru_cache(maxsize=200)
 def re_findall(pattern, text, flags=0):
@@ -289,6 +293,60 @@ def eval_selector(selector_string, namespace, variants_in_place):
 
 
 def select_lines(data, namespace, variants_in_place):
+    # Try to turn namespace into a hashable representation for memoization.
+    try:
+        namespace_copy = namespace.copy()
+        if namespace_copy.get("os") is os:
+            namespace_copy["os"] = _selector_placeholder_os
+        if namespace_copy.get("environ") is os.environ:
+            namespace_copy["environ"] = _selector_placeholder_os_environ
+        if "pin_run_as_build" in namespace_copy:
+            # This raises TypeError if pin_run_as_build is not a dict of dicts.
+            try:
+                namespace_copy["pin_run_as_build"] = tuple(
+                    (key, tuple((k, v) for k, v in value.items()))
+                    for key, value in namespace_copy["pin_run_as_build"].items()
+                )
+            except (AttributeError, TypeError, ValueError):
+                # AttributeError: no .items method
+                # TypeError: .items() not iterable of iterables
+                # ValueError: .items() not iterable of only (k, v) tuples
+                raise TypeError
+        for k, v in namespace_copy.items():
+            # Convert list/sets/tuple to tuples (of tuples if it contains
+            # list/set elements). Copy any other type verbatim and rather fall
+            # back to the non-memoized version to avoid wrong/lossy conversions.
+            if isinstance(v, (list, set, tuple)):
+                namespace_copy[k] = tuple(
+                    tuple(e) if isinstance(e, (list, set)) else e
+                    for e in v
+                )
+        namespace_tuple = tuple(namespace_copy.items())
+        # Raise TypeError if anything in namespace_tuple is not hashable.
+        hash(namespace_tuple)
+    except TypeError:
+        return _select_lines(data, namespace, variants_in_place)
+    return _select_lines_memoized(data, namespace_tuple, variants_in_place)
+
+
+@lru_cache(maxsize=200)
+def _select_lines_memoized(data, namespace_tuple, variants_in_place):
+    # Convert namespace_tuple to dict and undo the os/environ/pin_run_as_build
+    # replacements done in select_lines.
+    namespace = dict(namespace_tuple)
+    if namespace.get("os") is _selector_placeholder_os:
+        namespace["os"] = os
+    if namespace.get("environ") is _selector_placeholder_os_environ:
+        namespace["environ"] = os.environ
+    if "pin_run_as_build" in namespace:
+        namespace["pin_run_as_build"] = {
+            key: dict(value)
+            for key, value in namespace["pin_run_as_build"]
+        }
+    return _select_lines(data, namespace, variants_in_place)
+
+
+def _select_lines(data, namespace, variants_in_place):
     lines = []
 
     for i, line in enumerate(data.splitlines()):
@@ -1034,6 +1092,7 @@ def get_updated_output_dict_from_reparsed_metadata(original_dict, new_outputs):
     return output_d
 
 
+@lru_cache(maxsize=200)
 def _filter_recipe_text(text, extract_pattern=None):
     if extract_pattern:
         match = re_search(extract_pattern, text, flags=re.MULTILINE | re.DOTALL)
