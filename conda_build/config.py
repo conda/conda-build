@@ -9,6 +9,7 @@ from __future__ import annotations
 import copy
 import math
 import os
+import pickle
 import re
 import shutil
 import time
@@ -817,9 +818,10 @@ class Config:
 
     def copy(self):
         new = copy.copy(self)
-        new.variant = copy.deepcopy(self.variant)
+        # Use picke.loads(pickle.dumps(...) as a faster copy.deepcopy alternative.
+        new.variant = pickle.loads(pickle.dumps(self.variant, -1))
         if hasattr(self, "variants"):
-            new.variants = copy.deepcopy(self.variants)
+            new.variants = pickle.loads(pickle.dumps(self.variants, -1))
         return new
 
     # context management - automatic cleanup if self.dirty or self.keep_old_work is not True
