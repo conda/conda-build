@@ -5,6 +5,7 @@ import subprocess
 import sys
 from pathlib import Path
 from typing import NamedTuple
+from uuid import uuid4
 
 import filelock
 import pytest
@@ -444,10 +445,33 @@ def test_directory_size(tmp_path: Path, mocker: MockerFixture):
 
     assert utils.directory_size(tmp_path) == 0
 
-    for i in range(10):
-        (tmp_path / f"file{i}").write_text("test" * 100)
+    count = 1000
+    size = 1000
+    for i in range(count):
+        (tmp_path / f"file{i}").write_text(uuid4().hex * size)
 
-    expected = 4000 if utils.on_win else 80
+    if utils.on_win:
+        expected = 32 * size * count
+    elif utils.on_mac:
+        expected = 64 * count
+    else:
+        expected = 32 * count
+
     assert utils.directory_size(tmp_path) == expected
 
     assert not mock.called
+
+
+def test_directory_size_slow(tmp_path: Path):
+    assert utils.directory_size_slow("fake") == 0
+
+    assert utils.directory_size_slow(tmp_path) == 0
+
+    count = 1000
+    size = 1000
+    for i in range(count):
+        (tmp_path / f"file{i}").write_text(uuid4().hex * size)
+
+    expected = 32 * size * count
+
+    assert utils.directory_size_slow(tmp_path) == expected

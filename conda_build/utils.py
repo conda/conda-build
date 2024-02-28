@@ -81,6 +81,8 @@ from .exceptions import BuildLockError
 if TYPE_CHECKING:
     from conda.models.records import PrefixRecord
 
+log = logging.getLogger(__name__)
+
 on_win = sys.platform == "win32"
 on_mac = sys.platform == "darwin"
 on_linux = sys.platform == "linux"
@@ -157,13 +159,17 @@ def directory_size(path: str | os.PathLike | Path) -> int:
             capture_output=True,
         ).stdout
     except subprocess.CalledProcessError:
+        log.debug("Failed to get directory size using system command %s", command)
         return directory_size_slow(path)
 
     if on_win:
         # Windows can give long output, we need only 2nd to last line
         out = out.strip().splitlines()[-2]
         pattern = r"\s([\d\W]+).+"  # Language and punctuation neutral
-        out = re.search(pattern, out.strip()).group(1).strip()
+        if not (match := re.search(pattern, out.strip())):
+            log.debug("Failed to parse directory size from output: %s", out)
+            return 0
+        out = match.group(1).strip()
         out = out.replace(",", "").replace(".", "").replace(" ", "")
     else:
         out = out.split()[0]
@@ -171,6 +177,7 @@ def directory_size(path: str | os.PathLike | Path) -> int:
     try:
         return int(out)  # size in bytes
     except ValueError:
+        log.debug("Failed to parse directory size from output: %s", out)
         return 0
 
 
