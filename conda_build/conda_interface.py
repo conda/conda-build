@@ -45,7 +45,6 @@ from conda.exports import (  # noqa: F401
     add_parser_channels,
     add_parser_prefix,
     download,
-    handle_proxy_407,
     hashsum_file,
     human_bytes,
     input,
@@ -112,3 +111,8 @@ reset_context()
 # When deactivating envs (e.g. switching from root to build/test) this env var is used,
 # except the PR that removed this has been reverted (for now) and Windows doesn't need it.
 env_path_backup_var_exists = os.environ.get("CONDA_PATH_BACKUP", None)
+
+
+@deprecated("24.3", "24.5", addendum="Handled by CondaSession.")
+def handle_proxy_407(x, y):
+    pass
