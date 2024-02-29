@@ -48,7 +48,6 @@ from conda.exports import (  # noqa: F401
     human_bytes,
     input,
     lchmod,
-    memoized,
     normalized_version,
     prefix_placeholder,
     rm_rf,
