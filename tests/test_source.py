@@ -7,9 +7,9 @@ import tarfile
 import pytest
 
 from conda_build import source
-from conda_build.conda_interface import TemporaryDirectory, hashsum_file
+from conda_build.conda_interface import TemporaryDirectory
 from conda_build.source import download_to_cache
-from conda_build.utils import reset_deduplicator
+from conda_build.utils import compute_sum, reset_deduplicator
 
 from .utils import thisdir
 
@@ -142,7 +142,7 @@ def test_source_user_expand():
                     "url": os.path.join(
                         prefix, os.path.basename(tmp), "cb-test.tar.bz2"
                     ),
-                    "sha256": hashsum_file(tbz_name, "sha256"),
+                    "sha256": compute_sum(tbz_name, "sha256"),
                 }
                 with TemporaryDirectory() as tmp2:
                     download_to_cache(tmp2, "", source_dict)

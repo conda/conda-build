@@ -19,6 +19,7 @@ from urllib.parse import urljoin, urlsplit
 import pkginfo
 import requests
 import yaml
+from conda.utils import compute_sum
 from requests.packages.urllib3.util.url import parse_url
 
 from ..conda_interface import (
@@ -26,7 +27,6 @@ from ..conda_interface import (
     configparser,
     default_python,
     download,
-    hashsum_file,
     human_bytes,
     input,
     normalized_version,
@@ -1276,10 +1276,10 @@ def get_pkginfo(
         download_path = join(config.src_cache, filename)
         if (
             not isfile(download_path)
-            or hashsum_file(download_path, hash_type) != hash_value
+            or compute_sum(download_path, hash_type) != hash_value
         ):
             download(pypiurl, join(config.src_cache, filename))
-            if hashsum_file(download_path, hash_type) != hash_value:
+            if compute_sum(download_path, hash_type) != hash_value:
                 raise RuntimeError(
                     f" Download of {package} failed"
                     f" checksum type {hash_type} expected value {hash_value}. Please"
@@ -1291,7 +1291,7 @@ def get_pkginfo(
         # Needs to be done in this block because this is where we have
         # access to the source file.
         if hash_type != "sha256":
-            new_hash_value = hashsum_file(download_path, "sha256")
+            new_hash_value = compute_sum(download_path, "sha256")
         else:
             new_hash_value = ""
 

@@ -36,12 +36,12 @@ from typing import TYPE_CHECKING
 
 from conda.core.prefix_data import PrefixData
 from conda.models.records import PrefixRecord
+from conda.utils import compute_sum
 
 from . import utils
 from .conda_interface import (
     TemporaryDirectory,
     lchmod,
-    md5_file,
     walk_prefix,
 )
 from .exceptions import OverDependingError, OverLinkingError, RunPathError
@@ -393,7 +393,7 @@ def find_lib(link, prefix, files, path=None):
             # multiple places.
             md5s = set()
             for f in file_names[link]:
-                md5s.add(md5_file(join(prefix, f)))
+                md5s.add(compute_sum(join(prefix, f), "md5"))
             if len(md5s) > 1:
                 sys.exit(
                     f"Error: Found multiple instances of {link}: {file_names[link]}"

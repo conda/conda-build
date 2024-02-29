@@ -55,6 +55,7 @@ from conda.base.constants import (
 )
 from conda.core.prefix_data import PrefixData
 from conda.models.dist import Dist
+from conda.utils import compute_sum
 
 from .conda_interface import (
     CondaHTTPError,
@@ -67,8 +68,6 @@ from .conda_interface import (
     context,
     download,
     get_conda_channel,
-    hashsum_file,
-    md5_file,
     pkgs_dirs,
     root_dir,
     unix_path_to_win,
@@ -876,8 +875,8 @@ def tar_xf(tarball, dir_path):
 def file_info(path):
     return {
         "size": getsize(path),
-        "md5": md5_file(path),
-        "sha256": hashsum_file(path, "sha256"),
+        "md5": compute_sum(path, "md5"),
+        "sha256": compute_sum(path, "sha256"),
         "mtime": getmtime(path),
     }
 

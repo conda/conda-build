@@ -518,7 +518,7 @@ def _maybe_write(path, content, write_newline_end=False, content_is_binary=False
         if write_newline_end:
             fh.write(b"\n")
     if isfile(path):
-        if utils.md5_file(temp_path) == utils.md5_file(path):
+        if utils.compute_sum(temp_path, "md5") == utils.compute_sum(path, "md5"):
             # No need to change mtimes. The contents already match.
             os.unlink(temp_path)
             return False
@@ -1440,7 +1440,7 @@ class ChannelIndex:
                 channel_icon_fn = "{}.{}".format(data["name"], icon_ext)
                 icon_url = "icons/" + channel_icon_fn
                 icon_channel_path = join(channel_root, "icons", channel_icon_fn)
-                icon_md5 = utils.md5_file(icon_cache_path)
+                icon_md5 = utils.compute_sum(icon_cache_path, "md5")
                 icon_hash = f"md5:{icon_md5}:{getsize(icon_cache_path)}"
                 data.update(icon_hash=icon_hash, icon_url=icon_url)
                 # log.info("writing icon from %s to %s", icon_cache_path, icon_channel_path)
@@ -1496,7 +1496,7 @@ class ChannelIndex:
                     "size": getsize(path),
                     "timestamp": int(getmtime(path)),
                     "sha256": utils.sha256_checksum(path),
-                    "md5": utils.md5_file(path),
+                    "md5": utils.compute_sum(path, "md5"),
                 }
 
         extra_paths = OrderedDict()

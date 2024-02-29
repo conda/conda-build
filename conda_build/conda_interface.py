@@ -45,11 +45,9 @@ from conda.exports import (  # noqa: F401
     add_parser_channels,
     add_parser_prefix,
     download,
-    hashsum_file,
     human_bytes,
     input,
     lchmod,
-    md5_file,
     memoized,
     normalized_version,
     prefix_placeholder,
@@ -74,6 +72,7 @@ from conda.exports import linked_data as _linked_data
 from conda.exports import package_cache as _package_cache
 from conda.models.channel import get_conda_build_local_url  # noqa: F401
 from conda.models.dist import Dist as _Dist
+from conda.utils import compute_sum
 
 from .deprecations import deprecated
 
@@ -116,3 +115,19 @@ env_path_backup_var_exists = os.environ.get("CONDA_PATH_BACKUP", None)
 @deprecated("24.3", "24.5", addendum="Handled by CondaSession.")
 def handle_proxy_407(x, y):
     pass
+
+
+deprecated.constant(
+    "24.3",
+    "24.5",
+    "hashsum_file",
+    compute_sum,
+    addendum="Use `conda.utils.compute_sum` instead.",
+)
+
+
+@deprecated(
+    "24.3", "24.5", addendum="Use `conda.utils.compute_sum(path, 'md5')` instead."
+)
+def md5_file(path: str | os.PathLike) -> str:
+    return compute_sum(path, "md5")
