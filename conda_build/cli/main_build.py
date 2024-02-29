@@ -97,6 +97,7 @@ def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
         help="""Only run the build, without any post processing or
         testing. Implies --no-test and --no-anaconda-upload.""",
     )
+    # TODO: Understand what post does
     parser.add_argument(
         "-p",
         "--post",

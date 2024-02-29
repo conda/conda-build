@@ -1282,7 +1282,7 @@ def expand_globs(path_list, root_dir):
     return files
 
 
-def find_recipe(path):
+def find_recipe(path) -> os.PathLike:
     """recurse through a folder, locating valid meta files (see VALID_METAS).  Raises error if more than one is found.
 
     Returns full path to meta file to be built.

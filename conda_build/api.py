@@ -233,6 +233,7 @@ def build(
         "other arguments (config) by keyword."
     )
 
+    # NOTE: Should be moved as part of sanitization, Argparse?
     recipes = []
     for recipe in ensure_list(recipe_paths_or_metadata):
         if isinstance(recipe, str):
