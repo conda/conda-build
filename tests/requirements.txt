@@ -1,6 +1,6 @@
 beautifulsoup4
 chardet
-conda >=22.11.0
+conda >=23.3.0
 conda-forge::anaconda-client
 conda-index
 conda-package-handling >=1.3

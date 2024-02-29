@@ -76,10 +76,10 @@ jobs:
         include:
           # minimum Python/conda combo
           - python-version: '3.8'
-            conda-version: 22.11.0
+            conda-version: 23.3.0
             test-type: serial
           - python-version: '3.8'
-            conda-version: 22.11.0
+            conda-version: 23.3.0
             test-type: parallel
           # maximum Python/conda combo
           - python-version: '3.12'
