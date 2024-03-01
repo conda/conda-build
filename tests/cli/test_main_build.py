@@ -296,7 +296,7 @@ def test_no_force_upload(
 
     # render recipe
     api.output_yaml(testing_metadata, "meta.yaml")
-    pkg = api.get_output_file_path(testing_metadata)
+    pkg = api.get_output_file_paths(testing_metadata)
 
     # mock Config.set_keys to always set anaconda_upload to True
     # conda's Context + conda_build's MetaData & Config objects interact in such an

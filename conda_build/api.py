@@ -168,33 +168,6 @@ def get_output_file_paths(
     return sorted(list(set(outs)))
 
 
-def get_output_file_path(
-    recipe_path_or_metadata,
-    no_download_source=False,
-    config=None,
-    variants=None,
-    **kwargs,
-):
-    """Get output file paths for any packages that would be created by a recipe
-
-    Both split packages (recipes with more than one output) and build matrices,
-    created with variants, contribute to the list of file paths here.
-    """
-    log = get_logger(__name__)
-    log.warn(
-        "deprecation warning: this function has been renamed to get_output_file_paths, "
-        "to reflect that potentially multiple paths are returned.  This function will be "
-        "removed in the conda-build 4.0 release."
-    )
-    return get_output_file_paths(
-        recipe_path_or_metadata,
-        no_download_source=no_download_source,
-        config=config,
-        variants=variants,
-        **kwargs,
-    )
-
-
 def check(recipe_path, no_download_source=False, config=None, variants=None, **kwargs):
     """Check validity of input recipe path
 
