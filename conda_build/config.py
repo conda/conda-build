@@ -12,9 +12,15 @@ import re
 import shutil
 import time
 from collections import namedtuple
+from enum import Enum, auto
 from os.path import abspath, expanduser, expandvars, join
 from typing import TYPE_CHECKING
 
+from conda.base.constants import (
+    CONDA_PACKAGE_EXTENSION_V1,
+    CONDA_PACKAGE_EXTENSION_V2,  # noqa: F401
+    CONDA_PACKAGE_EXTENSIONS,  # noqa: F401
+)
 from .conda_interface import (
     binstar_upload,
     cc_conda_build,
@@ -47,6 +53,43 @@ def set_invocation_time():
 set_invocation_time()
 
 
+class CondaPkgFormat(Enum):
+    """Conda Package Format class
+
+    Conda Package Version 1 => 'tar.bz2'
+    Conda Package Version 2 => '.conda'
+    """
+
+    V1 = CONDA_PACKAGE_EXTENSION_V1
+    V2 = CONDA_PACKAGE_EXTENSION_V2
+
+    @classmethod
+    def normalize(cls, input) -> CondaPkgFormat:
+        if isinstance(input, cls):
+            return input
+        if not cls.is_acceptable(input):
+            raise ValueError(
+                f'{input} is not valid. Acceptable values [1, "1", ".tar.bz2", 2, "2", ".conda"]'
+            )
+        if input in (1, "1", "tar.bz2", ".tar.bz2", cls.V1):
+            return cls.V1
+        elif input in (2, "2", "conda", ".conda", cls.V2):
+            return cls.V2
+
+
+    @staticmethod
+    def acceptable():
+        return (1, "1", "tar.bz2", ".tar.bz2", 2, "2", "conda", ".conda")
+
+    @classmethod
+    def is_acceptable(cls, value):
+        return value in cls.acceptable()
+
+    @property
+    def ext(self):
+        return self.value
+
+
 # Don't "save" an attribute of this module for later, like build_prefix =
 # conda_build.config.config.build_prefix, as that won't reflect any mutated
 # changes.
@@ -62,7 +105,7 @@ enable_static_default = "false"
 no_rewrite_stdout_env_default = "false"
 ignore_verify_codes_default = []
 exit_on_verify_error_default = False
-conda_pkg_format_default = None
+conda_pkg_format_default = CondaPkgFormat.V1
 zstd_compression_level_default = 19
 
 
@@ -235,10 +278,11 @@ def _get_default_settings():
                 "zstd_compression_level", zstd_compression_level_default
             ),
         ),
-        # this can be set to different values (currently only 2 means anything) to use package formats
         Setting(
             "conda_pkg_format",
-            cc_conda_build.get("pkg_format", conda_pkg_format_default),
+            CondaPkgFormat.normalize(
+                cc_conda_build.get("pkg_format", conda_pkg_format_default)
+            ),
         ),
         Setting("suppress_variables", False),
         Setting("build_id_pat", cc_conda_build.get("build_id_pat", "{n}_{t}")),

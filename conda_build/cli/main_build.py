@@ -18,19 +18,23 @@ from conda.common.io import dashlist
 from .. import api, build, source, utils
 from ..conda_interface import add_parser_channels, binstar_upload, cc_conda_build
 from ..config import (
+    conda_pkg_format_default,
     get_channel_urls,
     get_or_merge_config,
+    CondaPkgFormat,
     zstd_compression_level_default,
 )
 from ..utils import LoggingContext
-from .actions import KeyValueAction
+from .actions import KeyValueAction, PackageTypeNormalize
 from .main_render import get_render_parser
 
 if TYPE_CHECKING:
+    import os
     from argparse import Namespace
     from typing import Sequence
 
     from ..conda_interface import ArgumentParser
+    from ..config import Config
 
 
 def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
@@ -81,7 +85,7 @@ def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
         "-t",
         "--test",
         action="store_true",
-        help="Test package (assumes package is already built).  RECIPE_DIR argument must be a "
+        help="Test package (assumes package is already built).  RECIPE_PATH argument must be a "
         "path to built package .tar.bz2 file.",
     )
     parser.add_argument(
@@ -474,12 +478,23 @@ def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
             "Do not display value of environment variables specified in build.script_env."
         ),
     )
-
+    parser.add_argument(
+        "--package-format",
+        dest="conda_pkg_format",
+        choices=CondaPkgFormat.acceptable(),
+        action=PackageTypeNormalize,
+        default=CondaPkgFormat.normalize(
+            cc_conda_build.get("pkg_format", conda_pkg_format_default)
+        ),
+        help=(
+            "Choose which package type(s) are outputted. (Accepted inputs tar.bz2 or 1, .conda or 2)"
+        ),
+    )
     add_parser_channels(parser)
 
     parsed = parser.parse_args(args)
     check_recipe(parsed.recipe)
-    return parser, parsed
+    return parsed
 
 
 def check_recipe(path_list):
@@ -500,7 +515,12 @@ def check_recipe(path_list):
             )
 
 
-def output_action(recipe, config):
+def output_action(recipe: os.PathLike, config: Config):
+    """Output the conda package filename which would have been created
+
+    :param recipe: Path to recipe or recipe folder
+    :param config: Config object used for various options
+    """
     with LoggingContext(logging.CRITICAL + 1):
         config.verbose = False
         config.debug = False
@@ -508,22 +528,34 @@ def output_action(recipe, config):
         print("\n".join(sorted(paths)))
 
 
-def source_action(recipe, config):
+def source_action(recipe: os.PathLike, config: Config):
+    """Get source assets but don't build action.
+
+    :param recipe: Path to recipe or recipe folder
+    :param config: Config object used for various options
+    """
     metadata = api.render(recipe, config=config)[0][0]
     source.provide(metadata)
     print("Source tree in:", metadata.config.work_dir)
 
 
-def test_action(recipe, config):
+def test_action(recipe: os.PathLike, config: Config) -> bool:
+    """Test a package action
+
+    :param recipe: Path to package
+    :param config: Config object used for various options
+    :return: True if tests succeed
+    """
     return api.test(recipe, move_broken=False, config=config)
 
 
-def check_action(recipe, config):
+def check_action(recipe: os.PathLike, config: Config):
     return api.check(recipe, config=config)
 
 
 def execute(args: Sequence[str] | None = None) -> int:
-    _, parsed = parse_args(args)
+    parsed = parse_args(args)
+
     config = get_or_merge_config(None, **parsed.__dict__)
     build.check_external()
 

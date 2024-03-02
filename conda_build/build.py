@@ -44,7 +44,7 @@ from .conda_interface import (
     root_dir,
     url_path,
 )
-from .config import Config
+from .config import Config, CondaPkgFormat
 from .create_test import create_all_test_files
 from .deprecations import deprecated
 from .exceptions import CondaBuildException, DependencyNeedsBuildingError
@@ -69,8 +69,6 @@ from .render import (
     try_download,
 )
 from .utils import (
-    CONDA_PACKAGE_EXTENSION_V1,
-    CONDA_PACKAGE_EXTENSION_V2,
     CONDA_PACKAGE_EXTENSIONS,
     env_var,
     glob,
@@ -1997,9 +1995,10 @@ def bundle_conda(output, metadata: MetaData, env, stats, **kw):
     tmp_archives = []
     final_outputs = []
     cph_kwargs = {}
-    ext = CONDA_PACKAGE_EXTENSION_V1
-    if output.get("type") == "conda_v2" or metadata.config.conda_pkg_format == "2":
-        ext = CONDA_PACKAGE_EXTENSION_V2
+    ext = CondaPkgFormat.V1.ext
+    breakpoint()
+    if output.get("type") == CondaPkgFormat.V2 or metadata.config.conda_pkg_format == CondaPkgFormat.V2:
+        ext = CondaPkgFormat.V2.ext
         cph_kwargs["compression_tuple"] = (
             ".tar.zst",
             "zstd",
@@ -2017,7 +2016,7 @@ def bundle_conda(output, metadata: MetaData, env, stats, **kw):
 
         # we're done building, perform some checks
         for tmp_path in tmp_archives:
-            if tmp_path.endswith(CONDA_PACKAGE_EXTENSION_V1):
+            if tmp_path.endswith(CondaPkgFormat.V1.ext):
                 tarcheck.check_all(tmp_path, metadata.config)
             output_filename = os.path.basename(tmp_path)
 
@@ -2153,8 +2152,8 @@ def scan_metadata(path):
 
 
 bundlers = {
-    "conda": bundle_conda,
-    "conda_v2": bundle_conda,
+    CondaPkgFormat.V1: bundle_conda,
+    CondaPkgFormat.V2: bundle_conda,
     "wheel": bundle_wheel,
 }
 
