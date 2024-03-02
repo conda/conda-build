@@ -12,7 +12,7 @@ import re
 import shutil
 import time
 from collections import namedtuple
-from enum import Enum, auto
+from enum import Enum
 from os.path import abspath, expanduser, expandvars, join
 from typing import TYPE_CHECKING
 
@@ -21,6 +21,7 @@ from conda.base.constants import (
     CONDA_PACKAGE_EXTENSION_V2,  # noqa: F401
     CONDA_PACKAGE_EXTENSIONS,  # noqa: F401
 )
+
 from .conda_interface import (
     binstar_upload,
     cc_conda_build,
@@ -75,7 +76,6 @@ class CondaPkgFormat(Enum):
             return cls.V1
         elif input in (2, "2", "conda", ".conda", cls.V2):
             return cls.V2
-
 
     @staticmethod
     def acceptable():

@@ -44,7 +44,7 @@ from .conda_interface import (
     root_dir,
     url_path,
 )
-from .config import Config, CondaPkgFormat
+from .config import CondaPkgFormat, Config
 from .create_test import create_all_test_files
 from .deprecations import deprecated
 from .exceptions import CondaBuildException, DependencyNeedsBuildingError
@@ -1996,8 +1996,10 @@ def bundle_conda(output, metadata: MetaData, env, stats, **kw):
     final_outputs = []
     cph_kwargs = {}
     ext = CondaPkgFormat.V1.ext
-    breakpoint()
-    if output.get("type") == CondaPkgFormat.V2 or metadata.config.conda_pkg_format == CondaPkgFormat.V2:
+    if (
+        output.get("type") == CondaPkgFormat.V2
+        or metadata.config.conda_pkg_format == CondaPkgFormat.V2
+    ):
         ext = CondaPkgFormat.V2.ext
         cph_kwargs["compression_tuple"] = (
             ".tar.zst",

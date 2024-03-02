@@ -19,7 +19,7 @@ from bs4 import UnicodeDammit
 
 from . import exceptions, utils, variants
 from .conda_interface import MatchSpec, envs_dirs, md5_file
-from .config import Config, get_or_merge_config, CondaPkgFormat
+from .config import CondaPkgFormat, Config, get_or_merge_config
 from .features import feature_list
 from .license_family import ensure_valid_license_family
 from .utils import (
