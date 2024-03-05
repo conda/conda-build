@@ -734,7 +734,7 @@ implicitly added by host requirements (e.g. libpng exports libpng), and with
        - libpng
 
 Here, because no specific kind of ``run_exports`` is specified, libpng's ``run_exports``
-are considered "weak." This means they will only apply when libpng is in the
+are considered "weak". This means they will only apply when libpng is in the
 host section, when they will add their export to the run section. If libpng were
 listed in the build section, the ``run_exports`` would not apply to the run section.
 
@@ -745,6 +745,9 @@ listed in the build section, the ``run_exports`` would not apply to the run sect
      run_exports:
        strong:
          - libgcc
+
+There is also ``run_exports/weak`` which is equivalent to an unspecific kind of
+``run_exports`` but useful if you want to define both strong and weak run exports.
 
 Strong ``run_exports`` are used for things like runtimes, where the same runtime
 needs to be present in the host and the run environment, and exactly which
