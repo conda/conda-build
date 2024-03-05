@@ -1,0 +1,6 @@
+package:
+  name: _empty_outputs_requires_package_version
+  # when there are not outputs, package/version is required
+  # version: 0
+
+outputs:

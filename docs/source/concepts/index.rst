@@ -9,7 +9,7 @@ Concepts
    generating-index
    recipe
    package-naming-conv
-   
+
 What is a “package”?
 --------------------
 
@@ -23,8 +23,8 @@ What is a “package”?
 
 * You can use conda-build to build a conda package.
 
-What about channels
--------------------
+What about channels?
+--------------------
 
 * Channels contain packages.
 
@@ -38,12 +38,3 @@ What about channels
 
 * conda is able to install from channels and uses the indexes in the channel to
   solve for requirements and dependencies.
-
-Building Anaconda installers
-----------------------------
-
-* Anaconda(/Miniconda) installers are built with a modified version of constructor.
-
-* The idea is to build an Anaconda metapackage and bundle it together with some
-  other packages to build an Anaconda installer.
-

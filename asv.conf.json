@@ -3,7 +3,7 @@
     "project": "conda-build",
     "project_url": "http://github.com/conda/conda-build",
     "repo": ".",
-    "branches": ["master"],
+    "branches": ["main"],
     "dvcs": "git",
     "environment_type": "conda",
     "show_commit_url": "http://github.com/conda/conda-build/commit/",

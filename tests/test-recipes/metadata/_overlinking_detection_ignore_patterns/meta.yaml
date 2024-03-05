@@ -1,0 +1,17 @@
+package:
+  name: overlinking_ignore_patterns
+  version: 0
+
+build:
+  number: 0
+  ignore_run_exports:
+    -  bzip2
+  overlinking_ignore_patterns:
+    - "bin/*"           # [unix]
+    - "Library/bin/*"   # [win]
+
+requirements:
+  build:
+    - {{ compiler('c') }}
+  host:
+    - bzip2

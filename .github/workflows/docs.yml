@@ -1,12 +1,17 @@
 name: CI docs
 
 on:
+  # NOTE: github.event context is push payload:
+  # https://docs.github.com/en/developers/webhooks-and-events/webhooks/webhook-events-and-payloads#push
   push:
     branches:
-      - master
+      - main
     paths:
       - '.github/workflows/docs.yml'
       - 'docs/**'
+
+  # NOTE: github.event context is pull_request payload:
+  # https://docs.github.com/en/developers/webhooks-and-events/webhooks/webhook-events-and-payloads#pull_request
   pull_request:
     paths:
       - '.github/workflows/docs.yml'
@@ -14,9 +19,10 @@ on:
 
 jobs:
   docs:
+    if: '!github.event.repository.fork'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0
       - name: Setup
