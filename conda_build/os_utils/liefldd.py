@@ -13,7 +13,6 @@ from functools import partial
 from pathlib import Path
 from subprocess import PIPE, Popen
 
-from ..deprecations import deprecated
 from ..utils import on_mac, on_win, rec_glob
 from .external import find_executable
 
@@ -21,7 +20,6 @@ from .external import find_executable
 # TODO :: Remove all use of pyldd
 # Currently we verify the output of each against the other
 from .pyldd import DLLfile, EXEfile, elffile, machofile
-from .pyldd import codefile_type as _codefile_type
 from .pyldd import inspect_linkages as inspect_linkages_pyldd
 
 try:
@@ -31,11 +29,6 @@ try:
     have_lief = True
 except ImportError:
     have_lief = False
-
-
-@deprecated("3.28.0", "24.1.0", addendum="Use `isinstance(value, str)` instead.")
-def is_string(s):
-    return isinstance(s, str)
 
 
 # Some functions can operate on either file names
@@ -53,7 +46,7 @@ def ensure_binary(
     try:
         return lief.parse(str(file))
     except BaseException:
-        print(f"WARNING: liefldd: failed to ensure_binary({file})")
+        print(f"WARNING: liefldd: failed to ensure_binary({file!r})")
         return None
 
 
@@ -100,32 +93,6 @@ if have_lief:
 
 else:
     from .pyldd import codefile_class
-
-
-@deprecated(
-    "3.28.0",
-    "24.1.0",
-    addendum="Use `conda_build.os_utils.liefldd.codefile_class` instead.",
-)
-def codefile_type_liefldd(*args, **kwargs) -> str | None:
-    codefile = codefile_class(*args, **kwargs)
-    return codefile.__name__ if codefile else None
-
-
-deprecated.constant(
-    "3.28.0",
-    "24.1.0",
-    "codefile_type_pyldd",
-    _codefile_type,
-    addendum="Use `conda_build.os_utils.pyldd.codefile_class` instead.",
-)
-deprecated.constant(
-    "3.28.0",
-    "24.1.0",
-    "codefile_type",
-    _codefile_type,
-    addendum="Use `conda_build.os_utils.liefldd.codefile_class` instead.",
-)
 
 
 def _trim_sysroot(sysroot):
@@ -537,7 +504,8 @@ def inspect_linkages_lief(
                     while tmp_filename:
                         if (
                             not parent_exe_dirname
-                            and codefile_class(tmp_filename) == EXEfile
+                            and codefile_class(tmp_filename, skip_symlinks=True)
+                            == EXEfile
                         ):
                             parent_exe_dirname = os.path.dirname(tmp_filename)
                         tmp_filename = parents_by_filename[tmp_filename]
@@ -633,7 +601,8 @@ def get_linkages(
     result_pyldd = []
     debug = False
     if not have_lief or debug:
-        if codefile_class(filename) not in (DLLfile, EXEfile):
+        codefile = codefile_class(filename, skip_symlinks=True)
+        if codefile not in (DLLfile, EXEfile):
             result_pyldd = inspect_linkages_pyldd(
                 filename,
                 resolve_filenames=resolve_filenames,
@@ -645,7 +614,7 @@ def get_linkages(
                 return result_pyldd
         else:
             print(
-                f"WARNING: failed to get_linkages, codefile_class('{filename}')={codefile_class(filename)}"
+                f"WARNING: failed to get_linkages, codefile_class('{filename}', True)={codefile}"
             )
             return {}
     result_lief = inspect_linkages_lief(

@@ -41,7 +41,7 @@ from os.path import (
 )
 from pathlib import Path
 from threading import Thread
-from typing import Iterable
+from typing import TYPE_CHECKING, Iterable
 
 import conda_package_handling.api
 import filelock
@@ -55,11 +55,11 @@ from conda.base.constants import (
 )
 from conda.core.prefix_data import PrefixData
 from conda.models.dist import Dist
-from conda.models.records import PrefixRecord
 
 from .conda_interface import (
     CondaHTTPError,
     MatchSpec,
+    PackageRecord,
     StringIO,
     TemporaryDirectory,
     VersionOrder,
@@ -77,6 +77,9 @@ from .conda_interface import (
 from .conda_interface import rm_rf as _rm_rf
 from .deprecations import deprecated
 from .exceptions import BuildLockError
+
+if TYPE_CHECKING:
+    from conda.models.records import PrefixRecord
 
 on_win = sys.platform == "win32"
 on_mac = sys.platform == "darwin"
@@ -763,26 +766,6 @@ def get_conda_operation_locks(locking=True, bldpkgs_dirs=None, timeout=900):
     return locks
 
 
-@deprecated(
-    "3.28.0",
-    "24.1.0",
-    addendum="Use `os.path.relpath` or `pathlib.Path.relative_to` instead.",
-)
-def relative(f, d="lib"):
-    assert not f.startswith("/"), f
-    assert not d.startswith("/"), d
-    d = d.strip("/").split("/")
-    if d == ["."]:
-        d = []
-    f = dirname(f).split("/")
-    if f == [""]:
-        f = []
-    while d and f and d[0] == f[0]:
-        d.pop(0)
-        f.pop(0)
-    return "/".join((([".."] * len(f)) if f else ["."]) + d)
-
-
 # This is the lowest common denominator of the formats supported by our libarchive/python-libarchive-c
 # packages across all platforms
 decompressible_exts = (
@@ -1009,7 +992,7 @@ def get_site_packages(prefix, py_ver):
     return os.path.join(get_stdlib_dir(prefix, py_ver), "site-packages")
 
 
-def get_build_folders(croot):
+def get_build_folders(croot: str | os.PathLike | Path) -> list[str]:
     # remember, glob is not a regex.
     return glob(os.path.join(croot, "*" + "[0-9]" * 10 + "*"), recursive=True)
 
@@ -1977,13 +1960,11 @@ def match_peer_job(target_matchspec, other_m, this_m=None):
     for any keys that are shared between target_variant and m.config.variant"""
     name, version, build = other_m.name(), other_m.version(), ""
     matchspec_matches = target_matchspec.match(
-        Dist(
+        PackageRecord(
             name=name,
-            dist_name=f"{name}-{version}-{build}",
             version=version,
-            build_string=build,
+            build=build,
             build_number=other_m.build_number(),
-            channel=None,
         )
     )
 
@@ -2131,6 +2112,7 @@ def download_channeldata(channel_url):
     return data
 
 
+@deprecated("24.1.0", "24.3.0")
 def linked_data_no_multichannels(
     prefix: str | os.PathLike | Path,
 ) -> dict[Dist, PrefixRecord]:
@@ -2188,11 +2170,5 @@ def is_conda_pkg(pkg_path: str) -> bool:
     )
 
 
-@deprecated("3.28.3", "24.1.0")
-def samefile(path1: Path, path2: Path) -> bool:
-    try:
-        return path1.samefile(path2)
-    except (FileNotFoundError, PermissionError):
-        # FileNotFoundError: path doesn't exist
-        # PermissionError: don't have permissions to read path
-        return path1 == path2
+def package_record_to_requirement(prec: PackageRecord) -> str:
+    return f"{prec.name} {prec.version} {prec.build}"

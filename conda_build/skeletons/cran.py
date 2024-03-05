@@ -28,7 +28,6 @@ from os.path import (
     realpath,
     relpath,
 )
-from typing import Literal
 
 import requests
 import yaml
@@ -39,6 +38,8 @@ try:
 except ImportError:
     from yaml import SafeDumper
 
+from typing import TYPE_CHECKING
+
 from conda.common.io import dashlist
 
 from .. import source
@@ -48,6 +49,9 @@ from ..license_family import allowed_license_families, guess_license_family
 from ..metadata import MetaData
 from ..utils import ensure_list, rm_rf
 from ..variants import DEFAULT_VARIANTS, get_package_variants
+
+if TYPE_CHECKING:
+    from typing import Literal
 
 SOURCE_META = """\
   {archive_keys}

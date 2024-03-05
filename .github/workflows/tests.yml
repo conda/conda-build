@@ -7,6 +7,7 @@ on:
       - main
       - feature/**
       - '[0-9].*.x'  # e.g., 3.24.x
+      - '[0-9][0-9].*.x'  # e.g., 23.3.x
 
   # https://docs.github.com/en/webhooks-and-events/webhooks/webhook-events-and-payloads#pull_request
   pull_request:

@@ -38,6 +38,7 @@ from .conda_interface import (
     env_path_backup_var_exists,
     get_conda_channel,
     get_rc_urls,
+    pkgs_dirs,
     prefix_placeholder,
     reset_context,
     root_dir,
@@ -45,6 +46,7 @@ from .conda_interface import (
 )
 from .config import Config
 from .create_test import create_all_test_files
+from .deprecations import deprecated
 from .exceptions import CondaBuildException, DependencyNeedsBuildingError
 from .index import _delegated_update_index, get_build_index
 from .metadata import FIELDS, MetaData
@@ -183,6 +185,7 @@ def prefix_replacement_excluded(path):
     return False
 
 
+@deprecated("24.3", "24.5")
 def have_prefix_files(files, prefix):
     """
     Yields files that contain the current prefix in them, and modifies them
@@ -1230,31 +1233,6 @@ def get_files_with_prefix(m, replacements, files_in, prefix):
             end - start,
         )
     )
-    """
-    # Keeping this around just for a while.
-    files_with_prefix2 = sorted(have_prefix_files(files_in, prefix))
-    end = time.time()
-    print("INFO :: Time taken to do replacements (prefix only) was: {}".format(end - start))
-
-    ignore_files = m.ignore_prefix_files()
-    ignore_types = set()
-    if not hasattr(ignore_files, "__iter__"):
-        if ignore_files is True:
-            ignore_types.update((FileMode.text.name, FileMode.binary.name))
-        ignore_files = []
-    if (not m.get_value('build/detect_binary_files_with_prefix', True) and
-        not m.get_value('build/binary_has_prefix_files', None)):
-        ignore_types.update((FileMode.binary.name,))
-    # files_with_prefix is a list of tuples containing (prefix_placeholder, file_type, file_path)
-    ignore_files.extend(
-        f[2] for f in files_with_prefix2 if f[1] in ignore_types and f[2] not in ignore_files)
-    files_with_prefix2 = [f for f in files_with_prefix2 if f[2] not in ignore_files]
-    end2 = time.time()
-    print("INFO :: Time taken to do replacements (prefix only) was: {}".format(end2 - start2))
-    files1 = set([f for _, _, f in files_with_prefix])
-    files2 = set([f for _, _, f in files_with_prefix2])
-    assert not (files2 - files1), "New ripgrep prefix search missed the following files:\n{}\n".format(files2 - files1)
-    """
     return sorted(files_with_prefix)
 
 
@@ -2308,7 +2286,7 @@ def create_build_envs(m: MetaData, notest):
     m.config._merge_build_host = m.build_is_host
 
     if m.is_cross and not m.build_is_host:
-        host_actions = environ.get_install_actions(
+        host_precs = environ.get_package_records(
             m.config.host_prefix,
             tuple(host_ms_deps),
             "host",
@@ -2325,7 +2303,7 @@ def create_build_envs(m: MetaData, notest):
         )
         environ.create_env(
             m.config.host_prefix,
-            host_actions,
+            host_precs,
             env="host",
             config=m.config,
             subdir=m.config.host_subdir,
@@ -2334,7 +2312,7 @@ def create_build_envs(m: MetaData, notest):
         )
     if m.build_is_host:
         build_ms_deps.extend(host_ms_deps)
-    build_actions = environ.get_install_actions(
+    build_precs = environ.get_package_records(
         m.config.build_prefix,
         tuple(build_ms_deps),
         "build",
@@ -2360,7 +2338,7 @@ def create_build_envs(m: MetaData, notest):
                 *utils.ensure_list(m.get_value("requirements/run", [])),
             ]
             # make sure test deps are available before taking time to create build env
-            environ.get_install_actions(
+            environ.get_package_records(
                 m.config.test_prefix,
                 tuple(test_run_ms_deps),
                 "test",
@@ -2397,7 +2375,7 @@ def create_build_envs(m: MetaData, notest):
     ):
         environ.create_env(
             m.config.build_prefix,
-            build_actions,
+            build_precs,
             env="build",
             config=m.config,
             subdir=m.config.build_subdir,
@@ -2435,8 +2413,8 @@ def build(
         return default_return
 
     log = utils.get_logger(__name__)
-    host_actions = []
-    build_actions = []
+    host_precs = []
+    build_precs = []
     output_metas = []
 
     with utils.path_prepended(m.config.build_prefix):
@@ -2779,7 +2757,7 @@ def build(
                         host_ms_deps = m.ms_depends("host")
                         sub_build_ms_deps = m.ms_depends("build")
                         if m.is_cross and not m.build_is_host:
-                            host_actions = environ.get_install_actions(
+                            host_precs = environ.get_package_records(
                                 m.config.host_prefix,
                                 tuple(host_ms_deps),
                                 "host",
@@ -2796,7 +2774,7 @@ def build(
                             )
                             environ.create_env(
                                 m.config.host_prefix,
-                                host_actions,
+                                host_precs,
                                 env="host",
                                 config=m.config,
                                 subdir=subdir,
@@ -2806,7 +2784,7 @@ def build(
                         else:
                             # When not cross-compiling, the build deps aggregate 'build' and 'host'.
                             sub_build_ms_deps.extend(host_ms_deps)
-                        build_actions = environ.get_install_actions(
+                        build_precs = environ.get_package_records(
                             m.config.build_prefix,
                             tuple(sub_build_ms_deps),
                             "build",
@@ -2823,7 +2801,7 @@ def build(
                         )
                         environ.create_env(
                             m.config.build_prefix,
-                            build_actions,
+                            build_precs,
                             env="build",
                             config=m.config,
                             subdir=m.config.build_subdir,
@@ -3394,6 +3372,25 @@ def test(
     #     folder destination
     _extract_test_files_from_package(metadata)
 
+    # Remove any previously cached build from the package cache to ensure we
+    # really test the requested build and not some clashing or corrupted build.
+    # (Corruption of the extracted package can happen, e.g., in multi-output
+    # builds if one of the subpackages overwrites files from the other.)
+    # Special case:
+    #   If test is requested for .tar.bz2/.conda file from the pkgs dir itself,
+    #   clean_pkg_cache() will remove it; don't call that function in this case.
+    in_pkg_cache = (
+        not hasattr(recipedir_or_package_or_metadata, "config")
+        and os.path.isfile(recipedir_or_package_or_metadata)
+        and recipedir_or_package_or_metadata.endswith(CONDA_PACKAGE_EXTENSIONS)
+        and any(
+            os.path.dirname(recipedir_or_package_or_metadata) in pkgs_dir
+            for pkgs_dir in pkgs_dirs
+        )
+    )
+    if not in_pkg_cache:
+        environ.clean_pkg_cache(metadata.dist(), metadata.config)
+
     copy_test_source_files(metadata, metadata.config.test_dir)
     # this is also copying tests/source_files from work_dir to testing workdir
 
@@ -3481,7 +3478,7 @@ def test(
     utils.rm_rf(metadata.config.test_prefix)
 
     try:
-        actions = environ.get_install_actions(
+        precs = environ.get_package_records(
             metadata.config.test_prefix,
             tuple(specs),
             "host",
@@ -3523,7 +3520,7 @@ def test(
     with env_var("CONDA_PATH_CONFLICT", conflict_verbosity, reset_context):
         environ.create_env(
             metadata.config.test_prefix,
-            actions,
+            precs,
             config=metadata.config,
             env="host",
             subdir=subdir,
@@ -3819,7 +3816,7 @@ def build_tree(
                                     with TemporaryDirectory(
                                         prefix="_", suffix=r_string
                                     ) as tmpdir:
-                                        actions = environ.get_install_actions(
+                                        precs = environ.get_package_records(
                                             tmpdir,
                                             specs,
                                             env="run",
@@ -3839,9 +3836,9 @@ def build_tree(
                                 # make sure to download that package to the local cache if not there
                                 local_file = execute_download_actions(
                                     meta,
-                                    actions,
+                                    precs,
                                     "host",
-                                    package_subset=dep,
+                                    package_subset=[dep],
                                     require_files=True,
                                 )
                                 # test that package, using the local channel so that our new

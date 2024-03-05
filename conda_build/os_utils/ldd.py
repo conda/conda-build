@@ -2,21 +2,23 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from __future__ import annotations
 
-import os
 import re
 import subprocess
 from functools import lru_cache
 from os.path import basename
 from pathlib import Path
-from typing import Iterable
-
-from conda.models.records import PrefixRecord
+from typing import TYPE_CHECKING
 
 from ..conda_interface import untracked
-from ..deprecations import deprecated
 from ..utils import on_linux, on_mac
 from .macho import otool
 from .pyldd import codefile_class, inspect_linkages, machofile
+
+if TYPE_CHECKING:
+    import os
+    from typing import Iterable
+
+    from conda.models.records import PrefixRecord
 
 LDD_RE = re.compile(r"\s*(.*?)\s*=>\s*(.*?)\s*\(.*\)")
 LDD_NOT_FOUND_RE = re.compile(r"\s*(.*?)\s*=>\s*not found")
@@ -108,23 +110,21 @@ def _get_linkages(
     return linkages
 
 
-@deprecated("3.28.0", "24.1.0")
-@lru_cache(maxsize=None)
-def get_package_files(
-    prec: PrefixRecord, prefix: str | os.PathLike | Path
-) -> list[str]:
-    return prec["files"]
-
-
 @lru_cache(maxsize=None)
 def get_package_obj_files(
     prec: PrefixRecord, prefix: str | os.PathLike | Path
 ) -> list[str]:
-    return [file for file in prec["files"] if codefile_class(Path(prefix, file))]
+    return [
+        file
+        for file in prec["files"]
+        if codefile_class(Path(prefix, file), skip_symlinks=True)
+    ]
 
 
 @lru_cache(maxsize=None)
 def get_untracked_obj_files(prefix: str | os.PathLike | Path) -> list[str]:
     return [
-        file for file in untracked(str(prefix)) if codefile_class(Path(prefix, file))
+        file
+        for file in untracked(str(prefix))
+        if codefile_class(Path(prefix, file), skip_symlinks=True)
     ]

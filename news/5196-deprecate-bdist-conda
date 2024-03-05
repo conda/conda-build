@@ -8,11 +8,11 @@
 
 ### Deprecations
 
-* <news item>
+* Mark `conda_build.bdist_conda` module as pending deprecation. (#5196)
 
 ### Docs
 
-* Add goat counter (https://www.goatcounter.com/) as an analytics tool. (#5093)
+* <news item>
 
 ### Other
 

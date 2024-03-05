@@ -5,12 +5,12 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+from typing import TYPE_CHECKING
 
 import pytest
 from conda import __version__ as conda_version
 from conda.base.context import context
 from packaging.version import Version
-from pytest import MonkeyPatch
 
 from conda_build import api
 from conda_build.config import Config
@@ -27,6 +27,9 @@ from conda_build.utils import DEFAULT_SUBDIRS
 from conda_build.variants import DEFAULT_VARIANTS
 
 from .utils import metadata_dir, metadata_path, thisdir
+
+if TYPE_CHECKING:
+    from pytest import MonkeyPatch
 
 
 def test_uses_vcs_in_metadata(testing_workdir, testing_metadata):
@@ -230,16 +233,16 @@ def test_compiler_metadata_cross_compiler():
 
 
 @pytest.mark.parametrize(
-    "platform,arch,stdlibs",
+    "platform,arch,stdlib,stdlib_version",
     [
-        ("linux", "64", {"sysroot_linux-64 2.12.*"}),
-        ("linux", "aarch64", {"sysroot_linux-aarch64 2.17.*"}),
-        ("osx", "64", {"macosx_deployment_target_osx-64 10.13.*"}),
-        ("osx", "arm64", {"macosx_deployment_target_osx-arm64 11.0.*"}),
+        ("linux", "64", "sysroot", "2.12"),
+        ("linux", "aarch64", "sysroot", "2.17"),
+        ("osx", "64", "macosx_deployment_target", "10.13"),
+        ("osx", "arm64", "macosx_deployment_target", "11.0"),
     ],
 )
 def test_native_stdlib_metadata(
-    platform: str, arch: str, stdlibs: set[str], testing_config
+    platform: str, arch: str, stdlib: str, stdlib_version: str, testing_config
 ):
     testing_config.platform = platform
     metadata = api.render(
@@ -253,7 +256,12 @@ def test_native_stdlib_metadata(
         bypass_env_check=True,
         python="3.11",  # irrelevant
     )[0][0]
-    assert stdlibs <= set(metadata.meta["requirements"]["host"])
+    stdlib_req = f"{stdlib}_{platform}-{arch} {stdlib_version}.*"
+    assert stdlib_req in metadata.meta["requirements"]["host"]
+    assert {"c_stdlib", "c_stdlib_version"} <= metadata.get_used_vars()
+    hash_contents = metadata.get_hash_contents()
+    assert stdlib == hash_contents["c_stdlib"]
+    assert stdlib_version == hash_contents["c_stdlib_version"]
 
 
 def test_hash_build_id(testing_metadata):

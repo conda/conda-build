@@ -1,9 +1,11 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
+
 import argparse
 import logging
-import sys
 from pprint import pprint
+from typing import TYPE_CHECKING
 
 import yaml
 from yaml.parser import ParserError
@@ -14,6 +16,10 @@ from ..config import get_channel_urls, get_or_merge_config
 from ..deprecations import deprecated
 from ..utils import LoggingContext
 from ..variants import get_package_variants, set_language_env_vars
+
+if TYPE_CHECKING:
+    from argparse import Namespace
+    from typing import Sequence
 
 log = logging.getLogger(__name__)
 
@@ -163,89 +169,80 @@ source to try fill in related template variables.",
     return p
 
 
-def parse_args(args):
-    p = get_render_parser()
-    p.add_argument(
+def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
+    parser = get_render_parser()
+    parser.add_argument(
         "-f",
         "--file",
         help="write YAML to file, given as argument here.\
               Overwrites existing files.",
     )
     # we do this one separately because we only allow one entry to conda render
-    p.add_argument(
+    parser.add_argument(
         "recipe",
         metavar="RECIPE_PATH",
         help="Path to recipe directory.",
     )
     # this is here because we have a different default than build
-    p.add_argument(
+    parser.add_argument(
         "--verbose",
         action="store_true",
         help="Enable verbose output from download tools and progress updates",
     )
-    args, _ = p.parse_known_args(args)
-    return p, args
+
+    return parser, parser.parse_args(args)
 
 
-def execute(args, print_results=True):
-    p, args = parse_args(args)
+@deprecated.argument("24.1.1", "24.3.0", "print_results")
+def execute(args: Sequence[str] | None = None) -> int:
+    _, parsed = parse_args(args)
 
-    config = get_or_merge_config(None, **args.__dict__)
+    config = get_or_merge_config(None, **parsed.__dict__)
 
-    variants = get_package_variants(args.recipe, config, variants=args.variants)
+    variants = get_package_variants(parsed.recipe, config, variants=parsed.variants)
     from ..build import get_all_replacements
 
     get_all_replacements(variants)
     set_language_env_vars(variants)
 
-    config.channel_urls = get_channel_urls(args.__dict__)
+    config.channel_urls = get_channel_urls(parsed.__dict__)
 
-    config.override_channels = args.override_channels
+    config.override_channels = parsed.override_channels
 
-    if args.output:
+    if parsed.output:
         config.verbose = False
         config.debug = False
 
     metadata_tuples = api.render(
-        args.recipe,
+        parsed.recipe,
         config=config,
-        no_download_source=args.no_source,
-        variants=args.variants,
+        no_download_source=parsed.no_source,
+        variants=parsed.variants,
     )
 
-    if args.file and len(metadata_tuples) > 1:
+    if parsed.file and len(metadata_tuples) > 1:
         log.warning(
             "Multiple variants rendered. "
-            f"Only one will be written to the file you specified ({args.file})."
+            f"Only one will be written to the file you specified ({parsed.file})."
         )
 
-    if print_results:
-        if args.output:
-            with LoggingContext(logging.CRITICAL + 1):
-                paths = api.get_output_file_paths(metadata_tuples, config=config)
-                print("\n".join(sorted(paths)))
-            if args.file:
-                m = metadata_tuples[-1][0]
-                api.output_yaml(m, args.file, suppress_outputs=True)
-        else:
-            logging.basicConfig(level=logging.INFO)
-            for m, _, _ in metadata_tuples:
-                print("--------------")
-                print("Hash contents:")
-                print("--------------")
-                pprint(m.get_hash_contents())
-                print("----------")
-                print("meta.yaml:")
-                print("----------")
-                print(api.output_yaml(m, args.file, suppress_outputs=True))
+    if parsed.output:
+        with LoggingContext(logging.CRITICAL + 1):
+            paths = api.get_output_file_paths(metadata_tuples, config=config)
+            print("\n".join(sorted(paths)))
+        if parsed.file:
+            m = metadata_tuples[-1][0]
+            api.output_yaml(m, parsed.file, suppress_outputs=True)
     else:
-        return metadata_tuples
+        logging.basicConfig(level=logging.INFO)
+        for m, _, _ in metadata_tuples:
+            print("--------------")
+            print("Hash contents:")
+            print("--------------")
+            pprint(m.get_hash_contents())
+            print("----------")
+            print("meta.yaml:")
+            print("----------")
+            print(api.output_yaml(m, parsed.file, suppress_outputs=True))
 
-
-@deprecated("3.26.0", "24.1.0", addendum="Use `conda render` instead.")
-def main():
-    return execute(sys.argv[1:])
-
-
-if __name__ == "__main__":
-    main()
+    return 0

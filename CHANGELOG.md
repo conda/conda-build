@@ -1,5 +1,181 @@
 [//]: # (current developments)
 
+## 24.1.2 (2024-02-15)
+
+### Bug fixes
+
+* Fix rpaths patcher being run on symbolic links. (#5179 via #5181)
+* Fix corrupted package cache for outputs in subpackage tests. (#5184)
+
+### Contributors
+
+* @mbargull
+
+
+
+## 24.1.1 (2024-02-07)
+
+### Bug fixes
+
+* Fix nonzero exitcode on success. (#5167 via #5169)
+
+### Contributors
+
+* @kenodegard
+
+
+
+## 24.1.0 (2024-01-25)
+
+### Enhancements
+
+* Update `conda inspect channels` to use updated solver/transaction logic. (#5033)
+* Relax `script_env` error in outputs when variable referenced in `script_env` is not defined.
+  This unifies current behavior with the top-level build. (#5105)
+* Add support for Python 3.12. (#4997 via #4998)
+* Adopt calender versioning (CalVer) per CEP-8 for consistency with conda. (#4975)
+* Adopt expedited CEP-9 deprecation policy. (#5064)
+
+### Deprecations
+
+* Mark `conda inspect channels --test-installable` as pending deprecation. (#5033)
+* Mark `conda_build.inspect_pkg.check_install(package)` as pending deprecation in favor of `conda_build.inspect_pkg.check_install(subdir)`. (#5033)
+* Mark `conda_build.inspect_pkg.check_install(prepend)` as pending deprecation. (#5033)
+* Mark `conda_build.inspect_pkg.check_install(minimal_hint)` as pending deprecation. (#5033)
+* Mark `conda_build.conda_interface.Dist` as pending deprecation. (#5074)
+* Mark `conda_build.conda_interface.display_actions` as pending deprecation. (#5074)
+* Mark `conda_build.conda_interface.execute_actions` as pending deprecation. (#5074)
+* Mark `conda_build.conda_interface.execute_plan` as pending deprecation. (#5074)
+* Mark `conda_build.conda_interface.get_index` as pending deprecation. (#5074)
+* Mark `conda_build.conda_interface.install_actions` as pending deprecation. (#5074)
+* Mark `conda_build.conda_interface.linked` as pending deprecation. (#5074)
+* Mark `conda_build.conda_interface.linked_data` as pending deprecation. (#5074)
+* Mark `conda_build.utils.linked_data_no_multichannels` as pending deprecation. (#5074)
+* Mark `conda_build.environ.get_install_actions` as pending deprecation in favor of `conda_build.environ.get_package_records`. (#5152)
+* Mark `conda_build.environ.create_env(specs_or_actions)` as pending deprecation in favor of `conda_build.environ.create_env(specs_or_precs)`. (#5152)
+* Mark `conda_build.index.channel_data` as pending deprecation. (#5152)
+* Mark `conda_build.index._determine_namespace` as pending deprecation. (#5152)
+* Mark `conda_build.index._make_seconds` as pending deprecation. (#5152)
+* Mark `conda_build.index.REPODATA_VERSION` as pending deprecation. (#5152)
+* Mark `conda_build.index.CHANNELDATA_VERSION` as pending deprecation. (#5152)
+* Mark `conda_build.index.REPODATA_JSON_FN` as pending deprecation. (#5152)
+* Mark `conda_build.index.REPODATA_FROM_PKGS_JSON_FN` as pending deprecation. (#5152)
+* Mark `conda_build.index.CHANNELDATA_FIELDS` as pending deprecation. (#5152)
+* Mark `conda_build.index._clear_newline_chars` as pending deprecation. (#5152)
+* Mark `conda_build.index._apply_instructions` as pending deprecation. (#5152)
+* Mark `conda_build.index._get_jinja2_environment` as pending deprecation. (#5152)
+* Mark `conda_build.index._maybe_write` as pending deprecation. (#5152)
+* Mark `conda_build.index._maybe_build_string` as pending deprecation. (#5152)
+* Mark `conda_build.index._warn_on_missing_dependencies` as pending deprecation. (#5152)
+* Mark `conda_build.index._cache_post_install_details` as pending deprecation. (#5152)
+* Mark `conda_build.index._cache_recipe` as pending deprecation. (#5152)
+* Mark `conda_build.index._cache_run_exports` as pending deprecation. (#5152)
+* Mark `conda_build.index._cache_icon` as pending deprecation. (#5152)
+* Mark `conda_build.index._make_subdir_index_html` as pending deprecation. (#5152)
+* Mark `conda_build.index._make_channeldata_index_html` as pending deprecation. (#5152)
+* Mark `conda_build.index._get_source_repo_git_info` as pending deprecation. (#5152)
+* Mark `conda_build.index._cache_info_file` as pending deprecation. (#5152)
+* Mark `conda_build.index._alternate_file_extension` as pending deprecation. (#5152)
+* Mark `conda_build.index._get_resolve_object` as pending deprecation. (#5152)
+* Mark `conda_build.index._get_newest_versions` as pending deprecation. (#5152)
+* Mark `conda_build.index._add_missing_deps` as pending deprecation. (#5152)
+* Mark `conda_build.index._add_prev_ver_for_features` as pending deprecation. (#5152)
+* Mark `conda_build.index._shard_newest_packages` as pending deprecation. (#5152)
+* Mark `conda_build.index._build_current_repodata` as pending deprecation. (#5152)
+* Mark `conda_build.index.ChannelIndex` as pending deprecation. (#5152)
+* Mark `conda_build.render.actions_to_pins` as pending deprecation. (#5152)
+* Mark `conda_build.render.execute_download_actions(actions)` as pending deprecation in favor of `conda_build.render.execute_download_actions(precs)`. (#5152)
+* Mark `conda_build.render.get_upstream_pins(actions)` as pending deprecation in favor of `conda_build.render.get_upstream_pins(precs)`. (#5152)
+* Remove `conda_build.api.update_index`. (#5151)
+* Remove `conda_build.cli.main_build.main`. (#5151)
+* Remove `conda_build.cli.main_convert.main`. (#5151)
+* Remove `conda_build.cli.main_debug.main`. (#5151)
+* Remove `conda_build.cli.main_develop.main`. (#5151)
+* Remove `conda_build.cli.main_index`. (#5151)
+* Remove `conda_build.cli.main_inspect.main`. (#5151)
+* Remove `conda_build.cli.main_metapackage.main`. (#5151)
+* Remove `conda_build.cli.main_render.main`. (#5151)
+* Remove `conda_build.cli.main_skeleton.main`. (#5151)
+* Remove `conda_build.conda_interface.IndexRecord`. (#5151)
+* Remove `conda_build.conda_interface.CrossPlatformStLink`. (#5151)
+* Remove `conda_build.conda_interface.SignatureError`. (#5151)
+* Remove `conda_build.conda_interface.which_package`. (#5151)
+* Remove `conda_build.conda_interface.which_prefix`. (#5151)
+* Remove `conda_build.conda_interface.get_installed_version`. (#5151)
+* Remove `conda_build.config.python2_fs_encode`. (#5151)
+* Remove `conda_build.config._ensure_dir`. (#5151)
+* Remove `conda_build.config.Config.CONDA_LUA`. (#5151)
+* Remove `conda_build.config.Config.CONDA_PY`. (#5151)
+* Remove `conda_build.config.Config.CONDA_NPY`. (#5151)
+* Remove `conda_build.config.Config.CONDA_PERL`. (#5151)
+* Remove `conda_build.config.Config.CONDA_R`. (#5151)
+* Remove `conda_build.environ.clean_pkg_cache`. (#5151)
+* Remove `conda_build.index.update_index`. (#5151)
+* Remove `conda_build.inspect_pkg.dist_files`. (#5151)
+* Remove `conda_build.inspect_pkg.which_package(avoid_canonical_channel_name)`. (#5151)
+* Remove `conda_build.inspect_pkg._installed`. (#5151)
+* Remove `conda_build.metadata.Metadata.name(fail_ok)`. (#5151)
+* Remove `conda_build.os_utils.ldd.get_package_files`. (#5151)
+* Remove `conda_build.os_utils.liefldd.is_string`. (#5151)
+* Remove `conda_build.os_utils.liefldd.codefile_type_liefldd`. (#5151)
+* Remove `conda_build.os_utils.liefldd.codefile_type_pyldd`. (#5151)
+* Remove `conda_build.os_utils.liefldd.codefile_type`. (#5151)
+* Remove `conda_build.os_utils.pyldd.mach_o_change`. (#5151)
+* Remove `conda_build.os_utils.pyldd.is_codefile`. (#5151)
+* Remove `conda_build.os_utils.pyldd.codefile_type`. (#5151)
+* Remove `conda_build.os_utils.pyldd.inspect_rpaths`. (#5151)
+* Remove `conda_build.os_utils.pyldd.get_runpaths`. (#5151)
+* Remove `conda_build.os_utils.pyldd.otool_sys`. (#5151)
+* Remove `conda_build.os_utils.pyldd.ldd_sys`. (#5151)
+* Remove `conda_build.plugin.index`. (#5151)
+* Remove `conda_build.post.determine_package_nature`. (#5151)
+* Remove `conda_build.post.library_nature(subdir)`. (#5151)
+* Remove `conda_build.post.library_nature(bldpkgs_dirs)`. (#5151)
+* Remove `conda_build.post.library_nature(output_folder)`. (#5151)
+* Remove `conda_build.post.library_nature(channel_urls)`. (#5151)
+* Remove `conda_build.post.dists_from_names`. (#5151)
+* Remove `conda_build.post.FakeDist`. (#5151)
+* Remove `conda_build.post._get_fake_pkg_dist`. (#5151)
+* Remove `conda_build.utils.relative`. (#5151)
+* Remove `conda_build.utils.samefile`. (#5151)
+
+### Docs
+
+* Add GoatCounter (https://www.goatcounter.com/) as an analytics tool. (#5093)
+
+### Other
+
+* Remove unused Allure test report collection. (#5113)
+* Remove dependency on `conda.plan`. (#5074)
+* Remove almost all dependency on `conda.models.dist`. (#5074)
+* Replace usage of legacy `conda.models.dist.Dist` with `conda.models.records.PackageRecord`. (#5074)
+
+### Contributors
+
+* @conda-bot
+* @dholth
+* @jaimergp
+* @jezdez
+* @johnnynunez
+* @kenodegard
+* @msarahan
+* @travishathaway
+* @pre-commit-ci[bot]
+
+
+
+## 3.28.4 (2024-01-17)
+
+### Bug fixes
+
+* Fix linking check regressions by restoring pre-3.28 behavior for `conda_build.inspect_pkg.which_package`. (#5141)
+
+### Contributors
+
+* @mbargull
+
+
+
 ## 3.28.3 (2024-01-04)
 
 ### Bug fixes

@@ -9,9 +9,12 @@ import json
 import os
 from os.path import basename, exists, isfile, join
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-from .metadata import MetaData
 from .utils import copy_into, ensure_list, on_win, rm_rf
+
+if TYPE_CHECKING:
+    from .metadata import MetaData
 
 
 def create_files(m: MetaData, test_dir: Path) -> bool:

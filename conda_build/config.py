@@ -13,7 +13,7 @@ import shutil
 import time
 from collections import namedtuple
 from os.path import abspath, expanduser, expandvars, join
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from .conda_interface import (
     binstar_upload,
@@ -24,7 +24,6 @@ from .conda_interface import (
     subdir,
     url_path,
 )
-from .deprecations import deprecated
 from .utils import (
     get_build_folders,
     get_conda_operation_locks,
@@ -33,6 +32,9 @@ from .utils import (
     rm_rf,
 )
 from .variants import get_default_variant
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 invocation_time = ""
 
@@ -62,23 +64,6 @@ ignore_verify_codes_default = []
 exit_on_verify_error_default = False
 conda_pkg_format_default = None
 zstd_compression_level_default = 19
-
-
-@deprecated("3.25.0", "24.1.0")
-def python2_fs_encode(strin):
-    return strin
-
-
-@deprecated(
-    "3.25.0",
-    "24.1.0",
-    addendum=(
-        "Use `pathlib.Path.mkdir(exist_ok=True)` or `os.makedirs(exist_ok=True)` "
-        "instead."
-    ),
-)
-def _ensure_dir(path: os.PathLike):
-    os.makedirs(path, exist_ok=True)
 
 
 # we need this to be accessible to the CLI, so it needs to be more static.
@@ -498,61 +483,6 @@ class Config:
         """This is the core folder for a given build.
         It has the environments and work directories."""
         return os.path.join(self.croot, self.build_id)
-
-    # back compat for conda-build-all - expects CONDA_* vars to be attributes of the config object
-    @property
-    @deprecated("3.0.28", "24.1.0")
-    def CONDA_LUA(self):
-        return self.variant.get("lua", get_default_variant(self)["lua"])
-
-    @CONDA_LUA.setter
-    @deprecated("3.0.28", "24.1.0")
-    def CONDA_LUA(self, value):
-        self.variant["lua"] = value
-
-    @property
-    @deprecated("3.0.28", "24.1.0")
-    def CONDA_PY(self):
-        value = self.variant.get("python", get_default_variant(self)["python"])
-        return int("".join(value.split(".")))
-
-    @CONDA_PY.setter
-    @deprecated("3.0.28", "24.1.0")
-    def CONDA_PY(self, value):
-        value = str(value)
-        self.variant["python"] = ".".join((value[0], value[1:]))
-
-    @property
-    @deprecated("3.0.28", "24.1.0")
-    def CONDA_NPY(self):
-        value = self.variant.get("numpy", get_default_variant(self)["numpy"])
-        return int("".join(value.split(".")))
-
-    @CONDA_NPY.setter
-    @deprecated("3.0.28", "24.1.0")
-    def CONDA_NPY(self, value):
-        value = str(value)
-        self.variant["numpy"] = ".".join((value[0], value[1:]))
-
-    @property
-    @deprecated("3.0.28", "24.1.0")
-    def CONDA_PERL(self):
-        return self.variant.get("perl", get_default_variant(self)["perl"])
-
-    @CONDA_PERL.setter
-    @deprecated("3.0.28", "24.1.0")
-    def CONDA_PERL(self, value):
-        self.variant["perl"] = value
-
-    @property
-    @deprecated("3.0.28", "24.1.0")
-    def CONDA_R(self):
-        return self.variant.get("r_base", get_default_variant(self)["r_base"])
-
-    @CONDA_R.setter
-    @deprecated("3.0.28", "24.1.0")
-    def CONDA_R(self, value):
-        self.variant["r_base"] = value
 
     def _get_python(self, prefix, platform):
         if platform.startswith("win") or (platform == "noarch" and on_win):

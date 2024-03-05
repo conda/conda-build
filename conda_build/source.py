@@ -12,7 +12,7 @@ import time
 from os.path import abspath, basename, exists, expanduser, isdir, isfile, join, normpath
 from pathlib import Path
 from subprocess import CalledProcessError
-from typing import Iterable
+from typing import TYPE_CHECKING
 from urllib.parse import urljoin
 
 from .conda_interface import (
@@ -39,6 +39,9 @@ from .utils import (
     safe_print_unicode,
     tar_xf,
 )
+
+if TYPE_CHECKING:
+    from typing import Iterable
 
 log = get_logger(__name__)
 

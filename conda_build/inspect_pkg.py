@@ -6,24 +6,20 @@ import json
 import os
 import sys
 from collections import defaultdict
-from functools import lru_cache
 from itertools import groupby
 from operator import itemgetter
-from os.path import abspath, basename, dirname, exists, join
+from os.path import abspath, basename, dirname, exists, join, normcase
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Iterable, Literal
+from typing import TYPE_CHECKING
 
 from conda.api import Solver
 from conda.core.index import get_index
 from conda.core.prefix_data import PrefixData
-from conda.models.dist import Dist
 from conda.models.records import PrefixRecord
-from conda.resolve import MatchSpec
 
 from . import conda_interface
 from .conda_interface import (
-    linked_data,
     specs_from_args,
 )
 from .deprecations import deprecated
@@ -44,21 +40,12 @@ from .utils import (
     package_has_file,
 )
 
+if TYPE_CHECKING:
+    from typing import Iterable, Literal
+
 log = get_logger(__name__)
 
 
-@deprecated("3.28.0", "24.1.0")
-@lru_cache(maxsize=None)
-def dist_files(prefix: str | os.PathLike | Path, dist: Dist) -> set[str]:
-    if (prec := PrefixData(str(prefix)).get(dist.name, None)) is None:
-        return set()
-    elif MatchSpec(dist).match(prec):
-        return set(prec["files"])
-    else:
-        return set()
-
-
-@deprecated.argument("3.28.0", "24.1.0", "avoid_canonical_channel_name")
 def which_package(
     path: str | os.PathLike | Path,
     prefix: str | os.PathLike | Path,
@@ -68,43 +55,20 @@ def which_package(
     Given the path (of a (presumably) conda installed file) iterate over
     the conda packages the file came from.  Usually the iteration yields
     only one package.
-
-    We use lstat since a symlink doesn't clobber the file it points to.
     """
-    prefix = Path(prefix)
-
-    # historically, path was relative to prefix, just to be safe we append to prefix
-    # get lstat before calling _file_package_mapping in case path doesn't exist
     try:
-        lstat = (prefix / path).lstat()
-    except FileNotFoundError:
-        # FileNotFoundError: path doesn't exist
-        return
-    else:
-        yield from _file_package_mapping(prefix).get(lstat, ())
+        path = Path(path).relative_to(prefix)
+    except ValueError:
+        # ValueError: path is already relative to prefix
+        pass
+    # On Windows, be lenient and allow case-insensitive path comparisons.
+    # NOTE: On macOS, although case-insensitive filesystem is default, still
+    #       require case-sensitive matches (i.e., normcase on macOS is a no-op).
+    normcase_path = normcase(path)
 
-
-@lru_cache(maxsize=None)
-def _file_package_mapping(prefix: Path) -> dict[os.stat_result, set[PrefixRecord]]:
-    """Map paths to package records.
-
-    We use lstat since a symlink doesn't clobber the file it points to.
-    """
-    mapping: dict[os.stat_result, set[PrefixRecord]] = {}
     for prec in PrefixData(str(prefix)).iter_records():
-        for file in prec["files"]:
-            # packages are capable of removing files installed by other dependencies from
-            # the build prefix, in those cases lstat will fail, while which_package wont
-            # return the correct package(s) in such a condition we choose to not worry about
-            # it since this file to package lookup exists primarily to detect clobbering
-            try:
-                lstat = (prefix / file).lstat()
-            except FileNotFoundError:
-                # FileNotFoundError: path doesn't exist
-                continue
-            else:
-                mapping.setdefault(lstat, set()).add(prec)
-    return mapping
+        if normcase_path in (normcase(file) for file in prec["files"]):
+            yield prec
 
 
 def print_object_info(info, key):
@@ -247,11 +211,6 @@ def test_installable(channel: str = "defaults") -> bool:
     return success
 
 
-@deprecated("3.28.0", "24.1.0")
-def _installed(prefix: str | os.PathLike | Path) -> dict[str, Dist]:
-    return {dist.name: dist for dist in linked_data(str(prefix))}
-
-
 def _underlined_text(text):
     return str(text) + "\n" + "-" * len(str(text)) + "\n\n"
 
@@ -374,7 +333,7 @@ def inspect_objects(
         info = []
         for f in obj_files:
             path = join(prefix, f)
-            codefile = codefile_class(path)
+            codefile = codefile_class(path, skip_symlinks=True)
             if codefile == machofile:
                 info.append(
                     {

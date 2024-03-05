@@ -18,6 +18,7 @@ from contextlib import nullcontext
 from glob import glob
 from pathlib import Path
 from shutil import which
+from typing import TYPE_CHECKING
 
 # for version
 import conda
@@ -27,15 +28,12 @@ from binstar_client.commands import remove, show
 from binstar_client.errors import NotFound
 from conda.common.compat import on_linux, on_mac, on_win
 from conda.exceptions import ClobberError, CondaMultiError
-from pytest import FixtureRequest, MonkeyPatch
-from pytest_mock import MockerFixture
+from conda_index.api import update_index
 
 from conda_build import __version__, api, exceptions
 from conda_build.conda_interface import (
-    CONDA_VERSION,
     CondaError,
     LinkError,
-    VersionOrder,
     context,
     reset_context,
     url_path,
@@ -47,7 +45,6 @@ from conda_build.exceptions import (
     OverDependingError,
     OverLinkingError,
 )
-from conda_build.metadata import MetaData
 from conda_build.os_utils.external import find_executable
 from conda_build.render import finalize_metadata
 from conda_build.utils import (
@@ -71,6 +68,12 @@ from .utils import (
     metadata_path,
     reset_config,
 )
+
+if TYPE_CHECKING:
+    from pytest import FixtureRequest, MonkeyPatch
+    from pytest_mock import MockerFixture
+
+    from conda_build.metadata import MetaData
 
 
 def represent_ordereddict(dumper, data):
@@ -533,7 +536,7 @@ def test_skip_existing_url(testing_metadata, testing_workdir, capfd):
     copy_into(outputs[0], os.path.join(platform, os.path.basename(outputs[0])))
 
     # create the index so conda can find the file
-    api.update_index(output_dir)
+    update_index(output_dir)
 
     testing_metadata.config.skip_existing = True
     testing_metadata.config.channel_urls = [url_path(output_dir)]
@@ -1467,7 +1470,7 @@ def test_run_constrained_stores_constrains_info(testing_config):
 @pytest.mark.sanity
 def test_no_locking(testing_config):
     recipe = os.path.join(metadata_dir, "source_git_jinja2")
-    api.update_index(os.path.join(testing_config.croot))
+    update_index(os.path.join(testing_config.croot))
     api.build(recipe, config=testing_config, locking=False)
 
 
@@ -1948,16 +1951,6 @@ def test_add_pip_as_python_dependency_from_condarc_file(
     Test whether settings from .condarc files are heeded.
     ref: https://github.com/conda/conda-libmamba-solver/issues/393
     """
-    if VersionOrder(CONDA_VERSION) <= VersionOrder("23.10.0"):
-        if not add_pip_as_python_dependency and context.solver == "libmamba":
-            pytest.xfail(
-                "conda.plan.install_actions from conda<=23.10.0 ignores .condarc files."
-            )
-        from conda.base.context import context_stack
-
-        # ContextStack's pop/replace methods don't call self.apply.
-        context_stack.apply()
-
     # TODO: SubdirData._cache_ clearing might not be needed for future conda versions.
     #       See https://github.com/conda/conda/pull/13365 for proposed changes.
     from conda.core.subdir_data import SubdirData

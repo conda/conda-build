@@ -1,5 +1,7 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
+
 import datetime
 import json
 import os
@@ -8,7 +10,6 @@ import re
 import time
 from functools import partial
 from io import StringIO, TextIOBase
-from typing import IO, Any, Optional
 from warnings import warn
 
 import jinja2
@@ -18,6 +19,8 @@ try:
     import tomllib  # Python 3.11
 except:
     import tomli as tomllib
+
+from typing import TYPE_CHECKING
 
 from . import _load_setup_py_data
 from .environ import get_dict as get_environ
@@ -34,6 +37,9 @@ from .utils import (
     rm_rf,
 )
 from .variants import DEFAULT_COMPILERS
+
+if TYPE_CHECKING:
+    from typing import IO, Any
 
 log = get_logger(__name__)
 
@@ -671,7 +677,7 @@ def _load_data(stream: IO, fmt: str, *args, **kwargs) -> Any:
 
 def load_file_data(
     filename: str,
-    fmt: Optional[str] = None,
+    fmt: str | None = None,
     *args,
     config=None,
     from_recipe_dir=False,

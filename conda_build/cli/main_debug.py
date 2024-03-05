@@ -1,14 +1,19 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
+
 import logging
 import sys
-from argparse import ArgumentParser
+from typing import TYPE_CHECKING
 
 from .. import api
-from ..deprecations import deprecated
 from ..utils import on_win
 from . import validators as valid
 from .main_render import get_render_parser
+
+if TYPE_CHECKING:
+    from argparse import ArgumentParser
+    from typing import Sequence
 
 logging.basicConfig(level=logging.INFO)
 
@@ -86,25 +91,25 @@ Set up environments and activation scripts to debug your build or test phase.
     return p
 
 
-def execute(args):
+def execute(args: Sequence[str] | None = None) -> int:
     parser = get_parser()
-    args = parser.parse_args(args)
+    parsed = parser.parse_args(args)
 
     try:
         activation_string = api.debug(
-            args.recipe_or_package_file_path,
-            verbose=(not args.activate_string_only),
-            **args.__dict__,
+            parsed.recipe_or_package_file_path,
+            verbose=(not parsed.activate_string_only),
+            **parsed.__dict__,
         )
 
-        if not args.activate_string_only:
+        if not parsed.activate_string_only:
             print("#" * 80)
             print(
                 "Test environment created for debugging.  To enter a debugging environment:\n"
             )
 
         print(activation_string)
-        if not args.activate_string_only:
+        if not parsed.activate_string_only:
             test_file = "conda_test_runner.bat" if on_win else "conda_test_runner.sh"
             print(
                 f"To run your tests, you might want to start with running the {test_file} file."
@@ -117,7 +122,4 @@ def execute(args):
         )
         sys.exit(1)
 
-
-@deprecated("3.26.0", "24.1.0", addendum="Use `conda debug` instead.")
-def main():
-    return execute(sys.argv[1:])
+    return 0

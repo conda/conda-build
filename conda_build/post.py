@@ -32,7 +32,7 @@ from os.path import (
 )
 from pathlib import Path
 from subprocess import CalledProcessError, call, check_output
-from typing import Iterable, Literal
+from typing import TYPE_CHECKING
 
 from conda.core.prefix_data import PrefixData
 from conda.models.records import PrefixRecord
@@ -44,10 +44,8 @@ from .conda_interface import (
     md5_file,
     walk_prefix,
 )
-from .deprecations import deprecated
 from .exceptions import OverDependingError, OverLinkingError, RunPathError
 from .inspect_pkg import which_package
-from .metadata import MetaData
 from .os_utils import external, macho
 from .os_utils.liefldd import (
     get_exports_memoized,
@@ -64,7 +62,12 @@ from .os_utils.pyldd import (
     elffile,
     machofile,
 )
-from .utils import linked_data_no_multichannels, on_mac, on_win, prefix_files
+from .utils import on_mac, on_win, prefix_files
+
+if TYPE_CHECKING:
+    from typing import Literal
+
+    from .metadata import MetaData
 
 filetypes_for_platform = {
     "win": (DLLfile, EXEfile),
@@ -75,7 +78,7 @@ filetypes_for_platform = {
 
 def fix_shebang(f, prefix, build_python, osx_is_app=False):
     path = join(prefix, f)
-    if codefile_class(path):
+    if codefile_class(path, skip_symlinks=True):
         return
     elif islink(path):
         return
@@ -414,7 +417,7 @@ def osx_ch_link(path, link_dict, host_prefix, build_prefix, files):
             ".. seems to be linking to a compiler runtime, replacing build prefix with "
             "host prefix and"
         )
-        if not codefile_class(link):
+        if not codefile_class(link, skip_symlinks=True):
             sys.exit(
                 "Error: Compiler runtime library in build prefix not found in host prefix %s"
                 % link
@@ -650,31 +653,11 @@ def assert_relative_osx(path, host_prefix, build_prefix):
                 )
 
 
-@deprecated(
-    "3.28.0",
-    "24.1.0",
-    addendum="Use `conda_build.post.get_dsos` and `conda_build.post.get_run_exports` instead.",
-)
-def determine_package_nature(
-    prec: PrefixRecord,
-    prefix: str | os.PathLike | Path,
-    subdir,
-    bldpkgs_dir,
-    output_folder,
-    channel_urls,
-) -> tuple[set[str], tuple[str, ...], bool]:
-    return (
-        get_dsos(prec, prefix),
-        get_run_exports(prec, prefix),
-        prec.name.startswith("lib"),
-    )
-
-
 def get_dsos(prec: PrefixRecord, prefix: str | os.PathLike | Path) -> set[str]:
     return {
         file
         for file in prec["files"]
-        if codefile_class(Path(prefix, file))
+        if codefile_class(Path(prefix, file), skip_symlinks=True)
         # codefile_class already filters by extension/binary type, do we need this second filter?
         for ext in (".dylib", ".so", ".dll", ".pyd")
         if ext in file
@@ -713,10 +696,6 @@ def get_run_exports(
         return ()
 
 
-@deprecated.argument("3.28.0", "24.1.0", "subdir")
-@deprecated.argument("3.28.0", "24.1.0", "bldpkgs_dirs")
-@deprecated.argument("3.28.0", "24.1.0", "output_folder")
-@deprecated.argument("3.28.0", "24.1.0", "channel_urls")
 def library_nature(
     prec: PrefixRecord, prefix: str | os.PathLike | Path
 ) -> Literal[
@@ -770,36 +749,6 @@ def library_nature(
         elif r_files:
             return "interpreted library (R)"
     return "non-library"
-
-
-@deprecated(
-    "3.28.0",
-    "24.1.0",
-    addendum="Query `conda.core.prefix_data.PrefixData` instead.",
-)
-def dists_from_names(names: Iterable[str], prefix: str | os.PathLike | Path):
-    names = utils.ensure_list(names)
-    return [prec for prec in linked_data_no_multichannels(prefix) if prec.name in names]
-
-
-@deprecated(
-    "3.28.0",
-    "24.1.0",
-    addendum="Use `conda.models.records.PrefixRecord` instead.",
-)
-class FakeDist:
-    def __init__(self, name, version, build_number, build_str, channel, files):
-        self.name = name
-        self.quad = [name]
-        self.version = version
-        self.build_number = build_number
-        self.build_string = build_str
-        self.channel = channel
-        self.files = files
-
-    def get(self, name):
-        if name == "files":
-            return self.files
 
 
 # This is really just a small, fixed sysroot and it is rooted at ''. `libcrypto.0.9.8.dylib` should not be in it IMHO.
@@ -891,7 +840,7 @@ def _collect_needed_dsos(
         sysroots = list(sysroots_files.keys())[0]
     for f in files:
         path = join(run_prefix, f)
-        if not codefile_class(path):
+        if not codefile_class(path, skip_symlinks=True):
             continue
         build_prefix = build_prefix.replace(os.sep, "/")
         run_prefix = run_prefix.replace(os.sep, "/")
@@ -1013,23 +962,6 @@ def _map_file_to_package(
                             contains_static_libs[prefix_owners[prefix][rp_po][0]] = True
 
     return prefix_owners, contains_dsos, contains_static_libs, all_lib_exports
-
-
-@deprecated(
-    "3.28.0", "24.1.0", addendum="Use `conda.models.records.PrefixRecord` instead."
-)
-def _get_fake_pkg_dist(pkg_name, pkg_version, build_str, build_number, channel, files):
-    return (
-        FakeDist(
-            pkg_name,
-            str(pkg_version),
-            build_number,
-            build_str,
-            channel,
-            files,
-        ),
-        f"{pkg_name}-{pkg_version}-{build_str}",
-    )
 
 
 def _print_msg(errors, text, verbose):
@@ -1246,7 +1178,7 @@ def _show_linking_messages(
             )
     for f in files:
         path = join(run_prefix, f)
-        codefile = codefile_class(path)
+        codefile = codefile_class(path, skip_symlinks=True)
         if codefile not in filetypes_for_platform[subdir.split("-")[0]]:
             continue
         warn_prelude = "WARNING ({},{})".format(pkg_name, f.replace(os.sep, "/"))
@@ -1345,7 +1277,7 @@ def check_overlinking_impl(
     filesu = []
     for file in files:
         path = join(run_prefix, file)
-        codefile = codefile_class(path)
+        codefile = codefile_class(path, skip_symlinks=True)
         if codefile in filetypes_for_platform[subdir.split("-")[0]]:
             files_to_inspect.append(file)
         filesu.append(file.replace("\\", "/"))
@@ -1650,7 +1582,7 @@ def post_process_shared_lib(m, f, files, host_prefix=None):
     if not host_prefix:
         host_prefix = m.config.host_prefix
     path = join(host_prefix, f)
-    codefile = codefile_class(path)
+    codefile = codefile_class(path, skip_symlinks=True)
     if not codefile or path.endswith(".debug"):
         return
     rpaths = m.get_value("build/rpaths", ["lib"])
@@ -1809,7 +1741,9 @@ def check_symlinks(files, prefix, croot):
             # symlinks to binaries outside of the same dir don't work.  RPATH stuff gets confused
             #    because ld.so follows symlinks in RPATHS
             #    If condition exists, then copy the file rather than symlink it.
-            if not dirname(link_path) == dirname(real_link_path) and codefile_class(f):
+            if not dirname(link_path) == dirname(real_link_path) and codefile_class(
+                f, skip_symlinks=True
+            ):
                 os.remove(path)
                 utils.copy_into(real_link_path, path)
             elif real_link_path.startswith(real_build_prefix):
