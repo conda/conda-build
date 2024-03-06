@@ -4,6 +4,7 @@ chardet
 conda >=22.11.0
 conda-forge::xdoctest
 conda-index
+conda-libmamba-solver
 conda-package-handling >=1.3
 conda-verify
 contextlib2
