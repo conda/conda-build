@@ -1309,7 +1309,8 @@ contents.
          - somefolder/*.some-extension
 
 Files can be excluded by specifying `files` as a dictionary separating
-files to `include` from those to `exclude`:
+files to `include` from those to `exclude`. Files from other packages
+are automatically excluded:
 
 .. code-block:: yaml
 
