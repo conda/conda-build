@@ -2,6 +2,8 @@
 # SPDX-License-Identifier: BSD-3-Clause
 import argparse
 
+from ..config import CondaPkgFormat
+
 
 class KeyValueAction(argparse.Action):
     def __call__(self, parser, namespace, items, option_string=None):
@@ -16,3 +18,8 @@ class KeyValueAction(argparse.Action):
                     "is already in use by conda-build."
                 )
             getattr(namespace, self.dest)[key] = value
+
+
+class PackageTypeNormalize(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        setattr(namespace, self.dest, CondaPkgFormat.normalize(values))
