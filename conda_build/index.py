@@ -39,6 +39,7 @@ from conda.common.compat import ensure_binary
 #  BAD BAD BAD - conda internals
 from conda.core.index import get_index
 from conda.core.subdir_data import SubdirData
+from conda.gateways.disk.read import compute_sum
 from conda.models.channel import Channel
 from conda_index.index import update_index as _update_index
 from conda_package_handling.api import InvalidArchiveError
@@ -518,7 +519,7 @@ def _maybe_write(path, content, write_newline_end=False, content_is_binary=False
         if write_newline_end:
             fh.write(b"\n")
     if isfile(path):
-        if utils.compute_sum(temp_path, "md5") == utils.compute_sum(path, "md5"):
+        if compute_sum(temp_path, "md5") == compute_sum(path, "md5"):
             # No need to change mtimes. The contents already match.
             os.unlink(temp_path)
             return False
@@ -1440,7 +1441,7 @@ class ChannelIndex:
                 channel_icon_fn = "{}.{}".format(data["name"], icon_ext)
                 icon_url = "icons/" + channel_icon_fn
                 icon_channel_path = join(channel_root, "icons", channel_icon_fn)
-                icon_md5 = utils.compute_sum(icon_cache_path, "md5")
+                icon_md5 = compute_sum(icon_cache_path, "md5")
                 icon_hash = f"md5:{icon_md5}:{getsize(icon_cache_path)}"
                 data.update(icon_hash=icon_hash, icon_url=icon_url)
                 # log.info("writing icon from %s to %s", icon_cache_path, icon_channel_path)
@@ -1496,7 +1497,7 @@ class ChannelIndex:
                     "size": getsize(path),
                     "timestamp": int(getmtime(path)),
                     "sha256": utils.sha256_checksum(path),
-                    "md5": utils.compute_sum(path, "md5"),
+                    "md5": compute_sum(path, "md5"),
                 }
 
         extra_paths = OrderedDict()
