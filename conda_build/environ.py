@@ -795,18 +795,21 @@ def os_vars(m, prefix):
     return d
 
 
+@deprecated("24.3", "24.5")
 class InvalidEnvironment(Exception):
     pass
 
 
 # Stripped-down Environment class from conda-tools ( https://github.com/groutr/conda-tools )
 # Vendored here to avoid the whole dependency for just this bit.
+@deprecated("24.3", "24.5")
 def _load_json(path):
     with open(path) as fin:
         x = json.load(fin)
     return x
 
 
+@deprecated("24.3", "24.5")
 def _load_all_json(path):
     """
     Load all json files in a directory.  Return dictionary with filenames mapped to json
@@ -820,6 +823,7 @@ def _load_all_json(path):
     return result
 
 
+@deprecated("24.3", "24.5", addendum="Use `conda.core.prefix_data.PrefixData` instead.")
 class Environment:
     def __init__(self, path):
         """
