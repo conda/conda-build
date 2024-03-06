@@ -1,0 +1,19 @@
+### Enhancements
+
+* <news item>
+
+### Bug fixes
+
+* <news item>
+
+### Deprecations
+
+* Mark `conda_build.environ.Environment` as deprecated. Use `conda.core.prefix_data.PrefixData` instead. (#5219)
+
+### Docs
+
+* <news item>
+
+### Other
+
+* <news item>
