@@ -35,8 +35,6 @@ from .conda_interface import (
     pkgs_dirs,
     specs_from_url,
 )
-from .deprecations import deprecated
-from .environ import LINK_ACTION
 from .exceptions import DependencyNeedsBuildingError
 from .index import get_build_index
 from .metadata import MetaData, combine_top_level_metadata_with_output
@@ -89,13 +87,6 @@ def bldpkg_path(m):
             f"{m.type} file for {m.name()} in: {join(m.config.output_folder, subdir)}"
         )
     return path
-
-
-@deprecated("24.1.0", "24.3.0")
-def actions_to_pins(actions):
-    if LINK_ACTION in actions:
-        return [package_record_to_requirement(prec) for prec in actions[LINK_ACTION]]
-    return []
 
 
 def _categorize_deps(m, specs, exclude_pattern, variant):
@@ -158,7 +149,7 @@ def get_env_dependencies(
     )
     with TemporaryDirectory(prefix="_", suffix=random_string) as tmpdir:
         try:
-            actions = environ.get_install_actions(
+            precs = environ.get_package_records(
                 tmpdir,
                 tuple(dependencies),
                 env,
@@ -180,19 +171,17 @@ def get_env_dependencies(
             else:
                 unsat = e.message
             if permit_unsatisfiable_variants:
-                actions = {}
+                precs = []
             else:
                 raise
 
-    specs = [
-        package_record_to_requirement(prec) for prec in actions.get(LINK_ACTION, [])
-    ]
+    specs = [package_record_to_requirement(prec) for prec in precs]
     return (
         utils.ensure_list(
             (specs + subpackages + pass_through_deps)
             or m.get_value(f"requirements/{env}", [])
         ),
-        actions,
+        precs,
         unsat,
     )
 
@@ -358,8 +347,6 @@ def execute_download_actions(m, precs, env, package_subset=None, require_files=F
 
     pkg_files = {}
 
-    if hasattr(precs, "keys"):
-        precs = precs.get(LINK_ACTION, [])
     if isinstance(package_subset, PackageRecord):
         package_subset = [package_subset]
     else:
@@ -413,8 +400,6 @@ def get_upstream_pins(m: MetaData, precs, env):
     downstream dependency specs.  Return these additional specs."""
     env_specs = m.get_value(f"requirements/{env}", [])
     explicit_specs = [req.split(" ")[0] for req in env_specs] if env_specs else []
-    if hasattr(precs, "keys"):
-        precs = precs.get(LINK_ACTION, [])
     precs = [prec for prec in precs if prec.name in explicit_specs]
 
     ignore_pkgs_list = utils.ensure_list(m.get_value("build/ignore_run_exports_from"))
@@ -451,7 +436,7 @@ def _read_upstream_pin_files(
     permit_unsatisfiable_variants,
     exclude_pattern,
 ):
-    deps, actions, unsat = get_env_dependencies(
+    deps, precs, unsat = get_env_dependencies(
         m,
         env,
         m.config.variant,
@@ -460,7 +445,7 @@ def _read_upstream_pin_files(
     )
     # extend host deps with strong build run exports.  This is important for things like
     #    vc feature activation to work correctly in the host env.
-    extra_run_specs = get_upstream_pins(m, actions, env)
+    extra_run_specs = get_upstream_pins(m, precs, env)
     return (
         list(set(deps)) or m.get_value(f"requirements/{env}", []),
         unsat,

@@ -41,7 +41,7 @@ from os.path import (
 )
 from pathlib import Path
 from threading import Thread
-from typing import TYPE_CHECKING, Iterable
+from typing import Iterable
 
 import conda_package_handling.api
 import filelock
@@ -53,8 +53,6 @@ from conda.base.constants import (
     CONDA_PACKAGE_EXTENSIONS,
     KNOWN_SUBDIRS,
 )
-from conda.core.prefix_data import PrefixData
-from conda.models.dist import Dist
 from conda.utils import compute_sum
 
 from .conda_interface import (
@@ -74,11 +72,7 @@ from .conda_interface import (
     win_path_to_unix,
 )
 from .conda_interface import rm_rf as _rm_rf
-from .deprecations import deprecated
 from .exceptions import BuildLockError
-
-if TYPE_CHECKING:
-    from conda.models.records import PrefixRecord
 
 on_win = sys.platform == "win32"
 on_mac = sys.platform == "darwin"
@@ -2109,21 +2103,6 @@ def download_channeldata(channel_url):
     else:
         data = channeldata_cache[channel_url]
     return data
-
-
-@deprecated("24.1.0", "24.3.0")
-def linked_data_no_multichannels(
-    prefix: str | os.PathLike | Path,
-) -> dict[Dist, PrefixRecord]:
-    """
-    Return a dictionary of the linked packages in prefix, with correct channels, hopefully.
-    cc @kalefranz.
-    """
-    prefix = Path(prefix)
-    return {
-        Dist.from_string(prec.fn, channel_override=prec.channel.name): prec
-        for prec in PrefixData(str(prefix)).iter_records()
-    }
 
 
 def shutil_move_more_retrying(src, dest, debug_name):
