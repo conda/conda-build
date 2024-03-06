@@ -61,29 +61,10 @@ from conda.exports import (  # noqa: F401
     walk_prefix,
     win_path_to_unix,
 )
-from conda.exports import display_actions as _display_actions
-from conda.exports import execute_actions as _execute_actions
-from conda.exports import execute_plan as _execute_plan
-from conda.exports import get_index as _get_index
-from conda.exports import install_actions as _install_actions
-from conda.exports import linked as _linked
-from conda.exports import linked_data as _linked_data
-from conda.exports import package_cache as _package_cache
 from conda.models.channel import get_conda_build_local_url  # noqa: F401
-from conda.models.dist import Dist as _Dist
 from conda.utils import compute_sum
 
 from .deprecations import deprecated
-
-deprecated.constant("24.1.0", "24.3.0", "Dist", _Dist)
-deprecated.constant("24.1.0", "24.3.0", "display_actions", _display_actions)
-deprecated.constant("24.1.0", "24.3.0", "execute_actions", _execute_actions)
-deprecated.constant("24.1.0", "24.3.0", "execute_plan", _execute_plan)
-deprecated.constant("24.1.0", "24.3.0", "get_index", _get_index)
-deprecated.constant("24.1.0", "24.3.0", "install_actions", _install_actions)
-deprecated.constant("24.1.0", "24.3.0", "linked", _linked)
-deprecated.constant("24.1.0", "24.3.0", "linked_data", _linked_data)
-deprecated.constant("24.1.0", "24.3.0", "package_cache", _package_cache)
 
 # TODO: Go to references of all properties below and import them from `context` instead
 binstar_upload = context.binstar_upload
