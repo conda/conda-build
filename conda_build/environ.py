@@ -1042,7 +1042,6 @@ def get_install_actions(
     return {PREFIX_ACTION: prefix, LINK_ACTION: precs}
 
 
-@deprecated.argument("24.1.0", "24.3.0", "specs_or_actions", rename="specs_or_precs")
 def create_env(
     prefix,
     specs_or_precs,

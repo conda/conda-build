@@ -329,7 +329,6 @@ def _read_specs_from_package(pkg_loc, pkg_dist):
     return specs
 
 
-@deprecated.argument("24.1.0", "24.3.0", "actions", rename="precs")
 def execute_download_actions(m, precs, env, package_subset=None, require_files=False):
     subdir = getattr(m.config, f"{env}_subdir")
     index, _, _ = get_build_index(
@@ -409,7 +408,6 @@ def execute_download_actions(m, precs, env, package_subset=None, require_files=F
     return pkg_files
 
 
-@deprecated.argument("24.1.0", "24.3.0", "actions", rename="precs")
 def get_upstream_pins(m: MetaData, precs, env):
     """Download packages from specs, then inspect each downloaded package for additional
     downstream dependency specs.  Return these additional specs."""
