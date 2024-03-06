@@ -30,7 +30,7 @@ requirements:
   run:
     - beautifulsoup4
     - chardet
-    - conda >=23.3.0
+    - conda >=23.5.0
     - conda-index >=0.4.0
     - conda-package-handling >=1.3
     - filelock
