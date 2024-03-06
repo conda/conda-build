@@ -1042,10 +1042,9 @@ def create_env(
                 with utils.try_acquire_locks(locks, timeout=config.timeout):
                     # input is a list of specs in MatchSpec format
                     if not isinstance(specs_or_precs[0], PackageRecord):
-                        specs = list(set(specs_or_precs))
                         precs = get_package_records(
                             prefix,
-                            tuple(specs),
+                            tuple(set(specs_or_precs)),
                             env,
                             subdir=subdir,
                             verbose=config.verbose,
