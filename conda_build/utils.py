@@ -41,7 +41,7 @@ from os.path import (
 )
 from pathlib import Path
 from threading import Thread
-from typing import Iterable
+from typing import Iterable, overload
 
 import conda_package_handling.api
 import filelock
@@ -53,11 +53,11 @@ from conda.base.constants import (
     CONDA_PACKAGE_EXTENSIONS,
     KNOWN_SUBDIRS,
 )
+from conda.models.match_spec import MatchSpec
 from conda.utils import compute_sum
 
 from .conda_interface import (
     CondaHTTPError,
-    MatchSpec,
     PackageRecord,
     StringIO,
     TemporaryDirectory,
@@ -1882,7 +1882,17 @@ spec_needing_star_re = re.compile(
 spec_ver_needing_star_re = re.compile(r"^([0-9a-zA-Z\.]+)$")
 
 
-def ensure_valid_spec(spec, warn=False):
+@overload
+def ensure_valid_spec(spec: str, warn: bool = False) -> str:
+    ...
+
+
+@overload
+def ensure_valid_spec(spec: MatchSpec, warn: bool = False) -> MatchSpec:
+    ...
+
+
+def ensure_valid_spec(spec: str | MatchSpec, warn: bool = False) -> str | MatchSpec:
     if isinstance(spec, MatchSpec):
         if (
             hasattr(spec, "version")

@@ -1,5 +1,7 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
+
 import contextlib
 import json
 import logging
@@ -15,6 +17,7 @@ from functools import lru_cache
 from glob import glob
 from logging import getLogger
 from os.path import join, normpath
+from typing import TYPE_CHECKING
 
 from conda.base.constants import (
     CONDA_PACKAGE_EXTENSIONS,
@@ -27,6 +30,7 @@ from conda.core.link import PrefixSetup, UnlinkLinkTransaction
 from conda.core.package_cache_data import PackageCacheData
 from conda.core.prefix_data import PrefixData
 from conda.models.channel import prioritize_channels
+from conda.models.match_spec import MatchSpec
 
 from . import utils
 from .conda_interface import (
@@ -34,7 +38,6 @@ from .conda_interface import (
     CondaError,
     LinkError,
     LockError,
-    MatchSpec,
     NoPackagesFoundError,
     PackageRecord,
     PaddingError,
@@ -48,12 +51,10 @@ from .conda_interface import (
     reset_context,
     root_dir,
 )
-from .config import Config
 from .deprecations import deprecated
 from .exceptions import BuildLockError, DependencyNeedsBuildingError
 from .features import feature_list
 from .index import get_build_index
-from .metadata import MetaData
 from .os_utils import external
 from .utils import (
     ensure_list,
@@ -64,6 +65,18 @@ from .utils import (
     prepend_bin_path,
 )
 from .variants import get_default_variant
+
+if TYPE_CHECKING:
+    from pathlib import Path
+    from typing import Any, Iterable, TypedDict
+
+    from .config import Config
+    from .metadata import MetaData
+
+    class InstallActionsType(TypedDict):
+        PREFIX: str | os.PathLike | Path
+        LINK: list[PackageRecord]
+
 
 log = getLogger(__name__)
 
@@ -852,30 +865,32 @@ class Environment:
         return specs
 
 
-cached_precs = {}
+cached_precs: dict[
+    tuple[tuple[str | MatchSpec, ...], Any, Any, Any, bool], list[PackageRecord]
+] = {}
 deprecated.constant("24.3", "24.5", "cached_actions", cached_precs)
 last_index_ts = 0
 
 
 def get_package_records(
-    prefix,
-    specs,
-    env,
-    retries=0,
+    prefix: str | os.PathLike | Path,
+    specs: Iterable[str | MatchSpec],
+    env,  # unused
+    retries: int = 0,
     subdir=None,
-    verbose=True,
-    debug=False,
-    locking=True,
+    verbose: bool = True,
+    debug: bool = False,
+    locking: bool = True,
     bldpkgs_dirs=None,
     timeout=900,
-    disable_pip=False,
-    max_env_retry=3,
+    disable_pip: bool = False,
+    max_env_retry: int = 3,
     output_folder=None,
     channel_urls=None,
-):
+) -> list[PackageRecord]:
     global cached_precs
     global last_index_ts
-    precs = {}
+
     log = utils.get_logger(__name__)
     conda_log_level = logging.WARN
     specs = list(specs)
@@ -907,6 +922,7 @@ def get_package_records(
         utils.ensure_valid_spec(spec) for spec in specs if not str(spec).endswith("@")
     )
 
+    precs: list[PackageRecord] = []
     if (
         specs,
         env,
@@ -922,7 +938,7 @@ def get_package_records(
         with utils.LoggingContext(conda_log_level):
             with capture():
                 try:
-                    precs = _install_actions(prefix, index, specs)[_LINK_ACTION]
+                    precs = _install_actions(prefix, index, specs)["LINK"]
                 except (NoPackagesFoundError, UnsatisfiableError) as exc:
                     raise DependencyNeedsBuildingError(exc, subdir=subdir)
                 except (
@@ -970,7 +986,7 @@ def get_package_records(
                         )
                         precs = get_package_records(
                             prefix,
-                            tuple(specs),
+                            specs,
                             env,
                             retries=retries + 1,
                             subdir=subdir,
@@ -1278,7 +1294,11 @@ def get_pinned_deps(m, section):
 # NOTE: The function has to retain the "install_actions" name for now since
 #       conda_libmamba_solver.solver.LibMambaSolver._called_from_conda_build
 #       checks for this name in the call stack explicitly.
-def install_actions(prefix, index, specs):
+def install_actions(
+    prefix: str | os.PathLike | Path,
+    index,
+    specs: Iterable[str | MatchSpec],
+) -> InstallActionsType:
     # This is copied over from https://github.com/conda/conda/blob/23.11.0/conda/plan.py#L471
     # but reduced to only the functionality actually used within conda-build.
 
@@ -1290,6 +1310,8 @@ def install_actions(prefix, index, specs):
         callback=reset_context,
     ):
         # a hack since in conda-build we don't track channel_priority_map
+        channels: tuple[Channel, ...] | None
+        subdirs: tuple[str, ...] | None
         if LAST_CHANNEL_URLS:
             channel_priority_map = prioritize_channels(LAST_CHANNEL_URLS)
             # tuple(dict.fromkeys(...)) removes duplicates while preserving input order.
@@ -1299,7 +1321,7 @@ def install_actions(prefix, index, specs):
             subdirs = (
                 tuple(
                     dict.fromkeys(
-                        subdir for subdir in (c.subdir for c in channels) if subdir
+                        subdir for channel in channels if (subdir := channel.subdir)
                     )
                 )
                 or context.subdirs
@@ -1307,12 +1329,12 @@ def install_actions(prefix, index, specs):
         else:
             channels = subdirs = None
 
-        specs = tuple(MatchSpec(spec) for spec in specs)
+        mspecs = tuple(MatchSpec(spec) for spec in specs)
 
         PrefixData._cache_.clear()
 
         solver_backend = context.plugin_manager.get_cached_solver_backend()
-        solver = solver_backend(prefix, channels, subdirs, specs_to_add=specs)
+        solver = solver_backend(prefix, channels, subdirs, specs_to_add=mspecs)
         if index:
             # Solver can modify the index (e.g., Solver._prepare adds virtual
             # package) => Copy index (just outer container, not deep copy)
@@ -1320,11 +1342,10 @@ def install_actions(prefix, index, specs):
             solver._index = index.copy()
         txn = solver.solve_for_transaction(prune=False, ignore_pinned=False)
         prefix_setup = txn.prefix_setups[prefix]
-        actions = {
-            _PREFIX_ACTION: prefix,
-            _LINK_ACTION: [prec for prec in prefix_setup.link_precs],
+        return {
+            "PREFIX": prefix,
+            "LINK": [prec for prec in prefix_setup.link_precs],
         }
-        return actions
 
 
 _install_actions = install_actions
