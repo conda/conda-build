@@ -26,7 +26,6 @@ from .utils import (
     ensure_list,
     expand_globs,
     find_recipe,
-    get_logger,
     get_skip_message,
     on_win,
 )
