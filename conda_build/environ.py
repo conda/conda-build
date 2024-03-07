@@ -29,21 +29,24 @@ from conda.core.index import LAST_CHANNEL_URLS
 from conda.core.link import PrefixSetup, UnlinkLinkTransaction
 from conda.core.package_cache_data import PackageCacheData
 from conda.core.prefix_data import PrefixData
+from conda.exceptions import (
+    CondaError,
+    LinkError,
+    LockError,
+    NoPackagesFoundError,
+    PackagesNotFoundError,
+    PaddingError,
+    UnsatisfiableError,
+)
 from conda.models.channel import prioritize_channels
 from conda.models.match_spec import MatchSpec
 
 from . import utils
 from .conda_interface import (
     Channel,
-    CondaError,
-    LinkError,
-    LockError,
-    NoPackagesFoundError,
     PackageRecord,
-    PaddingError,
     ProgressiveFetchExtract,
     TemporaryDirectory,
-    UnsatisfiableError,
     context,
     create_default_packages,
     get_version_from_git_tag,
@@ -939,7 +942,11 @@ def get_package_records(
             with capture():
                 try:
                     precs = _install_actions(prefix, index, specs)["LINK"]
-                except (NoPackagesFoundError, UnsatisfiableError) as exc:
+                except (
+                    NoPackagesFoundError,
+                    UnsatisfiableError,
+                    PackagesNotFoundError,
+                ) as exc:
                     raise DependencyNeedsBuildingError(exc, subdir=subdir)
                 except (
                     SystemExit,
