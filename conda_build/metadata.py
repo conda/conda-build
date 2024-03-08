@@ -16,9 +16,10 @@ from os.path import isfile, join
 from typing import TYPE_CHECKING, overload
 
 from bs4 import UnicodeDammit
+from conda.gateways.disk.read import compute_sum
 
 from . import exceptions, utils, variants
-from .conda_interface import MatchSpec, envs_dirs, md5_file
+from .conda_interface import MatchSpec, envs_dirs
 from .config import Config, get_or_merge_config
 from .features import feature_list
 from .license_family import ensure_valid_license_family
@@ -1704,7 +1705,9 @@ class MetaData:
     def app_meta(self):
         d = {"type": "app"}
         if self.get_value("app/icon"):
-            d["icon"] = "%s.png" % md5_file(join(self.path, self.get_value("app/icon")))
+            d["icon"] = "%s.png" % compute_sum(
+                join(self.path, self.get_value("app/icon")), "md5"
+            )
 
         for field, key in [
             ("app/entry", "app_entry"),
