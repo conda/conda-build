@@ -48,7 +48,6 @@ from .conda_interface import (
     TemporaryDirectory,
     context,
     create_default_packages,
-    get_version_from_git_tag,
     pkgs_dirs,
     reset_context,
     root_dir,
@@ -221,6 +220,24 @@ def verify_git_repo(
         log.debug(str(error))
         OK = False
     return OK
+
+
+GIT_DESCRIBE_REGEX = re.compile(
+    r"(?:[_-a-zA-Z]*)"
+    r"(?P<version>[a-zA-Z0-9.]+)"
+    r"(?:-(?P<post>\d+)-g(?P<hash>[0-9a-f]{7,}))$"
+)
+
+
+def get_version_from_git_tag(tag):
+    """Return a PEP440-compliant version derived from the git status.
+    If that fails for any reason, return the changeset hash.
+    """
+    m = GIT_DESCRIBE_REGEX.match(tag)
+    if m is None:
+        return None
+    version, post_commit, hash = m.groups()
+    return version if post_commit == "0" else f"{version}.post{post_commit}+{hash}"
 
 
 def get_git_info(git_exe, repo, debug):
