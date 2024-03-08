@@ -30,7 +30,7 @@ requires-python = ">=3.8"
 dependencies = [
   "beautifulsoup4",
   "chardet",
-  "conda >=22.11",
+  "conda >=23.5.0",
   "conda-index >=0.4.0",
   "conda-package-handling >=1.3",
   "filelock",
@@ -125,10 +125,10 @@ addopts = [
   # "--cov=conda_build",   # passed in test runner scripts instead (avoid debugger)
   "--cov-append",
   "--cov-branch",
-  "--cov-report=term-missing",
-  "--cov-report=xml",
-  "--durations=16",
-  "--junitxml=test-report.xml",
+  "--cov-report=term",  # print summary table to screen
+  "--cov-report=xml",  # for codecov/codecov-action upload
+  "--durations=16",  # show 16 slowest tests
+  "--junitxml=junit.xml",
   # "--splitting-algorithm=least_duration",  # not available yet
   # "--store-durations",  # not available yet
   "--strict-markers",
