@@ -1,7 +1,7 @@
 Enhancements:
 -------------
 
-* implemented negative matching for `files` for `outputs`
+* implemented new include/exclude sections for glob expressions in multi-output `outputs/files`
 
 Bug fixes:
 ----------
