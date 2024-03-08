@@ -116,7 +116,11 @@ def md5_file(path: str | os.PathLike) -> str:
     return compute_sum(path, "md5")
 
 
-@deprecated("24.3", "24.5")
+@deprecated(
+    "24.3",
+    "24.5",
+    addendum="Use `conda_build.environ.get_version_from_git_tag` instead.",
+)
 def get_version_from_git_tag(tag):
     from .environ import get_version_from_git_tag
 
