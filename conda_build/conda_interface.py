@@ -6,11 +6,9 @@ import configparser  # noqa: F401
 import os
 from functools import partial
 from importlib import import_module  # noqa: F401
+from re import compile
 
 from conda import __version__ as CONDA_VERSION  # noqa: F401
-from conda.auxlib.packaging import (  # noqa: F401
-    _get_version_from_git_tag as get_version_from_git_tag,
-)
 from conda.base.context import context, determine_target_prefix, reset_context
 from conda.base.context import non_x86_machines as non_x86_linux_machines  # noqa: F401
 from conda.core.package_cache import ProgressiveFetchExtract  # noqa: F401
@@ -117,3 +115,22 @@ deprecated.constant(
 )
 def md5_file(path: str | os.PathLike) -> str:
     return compute_sum(path, "md5")
+
+
+GIT_DESCRIBE_REGEX = compile(
+    r"(?:[_-a-zA-Z]*)"
+    r"(?P<version>[a-zA-Z0-9.]+)"
+    r"(?:-(?P<post>\d+)-g(?P<hash>[0-9a-f]{7,}))$"
+)
+
+
+@deprecated("24.3", "24.5")
+def get_version_from_git_tag(tag):
+    """Return a PEP440-compliant version derived from the git status.
+    If that fails for any reason, return the changeset hash.
+    """
+    m = GIT_DESCRIBE_REGEX.match(tag)
+    if m is None:
+        return None
+    version, post_commit, hash = m.groups()
+    return version if post_commit == "0" else f"{version}.post{post_commit}+{hash}"
