@@ -26,7 +26,7 @@ and Git. Make sure you install these packages into your base environment.::
 
     conda create -n base conda-build git
 
-For more information on installing and updating conda-build, see :doc:`<../install-conda-build>`.
+For more information on installing and updating conda-build, see :doc:`Installing and updating conda-build <../install-conda-build>`.
 
 .. _submissions:
 
