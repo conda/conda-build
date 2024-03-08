@@ -1296,7 +1296,8 @@ You can specify files to be included in the package in 1 of
 Explicit file lists are relative paths from the root of the
 build prefix. Explicit file lists support glob expressions.
 Directory names are also supported, and they recursively include
-contents.
+contents. Files installed to the prefix by host dependencies will
+be matched by glob expressions.
 
 .. code-block:: yaml
 
@@ -1309,8 +1310,9 @@ contents.
          - somefolder/*.some-extension
 
 Files can be excluded by specifying `files` as a dictionary separating
-files to `include` from those to `exclude`. Files from other packages
-are automatically excluded:
+files to `include` from those to `exclude`. Files installed to the prefix
+by host dependencies are automatically excluded when the include/exclude
+syntax is used:
 
 .. code-block:: yaml
 
