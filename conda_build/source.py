@@ -15,11 +15,12 @@ from subprocess import CalledProcessError
 from typing import TYPE_CHECKING
 from urllib.parse import urljoin
 
+from conda.gateways.disk.read import compute_sum
+
 from .conda_interface import (
     CondaHTTPError,
     TemporaryDirectory,
     download,
-    hashsum_file,
     url_path,
 )
 from .exceptions import MissingDependency
@@ -120,7 +121,7 @@ def download_to_cache(cache_folder, recipe_path, source_dict, verbose=False):
     for tp in ("md5", "sha1", "sha256"):
         if tp in source_dict:
             expected_hash = source_dict[tp]
-            hashed = hashsum_file(path, tp)
+            hashed = compute_sum(path, tp)
             if expected_hash != hashed:
                 rm_rf(path)
                 raise RuntimeError(
@@ -132,7 +133,7 @@ def download_to_cache(cache_folder, recipe_path, source_dict, verbose=False):
     #    collisions in our source cache, but the end user will get no benefit from the cache.
     if not hash_added:
         if not hashed:
-            hashed = hashsum_file(path, "sha256")
+            hashed = compute_sum(path, "sha256")
         dest_path = append_hash_to_fn(path, hashed)
         if not os.path.isfile(dest_path):
             shutil.move(path, dest_path)

@@ -18,6 +18,7 @@ from os import makedirs
 from os.path import basename, dirname, exists, join
 
 import requests
+from conda.core.index import get_index
 
 from .. import environ
 from ..conda_interface import (
@@ -28,7 +29,6 @@ from ..conda_interface import (
     TemporaryDirectory,
     TmpDownload,
     download,
-    get_index,
 )
 from ..config import Config, get_or_merge_config
 from ..utils import check_call_env, on_linux, on_win

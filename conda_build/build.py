@@ -3501,7 +3501,7 @@ def test(
         AssertionError,
     ) as exc:
         log.warn(
-            "failed to get install actions, retrying.  exception was: %s", str(exc)
+            "failed to get package records, retrying.  exception was: %s", str(exc)
         )
         tests_failed(
             metadata,
