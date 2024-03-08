@@ -8,9 +8,7 @@ from functools import partial
 from importlib import import_module  # noqa: F401
 
 from conda import __version__
-from conda.auxlib.packaging import (  # noqa: F401
-    _get_version_from_git_tag as get_version_from_git_tag,
-)
+
 from conda.base.context import context, determine_target_prefix, reset_context
 from conda.base.context import non_x86_machines as non_x86_linux_machines  # noqa: F401
 from conda.core.package_cache import ProgressiveFetchExtract  # noqa: F401
@@ -132,3 +130,14 @@ deprecated.constant(
     __version__,
     addendum="Use `conda.__version__` instead.",
 )
+
+
+@deprecated(
+    "24.3",
+    "24.5",
+    addendum="Use `conda_build.environ.get_version_from_git_tag` instead.",
+)
+def get_version_from_git_tag(tag):
+    from .environ import get_version_from_git_tag
+
+    return get_version_from_git_tag(tag)
