@@ -34,7 +34,6 @@ from conda.exceptions import (
     LinkError,
     LockError,
     NoPackagesFoundError,
-    PackagesNotFoundError,
     PaddingError,
     UnsatisfiableError,
 )
@@ -875,7 +874,10 @@ deprecated.constant("24.3", "24.5", "cached_actions", cached_precs)
 last_index_ts = 0
 
 
-def get_package_records(
+# NOTE: The function has to retain the "get_install_actions" name for now since
+#       conda_libmamba_solver.solver.LibMambaSolver._called_from_conda_build
+#       checks for this name in the call stack explicitly.
+def get_install_actions(
     prefix: str | os.PathLike | Path,
     specs: Iterable[str | MatchSpec],
     env,  # unused
@@ -942,11 +944,7 @@ def get_package_records(
             with capture():
                 try:
                     precs = _install_actions(prefix, index, specs)["LINK"]
-                except (
-                    NoPackagesFoundError,
-                    UnsatisfiableError,
-                    PackagesNotFoundError,
-                ) as exc:
+                except (NoPackagesFoundError, UnsatisfiableError) as exc:
                     raise DependencyNeedsBuildingError(exc, subdir=subdir)
                 except (
                     SystemExit,
@@ -1023,6 +1021,10 @@ def get_package_records(
         cached_precs[(specs, env, subdir, channel_urls, disable_pip)] = precs.copy()
         last_index_ts = index_ts
     return precs
+
+
+get_package_records = get_install_actions
+del get_install_actions
 
 
 def create_env(
