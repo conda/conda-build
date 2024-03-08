@@ -8,7 +8,7 @@
 
 ### Deprecations
 
-* Mark `conda_build.api.get_output_file_path` as deprecated. (#5208)
+* Mark `conda_build.api.get_output_file_path` as deprecated. Use `conda_build.api.get_output_file_paths` instead. (#5208)
 
 ### Docs
 

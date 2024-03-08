@@ -17,11 +17,10 @@ import sys
 from os.path import dirname, expanduser, join
 from pathlib import Path
 
-from conda.deprecations import deprecated
-
 # make the Config class available in the api namespace
 from .config import DEFAULT_PREFIX_LENGTH as _prefix_length
 from .config import Config, get_channel_urls, get_or_merge_config
+from .deprecations import deprecated
 from .utils import (
     CONDA_PACKAGE_EXTENSIONS,
     LoggingContext,
