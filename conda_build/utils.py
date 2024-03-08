@@ -41,7 +41,7 @@ from os.path import (
 )
 from pathlib import Path
 from threading import Thread
-from typing import Iterable, overload
+from typing import TYPE_CHECKING, Iterable, overload
 
 import conda_package_handling.api
 import filelock
@@ -73,6 +73,13 @@ from .conda_interface import (
 )
 from .conda_interface import rm_rf as _rm_rf
 from .exceptions import BuildLockError
+
+if TYPE_CHECKING:
+    from typing import Mapping, TypeVar
+
+    T = TypeVar("T")
+    K = TypeVar("K")
+    V = TypeVar("V")
 
 on_win = sys.platform == "win32"
 on_mac = sys.platform == "darwin"
@@ -1155,7 +1162,7 @@ def package_has_file(package_path, file_path, refresh_mode="modified"):
         return content
 
 
-def ensure_list(arg, include_dict=True):
+def ensure_list(arg: T | Iterable[T] | None, include_dict: bool = True) -> list[T]:
     """
     Ensure the object is a list. If not return it in a list.
 
@@ -1174,7 +1181,11 @@ def ensure_list(arg, include_dict=True):
         return [arg]
 
 
-def islist(arg, uniform=False, include_dict=True):
+def islist(
+    arg: T | Iterable[T],
+    uniform: bool = False,
+    include_dict: bool = True,
+) -> bool:
     """
     Check whether `arg` is a `list`. Optionally determine whether the list elements
     are all uniform.
@@ -1760,7 +1771,10 @@ def merge_or_update_dict(
     return base
 
 
-def merge_dicts_of_lists(dol1, dol2):
+def merge_dicts_of_lists(
+    dol1: Mapping[K, Iterable[V]],
+    dol2: Mapping[K, Iterable[V]],
+) -> dict[K, list[V]]:
     """
     From Alex Martelli: https://stackoverflow.com/a/1495821/3257826
     """

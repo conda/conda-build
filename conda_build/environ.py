@@ -1028,17 +1028,17 @@ del get_install_actions
 
 
 def create_env(
-    prefix,
-    specs_or_precs,
+    prefix: str | os.PathLike | Path,
+    specs_or_precs: Iterable[str | MatchSpec] | Iterable[PackageRecord],
     env,
     config,
     subdir,
-    clear_cache=True,
-    retry=0,
+    clear_cache: bool = True,
+    retry: int = 0,
     locks=None,
-    is_cross=False,
-    is_conda=False,
-):
+    is_cross: bool = False,
+    is_conda: bool = False,
+) -> None:
     """
     Create a conda envrionment for the given prefix and specs.
     """
@@ -1057,6 +1057,7 @@ def create_env(
         # if os.path.isdir(prefix):
         #     utils.rm_rf(prefix)
 
+        specs_or_precs = tuple(ensure_list(specs_or_precs))
         if specs_or_precs:  # Don't waste time if there is nothing to do
             log.debug("Creating environment in %s", prefix)
             log.debug(str(specs_or_precs))
