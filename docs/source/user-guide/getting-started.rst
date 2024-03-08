@@ -16,16 +16,17 @@ Prerequisites
 
 Before starting the tutorials, you need to install:
 
-- `Miniconda or Anaconda <https://docs.anaconda.com/anaconda/install/>`_
+- `Miniconda <https://docs.anaconda.com/free/miniconda/>`_ or `Anaconda <https://docs.anaconda.com/free/anaconda/install/>`_
 - conda-build
 - Git
 
 The most straightforward way to do this is to install Miniconda or
 Anaconda, which contain conda, and then use conda to install conda-build
-and Git. Make sure you install these packages into a new environment
-and not your base environment.::
+and Git. Make sure you install these packages into your base environment.::
 
-    conda create -n my-conda-build-environment conda-build git
+    conda create -n base conda-build git
+
+For more information on installing and updating conda-build, see :doc:`<../install-conda-build>`.
 
 .. _submissions:
 
