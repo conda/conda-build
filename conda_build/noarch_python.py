@@ -6,29 +6,9 @@ import logging
 import os
 import shutil
 import sys
-from os.path import basename, dirname, isdir, isfile, join
+from os.path import basename, dirname, isfile, join
 
-from .deprecations import deprecated
 from .utils import on_win
-
-deprecated.constant(
-    "24.1",
-    "24.3",
-    "ISWIN",
-    on_win,
-    addendum="Use `conda_build.utils.on_win` instead.",
-)
-
-
-@deprecated("24.1", "24.3", addendum="Use `os.makedirs(exist_ok=True)` instead.")
-def _force_dir(dirname):
-    if not isdir(dirname):
-        os.makedirs(dirname)
-
-
-@deprecated("24.1", "24.3")
-def _error_exit(exit_message):
-    sys.exit("[noarch_python] %s" % exit_message)
 
 
 def rewrite_script(fn, prefix):
