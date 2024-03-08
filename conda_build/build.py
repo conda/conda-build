@@ -22,6 +22,7 @@ import conda_package_handling.api
 import yaml
 from bs4 import UnicodeDammit
 from conda import __version__ as conda_version
+from conda.core.prefix_data import PrefixData
 
 from . import __version__ as conda_build_version
 from . import environ, noarch_python, source, tarcheck, utils
@@ -1421,8 +1422,10 @@ def write_about_json(m):
                 m.config.extra_meta,
             )
             extra.update(m.config.extra_meta)
-        env = environ.Environment(root_dir)
-        d["root_pkgs"] = env.package_specs()
+        d["root_pkgs"] = [
+            f"{prec.name} {prec.version} {prec.build}"
+            for prec in PrefixData(root_dir).iter_records()
+        ]
         # Include the extra section of the metadata in the about.json
         d["extra"] = extra
         json.dump(d, fo, indent=2, sort_keys=True)
