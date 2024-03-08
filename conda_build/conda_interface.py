@@ -7,7 +7,7 @@ import os
 from functools import partial
 from importlib import import_module  # noqa: F401
 
-from conda import __version__ as CONDA_VERSION  # noqa: F401
+from conda import __version__
 from conda.auxlib.packaging import (  # noqa: F401
     _get_version_from_git_tag as get_version_from_git_tag,
 )
@@ -67,7 +67,13 @@ from conda.models.channel import get_conda_build_local_url  # noqa: F401
 from .deprecations import deprecated
 
 # TODO: Go to references of all properties below and import them from `context` instead
-binstar_upload = context.binstar_upload
+deprecated.constant(
+    "24.3",
+    "24.5",
+    "binstar_upload",
+    context.binstar_upload,
+    addendum="Use `conda.base.context.context.binstar_upload` instead.",
+)
 default_python = context.default_python
 envs_dirs = context.envs_dirs
 pkgs_dirs = list(context.pkgs_dirs)
@@ -117,3 +123,12 @@ deprecated.constant(
 )
 def md5_file(path: str | os.PathLike) -> str:
     return compute_sum(path, "md5")
+
+
+deprecated.constant(
+    "24.3",
+    "24.5",
+    "CONDA_VERSION",
+    __version__,
+    addendum="Use `conda.__version__` instead.",
+)

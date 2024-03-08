@@ -15,8 +15,9 @@ from collections import namedtuple
 from os.path import abspath, expanduser, expandvars, join
 from typing import TYPE_CHECKING
 
+from conda.base.context import context
+
 from .conda_interface import (
-    binstar_upload,
     cc_conda_build,
     cc_platform,
     root_dir,
@@ -87,7 +88,7 @@ Setting = namedtuple("ConfigSetting", "name, default")
 def _get_default_settings():
     return [
         Setting("activate", True),
-        Setting("anaconda_upload", binstar_upload),
+        Setting("anaconda_upload", context.binstar_upload),
         Setting("force_upload", True),
         Setting("channel_urls", []),
         Setting("dirty", False),
