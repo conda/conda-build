@@ -1,0 +1,19 @@
+### Enhancements
+
+* <news item>
+
+### Bug fixes
+
+* <news item>
+
+### Deprecations
+
+* Mark `conda_build.conda_interface.get_version_from_git_tag` as deprecated. Use `conda_build.environ.get_version_from_git_tag` instead. (#5221)
+
+### Docs
+
+* <news item>
+
+### Other
+
+* <news item>
