@@ -35,8 +35,8 @@ from subprocess import CalledProcessError, call, check_output
 from typing import TYPE_CHECKING
 
 from conda.core.prefix_data import PrefixData
+from conda.gateways.disk.read import compute_sum
 from conda.models.records import PrefixRecord
-from conda.utils import compute_sum
 
 from . import utils
 from .conda_interface import (

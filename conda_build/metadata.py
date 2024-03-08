@@ -16,7 +16,7 @@ from os.path import isfile, join
 from typing import TYPE_CHECKING, overload
 
 from bs4 import UnicodeDammit
-from conda.utils import compute_sum
+from conda.gateways.disk.read import compute_sum
 
 from . import exceptions, utils, variants
 from .conda_interface import MatchSpec, envs_dirs

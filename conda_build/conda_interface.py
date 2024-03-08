@@ -61,8 +61,8 @@ from conda.exports import (  # noqa: F401
     walk_prefix,
     win_path_to_unix,
 )
+from conda.gateways.disk.read import compute_sum
 from conda.models.channel import get_conda_build_local_url  # noqa: F401
-from conda.utils import compute_sum
 
 from .deprecations import deprecated
 
@@ -92,7 +92,11 @@ reset_context()
 env_path_backup_var_exists = os.environ.get("CONDA_PATH_BACKUP", None)
 
 
-@deprecated("24.3", "24.5", addendum="Handled by CondaSession.")
+@deprecated(
+    "24.3",
+    "24.5",
+    addendum="Handled by `conda.gateways.connection.session.CondaSession`.",
+)
 def handle_proxy_407(x, y):
     pass
 
@@ -102,12 +106,14 @@ deprecated.constant(
     "24.5",
     "hashsum_file",
     compute_sum,
-    addendum="Use `conda.utils.compute_sum` instead.",
+    addendum="Use `conda.gateways.disk.read.compute_sum` instead.",
 )
 
 
 @deprecated(
-    "24.3", "24.5", addendum="Use `conda.utils.compute_sum(path, 'md5')` instead."
+    "24.3",
+    "24.5",
+    addendum="Use `conda.gateways.disk.read.compute_sum(path, 'md5')` instead.",
 )
 def md5_file(path: str | os.PathLike) -> str:
     return compute_sum(path, "md5")

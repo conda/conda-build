@@ -53,8 +53,8 @@ from conda.base.constants import (
     CONDA_PACKAGE_EXTENSIONS,
     KNOWN_SUBDIRS,
 )
+from conda.gateways.disk.read import compute_sum
 from conda.models.match_spec import MatchSpec
-from conda.utils import compute_sum
 
 from .conda_interface import (
     CondaHTTPError,

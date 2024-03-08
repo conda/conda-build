@@ -19,7 +19,7 @@ from urllib.parse import urljoin, urlsplit
 import pkginfo
 import requests
 import yaml
-from conda.utils import compute_sum
+from conda.gateways.disk.read import compute_sum
 from requests.packages.urllib3.util.url import parse_url
 
 from ..conda_interface import (

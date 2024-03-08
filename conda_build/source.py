@@ -15,7 +15,7 @@ from subprocess import CalledProcessError
 from typing import TYPE_CHECKING
 from urllib.parse import urljoin
 
-from conda.utils import compute_sum
+from conda.gateways.disk.read import compute_sum
 
 from .conda_interface import (
     CondaHTTPError,
