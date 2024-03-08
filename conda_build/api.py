@@ -17,6 +17,8 @@ import sys
 from os.path import dirname, expanduser, join
 from pathlib import Path
 
+from conda.deprecations import deprecated
+
 # make the Config class available in the api namespace
 from .config import DEFAULT_PREFIX_LENGTH as _prefix_length
 from .config import Config, get_channel_urls, get_or_merge_config
@@ -165,6 +167,28 @@ def get_output_file_paths(
         else:
             outs.append(bldpkg_path(m))
     return sorted(list(set(outs)))
+
+
+@deprecated("24.3.0", "24.5.0", addendum="Use `get_output_file_paths` instead.")
+def get_output_file_path(
+    recipe_path_or_metadata,
+    no_download_source=False,
+    config=None,
+    variants=None,
+    **kwargs,
+):
+    """Get output file paths for any packages that would be created by a recipe
+
+    Both split packages (recipes with more than one output) and build matrices,
+    created with variants, contribute to the list of file paths here.
+    """
+    return get_output_file_paths(
+        recipe_path_or_metadata,
+        no_download_source=no_download_source,
+        config=config,
+        variants=variants,
+        **kwargs,
+    )
 
 
 def check(recipe_path, no_download_source=False, config=None, variants=None, **kwargs):
