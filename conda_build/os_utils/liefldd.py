@@ -356,7 +356,7 @@ def get_uniqueness_key(file):
     if not binary:
         return EXE_FORMATS.UNKNOWN
     elif binary.format == EXE_FORMATS.MACHO:
-        return binary.name
+        return str(file)
     elif binary.format == EXE_FORMATS.ELF and (  # noqa
         binary.type == lief.ELF.ELF_CLASS.CLASS32
         or binary.type == lief.ELF.ELF_CLASS.CLASS64
@@ -367,8 +367,8 @@ def get_uniqueness_key(file):
         ]
         if result:
             return result[0]
-        return binary.name
-    return binary.name
+        return str(file)
+    return str(file)
 
 
 def _get_resolved_location(
