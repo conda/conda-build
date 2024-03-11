@@ -109,6 +109,8 @@ jobs:
       - name: Cache conda
         uses: actions/cache@v3
         with:
+          # Use faster GNU tar for all runners
+          enableCrossOsArchive: true
           path: ~/conda_pkgs_dir
           key: ${{ runner.os }}-conda-${{ env.TIMESTAMP }}
 
@@ -200,15 +202,18 @@ jobs:
       - name: Cache conda
         uses: actions/cache@v3
         with:
-          path: ~/conda_pkgs_dir
+          # Use faster GNU tar for all runners
+          enableCrossOsArchive: true
+          path: D:\conda_pkgs_dir
           key: ${{ runner.os }}-conda-${{ env.TIMESTAMP }}
 
       - name: Setup miniconda
-        uses: conda-incubator/setup-miniconda@v2
+        uses: jezdez/setup-miniconda@configurable-cache
         with:
           condarc-file: .\ci\github\.condarc
           python-version: ${{ matrix.python-version }}
           run-post: false  # skip post cleanup
+          pkgs-dirs: D:\conda_pkgs_dir
 
       - name: Setup environment
         shell: cmd /C CALL {0}
@@ -297,6 +302,8 @@ jobs:
       - name: Cache conda
         uses: actions/cache@v3
         with:
+          # Use faster GNU tar for all runners
+          enableCrossOsArchive: true
           path: ~/conda_pkgs_dir
           key: ${{ runner.os }}-conda-${{ env.TIMESTAMP }}
 
