@@ -127,6 +127,7 @@ jobs:
           --yes
           --file tests/requirements.txt
           --file tests/requirements-${{ runner.os }}.txt
+          --file tests/requirements-ci.txt
           python=${{ matrix.python-version }}
           ${{ env.CONDA_CHANNEL_LABEL }}${{ env.CONDA_VERSION }}
 
@@ -219,6 +220,7 @@ jobs:
           --yes
           --file tests\requirements.txt
           --file tests\requirements-${{ runner.os }}.txt
+          --file tests\requirements-ci.txt
           python=${{ matrix.python-version }}
           ${{ env.CONDA_CHANNEL_LABEL }}::conda
 
@@ -316,6 +318,7 @@ jobs:
           --yes
           --file tests/requirements.txt
           --file tests/requirements-${{ runner.os }}.txt
+          --file tests/requirements-ci.txt
           python=${{ matrix.python-version }}
           ${{ env.CONDA_CHANNEL_LABEL }}::conda
 
