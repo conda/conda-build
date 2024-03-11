@@ -1118,7 +1118,7 @@ def get_symbols(file, defined=True, undefined=True, notexported=False, arch="nat
             if isinstance(s, str):
                 s_name = "%s" % s
             else:
-                s_name = '%s' % s.name
+                s_name = "%s" % s.name
                 if isinstance(s, lief.Function):
                     s_exported = True
                     s_imported = s.name in imported_function_names
@@ -1126,7 +1126,7 @@ def get_symbols(file, defined=True, undefined=True, notexported=False, arch="nat
                     s_exported = s.exported
                     s_imported = s.imported
                 if s_exported and s_imported:
-                    print("Weird, symbol {} is both imported and exported".format(s_name))
+                    print(f"Weird, symbol {s_name} is both imported and exported")
                 if s_exported:
                     is_undefined = True
                     is_notexported = False
