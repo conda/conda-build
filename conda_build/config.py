@@ -823,10 +823,16 @@ class Config:
 
     def copy(self):
         new = copy.copy(self)
-        # Use picke.loads(pickle.dumps(...) as a faster copy.deepcopy alternative.
-        new.variant = pickle.loads(pickle.dumps(self.variant, -1))
+        # Use picke.loads(pickle.dumps(...) as a faster deepcopy alternative, if possible.
+        try:
+            new.variant = pickle.loads(pickle.dumps(self.variant, -1))
+        except:
+            new.variant = copy.deepcopy(self.variant)
         if hasattr(self, "variants"):
-            new.variants = pickle.loads(pickle.dumps(self.variants, -1))
+            try:
+                new.variants = pickle.loads(pickle.dumps(self.variants, -1))
+            except:
+                new.variants = copy.deepcopy(self.variants)
         return new
 
     # context management - automatic cleanup if self.dirty or self.keep_old_work is not True
