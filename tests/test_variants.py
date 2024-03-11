@@ -429,7 +429,7 @@ def test_build_run_exports_act_on_host(caplog):
         platform="win",
         arch="64",
     )
-    assert "failed to get install actions, retrying" not in caplog.text
+    assert "failed to get package records, retrying" not in caplog.text
 
 
 def test_detect_variables_in_build_and_output_scripts():

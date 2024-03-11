@@ -22,7 +22,6 @@ from . import conda_interface
 from .conda_interface import (
     specs_from_args,
 )
-from .deprecations import deprecated
 from .os_utils.ldd import (
     get_linkages,
     get_package_obj_files,
@@ -96,9 +95,6 @@ class _untracked_package:
 untracked_package = _untracked_package()
 
 
-@deprecated.argument("24.1.0", "24.3.0", "platform", rename="subdir")
-@deprecated.argument("24.1.0", "24.3.0", "prepend")
-@deprecated.argument("24.1.0", "24.3.0", "minimal_hint")
 def check_install(
     packages: Iterable[str],
     subdir: str | None = None,

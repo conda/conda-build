@@ -20,13 +20,13 @@ from pathlib import Path
 # make the Config class available in the api namespace
 from .config import DEFAULT_PREFIX_LENGTH as _prefix_length
 from .config import Config, get_channel_urls, get_or_merge_config
+from .deprecations import deprecated
 from .utils import (
     CONDA_PACKAGE_EXTENSIONS,
     LoggingContext,
     ensure_list,
     expand_globs,
     find_recipe,
-    get_logger,
     get_skip_message,
     on_win,
 )
@@ -168,6 +168,7 @@ def get_output_file_paths(
     return sorted(list(set(outs)))
 
 
+@deprecated("24.3.0", "24.5.0", addendum="Use `get_output_file_paths` instead.")
 def get_output_file_path(
     recipe_path_or_metadata,
     no_download_source=False,
@@ -180,12 +181,6 @@ def get_output_file_path(
     Both split packages (recipes with more than one output) and build matrices,
     created with variants, contribute to the list of file paths here.
     """
-    log = get_logger(__name__)
-    log.warn(
-        "deprecation warning: this function has been renamed to get_output_file_paths, "
-        "to reflect that potentially multiple paths are returned.  This function will be "
-        "removed in the conda-build 4.0 release."
-    )
     return get_output_file_paths(
         recipe_path_or_metadata,
         no_download_source=no_download_source,

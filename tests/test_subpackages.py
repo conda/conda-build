@@ -55,7 +55,7 @@ def test_rm_rf_does_not_remove_relative_source_package_files(
 def test_output_pkg_path_shows_all_subpackages(testing_metadata):
     testing_metadata.meta["outputs"] = [{"name": "a"}, {"name": "b"}]
     out_dicts_and_metadata = testing_metadata.get_output_metadata_set()
-    outputs = api.get_output_file_path(
+    outputs = api.get_output_file_paths(
         [(m, None, None) for (_, m) in out_dicts_and_metadata]
     )
     assert len(outputs) == 2
@@ -64,7 +64,7 @@ def test_output_pkg_path_shows_all_subpackages(testing_metadata):
 def test_subpackage_version_provided(testing_metadata):
     testing_metadata.meta["outputs"] = [{"name": "a", "version": "2.0"}]
     out_dicts_and_metadata = testing_metadata.get_output_metadata_set()
-    outputs = api.get_output_file_path(
+    outputs = api.get_output_file_paths(
         [(m, None, None) for (_, m) in out_dicts_and_metadata]
     )
     assert len(outputs) == 1
@@ -78,7 +78,7 @@ def test_subpackage_independent_hash(testing_metadata):
     testing_metadata.meta["requirements"]["run"] = ["a"]
     out_dicts_and_metadata = testing_metadata.get_output_metadata_set()
     assert len(out_dicts_and_metadata) == 2
-    outputs = api.get_output_file_path(
+    outputs = api.get_output_file_paths(
         [(m, None, None) for (_, m) in out_dicts_and_metadata]
     )
     assert len(outputs) == 2

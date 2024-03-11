@@ -41,7 +41,7 @@ from os.path import (
 )
 from pathlib import Path
 from threading import Thread
-from typing import TYPE_CHECKING, Iterable
+from typing import TYPE_CHECKING, Iterable, overload
 
 import conda_package_handling.api
 import filelock
@@ -53,12 +53,11 @@ from conda.base.constants import (
     CONDA_PACKAGE_EXTENSIONS,
     KNOWN_SUBDIRS,
 )
-from conda.core.prefix_data import PrefixData
-from conda.models.dist import Dist
+from conda.gateways.disk.read import compute_sum
+from conda.models.match_spec import MatchSpec
 
 from .conda_interface import (
     CondaHTTPError,
-    MatchSpec,
     PackageRecord,
     StringIO,
     TemporaryDirectory,
@@ -67,19 +66,20 @@ from .conda_interface import (
     context,
     download,
     get_conda_channel,
-    hashsum_file,
-    md5_file,
     pkgs_dirs,
     root_dir,
     unix_path_to_win,
     win_path_to_unix,
 )
 from .conda_interface import rm_rf as _rm_rf
-from .deprecations import deprecated
 from .exceptions import BuildLockError
 
 if TYPE_CHECKING:
-    from conda.models.records import PrefixRecord
+    from typing import Mapping, TypeVar
+
+    T = TypeVar("T")
+    K = TypeVar("K")
+    V = TypeVar("V")
 
 on_win = sys.platform == "win32"
 on_mac = sys.platform == "darwin"
@@ -876,8 +876,8 @@ def tar_xf(tarball, dir_path):
 def file_info(path):
     return {
         "size": getsize(path),
-        "md5": md5_file(path),
-        "sha256": hashsum_file(path, "sha256"),
+        "md5": compute_sum(path, "md5"),
+        "sha256": compute_sum(path, "sha256"),
         "mtime": getmtime(path),
     }
 
@@ -1162,7 +1162,7 @@ def package_has_file(package_path, file_path, refresh_mode="modified"):
         return content
 
 
-def ensure_list(arg, include_dict=True):
+def ensure_list(arg: T | Iterable[T] | None, include_dict: bool = True) -> list[T]:
     """
     Ensure the object is a list. If not return it in a list.
 
@@ -1181,7 +1181,11 @@ def ensure_list(arg, include_dict=True):
         return [arg]
 
 
-def islist(arg, uniform=False, include_dict=True):
+def islist(
+    arg: T | Iterable[T],
+    uniform: bool = False,
+    include_dict: bool = True,
+) -> bool:
     """
     Check whether `arg` is a `list`. Optionally determine whether the list elements
     are all uniform.
@@ -1767,7 +1771,10 @@ def merge_or_update_dict(
     return base
 
 
-def merge_dicts_of_lists(dol1, dol2):
+def merge_dicts_of_lists(
+    dol1: Mapping[K, Iterable[V]],
+    dol2: Mapping[K, Iterable[V]],
+) -> dict[K, list[V]]:
     """
     From Alex Martelli: https://stackoverflow.com/a/1495821/3257826
     """
@@ -1889,7 +1896,17 @@ spec_needing_star_re = re.compile(
 spec_ver_needing_star_re = re.compile(r"^([0-9a-zA-Z\.]+)$")
 
 
-def ensure_valid_spec(spec, warn=False):
+@overload
+def ensure_valid_spec(spec: str, warn: bool = False) -> str:
+    ...
+
+
+@overload
+def ensure_valid_spec(spec: MatchSpec, warn: bool = False) -> MatchSpec:
+    ...
+
+
+def ensure_valid_spec(spec: str | MatchSpec, warn: bool = False) -> str | MatchSpec:
     if isinstance(spec, MatchSpec):
         if (
             hasattr(spec, "version")
@@ -2110,21 +2127,6 @@ def download_channeldata(channel_url):
     else:
         data = channeldata_cache[channel_url]
     return data
-
-
-@deprecated("24.1.0", "24.3.0")
-def linked_data_no_multichannels(
-    prefix: str | os.PathLike | Path,
-) -> dict[Dist, PrefixRecord]:
-    """
-    Return a dictionary of the linked packages in prefix, with correct channels, hopefully.
-    cc @kalefranz.
-    """
-    prefix = Path(prefix)
-    return {
-        Dist.from_string(prec.fn, channel_override=prec.channel.name): prec
-        for prec in PrefixData(str(prefix)).iter_records()
-    }
 
 
 def shutil_move_more_retrying(src, dest, debug_name):
