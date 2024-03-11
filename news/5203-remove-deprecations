@@ -30,7 +30,6 @@
 * Remove `conda_build.conda_interface.display_actions`. (#5203)
 * Remove `conda_build.conda_interface.execute_actions`. (#5203)
 * Remove `conda_build.conda_interface.execute_plan`. (#5203)
-* Remove `conda_build.conda_interface.get_index`. (#5203)
 * Remove `conda_build.conda_interface.install_actions`. (#5203)
 * Remove `conda_build.conda_interface.linked`. (#5203)
 * Remove `conda_build.conda_interface.linked_data`. (#5203)
