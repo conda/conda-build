@@ -44,7 +44,6 @@
 * Remove `conda_build.index.REPODATA_FROM_PKGS_JSON_FN`. (#5203)
 * Remove `conda_build.index.CHANNELDATA_FIELDS`. (#5203)
 * Remove `conda_build.index._clear_newline_chars`. (#5203)
-* Remove `conda_build.index._apply_instructions`. (#5203)
 * Remove `conda_build.index._get_jinja2_environment`. (#5203)
 * Remove `conda_build.index._maybe_write`. (#5203)
 * Remove `conda_build.index._make_build_string`. (#5203)
