@@ -24,7 +24,7 @@ The most straightforward way to do this is to install Miniconda or
 Anaconda, which contain conda, and then use conda to install conda-build
 and Git. Make sure you install these packages into your base environment.::
 
-    conda create -n base conda-build git
+    conda install -n base conda-build git
 
 For more information on installing and updating conda-build, see :doc:`Installing and updating conda-build <../install-conda-build>`.
 
