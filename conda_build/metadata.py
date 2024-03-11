@@ -318,8 +318,7 @@ def select_lines(data, namespace, variants_in_place):
             # back to the non-memoized version to avoid wrong/lossy conversions.
             if isinstance(v, (list, set, tuple)):
                 namespace_copy[k] = tuple(
-                    tuple(e) if isinstance(e, (list, set)) else e
-                    for e in v
+                    tuple(e) if isinstance(e, (list, set)) else e for e in v
                 )
         namespace_tuple = tuple(namespace_copy.items())
         # Raise TypeError if anything in namespace_tuple is not hashable.
@@ -340,8 +339,7 @@ def _select_lines_memoized(data, namespace_tuple, variants_in_place):
         namespace["environ"] = os.environ
     if "pin_run_as_build" in namespace:
         namespace["pin_run_as_build"] = {
-            key: dict(value)
-            for key, value in namespace["pin_run_as_build"]
+            key: dict(value) for key, value in namespace["pin_run_as_build"]
         }
     return _select_lines(data, namespace, variants_in_place)
 
@@ -2290,7 +2288,8 @@ class MetaData:
             if "name" in out:
                 name_re = re.compile(r"^{}(\s|\Z|$)".format(out["name"]))
                 in_reqs = any(
-                    re_match(name_re, req) for req in self.get_depends_top_and_out("run")
+                    re_match(name_re, req)
+                    for req in self.get_depends_top_and_out("run")
                 )
                 if in_reqs:
                     break
@@ -2449,11 +2448,15 @@ class MetaData:
                 )
                 if build_reqs:
                     build_reqs = [
-                        req for req in build_reqs if not re_match(subpackage_pattern, req)
+                        req
+                        for req in build_reqs
+                        if not re_match(subpackage_pattern, req)
                     ]
                 if host_reqs:
                     host_reqs = [
-                        req for req in host_reqs if not re_match(subpackage_pattern, req)
+                        req
+                        for req in host_reqs
+                        if not re_match(subpackage_pattern, req)
                     ]
                 if run_reqs:
                     run_reqs = [

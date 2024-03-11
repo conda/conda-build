@@ -714,10 +714,7 @@ def get_vars(variants, loop_only=False):
         k
         for k, v in first_variant.items()
         if k not in special_keys
-        and (
-            not loop_only
-            or any(variant[k] != v for variant in other_variants)
-        )
+        and (not loop_only or any(variant[k] != v for variant in other_variants))
     ]
     return loop_vars
 
