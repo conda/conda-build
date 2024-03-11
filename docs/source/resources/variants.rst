@@ -323,7 +323,7 @@ your Jinja2 templates. There are two ways that you can feed this information
 into the API:
 
 1. Pass the ``variants`` keyword argument to API functions. Currently, the
-   ``build``, ``render``, ``get_output_file_path``, and ``check`` functions
+   ``build``, ``render``, ``get_output_file_paths``, and ``check`` functions
    accept this argument. ``variants`` should be a dictionary where each value
    is a list of versions to iterate over. These are aggregated as detailed in
    the `Aggregation of multiple variants`_ section below.

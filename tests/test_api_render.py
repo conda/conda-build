@@ -105,7 +105,7 @@ def test_get_output_file_path_jinja2(testing_config):
 
 def test_output_without_jinja_does_not_download(mocker, testing_config):
     mock = mocker.patch("conda_build.source")
-    api.get_output_file_path(
+    api.get_output_file_paths(
         os.path.join(metadata_dir, "source_git"), config=testing_config
     )
     mock.assert_not_called()
