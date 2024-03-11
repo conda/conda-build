@@ -18,7 +18,7 @@ perl
 pip
 pkginfo
 psutil
-conda-forge/label/lief_rc::py-lief >=0.14
+py-lief
 pyflakes
 pytest
 pytest-cov
