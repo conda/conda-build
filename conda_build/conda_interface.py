@@ -108,7 +108,13 @@ deprecated.constant(
     context.root_dir,
     addendum="Use `conda.base.context.context.root_dir` instead.",
 )
-root_writable = context.root_writable
+deprecated.constant(
+    "24.5",
+    "24.7",
+    "root_writable",
+    context.root_writable,
+    addendum="Use `conda.base.context.context.root_writable` instead.",
+)
 subdir = context.subdir
 create_default_packages = context.create_default_packages
 
