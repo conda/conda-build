@@ -39,7 +39,6 @@ from .conda_interface import (
     env_path_backup_var_exists,
     get_conda_channel,
     get_rc_urls,
-    pkgs_dirs,
     prefix_placeholder,
     reset_context,
     root_dir,
@@ -3388,7 +3387,7 @@ def test(
         and recipedir_or_package_or_metadata.endswith(CONDA_PACKAGE_EXTENSIONS)
         and any(
             os.path.dirname(recipedir_or_package_or_metadata) in pkgs_dir
-            for pkgs_dir in pkgs_dirs
+            for pkgs_dir in context.pkgs_dirs
         )
     )
     if not in_pkg_cache:

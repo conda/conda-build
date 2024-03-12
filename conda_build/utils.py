@@ -66,7 +66,6 @@ from .conda_interface import (
     context,
     download,
     get_conda_channel,
-    pkgs_dirs,
     root_dir,
     unix_path_to_win,
     win_path_to_unix,
@@ -754,9 +753,7 @@ def get_conda_operation_locks(locking=True, bldpkgs_dirs=None, timeout=900):
     bldpkgs_dirs = ensure_list(bldpkgs_dirs)
     # locks enabled by default
     if locking:
-        _pkgs_dirs = pkgs_dirs[:1]
-        locked_folders = _pkgs_dirs + list(bldpkgs_dirs)
-        for folder in locked_folders:
+        for folder in (*context.pkgs_dirs[:1], *bldpkgs_dirs):
             if not os.path.isdir(folder):
                 os.makedirs(folder)
             lock = get_lock(folder, timeout=timeout)
