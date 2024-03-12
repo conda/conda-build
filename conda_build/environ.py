@@ -47,7 +47,6 @@ from .conda_interface import (
     PackageRecord,
     ProgressiveFetchExtract,
     TemporaryDirectory,
-    create_default_packages,
     reset_context,
 )
 from .deprecations import deprecated
@@ -919,7 +918,7 @@ def get_install_actions(
     conda_log_level = logging.WARN
     specs = list(specs)
     if specs:
-        specs.extend(create_default_packages)
+        specs.extend(context.create_default_packages)
     if verbose or debug:
         capture = contextlib.nullcontext
         if debug:

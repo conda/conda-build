@@ -65,7 +65,6 @@ from conda.models.channel import get_conda_build_local_url  # noqa: F401
 from .deprecations import deprecated
 
 deprecated.constant("24.1.0", "24.5.0", "get_index", _get_index)
-# TODO: Go to references of all properties below and import them from `context` instead
 deprecated.constant(
     "24.5",
     "24.7",
@@ -122,7 +121,13 @@ deprecated.constant(
     context.subdir,
     addendum="Use `conda.base.context.context.subdir` instead.",
 )
-create_default_packages = context.create_default_packages
+deprecated.constant(
+    "24.5",
+    "24.7",
+    "create_default_packages",
+    context.create_default_packages,
+    addendum="Use `conda.base.context.context.create_default_packages` instead.",
+)
 
 get_rc_urls = lambda: list(context.channels)
 get_prefix = partial(determine_target_prefix, context)
