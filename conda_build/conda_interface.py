@@ -8,7 +8,7 @@ from functools import partial
 from importlib import import_module  # noqa: F401
 
 from conda import __version__
-from conda.base.context import context, determine_target_prefix, reset_context
+from conda.base.context import context, determine_target_prefix
 from conda.base.context import non_x86_machines as non_x86_linux_machines  # noqa: F401
 from conda.core.package_cache import ProgressiveFetchExtract  # noqa: F401
 from conda.exceptions import (  # noqa: F401
@@ -152,10 +152,6 @@ deprecated.constant(
     Channel.from_value,
     addendum="Use `conda.models.channel.Channel.from_value` instead.",
 )
-
-# Disallow softlinks. This avoids a lot of dumb issues, at the potential cost of disk space.
-os.environ["CONDA_ALLOW_SOFTLINKS"] = "false"
-reset_context()
 
 # When deactivating envs (e.g. switching from root to build/test) this env var is used,
 # except the PR that removed this has been reverted (for now) and Windows doesn't need it.
