@@ -38,7 +38,6 @@ from .conda_interface import (
     UnsatisfiableError,
     env_path_backup_var_exists,
     get_conda_channel,
-    get_rc_urls,
     prefix_placeholder,
     reset_context,
     url_path,
@@ -1404,7 +1403,7 @@ def write_about_json(m):
         # conda env will be in most, but not necessarily all installations.
         #    Don't die if we don't see it.
         stripped_channels = []
-        for channel in get_rc_urls() + list(m.config.channel_urls):
+        for channel in (*context.channels, *m.config.channel_urls):
             stripped_channels.append(sanitize_channel(channel))
         d["channels"] = stripped_channels
         evars = ["CIO_TEST"]
@@ -4158,8 +4157,10 @@ def is_package_built(metadata, env, include_local=True):
         _delegated_update_index(d, verbose=metadata.config.debug, warn=False, threads=1)
     subdir = getattr(metadata.config, f"{env}_subdir")
 
-    urls = [url_path(metadata.config.output_folder), "local"] if include_local else []
-    urls += get_rc_urls()
+    urls = [
+        *([url_path(metadata.config.output_folder), "local"] if include_local else []),
+        *context.channels,
+    ]
     if metadata.config.channel_urls:
         urls.extend(metadata.config.channel_urls)
 

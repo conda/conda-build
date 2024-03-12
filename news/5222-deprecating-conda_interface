@@ -18,6 +18,7 @@
 * Deprecate `conda_build.conda_interface.root_writable` constant. Use `conda.base.context.context.root_writable` instead. (#5222)
 * Deprecate `conda_build.conda_interface.subdir` constant. Use `conda.base.context.context.subdir` instead. (#5222)
 * Deprecate `conda_build.conda_interface.create_default_packages` constant. Use `conda.base.context.context.create_default_packages` instead. (#5222)
+* Deprecate `conda_build.conda_interface.get_rc_urls` function. Use `conda.base.context.context.channels` instead. (#5222)
 
 ### Docs
 

@@ -129,7 +129,13 @@ deprecated.constant(
     addendum="Use `conda.base.context.context.create_default_packages` instead.",
 )
 
-get_rc_urls = lambda: list(context.channels)
+deprecated.constant(
+    "24.5",
+    "24.7",
+    "get_rc_urls",
+    lambda: list(context.channels),
+    addendum="Use `conda.base.context.context.channels` instead.",
+)
 get_prefix = partial(determine_target_prefix, context)
 cc_conda_build = context.conda_build if hasattr(context, "conda_build") else {}
 
