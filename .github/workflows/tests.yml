@@ -51,7 +51,7 @@ jobs:
         if: github.event_name != 'pull_request'
 
       - name: Filter Changes
-        uses: dorny/paths-filter@v2.11.1
+        uses: dorny/paths-filter@v3
         id: filter
         with:
           filters: |
