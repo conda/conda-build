@@ -32,7 +32,7 @@ dependencies = [
   "chardet",
   "conda >=23.5.0",
   "conda-index >=0.4.0",
-  "conda-package-handling >=2",
+  "conda-package-handling >=2.2.0",
   "filelock",
   "jinja2",
   "jsonschema >=4.19",
