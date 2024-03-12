@@ -19,7 +19,6 @@ from conda.base.context import context
 
 from .conda_interface import (
     cc_conda_build,
-    cc_platform,
     root_dir,
     root_writable,
     subdir,
@@ -381,8 +380,8 @@ class Config:
         return self.host_platform == "noarch"
 
     def reset_platform(self):
-        if not self.platform == cc_platform:
-            self.platform = cc_platform
+        if not self.platform == context.platform:
+            self.platform = context.platform
 
     @property
     def subdir(self):

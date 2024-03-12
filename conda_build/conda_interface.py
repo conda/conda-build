@@ -94,7 +94,13 @@ deprecated.constant(
     list(context.pkgs_dirs),
     addendum="Use `conda.base.context.context.pkgs_dirs` instead.",
 )
-cc_platform = context.platform
+deprecated.constant(
+    "24.5",
+    "24.7",
+    "cc_platform",
+    context.platform,
+    addendum="Use `conda.base.context.context.platform` instead.",
+)
 root_dir = context.root_dir
 root_writable = context.root_writable
 subdir = context.subdir
