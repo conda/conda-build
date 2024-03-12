@@ -80,7 +80,13 @@ deprecated.constant(
     context.default_python,
     addendum="Use `conda.base.context.context.default_python` instead.",
 )
-envs_dirs = context.envs_dirs
+deprecated.constant(
+    "24.5",
+    "24.7",
+    "envs_dirs",
+    context.envs_dirs,
+    addendum="Use `conda.base.context.context.envs_dirs` instead.",
+)
 pkgs_dirs = list(context.pkgs_dirs)
 cc_platform = context.platform
 root_dir = context.root_dir
