@@ -248,6 +248,8 @@ def _delegated_update_index(
             warn=warn,
             current_index_versions=current_index_versions,
             debug=debug,
+            write_bz2=False,
+            write_zst=False,
         )
 
 
