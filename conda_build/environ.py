@@ -24,7 +24,7 @@ from conda.base.constants import (
     DEFAULTS_CHANNEL_NAME,
     UNKNOWN_CHANNEL,
 )
-from conda.base.context import context
+from conda.base.context import context, reset_context
 from conda.common.io import env_vars
 from conda.core.index import LAST_CHANNEL_URLS
 from conda.core.link import PrefixSetup, UnlinkLinkTransaction
@@ -47,7 +47,6 @@ from .conda_interface import (
     PackageRecord,
     ProgressiveFetchExtract,
     TemporaryDirectory,
-    reset_context,
 )
 from .deprecations import deprecated
 from .exceptions import BuildLockError, DependencyNeedsBuildingError

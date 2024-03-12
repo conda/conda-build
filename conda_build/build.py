@@ -22,7 +22,7 @@ import conda_package_handling.api
 import yaml
 from bs4 import UnicodeDammit
 from conda import __version__ as conda_version
-from conda.base.context import context
+from conda.base.context import context, reset_context
 from conda.core.prefix_data import PrefixData
 from conda.models.channel import Channel
 
@@ -39,7 +39,6 @@ from .conda_interface import (
     UnsatisfiableError,
     env_path_backup_var_exists,
     prefix_placeholder,
-    reset_context,
     url_path,
 )
 from .config import Config
