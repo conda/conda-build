@@ -136,7 +136,13 @@ deprecated.constant(
     lambda: list(context.channels),
     addendum="Use `conda.base.context.context.channels` instead.",
 )
-get_prefix = partial(determine_target_prefix, context)
+deprecated.constant(
+    "24.5",
+    "24.7",
+    "get_prefix",
+    partial(determine_target_prefix, context),
+    addendum="Use `conda.base.context.context.target_prefix` instead.",
+)
 cc_conda_build = context.conda_build if hasattr(context, "conda_build") else {}
 
 get_conda_channel = Channel.from_value
