@@ -158,7 +158,6 @@ jobs:
           name: test-results-${{ env.HASH }}
           path: |
             .coverage
-            tools/durations/${{ runner.os }}.json
             test-report.xml
           retention-days: 1  # temporary, combined in aggregate below
 
@@ -253,7 +252,6 @@ jobs:
           name: test-results-${{ env.HASH }}
           path: |
             .coverage
-            tools\durations\${{ runner.os }}.json
             test-report.xml
           retention-days: 1  # temporary, combined in aggregate below
 
@@ -347,7 +345,6 @@ jobs:
           name: test-results-${{ env.HASH }}
           path: |
             .coverage
-            tools/durations/${{ runner.os }}.json
             test-report.xml
           retention-days: 1  # temporary, combined in aggregate below
 
@@ -373,7 +370,6 @@ jobs:
         with:
           name: test-results-${{ github.sha }}-all
           path: test-results-*
-          retention-days: 7  # for durations.yml workflow
 
       - name: Test Summary
         uses: test-summary/action@v2
