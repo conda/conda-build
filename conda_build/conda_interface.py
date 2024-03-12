@@ -73,7 +73,13 @@ deprecated.constant(
     context.binstar_upload,
     addendum="Use `conda.base.context.context.binstar_upload` instead.",
 )
-default_python = context.default_python
+deprecated.constant(
+    "24.5",
+    "24.7",
+    "default_python",
+    context.default_python,
+    addendum="Use `conda.base.context.context.default_python` instead.",
+)
 envs_dirs = context.envs_dirs
 pkgs_dirs = list(context.pkgs_dirs)
 cc_platform = context.platform

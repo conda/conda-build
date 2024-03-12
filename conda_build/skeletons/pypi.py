@@ -19,13 +19,13 @@ from urllib.parse import urljoin, urlsplit
 import pkginfo
 import requests
 import yaml
+from conda.base.context import context
 from conda.gateways.disk.read import compute_sum
 from requests.packages.urllib3.util.url import parse_url
 
 from ..conda_interface import (
     StringIO,
     configparser,
-    default_python,
     download,
     human_bytes,
     input,
@@ -281,7 +281,8 @@ def skeletonize(
     if not config:
         config = Config()
 
-    python_version = python_version or config.variant.get("python", default_python)
+    if not python_version:
+        python_version = config.variant.get("python", context.default_python)
 
     created_recipes = []
     while packages:
@@ -556,7 +557,7 @@ def add_parser(repos):
     pypi.add_argument(
         "--python-version",
         action="store",
-        default=default_python,
+        default=context.default_python,
         help="""Version of Python to use to run setup.py. Default is %(default)s.""",
         choices=["2.7", "3.5", "3.6", "3.7", "3.8", "3.9", "3.10", "3.11", "3.12"],
     )
