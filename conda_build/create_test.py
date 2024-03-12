@@ -3,6 +3,7 @@
 """
 Module to handle generating test files.
 """
+
 from __future__ import annotations
 
 import json

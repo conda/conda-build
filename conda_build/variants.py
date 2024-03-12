@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 """This file handles the parsing of feature specifications from files,
 ending up with a configuration matrix"""
+
 import os.path
 import re
 import sys
@@ -304,14 +305,8 @@ def _combine_spec_dictionaries(
                                     ):
                                         raise ValueError(
                                             "All entries associated by a zip_key "
-                                            "field must be the same length.  In {}, {} and {} are "
-                                            "different ({} and {})".format(
-                                                spec_source,
-                                                k,
-                                                group_item,
-                                                len(ensure_list(v)),
-                                                len(ensure_list(spec[group_item])),
-                                            )
+                                            f"field must be the same length.  In {spec_source}, {k} and {group_item} are "
+                                            f"different ({len(ensure_list(v))} and {len(ensure_list(spec[group_item]))})"
                                         )
                                     values[group_item] = ensure_list(spec[group_item])
                             elif k in values:
@@ -338,17 +333,10 @@ def _combine_spec_dictionaries(
                                 ]
                                 if len(missing_subvalues):
                                     raise ValueError(
-                                        "variant config in {} is ambiguous because it\n"
-                                        "does not fully implement all zipped keys (To be clear: missing {})\n"
+                                        f"variant config in {spec_source} is ambiguous because it\n"
+                                        f"does not fully implement all zipped keys (To be clear: missing {missing_group_items})\n"
                                         "or specifies a subspace that is not fully implemented (To be clear:\n"
-                                        ".. we did not find {} from {} in {}:{}).".format(
-                                            spec_source,
-                                            missing_group_items,
-                                            missing_subvalues,
-                                            spec,
-                                            k,
-                                            values[k],
-                                        )
+                                        f".. we did not find {missing_subvalues} from {spec} in {k}:{values[k]})."
                                     )
 
     return values

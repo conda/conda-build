@@ -4,6 +4,7 @@
 This file tests the build.py module.  It sits lower in the stack than the API tests,
 and is more unit-test oriented.
 """
+
 import json
 import os
 import sys

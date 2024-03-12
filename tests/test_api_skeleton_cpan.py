@@ -5,7 +5,6 @@ Integrative tests of the CPAN skeleton that start from
 conda_build.api.skeletonize and check the output files
 """
 
-
 import pytest
 
 from conda_build import api

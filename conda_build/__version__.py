@@ -6,6 +6,7 @@ The logic here is used during development installs only so keep it simple.
 Conda-build abides by CEP-8 which specifies using CalVer, so the dev version is:
     YY.MM.MICRO.devN+gHASH[.dirty]
 """
+
 try:
     from setuptools_scm import get_version
 
