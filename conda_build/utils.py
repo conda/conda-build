@@ -55,6 +55,7 @@ from conda.base.constants import (
 )
 from conda.base.context import context
 from conda.gateways.disk.read import compute_sum
+from conda.models.channel import Channel
 from conda.models.match_spec import MatchSpec
 
 from .conda_interface import (
@@ -65,7 +66,6 @@ from .conda_interface import (
     VersionOrder,
     cc_conda_build,
     download,
-    get_conda_channel,
     unix_path_to_win,
     win_path_to_unix,
 )
@@ -2106,7 +2106,7 @@ channeldata_cache = {}
 def download_channeldata(channel_url):
     global channeldata_cache
     if channel_url.startswith("file://") or channel_url not in channeldata_cache:
-        urls = get_conda_channel(channel_url).urls()
+        urls = Channel.from_value(channel_url).urls()
         urls = {url.rsplit("/", 1)[0] for url in urls}
         data = {}
         for url in urls:

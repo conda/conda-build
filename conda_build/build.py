@@ -24,6 +24,7 @@ from bs4 import UnicodeDammit
 from conda import __version__ as conda_version
 from conda.base.context import context
 from conda.core.prefix_data import PrefixData
+from conda.models.channel import Channel
 
 from . import __version__ as conda_build_version
 from . import environ, noarch_python, source, tarcheck, utils
@@ -37,7 +38,6 @@ from .conda_interface import (
     TemporaryDirectory,
     UnsatisfiableError,
     env_path_backup_var_exists,
-    get_conda_channel,
     prefix_placeholder,
     reset_context,
     url_path,
@@ -1331,7 +1331,7 @@ def record_prefix_files(m, files_with_prefix):
 
 
 def sanitize_channel(channel):
-    return get_conda_channel(channel).urls(with_credentials=False, subdirs=[""])[0]
+    return Channel.from_value(channel).urls(with_credentials=False, subdirs=[""])[0]
 
 
 def write_info_files_file(m, files):

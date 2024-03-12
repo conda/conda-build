@@ -145,7 +145,13 @@ deprecated.constant(
 )
 cc_conda_build = context.conda_build if hasattr(context, "conda_build") else {}
 
-get_conda_channel = Channel.from_value
+deprecated.constant(
+    "24.5",
+    "24.7",
+    "get_conda_channel",
+    Channel.from_value,
+    addendum="Use `conda.models.channel.Channel.from_value` instead.",
+)
 
 # Disallow softlinks. This avoids a lot of dumb issues, at the potential cost of disk space.
 os.environ["CONDA_ALLOW_SOFTLINKS"] = "false"
