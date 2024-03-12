@@ -67,8 +67,8 @@ from .deprecations import deprecated
 deprecated.constant("24.1.0", "24.5.0", "get_index", _get_index)
 # TODO: Go to references of all properties below and import them from `context` instead
 deprecated.constant(
-    "24.3",
     "24.5",
+    "24.7",
     "binstar_upload",
     context.binstar_upload,
     addendum="Use `conda.base.context.context.binstar_upload` instead.",
@@ -125,8 +125,8 @@ def md5_file(path: str | os.PathLike) -> str:
 
 
 deprecated.constant(
-    "24.3",
     "24.5",
+    "24.7",
     "CONDA_VERSION",
     __version__,
     addendum="Use `conda.__version__` instead.",
