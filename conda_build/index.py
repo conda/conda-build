@@ -8,11 +8,12 @@ from concurrent.futures import Executor
 from functools import partial
 from os.path import dirname
 
+from conda.base.context import context
 from conda.core.index import get_index
 from conda_index.index import update_index as _update_index
 
-from . import conda_interface, utils
-from .conda_interface import CondaHTTPError, context, url_path
+from . import utils
+from .conda_interface import CondaHTTPError, url_path
 from .deprecations import deprecated
 from .utils import (
     CONDA_PACKAGE_EXTENSION_V1,
@@ -128,7 +129,7 @@ def get_build_index(
             #      native content and the noarch content.
 
             if subdir == "noarch":
-                subdir = conda_interface.subdir
+                subdir = context.subdir
             try:
                 # get_index() is like conda reading the index, not conda_index
                 # creating a new index.

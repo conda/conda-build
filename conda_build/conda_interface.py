@@ -115,7 +115,13 @@ deprecated.constant(
     context.root_writable,
     addendum="Use `conda.base.context.context.root_writable` instead.",
 )
-subdir = context.subdir
+deprecated.constant(
+    "24.5",
+    "24.7",
+    "subdir",
+    context.subdir,
+    addendum="Use `conda.base.context.context.subdir` instead.",
+)
 create_default_packages = context.create_default_packages
 
 get_rc_urls = lambda: list(context.channels)

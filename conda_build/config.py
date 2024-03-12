@@ -17,11 +17,7 @@ from typing import TYPE_CHECKING
 
 from conda.base.context import context
 
-from .conda_interface import (
-    cc_conda_build,
-    subdir,
-    url_path,
-)
+from .conda_interface import cc_conda_build, url_path
 from .utils import (
     get_build_folders,
     get_conda_operation_locks,
@@ -319,7 +315,7 @@ class Config:
     def arch(self):
         """Always the native (build system) arch, except when pretending to be some
         other platform"""
-        return self._arch or subdir.rsplit("-", 1)[1]
+        return self._arch or context.subdir.rsplit("-", 1)[1]
 
     @arch.setter
     def arch(self, value):
@@ -335,7 +331,7 @@ class Config:
     def platform(self):
         """Always the native (build system) OS, except when pretending to be some
         other platform"""
-        return self._platform or subdir.rsplit("-", 1)[0]
+        return self._platform or context.subdir.rsplit("-", 1)[0]
 
     @platform.setter
     def platform(self, value):
@@ -715,7 +711,7 @@ class Config:
         #     subdir should be the native platform, while self.subdir would be the host platform.
         return {
             join(self.croot, self.host_subdir),
-            join(self.croot, subdir),
+            join(self.croot, context.subdir),
             join(self.croot, "noarch"),
         }
 
