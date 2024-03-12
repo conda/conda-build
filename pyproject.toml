@@ -133,7 +133,15 @@ addopts = [
   # "--store-durations",  # not available yet
   "--strict-markers",
   "--tb=native",
+  "--xdoctest-modules",
+  "--xdoctest-style=google",
   "-vv",
+]
+doctest_optionflags = [
+  "NORMALIZE_WHITESPACE",
+  "IGNORE_EXCEPTION_DETAIL",
+  "ALLOW_UNICODE",
+  "ELLIPSIS",
 ]
 markers = [
   "serial: execute test serially (to avoid race conditions)",

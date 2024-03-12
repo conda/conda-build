@@ -58,11 +58,13 @@ from conda.exports import (  # noqa: F401
     walk_prefix,
     win_path_to_unix,
 )
+from conda.exports import get_index as _get_index
 from conda.gateways.disk.read import compute_sum
 from conda.models.channel import get_conda_build_local_url  # noqa: F401
 
 from .deprecations import deprecated
 
+deprecated.constant("24.1.0", "24.5.0", "get_index", _get_index)
 # TODO: Go to references of all properties below and import them from `context` instead
 deprecated.constant(
     "24.3",
