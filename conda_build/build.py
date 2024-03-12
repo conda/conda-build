@@ -22,6 +22,7 @@ import conda_package_handling.api
 import yaml
 from bs4 import UnicodeDammit
 from conda import __version__ as conda_version
+from conda.base.context import context
 from conda.core.prefix_data import PrefixData
 
 from . import __version__ as conda_build_version
@@ -35,13 +36,11 @@ from .conda_interface import (
     PathType,
     TemporaryDirectory,
     UnsatisfiableError,
-    context,
     env_path_backup_var_exists,
     get_conda_channel,
     get_rc_urls,
     prefix_placeholder,
     reset_context,
-    root_dir,
     url_path,
 )
 from .config import Config
@@ -1423,7 +1422,7 @@ def write_about_json(m):
             extra.update(m.config.extra_meta)
         d["root_pkgs"] = [
             f"{prec.name} {prec.version} {prec.build}"
-            for prec in PrefixData(root_dir).iter_records()
+            for prec in PrefixData(context.root_dir).iter_records()
         ]
         # Include the extra section of the metadata in the about.json
         d["extra"] = extra

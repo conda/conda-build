@@ -24,6 +24,7 @@ from conda.base.constants import (
     DEFAULTS_CHANNEL_NAME,
     UNKNOWN_CHANNEL,
 )
+from conda.base.context import context
 from conda.common.io import env_vars
 from conda.core.index import LAST_CHANNEL_URLS
 from conda.core.link import PrefixSetup, UnlinkLinkTransaction
@@ -46,10 +47,8 @@ from .conda_interface import (
     PackageRecord,
     ProgressiveFetchExtract,
     TemporaryDirectory,
-    context,
     create_default_packages,
     reset_context,
-    root_dir,
 )
 from .deprecations import deprecated
 from .exceptions import BuildLockError, DependencyNeedsBuildingError
@@ -424,7 +423,7 @@ def conda_build_vars(prefix, config):
         "HTTP_PROXY": os.getenv("HTTP_PROXY", ""),
         "REQUESTS_CA_BUNDLE": os.getenv("REQUESTS_CA_BUNDLE", ""),
         "DIRTY": "1" if config.dirty else "",
-        "ROOT": root_dir,
+        "ROOT": context.root_dir,
     }
 
 
