@@ -54,6 +54,7 @@ def test_uses_vcs_in_metadata(testing_workdir, testing_metadata):
     assert not testing_metadata.uses_vcs_in_build
 
 
+@pytest.mark.benchmark
 def test_select_lines():
     lines = "\n".join(
         (
