@@ -10,6 +10,7 @@ from importlib import import_module  # noqa: F401
 from conda import __version__
 from conda.base.context import context, determine_target_prefix
 from conda.base.context import non_x86_machines as non_x86_linux_machines  # noqa: F401
+from conda.base.context import reset_context as _reset_context
 from conda.core.package_cache import ProgressiveFetchExtract  # noqa: F401
 from conda.exceptions import (  # noqa: F401
     CondaError,
@@ -65,6 +66,13 @@ from conda.models.channel import get_conda_build_local_url  # noqa: F401
 from .deprecations import deprecated
 
 deprecated.constant("24.1.0", "24.5.0", "get_index", _get_index)
+deprecated.constant(
+    "24.5",
+    "24.7",
+    "reset_context",
+    _reset_context,
+    addendum="Use `conda.base.context.reset_context` instead.",
+)
 deprecated.constant(
     "24.5",
     "24.7",
