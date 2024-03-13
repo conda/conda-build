@@ -16,6 +16,7 @@ import os
 import sys
 from os.path import dirname, expanduser, join
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 # make the Config class available in the api namespace
 from .config import DEFAULT_PREFIX_LENGTH as _prefix_length
@@ -31,16 +32,21 @@ from .utils import (
     on_win,
 )
 
+if TYPE_CHECKING:
+    from typing import Any
+
+    from .metadata import MetaData
+
 
 def render(
-    recipe_path,
-    config=None,
-    variants=None,
-    permit_unsatisfiable_variants=True,
-    finalize=True,
-    bypass_env_check=False,
+    recipe_path: str | os.PathLike | Path,
+    config: Config | None = None,
+    variants: dict[str, Any] | None = None,
+    permit_unsatisfiable_variants: bool = True,
+    finalize: bool = True,
+    bypass_env_check: bool = False,
     **kwargs,
-):
+) -> list[tuple[MetaData, bool, bool]]:
     """Given path to a recipe, return the MetaData object(s) representing that recipe, with jinja2
        templates evaluated.
 

@@ -23,6 +23,7 @@ from os.path import (
     normpath,
 )
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import yaml
 
@@ -48,6 +49,11 @@ from .variants import (
     get_package_variants,
     list_of_dicts_to_dict_of_lists,
 )
+
+if TYPE_CHECKING:
+    from typing import Any
+
+    from .config import Config
 
 
 def odict_representer(dumper, data):
@@ -929,14 +935,14 @@ def expand_outputs(metadata_tuples):
 
 
 def render_recipe(
-    recipe_path,
-    config,
-    no_download_source=False,
-    variants=None,
-    permit_unsatisfiable_variants=True,
-    reset_build_id=True,
-    bypass_env_check=False,
-):
+    recipe_path: str | os.PathLike | Path,
+    config: Config,
+    no_download_source: bool = False,
+    variants: dict[str, Any] | None = None,
+    permit_unsatisfiable_variants: bool = True,
+    reset_build_id: bool = True,
+    bypass_env_check: bool = False,
+) -> list[tuple[MetaData, bool, bool]]:
     """Returns a list of tuples, each consisting of
 
     (metadata-object, needs_download, needs_render_in_env)
@@ -944,7 +950,7 @@ def render_recipe(
     You get one tuple per variant.  Outputs are not factored in here (subpackages won't affect these
     results returned here.)
     """
-    arg = recipe_path
+    arg = str(recipe_path)
     if isfile(arg):
         if arg.endswith((".tar", ".tar.gz", ".tgz", ".tar.bz2")):
             recipe_dir = tempfile.mkdtemp()
@@ -993,9 +999,7 @@ def render_recipe(
                 ]
             m.config.variants = get_package_variants(m, variants=variants)
             m.config.variant = m.config.variants[0]
-        rendered_metadata = [
-            (m, False, False),
-        ]
+        rendered_metadata = [(m, False, False)]
     else:
         # merge any passed-in variants with any files found
         variants = get_package_variants(m, variants=variants)
