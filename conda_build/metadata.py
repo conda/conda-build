@@ -1664,7 +1664,6 @@ class MetaData:
             raise RuntimeError(
                 f"Couldn't extract raw recipe text for {self.name()} output"
             )
-        raw_recipe_text = self.extract_package_and_build_text()
         raw_manual_build_string = re.search(r"\s*string:", raw_recipe_text)
         # user setting their own build string.  Don't modify it.
         if manual_build_string and not (
