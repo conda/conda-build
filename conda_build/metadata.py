@@ -2086,8 +2086,11 @@ class MetaData:
         return None
 
     def get_recipe_text(
-        self, extract_pattern=None, force_top_level=False, apply_selectors=True
-    ):
+        self,
+        extract_pattern: str | None = None,
+        force_top_level: bool = False,
+        apply_selectors: bool = True,
+    ) -> str:
         meta_path = self.meta_path
         if meta_path:
             recipe_text = read_meta_file(meta_path)
