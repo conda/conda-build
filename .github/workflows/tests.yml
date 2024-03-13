@@ -161,6 +161,75 @@ jobs:
             test-report.xml
           retention-days: 1  # temporary, combined in aggregate below
 
+  # linux benchmarks
+  linux-benchmarks:
+    # only run test suite if there are code changes
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        # https://github.com/conda-incubator/setup-miniconda#use-a-default-shell
+        shell: bash -el {0}  # bash exit immediately on error + login shell
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.12']
+
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Hash + Timestamp
+        run: echo "HASH=${{ runner.os }}-${{ runner.arch }}-Py${{ matrix.python-version }}-benchmark-$(date -u "+%Y%m")" >> $GITHUB_ENV
+
+      - name: Cache Conda
+        uses: actions/cache@v4
+        with:
+          path: ~/conda_pkgs_dir
+          key: cache-${{ env.HASH }}
+
+      - name: Setup Miniconda
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          condarc-file: .github/condarc
+          run-post: false  # skip post cleanup
+
+      - name: Conda Install
+        run: conda install
+          --yes
+          --file tests/requirements.txt
+          --file tests/requirements-${{ runner.os }}.txt
+          --file tests/requirements-ci.txt
+          python=${{ matrix.python-version }}
+          ${{ env.CONDA_CHANNEL_LABEL }}${{ env.CONDA_VERSION }}
+
+      - name: Install CodSpeed
+        run: pip install git+https://github.com/kenodegard/pytest-codspeed.git@fix-outerr-redirects#egg=pytest-codspeed
+
+      # TODO: how can we remove this step?
+      - name: Install Self
+        run: pip install -e .
+
+      - name: Conda Info
+        # view test env info (not base)
+        run: python -m conda info --verbose
+
+      - name: Conda Config
+        run: conda config --show-sources
+
+      - name: Conda List
+        run: conda list --show-channel-urls
+
+      - name: Run Benchmarks
+        uses: CodSpeedHQ/action@v2
+        with:
+          token: ${{ secrets.CODSPEED_TOKEN }}
+          run: $CONDA/envs/test/bin/pytest --codspeed
+
   # windows test suite
   windows:
     # only run test suite if there are code changes
@@ -351,7 +420,7 @@ jobs:
   # aggregate and upload
   aggregate:
     # only aggregate test suite if there are code changes
-    needs: [changes, linux, windows, macos]
+    needs: [changes, linux, linux-benchmarks, windows, macos]
     if: >-
       !cancelled()
       && (
@@ -378,7 +447,7 @@ jobs:
 
   # required check
   analyze:
-    needs: [linux, windows, macos, aggregate]
+    needs: [linux, linux-benchmarks, windows, macos, aggregate]
     if: '!cancelled()'
 
     runs-on: ubuntu-latest
