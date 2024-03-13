@@ -87,6 +87,7 @@ def test_select_lines():
             " ' test '",
             ' " test "',
             "",
+            "",
             "test",
             " 'quoted'",
             ' "quoted"',
@@ -107,6 +108,7 @@ def test_select_lines():
             "test [abc] # no",
             " ' test '",
             ' " test "',
+            "",
             "",
             "test {{ JINJA_VAR[:2] }}",
             "",  # trailing newline

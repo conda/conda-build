@@ -35,7 +35,7 @@ from .utils import (
 )
 
 if TYPE_CHECKING:
-    from typing import Literal
+    from typing import Any, Literal
 
 try:
     import yaml
@@ -267,38 +267,64 @@ def eval_selector(selector_string, namespace, variants_in_place):
         return eval_selector(next_string, namespace, variants_in_place)
 
 
-def select_lines(data, namespace, variants_in_place):
-    lines = []
-
-    for i, line in enumerate(data.splitlines()):
+@lru_cache(maxsize=None)
+def _split_line_selector(text: str) -> tuple[tuple[str | None, str], ...]:
+    lines: list[tuple[str | None, str]] = []
+    for line in text.splitlines():
         line = line.rstrip()
 
+        # skip comment lines, include a blank line as a placeholder
+        if line.lstrip().startswith("#"):
+            lines.append((None, ""))
+            continue
+
+        # include blank lines
+        if not line:
+            lines.append((None, ""))
+            continue
+
+        # user may have quoted entire line to make YAML happy
         trailing_quote = ""
         if line and line[-1] in ("'", '"'):
             trailing_quote = line[-1]
 
-        if line.lstrip().startswith("#"):
-            # Don't bother with comment only lines
-            continue
-        m = sel_pat.match(line)
-        if m:
-            cond = m.group(3)
-            try:
-                if eval_selector(cond, namespace, variants_in_place):
-                    lines.append(m.group(1) + trailing_quote)
-            except Exception as e:
-                sys.exit(
-                    """\
-Error: Invalid selector in meta.yaml line %d:
-offending line:
-%s
-exception:
-%s
-"""
-                    % (i + 1, line, str(e))
-                )
+        match = sel_pat.match(line)
+        if match and (selector := match.group(3)):
+            # found a selector
+            lines.append((selector, (match.group(1) + trailing_quote).rstrip()))
         else:
+            # no selector found
+            lines.append((None, line))
+    return tuple(lines)
+
+
+def select_lines(text: str, namespace: dict[str, Any], variants_in_place: bool) -> str:
+    lines = []
+    selector_cache: dict[str, bool] = {}
+    for i, (selector, line) in enumerate(_split_line_selector(text)):
+        if not selector:
+            # no selector? include line as is
             lines.append(line)
+        else:
+            # include lines with a selector that evaluates to True
+            try:
+                if selector_cache[selector]:
+                    lines.append(line)
+            except KeyError:
+                # KeyError: cache miss
+                try:
+                    value = bool(eval_selector(selector, namespace, variants_in_place))
+                    selector_cache[selector] = value
+                    if value:
+                        lines.append(line)
+                except Exception as e:
+                    sys.exit(
+                        f"Error: Invalid selector in meta.yaml line {i + 1}:\n"
+                        f"offending line:\n"
+                        f"{line}\n"
+                        f"exception:\n"
+                        f"{e.__class__.__name__}: {e}\n"
+                    )
     return "\n".join(lines) + "\n"
 
 
