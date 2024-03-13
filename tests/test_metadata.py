@@ -53,50 +53,72 @@ def test_uses_vcs_in_metadata(testing_workdir, testing_metadata):
     assert not testing_metadata.uses_vcs_in_build
 
 
+@pytest.mark.benchmark
 def test_select_lines():
-    lines = """
-test
-test [abc] no
-test [abc] # no
-
-test [abc]
- 'quoted # [abc] '
- "quoted # [abc] yes "
-test # stuff [abc] yes
-test {{ JINJA_VAR[:2] }}
-test {{ JINJA_VAR[:2] }} # stuff [abc] yes
-test {{ JINJA_VAR[:2] }} # stuff yes [abc]
-test {{ JINJA_VAR[:2] }} # [abc] stuff yes
-{{ environ["test"] }}  # [abc]
-"""
+    lines = (
+        "\n".join(
+            (
+                "",
+                "test",
+                "test [abc] no",
+                "test [abc] # no",
+                " ' test ' ",
+                ' " test " ',
+                "",
+                "# comment line",
+                "test [abc]",
+                " 'quoted # [abc] '",
+                ' "quoted # [abc] yes "',
+                "test # stuff [abc] yes",
+                "test {{ JINJA_VAR[:2] }}",
+                "test {{ JINJA_VAR[:2] }} # stuff [abc] yes",
+                "test {{ JINJA_VAR[:2] }} # stuff yes [abc]",
+                "test {{ JINJA_VAR[:2] }} # [abc] stuff yes",
+                '{{ environ["test"] }}  # [abc]',
+            )
+        )
+        + "\n"
+    )
 
     assert (
         select_lines(lines, {"abc": True}, variants_in_place=True)
-        == """
-test
-test [abc] no
-test [abc] # no
-
-test
- 'quoted'
- "quoted"
-test
-test {{ JINJA_VAR[:2] }}
-test {{ JINJA_VAR[:2] }}
-test {{ JINJA_VAR[:2] }}
-test {{ JINJA_VAR[:2] }}
-{{ environ["test"] }}
-"""
+        == "\n".join(
+            (
+                "",
+                "test",
+                "test [abc] no",
+                "test [abc] # no",
+                " ' test '",
+                ' " test "',
+                "",
+                "test",
+                " 'quoted'",
+                ' "quoted"',
+                "test",
+                "test {{ JINJA_VAR[:2] }}",
+                "test {{ JINJA_VAR[:2] }}",
+                "test {{ JINJA_VAR[:2] }}",
+                "test {{ JINJA_VAR[:2] }}",
+                '{{ environ["test"] }}',
+            )
+        )
+        + "\n"
     )
     assert (
         select_lines(lines, {"abc": False}, variants_in_place=True)
-        == """
-test
-test [abc] no
-test [abc] # no
-
-test {{ JINJA_VAR[:2] }}
-"""
+        == "\n".join(
+            (
+                "",
+                "test",
+                "test [abc] no",
+                "test [abc] # no",
+                " ' test '",
+                ' " test "',
+                "",
+                "test {{ JINJA_VAR[:2] }}",
+            )
+        )
+        + "\n"
     )
 
 
