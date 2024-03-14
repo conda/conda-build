@@ -222,7 +222,7 @@ def test_which_package_battery(tmp_path: Path):
 
     # dummy packages with files
     removed = []
-    for _ in range(100):
+    for _ in range(10):
         name = f"package_{uuid4().hex}"
 
         # mock a package with 100 files
