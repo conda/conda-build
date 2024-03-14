@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 )
 def test_noarch_output(build, testing_metadata):
     testing_metadata.meta["build"].update(build)
-    output = api.get_output_file_path(testing_metadata)
+    output = api.get_output_file_paths(testing_metadata)
     assert os.path.sep + "noarch" + os.path.sep in output[0]
 
 
