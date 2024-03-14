@@ -17,7 +17,8 @@ sub_commands = [
     "skeleton",
 ]
 
-# Skip context logic for docs since we don't install all dependencies
+# Skip context logic for doc generation since we don't install all dependencies in the CI doc build environment,
+# see .readthedocs.yml file
 try:
     import os
 
