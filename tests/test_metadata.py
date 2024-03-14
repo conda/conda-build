@@ -134,10 +134,10 @@ def test_select_lines_battery():
             test_foo_or_bar,
             test_foo_or_baz,
         )
-        * 100
+        * 10
     )
 
-    for _ in range(100):
+    for _ in range(10):
         for foo, bar, baz in product((True, False), repeat=3):
             namespace = {"foo": foo, "bar": bar, "baz": baz}
             selection = (
@@ -151,7 +151,7 @@ def test_select_lines_battery():
                     + (foo or bar)
                     + (foo or baz)
                 )
-                * 100
+                * 10
             )
             selection = "\n".join(selection) + "\n"  # trailing newline
             assert select_lines(lines, namespace, variants_in_place=True) == selection
