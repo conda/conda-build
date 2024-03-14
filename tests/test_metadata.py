@@ -53,7 +53,6 @@ def test_uses_vcs_in_metadata(testing_workdir, testing_metadata):
     assert not testing_metadata.uses_vcs_in_build
 
 
-@pytest.mark.benchmark
 def test_select_lines():
     lines = (
         "\n".join(
@@ -120,6 +119,58 @@ def test_select_lines():
         )
         + "\n"
     )
+
+
+@pytest.mark.benchmark
+def test_select_lines_battery():
+    test_foo = "test [foo]"
+    test_bar = "test [bar]"
+    test_baz = "test [baz]"
+    test_foo_and_bar = "test [foo and bar]"
+    test_foo_and_baz = "test [foo and baz]"
+    test_foo_or_bar = "test [foo or bar]"
+    test_foo_or_baz = "test [foo or baz]"
+
+    lines = "\n".join(
+        (
+            test_foo,
+            test_bar,
+            test_baz,
+            test_foo_and_bar,
+            test_foo_and_baz,
+            test_foo_or_bar,
+            test_foo_or_baz,
+        )
+        * 100
+    )
+
+    for _ in range(100):
+        for foo in (True, False):
+            for bar in (True, False):
+                for baz in (True, False):
+                    assert (
+                        select_lines(
+                            lines,
+                            {"foo": foo, "bar": bar, "baz": baz},
+                            variants_in_place=True,
+                        )
+                        == "\n".join(
+                            filter(
+                                None,
+                                (
+                                    foo and "test",
+                                    bar and "test",
+                                    baz and "test",
+                                    (foo and bar) and "test",
+                                    (foo and baz) and "test",
+                                    (foo or bar) and "test",
+                                    (foo or baz) and "test",
+                                )
+                                * 100,
+                            )
+                        )
+                        + "\n"
+                    )
 
 
 def test_disallow_leading_period_in_version(testing_metadata):
