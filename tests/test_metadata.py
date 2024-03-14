@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+from itertools import product
 from typing import TYPE_CHECKING
 
 import pytest
@@ -54,70 +55,62 @@ def test_uses_vcs_in_metadata(testing_workdir, testing_metadata):
 
 
 def test_select_lines():
-    lines = (
-        "\n".join(
-            (
-                "",
-                "test",
-                "test [abc] no",
-                "test [abc] # no",
-                " ' test ' ",
-                ' " test " ',
-                "",
-                "# comment line",
-                "test [abc]",
-                " 'quoted # [abc] '",
-                ' "quoted # [abc] yes "',
-                "test # stuff [abc] yes",
-                "test {{ JINJA_VAR[:2] }}",
-                "test {{ JINJA_VAR[:2] }} # stuff [abc] yes",
-                "test {{ JINJA_VAR[:2] }} # stuff yes [abc]",
-                "test {{ JINJA_VAR[:2] }} # [abc] stuff yes",
-                '{{ environ["test"] }}  # [abc]',
-            )
+    lines = "\n".join(
+        (
+            "",
+            "test",
+            "test [abc] no",
+            "test [abc] # no",
+            " ' test ' ",
+            ' " test " ',
+            "",
+            "# comment line",
+            "test [abc]",
+            " 'quoted # [abc] '",
+            ' "quoted # [abc] yes "',
+            "test # stuff [abc] yes",
+            "test {{ JINJA_VAR[:2] }}",
+            "test {{ JINJA_VAR[:2] }} # stuff [abc] yes",
+            "test {{ JINJA_VAR[:2] }} # stuff yes [abc]",
+            "test {{ JINJA_VAR[:2] }} # [abc] stuff yes",
+            '{{ environ["test"] }}  # [abc]',
+            "",  # trailing newline
         )
-        + "\n"
     )
 
-    assert (
-        select_lines(lines, {"abc": True}, variants_in_place=True)
-        == "\n".join(
-            (
-                "",
-                "test",
-                "test [abc] no",
-                "test [abc] # no",
-                " ' test '",
-                ' " test "',
-                "",
-                "test",
-                " 'quoted'",
-                ' "quoted"',
-                "test",
-                "test {{ JINJA_VAR[:2] }}",
-                "test {{ JINJA_VAR[:2] }}",
-                "test {{ JINJA_VAR[:2] }}",
-                "test {{ JINJA_VAR[:2] }}",
-                '{{ environ["test"] }}',
-            )
+    assert select_lines(lines, {"abc": True}, variants_in_place=True) == "\n".join(
+        (
+            "",
+            "test",
+            "test [abc] no",
+            "test [abc] # no",
+            " ' test '",
+            ' " test "',
+            "",
+            "test",
+            " 'quoted'",
+            ' "quoted"',
+            "test",
+            "test {{ JINJA_VAR[:2] }}",
+            "test {{ JINJA_VAR[:2] }}",
+            "test {{ JINJA_VAR[:2] }}",
+            "test {{ JINJA_VAR[:2] }}",
+            '{{ environ["test"] }}',
+            "",  # trailing newline
         )
-        + "\n"
     )
-    assert (
-        select_lines(lines, {"abc": False}, variants_in_place=True)
-        == "\n".join(
-            (
-                "",
-                "test",
-                "test [abc] no",
-                "test [abc] # no",
-                " ' test '",
-                ' " test "',
-                "",
-                "test {{ JINJA_VAR[:2] }}",
-            )
+    assert select_lines(lines, {"abc": False}, variants_in_place=True) == "\n".join(
+        (
+            "",
+            "test",
+            "test [abc] no",
+            "test [abc] # no",
+            " ' test '",
+            ' " test "',
+            "",
+            "test {{ JINJA_VAR[:2] }}",
+            "",  # trailing newline
         )
-        + "\n"
     )
 
 
@@ -145,32 +138,23 @@ def test_select_lines_battery():
     )
 
     for _ in range(100):
-        for foo in (True, False):
-            for bar in (True, False):
-                for baz in (True, False):
-                    assert (
-                        select_lines(
-                            lines,
-                            {"foo": foo, "bar": bar, "baz": baz},
-                            variants_in_place=True,
-                        )
-                        == "\n".join(
-                            filter(
-                                None,
-                                (
-                                    foo and "test",
-                                    bar and "test",
-                                    baz and "test",
-                                    (foo and bar) and "test",
-                                    (foo and baz) and "test",
-                                    (foo or bar) and "test",
-                                    (foo or baz) and "test",
-                                )
-                                * 100,
-                            )
-                        )
-                        + "\n"
-                    )
+        for foo, bar, baz in product((True, False), repeat=3):
+            namespace = {"foo": foo, "bar": bar, "baz": baz}
+            selection = (
+                ["test"]
+                * (
+                    foo
+                    + bar
+                    + baz
+                    + (foo and bar)
+                    + (foo and baz)
+                    + (foo or bar)
+                    + (foo or baz)
+                )
+                * 100
+            )
+            selection = "\n".join(selection) + "\n"  # trailing newline
+            assert select_lines(lines, namespace, variants_in_place=True) == selection
 
 
 def test_disallow_leading_period_in_version(testing_metadata):
