@@ -1132,7 +1132,10 @@ def convert_path_for_cygwin_or_msys2(exe, path):
 
 
 def get_skip_message(m):
-    return f"Skipped: {m.name()} from {m.path} defines build/skip for this configuration ({({k: m.config.variant[k] for k in m.get_used_vars()})})."
+    return (
+        f"Skipped: {m.name()} from {m.path} defines build/skip for this configuration "
+        f"({({k: m.config.variant[k] for k in m.get_used_vars()})})."
+    )
 
 
 def package_has_file(package_path, file_path, refresh_mode="modified"):

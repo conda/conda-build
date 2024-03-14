@@ -304,9 +304,10 @@ def _combine_spec_dictionaries(
                                         ensure_list(v)
                                     ):
                                         raise ValueError(
-                                            "All entries associated by a zip_key "
-                                            f"field must be the same length.  In {spec_source}, {k} and {group_item} are "
-                                            f"different ({len(ensure_list(v))} and {len(ensure_list(spec[group_item]))})"
+                                            f"All entries associated by a zip_key "
+                                            f"field must be the same length.  In {spec_source}, {k} and {group_item} "
+                                            f"are different ({len(ensure_list(v))} and "
+                                            f"{len(ensure_list(spec[group_item]))})"
                                         )
                                     values[group_item] = ensure_list(spec[group_item])
                             elif k in values:
@@ -333,10 +334,10 @@ def _combine_spec_dictionaries(
                                 ]
                                 if len(missing_subvalues):
                                     raise ValueError(
-                                        f"variant config in {spec_source} is ambiguous because it\n"
-                                        f"does not fully implement all zipped keys (To be clear: missing {missing_group_items})\n"
-                                        "or specifies a subspace that is not fully implemented (To be clear:\n"
-                                        f".. we did not find {missing_subvalues} from {spec} in {k}:{values[k]})."
+                                        f"variant config in {spec_source} is ambiguous because it does not fully "
+                                        f"implement all zipped keys (missing {missing_group_items}) or specifies a "
+                                        f"subspace that is not fully implemented (we did not find {missing_subvalues} "
+                                        f"from {spec} in {k}:{values[k]})."
                                     )
 
     return values

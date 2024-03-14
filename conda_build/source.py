@@ -379,7 +379,8 @@ def git_mirror_checkout_recursive(
             )
             if verbose:
                 print(
-                    f"Relative submodule {submod_name} found: url is {submod_url}, submod_mirror_dir is {submod_mirror_dir}"
+                    f"Relative submodule {submod_name} found: url is {submod_url}, "
+                    f"submod_mirror_dir is {submod_mirror_dir}"
                 )
             with TemporaryDirectory() as temp_checkout_dir:
                 git_mirror_checkout_recursive(
