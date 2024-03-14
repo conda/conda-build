@@ -135,7 +135,8 @@ jobs:
         run: pip install -e .
 
       - name: Conda Info
-        run: conda info --verbose
+        # view test env info (not base)
+        run: python -m conda info --verbose
 
       - name: Conda List
         run: conda list --show-channel-urls
@@ -226,7 +227,8 @@ jobs:
         run: pip install -e .
 
       - name: Conda Info
-        run: conda info --verbose
+        # view test env info (not base)
+        run: python -m conda info --verbose
 
       - name: Conda List
         run: conda list --show-channel-urls
@@ -322,7 +324,8 @@ jobs:
         run: pip install -e .
 
       - name: Conda Info
-        run: conda info --verbose
+        # view test env info (not base)
+        run: python -m conda info --verbose
 
       - name: Conda List
         run: conda list --show-channel-urls
