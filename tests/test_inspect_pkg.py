@@ -207,6 +207,14 @@ def test_which_package(tmp_path: Path):
 @pytest.mark.benchmark
 def test_which_package_battery(tmp_path: Path):
     # regression: https://github.com/conda/conda-build/issues/5126
+
+    # NOTE: CodSpeed on Python 3.12+ activates the stack profiler trampoline backend
+    # and thus runs the test twice (once without profiling and once with profiling),
+    # unfortunately this means that on the second iteration tmp_path is no longer empty
+    # so we create a randomized unique directory to compensate
+    tmp_path = tmp_path / uuid4().hex
+    tmp_path.mkdir()
+
     # create a dummy environment
     (tmp_path / "conda-meta").mkdir()
     (tmp_path / "conda-meta" / "history").touch()
