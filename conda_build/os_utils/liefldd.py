@@ -27,6 +27,16 @@ try:
 
     lief.logging.disable()
     have_lief = True
+    try:
+        PE_HEADER_CHARACTERISTICS = lief.PE.Header.CHARACTERISTICS
+    except AttributeError:
+        # Fallback for lief<0.14.
+        PE_HEADER_CHARACTERISTICS = lief.PE.HEADER_CHARACTERISTICS
+    try:
+        EXE_FORMATS = lief.Binary.FORMATS
+    except AttributeError:
+        # Fallback for lief<0.14.
+        EXE_FORMATS = lief.EXE_FORMATS
 except ImportError:
     have_lief = False
 
@@ -78,15 +88,15 @@ if have_lief:
         if not (binary := ensure_binary(path)):
             return None
         elif (
-            binary.format == lief.EXE_FORMATS.PE
-            and lief.PE.HEADER_CHARACTERISTICS.DLL in binary.header.characteristics_list
+            binary.format == EXE_FORMATS.PE
+            and PE_HEADER_CHARACTERISTICS.DLL in binary.header.characteristics_list
         ):
             return DLLfile
-        elif binary.format == lief.EXE_FORMATS.PE:
+        elif binary.format == EXE_FORMATS.PE:
             return EXEfile
-        elif binary.format == lief.EXE_FORMATS.MACHO:
+        elif binary.format == EXE_FORMATS.MACHO:
             return machofile
-        elif binary.format == lief.EXE_FORMATS.ELF:
+        elif binary.format == EXE_FORMATS.ELF:
             return elffile
         else:
             return None
@@ -105,7 +115,7 @@ def get_libraries(file):
     result = []
     binary = ensure_binary(file)
     if binary:
-        if binary.format == lief.EXE_FORMATS.PE:
+        if binary.format == EXE_FORMATS.PE:
             result = binary.libraries
         else:
             result = [
@@ -113,7 +123,7 @@ def get_libraries(file):
             ]
             # LIEF returns LC_ID_DYLIB name @rpath/libbz2.dylib in binary.libraries. Strip that.
             binary_name = None
-            if binary.format == lief.EXE_FORMATS.MACHO:
+            if binary.format == EXE_FORMATS.MACHO:
                 binary_name = [
                     command.name
                     for command in binary.commands
@@ -174,7 +184,7 @@ if have_lief:
         rpaths = []
         if binary:
             binary_format = binary.format
-            if binary_format == lief.EXE_FORMATS.ELF:
+            if binary_format == EXE_FORMATS.ELF:
                 binary_type = binary.type
                 if (
                     binary_type == lief.ELF.ELF_CLASS.CLASS32
@@ -182,7 +192,7 @@ if have_lief:
                 ):
                     rpaths = _get_elf_rpathy_thing(binary, elf_attribute, elf_dyn_tag)
             elif (
-                binary_format == lief.EXE_FORMATS.MACHO
+                binary_format == EXE_FORMATS.MACHO
                 and binary.has_rpath
                 and elf_dyn_tag == lief.ELF.DYNAMIC_TAGS.RPATH
             ):
@@ -232,7 +242,7 @@ def set_rpath(old_matching, new_rpath, file):
     binary = ensure_binary(file)
     if not binary:
         return
-    if binary.format == lief.EXE_FORMATS.ELF and (
+    if binary.format == EXE_FORMATS.ELF and (
         binary.type == lief.ELF.ELF_CLASS.CLASS32
         or binary.type == lief.ELF.ELF_CLASS.CLASS64
     ):
@@ -244,7 +254,7 @@ def set_rpath(old_matching, new_rpath, file):
 
 def get_rpaths(file, exe_dirname, envroot, windows_root=""):
     rpaths, rpaths_type, binary_format, binary_type = get_runpaths_or_rpaths_raw(file)
-    if binary_format == lief.EXE_FORMATS.PE:
+    if binary_format == EXE_FORMATS.PE:
         # To allow the unix-y rpath code to work we consider
         # exes as having rpaths of env + CONDA_WINDOWS_PATHS
         # and consider DLLs as having no rpaths.
@@ -259,9 +269,9 @@ def get_rpaths(file, exe_dirname, envroot, windows_root=""):
             rpaths.append("/".join((windows_root, "System32", "downlevel")))
             rpaths.append(windows_root)
         if envroot:
-            # and not lief.PE.HEADER_CHARACTERISTICS.DLL in binary.header.characteristics_list:
+            # and not .DLL in binary.header.characteristics_list:
             rpaths.extend(list(_get_path_dirs(envroot)))
-    elif binary_format == lief.EXE_FORMATS.MACHO:
+    elif binary_format == EXE_FORMATS.MACHO:
         rpaths = [rpath.rstrip("/") for rpath in rpaths]
     return [from_os_varnames(binary_format, binary_type, rpath) for rpath in rpaths]
 
@@ -299,13 +309,13 @@ def _inspect_linkages_this(filename, sysroot="", arch="native"):
 
 def to_os_varnames(binary, input_):
     """Don't make these functions - they are methods to match the API for elffiles."""
-    if binary.format == lief.EXE_FORMATS.MACHO:
+    if binary.format == EXE_FORMATS.MACHO:
         return (
             input_.replace("$SELFDIR", "@loader_path")
             .replace("$EXEDIR", "@executable_path")
             .replace("$RPATH", "@rpath")
         )
-    elif binary.format == lief.EXE_FORMATS.ELF:
+    elif binary.format == EXE_FORMATS.ELF:
         if binary.ehdr.sz_ptr == 8:
             libdir = "/lib64"
         else:
@@ -315,19 +325,19 @@ def to_os_varnames(binary, input_):
 
 def from_os_varnames(binary_format, binary_type, input_):
     """Don't make these functions - they are methods to match the API for elffiles."""
-    if binary_format == lief.EXE_FORMATS.MACHO:
+    if binary_format == EXE_FORMATS.MACHO:
         return (
             input_.replace("@loader_path", "$SELFDIR")
             .replace("@executable_path", "$EXEDIR")
             .replace("@rpath", "$RPATH")
         )
-    elif binary_format == lief.EXE_FORMATS.ELF:
+    elif binary_format == EXE_FORMATS.ELF:
         if binary_type == lief.ELF.ELF_CLASS.CLASS64:
             libdir = "/lib64"
         else:
             libdir = "/lib"
         return input_.replace("$ORIGIN", "$SELFDIR").replace("$LIB", libdir)
-    elif binary_format == lief.EXE_FORMATS.PE:
+    elif binary_format == EXE_FORMATS.PE:
         return input_
 
 
@@ -344,10 +354,10 @@ def _get_path_dirs(prefix):
 def get_uniqueness_key(file):
     binary = ensure_binary(file)
     if not binary:
-        return lief.EXE_FORMATS.UNKNOWN
-    elif binary.format == lief.EXE_FORMATS.MACHO:
-        return binary.name
-    elif binary.format == lief.EXE_FORMATS.ELF and (  # noqa
+        return EXE_FORMATS.UNKNOWN
+    elif binary.format == EXE_FORMATS.MACHO:
+        return str(file)
+    elif binary.format == EXE_FORMATS.ELF and (  # noqa
         binary.type == lief.ELF.ELF_CLASS.CLASS32
         or binary.type == lief.ELF.ELF_CLASS.CLASS64
     ):
@@ -357,8 +367,8 @@ def get_uniqueness_key(file):
         ]
         if result:
             return result[0]
-        return binary.name
-    return binary.name
+        return str(file)
+    return str(file)
 
 
 def _get_resolved_location(
@@ -467,7 +477,7 @@ def inspect_linkages_lief(
     default_paths = []
     if not binary:
         default_paths = []
-    elif binary.format == lief.EXE_FORMATS.ELF:
+    elif binary.format == EXE_FORMATS.ELF:
         if binary.type == lief.ELF.ELF_CLASS.CLASS64:
             default_paths = [
                 "$SYSROOT/lib64",
@@ -477,9 +487,9 @@ def inspect_linkages_lief(
             ]
         else:
             default_paths = ["$SYSROOT/lib", "$SYSROOT/usr/lib"]
-    elif binary.format == lief.EXE_FORMATS.MACHO:
+    elif binary.format == EXE_FORMATS.MACHO:
         default_paths = ["$SYSROOT/usr/lib"]
-    elif binary.format == lief.EXE_FORMATS.PE:
+    elif binary.format == EXE_FORMATS.PE:
         # We do not include C:\Windows nor C:\Windows\System32 in this list. They are added in
         # get_rpaths() instead since we need to carefully control the order.
         default_paths = [
@@ -499,7 +509,7 @@ def inspect_linkages_lief(
             uniqueness_key = get_uniqueness_key(binary)
             if uniqueness_key not in already_seen:
                 parent_exe_dirname = None
-                if binary.format == lief.EXE_FORMATS.PE:
+                if binary.format == EXE_FORMATS.PE:
                     tmp_filename = filename2
                     while tmp_filename:
                         if (
@@ -519,7 +529,7 @@ def inspect_linkages_lief(
                 )
                 tmp_filename = filename2
                 rpaths_transitive = []
-                if binary.format == lief.EXE_FORMATS.PE:
+                if binary.format == EXE_FORMATS.PE:
                     rpaths_transitive = rpaths_by_binary[tmp_filename]
                 else:
                     while tmp_filename:
@@ -534,7 +544,7 @@ def inspect_linkages_lief(
                         "$RPATH/" + lib
                         if not lib.startswith("/")
                         and not lib.startswith("$")
-                        and binary.format != lief.EXE_FORMATS.MACHO  # noqa
+                        and binary.format != EXE_FORMATS.MACHO  # noqa
                         else lib
                     )
                     for lib in libraries
@@ -556,7 +566,7 @@ def inspect_linkages_lief(
                     # can be run case-sensitively if the user wishes.
                     #
                     """
-                    if binary.format == lief.EXE_FORMATS.PE:
+                    if binary.format == EXE_FORMATS.PE:
                         import random
                         path_fixed = (
                             os.path.dirname(path_fixed)
