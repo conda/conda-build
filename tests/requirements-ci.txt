@@ -1,0 +1,19 @@
+anaconda-client
+conda-forge::xdoctest
+conda-verify
+contextlib2
+coverage
+cytoolz
+git
+numpy
+perl
+pip
+pyflakes
+pytest
+pytest-cov
+pytest-forked
+pytest-mock
+pytest-rerunfailures
+pytest-xdist
+ruamel.yaml
+tomli  # [py<3.11] for coverage pyproject.toml
