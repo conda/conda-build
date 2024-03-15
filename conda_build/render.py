@@ -935,7 +935,8 @@ def expand_outputs(metadata_tuples):
 
 
 @contextmanager
-def _open_recipe(recipe: str | os.PathLike | Path) -> Iterator[Path]:
+def open_recipe(recipe: str | os.PathLike | Path) -> Iterator[Path]:
+    """Open the recipe from a file (meta.yaml), directory (recipe), or tarball (package)."""
     recipe = Path(recipe)
 
     if not recipe.exists():
@@ -971,7 +972,7 @@ def render_recipe(
     You get one tuple per variant.  Outputs are not factored in here (subpackages won't affect these
     results returned here.)
     """
-    with _open_recipe(recipe_dir) as recipe:
+    with open_recipe(recipe_dir) as recipe:
         try:
             m = MetaData(str(recipe), config=config)
         except exceptions.YamlParsingError as e:

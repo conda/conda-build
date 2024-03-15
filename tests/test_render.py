@@ -12,10 +12,10 @@ import pytest
 
 from conda_build.api import get_output_file_paths
 from conda_build.render import (
-    _open_recipe,
     _simplify_to_exact_constraints,
     find_pkg_dir_or_file_in_pkgs_dirs,
     get_pin_from_build,
+    open_recipe,
 )
 from conda_build.utils import CONDA_PACKAGE_EXTENSION_V1
 
@@ -124,7 +124,7 @@ def test_open_recipe(tmp_path: Path):
         SystemExit,
         match=rf"Error: non-existent: {re.escape(str(path))}",
     ):
-        with _open_recipe(path):
+        with open_recipe(path):
             pass
 
     (path := tmp_path / "bad.ext").touch()
@@ -132,5 +132,5 @@ def test_open_recipe(tmp_path: Path):
         SystemExit,
         match=rf"Error: non-recipe: {re.escape(str(path))}",
     ):
-        with _open_recipe(path):
+        with open_recipe(path):
             pass
