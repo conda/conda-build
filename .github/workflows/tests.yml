@@ -77,28 +77,37 @@ jobs:
       fail-fast: false
       matrix:
         # test all lower versions (w/ stable conda) and upper version (w/ canary conda)
-        python-version: ['3.9', '3.10', '3.11']
-        conda-version: [release]
-        test-type: [serial, parallel]
-        include:
-          # minimum Python/conda combo
-          - python-version: '3.8'
+        python-version: ['3.8', 3.9', '3.10', '3.11', '3.12']
+        conda-version: [23.5.0, release, canary]
+        test-group: [1, 2, 3]
+        exclude:
+          # testing oldest supported conda with Python 3.8
+          - python-version: '3.9'
             conda-version: 23.5.0
-            test-type: serial
-          - python-version: '3.8'
+          - python-version: '3.10'
             conda-version: 23.5.0
-            test-type: parallel
-          # maximum Python/conda combo
+          - python-version: '3.11'
+            conda-version: 23.5.0
           - python-version: '3.12'
-            conda-version: canary
-            test-type: serial
+            conda-version: 23.5.0
+          # testing stable conda with Python 3.9-3.11
+          - python-version: '3.8'
+            conda-version: release
           - python-version: '3.12'
+            conda-version: release
+          # testing canary conda with Python 3.12
+          - python-version: '3.8'
             conda-version: canary
-            test-type: parallel
+          - python-version: '3.9'
+            conda-version: canary
+          - python-version: '3.10'
+            conda-version: canary
+          - python-version: '3.11'
+            conda-version: canary
     env:
       CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev::' || '' }}
       CONDA_VERSION: ${{ contains('canary|release', matrix.conda-version) && 'conda' || format('conda={0}', matrix.conda-version) }}
-      PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial' || 'not serial' }}
+      PYTEST_SPLITS: 3
 
     steps:
       - name: Checkout Source
@@ -107,7 +116,7 @@ jobs:
           fetch-depth: 0
 
       - name: Hash + Timestamp
-        run: echo "HASH=${{ runner.os }}-${{ runner.arch }}-Py${{ matrix.python-version }}-${{ matrix.conda-version }}-${{ matrix.test-type }}-$(date -u "+%Y%m")" >> $GITHUB_ENV
+        run: echo "HASH=${{ runner.os }}-${{ runner.arch }}-Py${{ matrix.python-version }}-${{ matrix.conda-version }}-${{ matrix.test-group }}-$(date -u "+%Y%m")" >> $GITHUB_ENV
 
       - name: Cache Conda
         uses: actions/cache@v4
@@ -143,8 +152,10 @@ jobs:
       - name: Run Tests
         run: pytest
           --cov=conda_build
+          --durations-path=tools/durations/${{ runner.os }}.json
+          --group=${{ matrix.test-group }}
+          --splits=${{ env.PYTEST_SPLITS }}
           -n auto
-          -m "${{ env.PYTEST_MARKER }}"
 
       - name: Upload Coverage
         uses: codecov/codecov-action@v4
@@ -158,6 +169,7 @@ jobs:
           name: test-results-${{ env.HASH }}
           path: |
             .coverage
+            tools/durations/${{ runner.os }}.json
             test-report.xml
           retention-days: 1  # temporary, combined in aggregate below
 
@@ -172,20 +184,18 @@ jobs:
       fail-fast: false
       matrix:
         # test lower version (w/ stable conda) and upper version (w/ canary conda)
-        python-version: ['3.8']
-        conda-version: [release]
-        test-type: [serial, parallel]
-        include:
-          - python-version: '3.12'
+        python-version: ['3.8', '3.12']
+        conda-version: [release, canary]
+        test-group: [1, 2, 3]
+        exclude:
+          - python-version: '3.8'
             conda-version: canary
-            test-type: serial
           - python-version: '3.12'
-            conda-version: canary
-            test-type: parallel
+            conda-version: release
     env:
       ErrorActionPreference: Stop  # powershell exit on first error
       CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'defaults' }}
-      PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial' || 'not serial and not slow' }}
+      PYTEST_SPLITS: 3
 
     steps:
       - name: Checkout Source
@@ -195,7 +205,7 @@ jobs:
 
       - name: Hash + Timestamp
         shell: bash  # use bash to run date command
-        run: echo "HASH=${{ runner.os }}-${{ runner.arch }}-Py${{ matrix.python-version }}-${{ matrix.conda-version }}-${{ matrix.test-type }}-$(date -u "+%Y%m")" >> $GITHUB_ENV
+        run: echo "HASH=${{ runner.os }}-${{ runner.arch }}-Py${{ matrix.python-version }}-${{ matrix.conda-version }}-${{ matrix.test-group }}-$(date -u "+%Y%m")" >> $GITHUB_ENV
 
       - name: Cache Conda
         uses: actions/cache@v4
@@ -237,8 +247,10 @@ jobs:
         run: pytest
           --cov=conda_build
           --basetemp=${{ runner.temp }}
+          --durations-path=tools\durations\${{ runner.os }}.json
+          --group=${{ matrix.test-group }}
+          --splits=${{ env.PYTEST_SPLITS }}
           -n auto
-          -m "${{ env.PYTEST_MARKER }}"
 
       - name: Upload Coverage
         uses: codecov/codecov-action@v4
@@ -252,6 +264,7 @@ jobs:
           name: test-results-${{ env.HASH }}
           path: |
             .coverage
+            tools\durations\${{ runner.os }}.json
             test-report.xml
           retention-days: 1  # temporary, combined in aggregate below
 
@@ -270,19 +283,17 @@ jobs:
       fail-fast: false
       matrix:
         # test lower version (w/ stable conda) and upper version (w/ canary conda)
-        python-version: ['3.8']
-        conda-version: [release]
-        test-type: [serial, parallel]
-        include:
-          - python-version: '3.12'
+        python-version: ['3.8', '3.12']
+        conda-version: [release, canary]
+        test-group: [1, 2, 3]
+        exclude:
+          - python-version: '3.8'
             conda-version: canary
-            test-type: serial
           - python-version: '3.12'
-            conda-version: canary
-            test-type: parallel
+            conda-version: release
     env:
       CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'defaults' }}
-      PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial' || 'not serial' }}
+      PYTEST_SPLITS: 3
 
     steps:
       - name: Checkout Source
@@ -291,7 +302,7 @@ jobs:
           fetch-depth: 0
 
       - name: Hash + Timestamp
-        run: echo "HASH=${{ runner.os }}-${{ runner.arch }}-Py${{ matrix.python-version }}-${{ matrix.conda-version }}-${{ matrix.test-type }}-$(date -u "+%Y%m")" >> $GITHUB_ENV
+        run: echo "HASH=${{ runner.os }}-${{ runner.arch }}-Py${{ matrix.python-version }}-${{ matrix.conda-version }}-${{ matrix.test-group }}-$(date -u "+%Y%m")" >> $GITHUB_ENV
 
       - name: Cache Conda
         uses: actions/cache@v4
@@ -330,8 +341,10 @@ jobs:
       - name: Run Tests
         run: pytest
           --cov=conda_build
+          --durations-path=tools/durations/${{ runner.os }}.json
+          --group=${{ matrix.test-group }}
+          --splits=${{ env.PYTEST_SPLITS }}
           -n auto
-          -m "${{ env.PYTEST_MARKER }}"
 
       - name: Upload Coverage
         uses: codecov/codecov-action@v4
@@ -345,6 +358,7 @@ jobs:
           name: test-results-${{ env.HASH }}
           path: |
             .coverage
+            tools/durations/${{ runner.os }}.json
             test-report.xml
           retention-days: 1  # temporary, combined in aggregate below
 
