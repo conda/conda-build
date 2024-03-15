@@ -4,11 +4,11 @@
 
 ### Enhancements
 
-* Add compatibility for LIEF=0.14. (#5227 via #5228)
+* Add compatibility for `LIEF=0.14`. (#5227 via #5228)
 
 ### Bug fixes
 
-* Fix stdlib being recognized in variant hash inputs. (#5190 via #5195)
+* Fix `stdlib` being recognized in variant hash inputs. (#5190 via #5195)
 
 ### Deprecations
 
@@ -86,7 +86,7 @@
 
 ### Other
 
-* Added a check to print an additional warning and return an empty string when bits is "arm64" in msvc_env_cmd. (#4867)
+* Add a check to print an additional warning and return an empty string when bits is "arm64" in `msvc_env_cmd`. (#4867)
 
 ### Contributors
 
