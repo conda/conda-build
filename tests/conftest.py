@@ -69,7 +69,7 @@ def testing_homedir(monkeypatch: MonkeyPatch) -> Iterator[Path]:
 
 
 @pytest.fixture(scope="function")
-def testing_config(testing_workdir):
+def testing_config(testing_workdir: str) -> Config:
     def boolify(v):
         return v == "true"
 

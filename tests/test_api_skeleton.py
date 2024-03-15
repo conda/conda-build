@@ -399,7 +399,7 @@ def test_pypi_with_version_arg(tmp_path: Path):
 
 
 @pytest.mark.slow
-def test_pypi_with_extra_specs(tmp_path: Path, testing_config):
+def test_pypi_with_extra_specs(tmp_path: Path, testing_config: Config):
     # regression test for https://github.com/conda/conda-build/issues/1697
     # For mpi4py:
     testing_config.channel_urls.append("https://repo.anaconda.com/pkgs/free")
@@ -422,13 +422,13 @@ def test_pypi_with_extra_specs(tmp_path: Path, testing_config):
 
 
 @pytest.mark.slow
-def test_pypi_with_version_inconsistency(tmp_path: Path, testing_config):
+def test_pypi_with_version_inconsistency(tmp_path: Path, testing_config: Config):
     # regression test for https://github.com/conda/conda-build/issues/189
     # For mpi4py:
+    testing_config.channel_urls.append("https://repo.anaconda.com/pkgs/free")
     extra_specs = ["mpi4py"]
     if not on_win:
         extra_specs.append("nomkl")
-    testing_config.channel_urls.append("https://repo.anaconda.com/pkgs/free")
     api.skeletonize(
         "mpi4py_test",
         "pypi",

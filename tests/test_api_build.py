@@ -70,7 +70,7 @@ from .utils import (
 )
 
 if TYPE_CHECKING:
-    from pytest import FixtureRequest, MonkeyPatch
+    from pytest import FixtureRequest, LogCaptureFixture, MonkeyPatch
     from pytest_mock import MockerFixture
 
     from conda_build.metadata import MetaData
@@ -1108,7 +1108,7 @@ def test_build_expands_wildcards(mocker):
 
 
 @pytest.mark.parametrize("set_build_id", [True, False])
-def test_remove_workdir_default(testing_config, caplog, set_build_id):
+def test_remove_workdir_default(testing_config: Config, set_build_id):
     recipe = os.path.join(metadata_dir, "_keep_work_dir")
     # make a metadata object - otherwise the build folder is computed within the build, but does
     #    not alter the config object that is passed in.  This is by design - we always make copies
@@ -1148,7 +1148,7 @@ def test_keep_workdir_and_dirty_reuse(testing_config, capfd):
 
 
 @pytest.mark.sanity
-def test_workdir_removal_warning(testing_config, caplog):
+def test_workdir_removal_warning(testing_config: Config):
     recipe = os.path.join(metadata_dir, "_test_uses_src_dir")
     with pytest.raises(ValueError) as exc:
         api.build(recipe, config=testing_config)
@@ -1858,11 +1858,12 @@ def test_ignore_verify_codes(testing_config):
 
 
 @pytest.mark.sanity
-def test_extra_meta(testing_config, caplog):
+def test_extra_meta(testing_config: Config, caplog: LogCaptureFixture):
     recipe_dir = os.path.join(metadata_dir, "_extra_meta")
     extra_meta_data = {"foo": "bar"}
     testing_config.extra_meta = extra_meta_data
-    outputs = api.build(recipe_dir, config=testing_config)
+    with caplog.at_level(logging.INFO):
+        outputs = api.build(recipe_dir, config=testing_config)
     about = json.loads(package_has_file(outputs[0], "info/about.json"))
     assert "foo" in about["extra"] and about["extra"]["foo"] == "bar"
     assert (
