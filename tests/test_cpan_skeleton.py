@@ -4,7 +4,6 @@
 Unit tests of the CPAN skeleton utility functions
 """
 
-
 from pathlib import Path
 
 import pytest
