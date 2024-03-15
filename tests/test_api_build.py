@@ -674,7 +674,7 @@ def test_relative_git_url_submodule_clone(testing_workdir, testing_config, monke
     FNULL.close()
 
     for tag in range(2):
-        os.chdir(absolute_sub)
+        monkeypatch.chdir(absolute_sub)
         if tag == 0:
             check_call_env([git, "init"], env=sys_git_env)
         with open("absolute", "w") as f:
@@ -682,7 +682,7 @@ def test_relative_git_url_submodule_clone(testing_workdir, testing_config, monke
         check_call_env([git, "add", "absolute"], env=sys_git_env)
         check_call_env([git, "commit", "-m", f"absolute{tag}"], env=sys_git_env)
 
-        os.chdir(relative_sub)
+        monkeypatch.chdir(relative_sub)
         if tag == 0:
             check_call_env([git, "init"], env=sys_git_env)
         with open("relative", "w") as f:
@@ -690,7 +690,7 @@ def test_relative_git_url_submodule_clone(testing_workdir, testing_config, monke
         check_call_env([git, "add", "relative"], env=sys_git_env)
         check_call_env([git, "commit", "-m", f"relative{tag}"], env=sys_git_env)
 
-        os.chdir(toplevel)
+        monkeypatch.chdir(toplevel)
         if tag == 0:
             check_call_env([git, "init"], env=sys_git_env)
         with open("toplevel", "w") as f:
