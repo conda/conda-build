@@ -80,6 +80,10 @@
 * Mark `conda_build.environ.Environment` as deprecated. Use `conda.core.prefix_data.PrefixData` instead. (#5219)
 * Mark `conda_build.conda_interface.get_version_from_git_tag` as deprecated. Use `conda_build.environ.get_version_from_git_tag` instead. (#5221)
 
+### Docs
+
+* Update advice for installing conda-build into base environment. (#5223)
+
 ### Other
 
 * Added a check to print an additional warning and return an empty string when bits is "arm64" in msvc_env_cmd. (#4867)
