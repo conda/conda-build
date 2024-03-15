@@ -89,7 +89,7 @@
 * @beeankha
 * @conda-bot
 * @dholth
-* @finnagin
+* @finnagin made their first contribution in https://github.com/conda/conda-build/pull/4867
 * @kathatherine
 * @kenodegard
 * @mbargull
