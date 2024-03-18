@@ -1,0 +1,30 @@
+package:
+  name: _file_hash
+  version: 0.0.1
+
+build:
+  number: 0
+  skip: True  # [not linux64]
+  error_overlinking: true
+
+requirements:
+  build:
+    - {{ compiler('c') }}
+  host:
+  run:
+
+outputs:
+  - name: py-file-hash
+    script: install-py.sh
+    requirements:
+      build:
+        - {{ compiler('c') }}
+      host:
+        - python
+      run:
+        - python
+
+  - name: _file_hash
+    requirements:
+      build:
+        - {{ compiler('c') }}
