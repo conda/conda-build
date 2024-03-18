@@ -209,7 +209,13 @@ def get_output_file_path(
     )
 
 
-def check(recipe_path, no_download_source=False, config=None, variants=None, **kwargs):
+def check(
+    recipe_path: str | os.PathLike | Path,
+    no_download_source: bool = False,
+    config: Config | None = None,
+    variants: dict[str, Any] | None = None,
+    **kwargs,
+) -> bool:
     """Check validity of input recipe path
 
     Verifies that recipe can be completely rendered, and that fields of the rendered recipe are
