@@ -185,12 +185,16 @@ def get_output_file_paths(
 
 @deprecated("24.3.0", "24.5.0", addendum="Use `get_output_file_paths` instead.")
 def get_output_file_path(
-    recipe_path_or_metadata,
-    no_download_source=False,
-    config=None,
-    variants=None,
+    recipe_path_or_metadata: str
+    | os.PathLike
+    | Path
+    | MetaData
+    | Iterable[tuple[MetaData, bool, bool]],
+    no_download_source: bool = False,
+    config: Config | None = None,
+    variants: dict[str, Any] | None = None,
     **kwargs,
-):
+) -> list[str]:
     """Get output file paths for any packages that would be created by a recipe
 
     Both split packages (recipes with more than one output) and build matrices,
