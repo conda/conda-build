@@ -77,6 +77,8 @@ from .exceptions import BuildLockError
 if TYPE_CHECKING:
     from typing import Mapping, TypeVar
 
+    from .metadata import MetaData
+
     T = TypeVar("T")
     K = TypeVar("K")
     V = TypeVar("V")
@@ -1131,7 +1133,7 @@ def convert_path_for_cygwin_or_msys2(exe, path):
     return path
 
 
-def get_skip_message(m):
+def get_skip_message(m: MetaData) -> str:
     return "Skipped: {} from {} defines build/skip for this configuration ({}).".format(
         m.name(), m.path, {k: m.config.variant[k] for k in m.get_used_vars()}
     )

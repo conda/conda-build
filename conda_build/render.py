@@ -66,7 +66,7 @@ yaml.add_representer(tuple, yaml.representer.SafeRepresenter.represent_list)
 yaml.add_representer(OrderedDict, odict_representer)
 
 
-def bldpkg_path(m):
+def bldpkg_path(m: MetaData) -> str:
     """
     Returns path to built package's tarball given its ``Metadata``.
     """

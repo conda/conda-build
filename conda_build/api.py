@@ -14,6 +14,7 @@ from __future__ import annotations
 #    to conda-build's functionality.
 import os
 import sys
+from collections.abc import Iterable
 from os.path import dirname, expanduser, join
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -22,6 +23,7 @@ from typing import TYPE_CHECKING
 from .config import DEFAULT_PREFIX_LENGTH as _prefix_length
 from .config import Config, get_channel_urls, get_or_merge_config
 from .deprecations import deprecated
+from .metadata import MetaData
 from .utils import (
     CONDA_PACKAGE_EXTENSIONS,
     LoggingContext,
@@ -34,8 +36,6 @@ from .utils import (
 
 if TYPE_CHECKING:
     from typing import Any
-
-    from .metadata import MetaData
 
 
 def render(
@@ -125,12 +125,16 @@ def output_yaml(
 
 
 def get_output_file_paths(
-    recipe_path_or_metadata,
-    no_download_source=False,
-    config=None,
-    variants=None,
+    recipe_path_or_metadata: str
+    | os.PathLike
+    | Path
+    | MetaData
+    | Iterable[tuple[MetaData, bool, bool]],
+    no_download_source: bool = False,
+    config: Config | None = None,
+    variants: dict[str, Any] | None = None,
     **kwargs,
-):
+) -> list[str]:
     """Get output file paths for any packages that would be created by a recipe
 
     Both split packages (recipes with more than one output) and build matrices,
@@ -140,20 +144,7 @@ def get_output_file_paths(
 
     config = get_or_merge_config(config, **kwargs)
 
-    if hasattr(recipe_path_or_metadata, "__iter__") and not isinstance(
-        recipe_path_or_metadata, str
-    ):
-        list_of_metas = [
-            hasattr(item[0], "config")
-            for item in recipe_path_or_metadata
-            if len(item) == 3
-        ]
-
-        if list_of_metas and all(list_of_metas):
-            metadata = recipe_path_or_metadata
-        else:
-            raise ValueError(f"received mixed list of metas: {recipe_path_or_metadata}")
-    elif isinstance(recipe_path_or_metadata, (str, Path)):
+    if isinstance(recipe_path_or_metadata, (str, Path)):
         # first, render the parent recipe (potentially multiple outputs, depending on variants).
         metadata = render(
             recipe_path_or_metadata,
@@ -163,19 +154,33 @@ def get_output_file_paths(
             finalize=True,
             **kwargs,
         )
-    else:
-        assert hasattr(
-            recipe_path_or_metadata, "config"
-        ), f"Expecting metadata object - got {recipe_path_or_metadata}"
+
+    elif hasattr(recipe_path_or_metadata, "config"):
         metadata = [(recipe_path_or_metadata, None, None)]
-    #    Next, loop over outputs that each metadata defines
+
+    elif isinstance(recipe_path_or_metadata, Iterable) and all(
+        isinstance(recipe, tuple)
+        and len(recipe) == 3
+        and isinstance(recipe[0], MetaData)
+        for recipe in recipe_path_or_metadata
+    ):
+        pass
+
+    else:
+        raise ValueError(
+            f"Unknown input type: {type(recipe_path_or_metadata)}; expecting "
+            "PathLike object, MetaData object, or a list of tuples containing "
+            "(MetaData, bool, bool)."
+        )
+
+    # Next, loop over outputs that each metadata defines
     outs = []
     for m, _, _ in metadata:
         if m.skip():
             outs.append(get_skip_message(m))
         else:
             outs.append(bldpkg_path(m))
-    return sorted(list(set(outs)))
+    return sorted(set(outs))
 
 
 @deprecated("24.3.0", "24.5.0", addendum="Use `get_output_file_paths` instead.")
