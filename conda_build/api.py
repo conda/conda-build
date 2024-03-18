@@ -113,7 +113,11 @@ def render(
     return list(output_metas.values())
 
 
-def output_yaml(metadata, file_path=None, suppress_outputs=False):
+def output_yaml(
+    metadata: MetaData,
+    file_path: str | os.PathLike | Path | None = None,
+    suppress_outputs: bool = False,
+) -> str:
     """Save a rendered recipe in its final form to the path given by file_path"""
     from .render import output_yaml
 
