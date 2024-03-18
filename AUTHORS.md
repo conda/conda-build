@@ -75,6 +75,7 @@ Authors are sorted alphabetically.
 * Felix Kühnl
 * Ferry Firmansjah
 * Filipe Fernandes
+* Finn Womack
 * Floris Bruynooghe
 * Gabriel Reis
 * Gaëtan de Menten
