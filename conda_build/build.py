@@ -3,6 +3,8 @@
 """
 Module that does most of the heavy lifting for the ``conda build`` command.
 """
+from __future__ import annotations
+
 import fnmatch
 import json
 import os
@@ -17,6 +19,7 @@ import time
 import warnings
 from collections import OrderedDict, deque
 from os.path import dirname, isdir, isfile, islink, join
+from typing import TYPE_CHECKING
 
 import conda_package_handling.api
 import yaml
@@ -87,6 +90,9 @@ from .variants import (
     get_package_variants,
     set_language_env_vars,
 )
+
+if TYPE_CHECKING:
+    from typing import Any, Iterable
 
 if on_win:
     from . import windows
@@ -3657,8 +3663,14 @@ def check_external():
 
 
 def build_tree(
-    recipe_list, config, stats, build_only=False, post=None, notest=False, variants=None
-):
+    recipe_list: Iterable[str | MetaData],
+    config: Config,
+    stats: dict,
+    build_only: bool = False,
+    post: bool | None = None,
+    notest: bool = False,
+    variants: dict[str, Any] | None = None,
+) -> list[str]:
     to_build_recursive = []
     recipe_list = deque(recipe_list)
 

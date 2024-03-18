@@ -232,16 +232,16 @@ def check(
 
 
 def build(
-    recipe_paths_or_metadata,
-    post=None,
-    need_source_download=True,
-    build_only=False,
-    notest=False,
-    config=None,
-    variants=None,
-    stats=None,
+    recipe_paths_or_metadata: str | os.PathLike | Path | MetaData,
+    post: bool | None = None,
+    need_source_download: bool = True,
+    build_only: bool = False,
+    notest: bool = False,
+    config: Config | None = None,
+    variants: dict[str, Any] | None = None,
+    stats: dict | None = None,
     **kwargs,
-):
+) -> list[str]:
     """Run the build step.
 
     If recipe paths are provided, renders recipe before building.
@@ -253,16 +253,15 @@ def build(
         "other arguments (config) by keyword."
     )
 
-    recipes = []
+    recipes: list[str | MetaData] = []
     for recipe in ensure_list(recipe_paths_or_metadata):
-        if isinstance(recipe, str):
+        if isinstance(recipe, (str, os.PathLike, Path)):
             for recipe in expand_globs(recipe, os.getcwd()):
                 try:
-                    recipe = find_recipe(recipe)
+                    recipes.append(find_recipe(recipe))
                 except OSError:
                     continue
-                recipes.append(recipe)
-        elif hasattr(recipe, "config"):
+        elif isinstance(recipe, MetaData):
             recipes.append(recipe)
         else:
             raise ValueError(f"Recipe passed was unrecognized object: {recipe}")
