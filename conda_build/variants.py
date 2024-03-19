@@ -12,8 +12,9 @@ from functools import lru_cache
 from itertools import product
 
 import yaml
+from conda.base.context import context
 
-from .conda_interface import cc_conda_build, subdir
+from .conda_interface import cc_conda_build
 from .utils import ensure_list, get_logger, islist, on_win, trim_empty_keys
 from .version import _parse as parse_version
 
@@ -85,7 +86,7 @@ DEFAULT_COMPILERS = {
     },
 }
 
-arch_name = subdir.rsplit("-", 1)[-1]
+arch_name = context.subdir.rsplit("-", 1)[-1]
 
 SUFFIX_MAP = {
     "PY": "python",
