@@ -1557,9 +1557,16 @@ information displays in the Anaconda.org channel.
 
   about:
     home: https://github.com/ilanschnell/bsdiff4
-    license: BSD
+    license: BSD 3-Clause
     license_file: LICENSE
-    summary: binary diff and patch using the BSDIFF4-format
+    license_family: BSD
+    summary: binary diff and patch using the BSDIFF4 format
+    description: |
+      This module provides an interface to the BSDIFF4 format, command line interfaces
+      (bsdiff4, bspatch4) and tests.
+    dev_url: https://github.com/ilanschnell/bsdiff4
+    doc_url: https://bsdiff4.readthedocs.io
+    doc_source_url: https://github.com/ilanschnell/bsdiff4/blob/main/README.rst
 
 
 License file
