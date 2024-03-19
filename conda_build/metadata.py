@@ -1342,8 +1342,7 @@ class MetaData:
         return m
 
     @overload
-    def get_section(self, section: Literal["source", "outputs"]) -> list[dict]:
-        ...
+    def get_section(self, section: Literal["source", "outputs"]) -> list[dict]: ...
 
     @overload
     def get_section(
@@ -1357,8 +1356,7 @@ class MetaData:
             "about",
             "extra",
         ],
-    ) -> dict:
-        ...
+    ) -> dict: ...
 
     def get_section(self, name):
         section = self.meta.get(name)
@@ -2554,9 +2552,9 @@ class MetaData:
                             )
                         ] = (out, out_metadata)
                         out_metadata_map[HashableDict(out)] = out_metadata
-                        ref_metadata.other_outputs = (
-                            out_metadata.other_outputs
-                        ) = all_output_metadata
+                        ref_metadata.other_outputs = out_metadata.other_outputs = (
+                            all_output_metadata
+                        )
                 except SystemExit:
                     if not permit_undefined_jinja:
                         raise

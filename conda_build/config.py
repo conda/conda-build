@@ -3,6 +3,7 @@
 """
 Module to store conda build settings.
 """
+
 from __future__ import annotations
 
 import copy

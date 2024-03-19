@@ -8,6 +8,7 @@ version number.
 Design philosophy: put variability into config.  Make each function here accept kwargs,
 but only use those kwargs in config.  Config must change to support new features elsewhere.
 """
+
 from __future__ import annotations
 
 # imports are done locally to keep the api clean and limited strictly

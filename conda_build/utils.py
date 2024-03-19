@@ -1128,8 +1128,9 @@ def convert_path_for_cygwin_or_msys2(exe, path):
 
 
 def get_skip_message(m):
-    return "Skipped: {} from {} defines build/skip for this configuration ({}).".format(
-        m.name(), m.path, {k: m.config.variant[k] for k in m.get_used_vars()}
+    return (
+        f"Skipped: {m.name()} from {m.path} defines build/skip for this configuration "
+        f"({({k: m.config.variant[k] for k in m.get_used_vars()})})."
     )
 
 
@@ -1893,13 +1894,11 @@ spec_ver_needing_star_re = re.compile(r"^([0-9a-zA-Z\.]+)$")
 
 
 @overload
-def ensure_valid_spec(spec: str, warn: bool = False) -> str:
-    ...
+def ensure_valid_spec(spec: str, warn: bool = False) -> str: ...
 
 
 @overload
-def ensure_valid_spec(spec: MatchSpec, warn: bool = False) -> MatchSpec:
-    ...
+def ensure_valid_spec(spec: MatchSpec, warn: bool = False) -> MatchSpec: ...
 
 
 def ensure_valid_spec(spec: str | MatchSpec, warn: bool = False) -> str | MatchSpec:

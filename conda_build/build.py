@@ -3,6 +3,7 @@
 """
 Module that does most of the heavy lifting for the ``conda build`` command.
 """
+
 import fnmatch
 import json
 import os
