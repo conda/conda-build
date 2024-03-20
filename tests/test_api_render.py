@@ -7,6 +7,7 @@ should go in test_render.py
 
 import os
 import re
+from itertools import count, islice
 
 import pytest
 import yaml
@@ -15,6 +16,7 @@ from conda.common.compat import on_win
 
 from conda_build import api, render
 from conda_build.conda_interface import cc_conda_build
+from conda_build.variants import validate_spec
 
 from .utils import metadata_dir, variants_dir
 
@@ -299,3 +301,33 @@ def test_pin_expression_works_with_python_prereleases(testing_config):
     assert len(ms) == 2
     m = next(m_[0] for m_ in ms if m_[0].meta["package"]["name"] == "bar")
     assert "python >=3.10.0rc1,<3.11.0a0" in m.meta["requirements"]["run"]
+
+
+@pytest.mark.benchmark
+def test_pin_subpackage_benchmark(testing_config):
+    # Performance regression test for https://github.com/conda/conda-build/pull/5224
+    recipe = os.path.join(metadata_dir, "_pin_subpackage_benchmark")
+
+    # Create variant config of size comparable (for subdir linux-64) to
+    #   https://github.com/conda-forge/conda-forge-pinning-feedstock/blob/3c7d60f56a8cb7d1b8f5a8da0b02ae1f1f0982d7/recipe/conda_build_config.yaml
+    def create_variant():
+        # ("pkg_1, ("1.1", "1.2", ...)), ("pkg_2", ("2.1", "2.2", ...)), ...
+        packages = ((f"pkg_{i}", (f"{i}.{j}" for j in count(1))) for i in count(1))
+        variant = {}
+        variant["zip_keys"] = []
+        for version_count, package_count in [(1, 4), (4, 3), (4, 3)]:
+            zipped = []
+            for package, versions in islice(packages, package_count):
+                zipped.append(package)
+                variant[package] = list(islice(versions, version_count))
+            variant["zip_keys"].append(zipped)
+        for version_count, package_count in [(3, 1), (2, 4), (1, 327)]:
+            for package, versions in islice(packages, package_count):
+                variant[package] = list(islice(versions, version_count))
+        validate_spec("<generated>", variant)
+        return variant
+
+    ms = api.render(
+        recipe, config=testing_config, channels=[], variant=create_variant()
+    )
+    assert len(ms) == 11
