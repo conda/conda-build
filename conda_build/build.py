@@ -3,6 +3,7 @@
 """
 Module that does most of the heavy lifting for the ``conda build`` command.
 """
+
 from __future__ import annotations
 
 import fnmatch
@@ -16,7 +17,6 @@ import string
 import subprocess
 import sys
 import time
-import typing
 import warnings
 from collections import OrderedDict, deque
 from os.path import dirname, isdir, isfile, islink, join
@@ -1804,7 +1804,14 @@ def post_process_files(m: MetaData, initial_prefix_files):
     return new_files
 
 
-def bundle_conda(output, metadata: MetaData, env, stats, new_prefix_files: typing.Set[str], **kw):
+def bundle_conda(
+    output,
+    metadata: MetaData,
+    env,
+    stats,
+    new_prefix_files: set[str],
+    **kw,
+):
     log = utils.get_logger(__name__)
     log.info("Packaging %s", metadata.dist())
     get_all_replacements(metadata.config)
@@ -2111,7 +2118,13 @@ def bundle_conda(output, metadata: MetaData, env, stats, new_prefix_files: typin
     return final_outputs
 
 
-def bundle_wheel(output, metadata: MetaData, env, stats, new_prefix_files: typing.Set[str]):
+def bundle_wheel(
+    output,
+    metadata: MetaData,
+    env,
+    stats,
+    new_prefix_files: set[str],
+):
     ext = ".bat" if utils.on_win else ".sh"
     with TemporaryDirectory() as tmpdir, utils.tmp_chdir(metadata.config.work_dir):
         dest_file = os.path.join(metadata.config.work_dir, "wheel_output" + ext)
@@ -2851,7 +2864,9 @@ def build(
                     with utils.path_prepended(m.config.build_prefix):
                         env = environ.get_dict(m=m)
                     pkg_type = "conda" if not hasattr(m, "type") else m.type
-                    newly_built_packages = bundlers[pkg_type](output_d, m, env, stats, new_prefix_files)
+                    newly_built_packages = bundlers[pkg_type](
+                        output_d, m, env, stats, new_prefix_files
+                    )
                     # warn about overlapping files.
                     if "checksums" in output_d:
                         for file, csum in output_d["checksums"].items():
