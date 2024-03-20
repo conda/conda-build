@@ -3,42 +3,43 @@
 #   https://github.com/conda-forge/arrow-cpp-feedstock/blob/e6f573674c5f9c35c6a614a1563b2fe3eeb3e72b/recipe/meta.yaml
 # stripped of everything apart from the large number of inter-output
 # pin_subpackage dependencies/run_exports.
+# Addendum: Omit libarrow-all, pyarrow, pyarrow-tests to reduce benchmark duration.
 
 package:
   name: apache-arrow
   version: 15.0.2
 
 outputs:
-  - name: libarrow-all
-    build:
-      run_exports:
-        - {{ pin_subpackage("libarrow", max_pin="x") }}
-        - {{ pin_subpackage("libarrow-acero", max_pin="x") }}
-        - {{ pin_subpackage("libarrow-dataset", max_pin="x") }}
-        - {{ pin_subpackage("libarrow-flight", max_pin="x") }}
-        - {{ pin_subpackage("libarrow-flight-sql", max_pin="x") }}
-        - {{ pin_subpackage("libarrow-gandiva", max_pin="x") }}
-        - {{ pin_subpackage("libarrow-substrait", max_pin="x") }}
-        - {{ pin_subpackage("libparquet", max_pin="x") }}
-    requirements:
-      host:
-        - {{ pin_subpackage("libarrow", exact=True) }}
-        - {{ pin_subpackage("libarrow-acero", exact=True) }}
-        - {{ pin_subpackage("libarrow-dataset", exact=True) }}
-        - {{ pin_subpackage("libarrow-flight", exact=True) }}
-        - {{ pin_subpackage("libarrow-flight-sql", exact=True) }}
-        - {{ pin_subpackage("libarrow-gandiva", exact=True) }}
-        - {{ pin_subpackage("libarrow-substrait", exact=True) }}
-        - {{ pin_subpackage("libparquet", exact=True) }}
-      run:
-        - {{ pin_subpackage("libarrow", exact=True) }}
-        - {{ pin_subpackage("libarrow-acero", exact=True) }}
-        - {{ pin_subpackage("libarrow-dataset", exact=True) }}
-        - {{ pin_subpackage("libarrow-flight", exact=True) }}
-        - {{ pin_subpackage("libarrow-flight-sql", exact=True) }}
-        - {{ pin_subpackage("libarrow-gandiva", exact=True) }}
-        - {{ pin_subpackage("libarrow-substrait", exact=True) }}
-        - {{ pin_subpackage("libparquet", exact=True) }}
+#  - name: libarrow-all
+#    build:
+#      run_exports:
+#        - {{ pin_subpackage("libarrow", max_pin="x") }}
+#        - {{ pin_subpackage("libarrow-acero", max_pin="x") }}
+#        - {{ pin_subpackage("libarrow-dataset", max_pin="x") }}
+#        - {{ pin_subpackage("libarrow-flight", max_pin="x") }}
+#        - {{ pin_subpackage("libarrow-flight-sql", max_pin="x") }}
+#        - {{ pin_subpackage("libarrow-gandiva", max_pin="x") }}
+#        - {{ pin_subpackage("libarrow-substrait", max_pin="x") }}
+#        - {{ pin_subpackage("libparquet", max_pin="x") }}
+#    requirements:
+#      host:
+#        - {{ pin_subpackage("libarrow", exact=True) }}
+#        - {{ pin_subpackage("libarrow-acero", exact=True) }}
+#        - {{ pin_subpackage("libarrow-dataset", exact=True) }}
+#        - {{ pin_subpackage("libarrow-flight", exact=True) }}
+#        - {{ pin_subpackage("libarrow-flight-sql", exact=True) }}
+#        - {{ pin_subpackage("libarrow-gandiva", exact=True) }}
+#        - {{ pin_subpackage("libarrow-substrait", exact=True) }}
+#        - {{ pin_subpackage("libparquet", exact=True) }}
+#      run:
+#        - {{ pin_subpackage("libarrow", exact=True) }}
+#        - {{ pin_subpackage("libarrow-acero", exact=True) }}
+#        - {{ pin_subpackage("libarrow-dataset", exact=True) }}
+#        - {{ pin_subpackage("libarrow-flight", exact=True) }}
+#        - {{ pin_subpackage("libarrow-flight-sql", exact=True) }}
+#        - {{ pin_subpackage("libarrow-gandiva", exact=True) }}
+#        - {{ pin_subpackage("libarrow-substrait", exact=True) }}
+#        - {{ pin_subpackage("libparquet", exact=True) }}
 
   - name: libarrow
     build:
@@ -124,24 +125,24 @@ outputs:
       run:
         - {{ pin_subpackage("libarrow", exact=True) }}
 
-  - name: pyarrow
-    requirements:
-      host:
-        - {{ pin_subpackage("libarrow-all", exact=True) }}
-      run:
-        - {{ pin_subpackage("libarrow", exact=True) }}
-        - {{ pin_subpackage("libarrow-acero", exact=True) }}
-        - {{ pin_subpackage("libarrow-dataset", exact=True) }}
-        - {{ pin_subpackage("libarrow-flight", exact=True) }}
-        - {{ pin_subpackage("libarrow-flight-sql", exact=True) }}
-        - {{ pin_subpackage("libarrow-gandiva", exact=True) }}
-        - {{ pin_subpackage("libarrow-substrait", exact=True) }}
-        - {{ pin_subpackage("libparquet", exact=True) }}
-
-  - name: pyarrow-tests
-    requirements:
-      host:
-        - {{ pin_subpackage("libarrow-all", exact=True) }}
-        - {{ pin_subpackage('pyarrow', exact=True) }}
-      run:
-        - {{ pin_subpackage('pyarrow', exact=True) }}
+#  - name: pyarrow
+#    requirements:
+#      host:
+#        - {{ pin_subpackage("libarrow-all", exact=True) }}
+#      run:
+#        - {{ pin_subpackage("libarrow", exact=True) }}
+#        - {{ pin_subpackage("libarrow-acero", exact=True) }}
+#        - {{ pin_subpackage("libarrow-dataset", exact=True) }}
+#        - {{ pin_subpackage("libarrow-flight", exact=True) }}
+#        - {{ pin_subpackage("libarrow-flight-sql", exact=True) }}
+#        - {{ pin_subpackage("libarrow-gandiva", exact=True) }}
+#        - {{ pin_subpackage("libarrow-substrait", exact=True) }}
+#        - {{ pin_subpackage("libparquet", exact=True) }}
+#
+#  - name: pyarrow-tests
+#    requirements:
+#      host:
+#        - {{ pin_subpackage("libarrow-all", exact=True) }}
+#        - {{ pin_subpackage('pyarrow', exact=True) }}
+#      run:
+#        - {{ pin_subpackage('pyarrow', exact=True) }}
