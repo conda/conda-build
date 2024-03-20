@@ -3,6 +3,7 @@
 """
 This module tests the build API.  These are high-level integration tests.
 """
+
 from __future__ import annotations
 
 import json
@@ -26,6 +27,7 @@ import pytest
 import yaml
 from binstar_client.commands import remove, show
 from binstar_client.errors import NotFound
+from conda.base.context import reset_context
 from conda.common.compat import on_linux, on_mac, on_win
 from conda.exceptions import ClobberError, CondaMultiError
 from conda_index.api import update_index
@@ -35,7 +37,6 @@ from conda_build.conda_interface import (
     CondaError,
     LinkError,
     context,
-    reset_context,
     url_path,
 )
 from conda_build.config import Config
@@ -242,7 +243,7 @@ def test_offline(
 def test_git_describe_info_on_branch(testing_config):
     recipe_path = os.path.join(metadata_dir, "_git_describe_number_branch")
     m = api.render(recipe_path, config=testing_config)[0][0]
-    output = api.get_output_file_path(m)[0]
+    output = api.get_output_file_paths(m)[0]
     # missing hash because we set custom build string in meta.yaml
     test_path = os.path.join(
         testing_config.croot,
@@ -306,9 +307,7 @@ def test_output_build_path_git_source(testing_config):
     test_path = os.path.join(
         testing_config.croot,
         testing_config.host_subdir,
-        "conda-build-test-source-git-jinja2-1.20.2-py{}{}{}_0_g262d444.tar.bz2".format(
-            sys.version_info.major, sys.version_info.minor, _hash
-        ),
+        f"conda-build-test-source-git-jinja2-1.20.2-py{sys.version_info.major}{sys.version_info.minor}{_hash}_0_g262d444.tar.bz2",
     )
     assert output == test_path
 
@@ -625,7 +624,7 @@ def test_numpy_setup_py_data(testing_config):
     m = api.render(recipe_path, config=testing_config, numpy="1.16")[0][0]
     _hash = m.hash_dependencies()
     assert (
-        os.path.basename(api.get_output_file_path(m)[0])
+        os.path.basename(api.get_output_file_paths(m)[0])
         == f"load_setup_py_test-0.1.0-np116py{sys.version_info.major}{sys.version_info.minor}{_hash}_0.tar.bz2"
     )
 
@@ -795,7 +794,7 @@ def test_relative_git_url_submodule_clone(testing_workdir, testing_config, monke
         # This will (after one spin round the loop) install and run 'git' with the
         # build env prepended to os.environ[]
         metadata = api.render(testing_workdir, config=testing_config)[0][0]
-        output = api.get_output_file_path(metadata, config=testing_config)[0]
+        output = api.get_output_file_paths(metadata, config=testing_config)[0]
         assert f"relative_submodules-{tag}-" in output
         api.build(metadata, config=testing_config)
 
@@ -811,7 +810,7 @@ def test_noarch(testing_workdir):
         )
         with open(filename, "w") as outfile:
             outfile.write(yaml.dump(data, default_flow_style=False, width=999999999))
-        output = api.get_output_file_path(testing_workdir)[0]
+        output = api.get_output_file_paths(testing_workdir)[0]
         assert os.path.sep + "noarch" + os.path.sep in output or not noarch
         assert os.path.sep + "noarch" + os.path.sep not in output or noarch
 
@@ -819,15 +818,15 @@ def test_noarch(testing_workdir):
 def test_disable_pip(testing_metadata):
     testing_metadata.config.disable_pip = True
     testing_metadata.meta["requirements"] = {"host": ["python"], "run": ["python"]}
-    testing_metadata.meta["build"][
-        "script"
-    ] = 'python -c "import pip; print(pip.__version__)"'
+    testing_metadata.meta["build"]["script"] = (
+        'python -c "import pip; print(pip.__version__)"'
+    )
     with pytest.raises(subprocess.CalledProcessError):
         api.build(testing_metadata)
 
-    testing_metadata.meta["build"][
-        "script"
-    ] = 'python -c "import setuptools; print(setuptools.__version__)"'
+    testing_metadata.meta["build"]["script"] = (
+        'python -c "import setuptools; print(setuptools.__version__)"'
+    )
     with pytest.raises(subprocess.CalledProcessError):
         api.build(testing_metadata)
 

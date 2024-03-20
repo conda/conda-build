@@ -3,6 +3,7 @@
 """
 Module to store conda build settings.
 """
+
 from __future__ import annotations
 
 import copy
@@ -15,15 +16,9 @@ from collections import namedtuple
 from os.path import abspath, expanduser, expandvars, join
 from typing import TYPE_CHECKING
 
-from .conda_interface import (
-    binstar_upload,
-    cc_conda_build,
-    cc_platform,
-    root_dir,
-    root_writable,
-    subdir,
-    url_path,
-)
+from conda.base.context import context
+
+from .conda_interface import cc_conda_build, url_path
 from .utils import (
     get_build_folders,
     get_conda_operation_locks,
@@ -87,7 +82,7 @@ Setting = namedtuple("ConfigSetting", "name, default")
 def _get_default_settings():
     return [
         Setting("activate", True),
-        Setting("anaconda_upload", binstar_upload),
+        Setting("anaconda_upload", context.binstar_upload),
         Setting("force_upload", True),
         Setting("channel_urls", []),
         Setting("dirty", False),
@@ -321,7 +316,7 @@ class Config:
     def arch(self):
         """Always the native (build system) arch, except when pretending to be some
         other platform"""
-        return self._arch or subdir.rsplit("-", 1)[1]
+        return self._arch or context.subdir.rsplit("-", 1)[1]
 
     @arch.setter
     def arch(self, value):
@@ -337,7 +332,7 @@ class Config:
     def platform(self):
         """Always the native (build system) OS, except when pretending to be some
         other platform"""
-        return self._platform or subdir.rsplit("-", 1)[0]
+        return self._platform or context.subdir.rsplit("-", 1)[0]
 
     @platform.setter
     def platform(self, value):
@@ -380,8 +375,8 @@ class Config:
         return self.host_platform == "noarch"
 
     def reset_platform(self):
-        if not self.platform == cc_platform:
-            self.platform = cc_platform
+        if not self.platform == context.platform:
+            self.platform = context.platform
 
     @property
     def subdir(self):
@@ -459,8 +454,8 @@ class Config:
                 self._croot = abspath(expanduser(_bld_root_env))
             elif _bld_root_rc:
                 self._croot = abspath(expanduser(expandvars(_bld_root_rc)))
-            elif root_writable:
-                self._croot = join(root_dir, "conda-bld")
+            elif context.root_writable:
+                self._croot = join(context.root_dir, "conda-bld")
             else:
                 self._croot = abspath(expanduser("~/conda-bld"))
         return self._croot
@@ -717,7 +712,7 @@ class Config:
         #     subdir should be the native platform, while self.subdir would be the host platform.
         return {
             join(self.croot, self.host_subdir),
-            join(self.croot, subdir),
+            join(self.croot, context.subdir),
             join(self.croot, "noarch"),
         }
 

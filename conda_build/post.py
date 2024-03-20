@@ -1402,9 +1402,11 @@ def check_overlinking_impl(
             if diffs:
                 log = utils.get_logger(__name__)
                 log.warning(
-                    "Partially parsed some '.tbd' files in sysroot {}, pretending .tbds are their install-names\n"
+                    "Partially parsed some '.tbd' files in sysroot %s, pretending .tbds are their install-names\n"
                     "Adding support to 'conda-build' for parsing these in 'liefldd.py' would be easy and useful:\n"
-                    "{} ...".format(sysroot, list(diffs)[1:3])
+                    "%s...",
+                    sysroot,
+                    list(diffs)[1:3],
                 )
                 sysroots_files[srs] = sysroot_files
     sysroots_files = OrderedDict(

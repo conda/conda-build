@@ -4,15 +4,17 @@
 This module tests the test API.  These are high-level integration tests.  Lower level unit tests
 should go in test_render.py
 """
+
 import os
 import re
 
 import pytest
 import yaml
+from conda.base.context import context
 from conda.common.compat import on_win
 
 from conda_build import api, render
-from conda_build.conda_interface import cc_conda_build, subdir
+from conda_build.conda_interface import cc_conda_build
 
 from .utils import metadata_dir, variants_dir
 
@@ -105,7 +107,7 @@ def test_get_output_file_path_jinja2(testing_config):
 
 def test_output_without_jinja_does_not_download(mocker, testing_config):
     mock = mocker.patch("conda_build.source")
-    api.get_output_file_path(
+    api.get_output_file_paths(
         os.path.join(metadata_dir, "source_git"), config=testing_config
     )
     mock.assert_not_called()
@@ -166,7 +168,7 @@ def test_pin_depends(testing_config):
 def test_cross_recipe_with_only_build_section(testing_config):
     recipe = os.path.join(metadata_dir, "_cross_prefix_elision_compiler_used")
     metadata = api.render(recipe, config=testing_config, bypass_env_check=True)[0][0]
-    assert metadata.config.host_subdir != subdir
+    assert metadata.config.host_subdir != context.subdir
     assert metadata.config.build_prefix != metadata.config.host_prefix
     assert not metadata.build_is_host
 
@@ -175,7 +177,7 @@ def test_cross_info_index_platform(testing_config):
     recipe = os.path.join(metadata_dir, "_cross_build_unix_windows")
     metadata = api.render(recipe, config=testing_config, bypass_env_check=True)[0][0]
     info_index = metadata.info_index()
-    assert metadata.config.host_subdir != subdir
+    assert metadata.config.host_subdir != context.subdir
     assert metadata.config.host_subdir == info_index["subdir"]
     assert metadata.config.host_platform != metadata.config.platform
     assert metadata.config.host_platform == info_index["platform"]
