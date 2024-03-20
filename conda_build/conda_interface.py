@@ -11,7 +11,7 @@ from conda import __version__
 from conda.base.context import context, determine_target_prefix
 from conda.base.context import non_x86_machines as non_x86_linux_machines  # noqa: F401
 from conda.base.context import reset_context as _reset_context
-from conda.core.package_cache import ProgressiveFetchExtract  # noqa: F401
+from conda.core.package_cache_data import ProgressiveFetchExtract  # noqa: F401
 from conda.exceptions import (  # noqa: F401
     CondaError,
     CondaHTTPError,

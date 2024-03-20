@@ -1343,7 +1343,7 @@ class LoggingContext:
         "dotupdate",
         "stdoutlog",
         "requests",
-        "conda.core.package_cache",
+        "conda.core.package_cache_data",
         "conda.plan",
         "conda.gateways.disk.delete",
         "conda_build",
