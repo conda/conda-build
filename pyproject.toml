@@ -152,7 +152,9 @@ markers = [
 ]
 filterwarnings = [
   # elevate conda's deprecated warning to an error
+  "error::PendingDeprecationWarning:conda",
   "error::DeprecationWarning:conda",
   # elevate conda-build's deprecated warning to an error
+  "error::PendingDeprecationWarning:conda_build",
   "error::DeprecationWarning:conda_build",
 ]
