@@ -5,7 +5,8 @@ import stat
 from glob import glob
 from os.path import expanduser, isfile, join
 
-from ..conda_interface import root_dir
+from conda.base.context import context
+
 from ..utils import on_win
 
 
@@ -16,10 +17,10 @@ def find_executable(executable, prefix=None, all_matches=False):
     result = None
     if on_win:
         dir_paths = [
-            join(root_dir, "Scripts"),
-            join(root_dir, "Library\\mingw-w64\\bin"),
-            join(root_dir, "Library\\usr\\bin"),
-            join(root_dir, "Library\\bin"),
+            join(context.root_dir, "Scripts"),
+            join(context.root_dir, "Library\\mingw-w64\\bin"),
+            join(context.root_dir, "Library\\usr\\bin"),
+            join(context.root_dir, "Library\\bin"),
         ]
         if prefix:
             dir_paths[0:0] = [
@@ -30,7 +31,7 @@ def find_executable(executable, prefix=None, all_matches=False):
             ]
     else:
         dir_paths = [
-            join(root_dir, "bin"),
+            join(context.root_dir, "bin"),
         ]
         if prefix:
             dir_paths.insert(0, join(prefix, "bin"))
