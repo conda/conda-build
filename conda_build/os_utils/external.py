@@ -17,10 +17,10 @@ def find_executable(executable, prefix=None, all_matches=False):
     result = None
     if on_win:
         dir_paths = [
-            join(context.root_dir, "Scripts"),
-            join(context.root_dir, "Library\\mingw-w64\\bin"),
-            join(context.root_dir, "Library\\usr\\bin"),
-            join(context.root_dir, "Library\\bin"),
+            join(context.root_prefix, "Scripts"),
+            join(context.root_prefix, "Library\\mingw-w64\\bin"),
+            join(context.root_prefix, "Library\\usr\\bin"),
+            join(context.root_prefix, "Library\\bin"),
         ]
         if prefix:
             dir_paths[0:0] = [
@@ -31,7 +31,7 @@ def find_executable(executable, prefix=None, all_matches=False):
             ]
     else:
         dir_paths = [
-            join(context.root_dir, "bin"),
+            join(context.root_prefix, "bin"),
         ]
         if prefix:
             dir_paths.insert(0, join(prefix, "bin"))

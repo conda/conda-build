@@ -112,8 +112,8 @@ deprecated.constant(
     "24.5",
     "24.7",
     "root_dir",
-    context.root_dir,
-    addendum="Use `conda.base.context.context.root_dir` instead.",
+    context.root_prefix,
+    addendum="Use `conda.base.context.context.root_prefix` instead.",
 )
 deprecated.constant(
     "24.5",

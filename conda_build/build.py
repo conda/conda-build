@@ -1421,7 +1421,7 @@ def write_about_json(m):
             extra.update(m.config.extra_meta)
         d["root_pkgs"] = [
             f"{prec.name} {prec.version} {prec.build}"
-            for prec in PrefixData(context.root_dir).iter_records()
+            for prec in PrefixData(context.root_prefix).iter_records()
         ]
         # Include the extra section of the metadata in the about.json
         d["extra"] = extra
