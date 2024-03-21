@@ -27,6 +27,7 @@ import pytest
 import yaml
 from binstar_client.commands import remove, show
 from binstar_client.errors import NotFound
+from conda.base.context import reset_context
 from conda.common.compat import on_linux, on_mac, on_win
 from conda.exceptions import ClobberError, CondaMultiError
 from conda_index.api import update_index
@@ -36,7 +37,6 @@ from conda_build.conda_interface import (
     CondaError,
     LinkError,
     context,
-    reset_context,
     url_path,
 )
 from conda_build.config import Config
