@@ -26,7 +26,7 @@ def test_environment():
     """Asserting PrefixData can accomplish the same thing as Environment."""
     with pytest.warns(
         PendingDeprecationWarning
-        if deprecated._version_less_than("24.5")
+        if deprecated._version_less_than("24.3")
         else DeprecationWarning,
     ):
         assert (specs := Environment(sys.prefix).package_specs())
