@@ -320,7 +320,7 @@ def test(
         )
 
 
-def list_skeletons():
+def list_skeletons() -> list[str]:
     """List available skeletons for generating conda recipes from external sources.
 
     The returned list is generally the names of supported repositories (pypi, cran, etc.)
