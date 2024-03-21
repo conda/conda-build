@@ -4,6 +4,7 @@
 Integrative tests of the CRAN skeleton that start from
 conda_build.api.skeletonize and check the output files
 """
+
 from pathlib import Path
 from typing import Sequence
 

@@ -4,15 +4,19 @@
 This module tests the test API.  These are high-level integration tests.  Lower level unit tests
 should go in test_render.py
 """
+
 import os
 import re
+from itertools import count, islice
 
 import pytest
 import yaml
+from conda.base.context import context
 from conda.common.compat import on_win
 
 from conda_build import api, render
-from conda_build.conda_interface import cc_conda_build, subdir
+from conda_build.conda_interface import cc_conda_build
+from conda_build.variants import validate_spec
 
 from .utils import metadata_dir, variants_dir
 
@@ -166,7 +170,7 @@ def test_pin_depends(testing_config):
 def test_cross_recipe_with_only_build_section(testing_config):
     recipe = os.path.join(metadata_dir, "_cross_prefix_elision_compiler_used")
     metadata = api.render(recipe, config=testing_config, bypass_env_check=True)[0][0]
-    assert metadata.config.host_subdir != subdir
+    assert metadata.config.host_subdir != context.subdir
     assert metadata.config.build_prefix != metadata.config.host_prefix
     assert not metadata.build_is_host
 
@@ -175,7 +179,7 @@ def test_cross_info_index_platform(testing_config):
     recipe = os.path.join(metadata_dir, "_cross_build_unix_windows")
     metadata = api.render(recipe, config=testing_config, bypass_env_check=True)[0][0]
     info_index = metadata.info_index()
-    assert metadata.config.host_subdir != subdir
+    assert metadata.config.host_subdir != context.subdir
     assert metadata.config.host_subdir == info_index["subdir"]
     assert metadata.config.host_platform != metadata.config.platform
     assert metadata.config.host_platform == info_index["platform"]
@@ -297,3 +301,35 @@ def test_pin_expression_works_with_python_prereleases(testing_config):
     assert len(ms) == 2
     m = next(m_[0] for m_ in ms if m_[0].meta["package"]["name"] == "bar")
     assert "python >=3.10.0rc1,<3.11.0a0" in m.meta["requirements"]["run"]
+
+
+@pytest.mark.benchmark
+def test_pin_subpackage_benchmark(testing_config):
+    # Performance regression test for https://github.com/conda/conda-build/pull/5224
+    recipe = os.path.join(metadata_dir, "_pin_subpackage_benchmark")
+
+    # Create variant config of size comparable (for subdir linux-64) to
+    #   https://github.com/conda-forge/conda-forge-pinning-feedstock/blob/3c7d60f56a8cb7d1b8f5a8da0b02ae1f1f0982d7/recipe/conda_build_config.yaml
+    # Addendum: Changed number of single-value keys from 327 to 33 to reduce benchmark duration.
+    def create_variants():
+        # ("pkg_1, ("1.1", "1.2", ...)), ("pkg_2", ("2.1", "2.2", ...)), ...
+        packages = ((f"pkg_{i}", (f"{i}.{j}" for j in count(1))) for i in count(1))
+        variant = {}
+        variant["zip_keys"] = []
+        for version_count, package_count in [(1, 4), (4, 3), (4, 3)]:
+            zipped = []
+            for package, versions in islice(packages, package_count):
+                zipped.append(package)
+                variant[package] = list(islice(versions, version_count))
+            variant["zip_keys"].append(zipped)
+        # for version_count, package_count in [(3, 1), (2, 4), (1, 327)]:
+        for version_count, package_count in [(3, 1), (2, 4), (1, 33)]:
+            for package, versions in islice(packages, package_count):
+                variant[package] = list(islice(versions, version_count))
+        validate_spec("<generated>", variant)
+        return variant
+
+    ms = api.render(
+        recipe, config=testing_config, channels=[], variants=create_variants()
+    )
+    assert len(ms) == 11 - 3  # omits libarrow-all, pyarrow, pyarrow-tests

@@ -26,6 +26,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import yaml
+from conda.base.context import context
 
 from . import environ, exceptions, source, utils
 from .conda_interface import (
@@ -33,7 +34,6 @@ from .conda_interface import (
     ProgressiveFetchExtract,
     TemporaryDirectory,
     UnsatisfiableError,
-    pkgs_dirs,
     specs_from_url,
 )
 from .exceptions import DependencyNeedsBuildingError
@@ -253,7 +253,7 @@ def _filter_run_exports(specs, ignore_list):
 def find_pkg_dir_or_file_in_pkgs_dirs(
     distribution: str, m: MetaData, files_only: bool = False
 ) -> str | None:
-    for cache in map(Path, (*pkgs_dirs, *m.config.bldpkgs_dirs)):
+    for cache in map(Path, (*context.pkgs_dirs, *m.config.bldpkgs_dirs)):
         package = cache / (distribution + CONDA_PACKAGE_EXTENSION_V1)
         if package.is_file():
             return str(package)
@@ -280,6 +280,7 @@ def find_pkg_dir_or_file_in_pkgs_dirs(
                     archive.add(entry, arcname=entry.name)
 
             return str(package)
+    return None
 
 
 @lru_cache(maxsize=None)
@@ -391,7 +392,7 @@ def execute_download_actions(m, precs, env, package_subset=None, require_files=F
             pfe = ProgressiveFetchExtract(link_prefs=(link_prec,))
             with utils.LoggingContext():
                 pfe.execute()
-            for pkg_dir in pkgs_dirs:
+            for pkg_dir in context.pkgs_dirs:
                 _loc = join(pkg_dir, prec.fn)
                 if isfile(_loc):
                     pkg_loc = _loc
