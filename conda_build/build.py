@@ -1809,7 +1809,7 @@ def bundle_conda(
     metadata: MetaData,
     env,
     stats,
-    new_prefix_files: set[str],
+    new_prefix_files: set[str] = set(),
     **kw,
 ):
     log = utils.get_logger(__name__)
@@ -2123,7 +2123,7 @@ def bundle_wheel(
     metadata: MetaData,
     env,
     stats,
-    new_prefix_files: set[str],
+    new_prefix_files: set[str] = set(),
 ):
     ext = ".bat" if utils.on_win else ".sh"
     with TemporaryDirectory() as tmpdir, utils.tmp_chdir(metadata.config.work_dir):
