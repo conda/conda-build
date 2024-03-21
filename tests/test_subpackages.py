@@ -8,9 +8,9 @@ from glob import glob
 from pathlib import Path
 
 import pytest
+from conda.base.context import context
 
 from conda_build import api, utils
-from conda_build.conda_interface import subdir
 from conda_build.render import finalize_metadata
 
 from .utils import get_valid_recipes, subpackage_dir
@@ -145,7 +145,7 @@ def test_output_specific_subdir(testing_config):
     assert len(metadata) == 3
     for m, _, _ in metadata:
         if m.name() in ("default_subdir", "default_subdir_2"):
-            assert m.config.target_subdir == subdir
+            assert m.config.target_subdir == context.subdir
         elif m.name() == "custom_subdir":
             assert m.config.target_subdir == "linux-aarch64"
         else:

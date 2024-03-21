@@ -3,6 +3,7 @@
 """
 Tools for converting CPAN packages to conda recipes.
 """
+
 import codecs
 import gzip
 import hashlib
@@ -149,7 +150,6 @@ perl_core = []
 
 
 class InvalidReleaseError(RuntimeError):
-
     """
     An exception that is raised when a release is not available on MetaCPAN.
     """
@@ -158,7 +158,6 @@ class InvalidReleaseError(RuntimeError):
 
 
 class PerlTmpDownload(TmpDownload):
-
     """
     Subclass Conda's TmpDownload to replace : in download filenames.
     Critical on win.

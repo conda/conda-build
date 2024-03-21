@@ -12,6 +12,7 @@ import pytest
 from conda.common.compat import on_mac, on_win
 from pytest import MonkeyPatch
 
+import conda_build
 import conda_build.config
 from conda_build.config import (
     Config,
@@ -30,6 +31,14 @@ from conda_build.config import (
 from conda_build.metadata import MetaData
 from conda_build.utils import check_call_env, copy_into, prepend_bin_path
 from conda_build.variants import get_default_variant
+
+
+@pytest.hookimpl
+def pytest_report_header(config: pytest.Config):
+    # ensuring the expected development conda is being run
+    expected = Path(__file__).parent.parent / "conda_build" / "__init__.py"
+    assert expected.samefile(conda_build.__file__)
+    return f"conda_build.__file__: {conda_build.__file__}"
 
 
 @pytest.fixture(scope="function")

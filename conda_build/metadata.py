@@ -16,10 +16,11 @@ from os.path import isfile, join
 from typing import TYPE_CHECKING, overload
 
 from bs4 import UnicodeDammit
+from conda.base.context import context
 from conda.gateways.disk.read import compute_sum
 
 from . import exceptions, utils, variants
-from .conda_interface import MatchSpec, envs_dirs
+from .conda_interface import MatchSpec
 from .config import Config, get_or_merge_config
 from .features import feature_list
 from .license_family import ensure_valid_license_family
@@ -781,7 +782,7 @@ def build_string_from_metadata(metadata):
 #   but we don't presently have an API there.
 def _get_env_path(env_name_or_path):
     if not os.path.isdir(env_name_or_path):
-        for envs_dir in list(envs_dirs) + [os.getcwd()]:
+        for envs_dir in list(context.envs_dirs) + [os.getcwd()]:
             path = os.path.join(envs_dir, env_name_or_path)
             if os.path.isdir(path):
                 env_name_or_path = path
@@ -1344,8 +1345,7 @@ class MetaData:
         return m
 
     @overload
-    def get_section(self, section: Literal["source", "outputs"]) -> list[dict]:
-        ...
+    def get_section(self, section: Literal["source", "outputs"]) -> list[dict]: ...
 
     @overload
     def get_section(
@@ -1359,8 +1359,7 @@ class MetaData:
             "about",
             "extra",
         ],
-    ) -> dict:
-        ...
+    ) -> dict: ...
 
     def get_section(self, name):
         section = self.meta.get(name)
@@ -2556,9 +2555,9 @@ class MetaData:
                             )
                         ] = (out, out_metadata)
                         out_metadata_map[HashableDict(out)] = out_metadata
-                        ref_metadata.other_outputs = (
-                            out_metadata.other_outputs
-                        ) = all_output_metadata
+                        ref_metadata.other_outputs = out_metadata.other_outputs = (
+                            all_output_metadata
+                        )
                 except SystemExit:
                     if not permit_undefined_jinja:
                         raise

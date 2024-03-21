@@ -191,12 +191,10 @@ def find_apple_cctools_executable(name, build_prefix, nofail=False):
                     tool = tool_xcr
                     if os.path.exists(tool):
                         return tool
-        except Exception as _:  # noqa
+        except Exception:  # noqa
             print(
-                "ERROR :: Failed to run `{}`.  Please use `conda` to install `cctools` into your base environment.\n"
-                "         An option on macOS is to install `Xcode` or `Command Line Tools for Xcode`.".format(
-                    tool
-                )
+                f"ERROR :: Failed to run `{tool}`. Use `conda` to install `cctools` into your base environment.\n"
+                f"         An option on macOS is to install `Xcode` or `Command Line Tools for Xcode`."
             )
             sys.exit(1)
         return tool

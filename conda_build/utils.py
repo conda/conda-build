@@ -53,7 +53,9 @@ from conda.base.constants import (
     CONDA_PACKAGE_EXTENSIONS,
     KNOWN_SUBDIRS,
 )
+from conda.base.context import context
 from conda.gateways.disk.read import compute_sum
+from conda.models.channel import Channel
 from conda.models.match_spec import MatchSpec
 
 from .conda_interface import (
@@ -63,11 +65,7 @@ from .conda_interface import (
     TemporaryDirectory,
     VersionOrder,
     cc_conda_build,
-    context,
     download,
-    get_conda_channel,
-    pkgs_dirs,
-    root_dir,
     unix_path_to_win,
     win_path_to_unix,
 )
@@ -88,7 +86,7 @@ on_mac = sys.platform == "darwin"
 on_linux = sys.platform == "linux"
 
 codec = getpreferredencoding() or "utf-8"
-root_script_dir = os.path.join(root_dir, "Scripts" if on_win else "bin")
+root_script_dir = os.path.join(context.root_dir, "Scripts" if on_win else "bin")
 mmap_MAP_PRIVATE = 0 if on_win else mmap.MAP_PRIVATE
 mmap_PROT_READ = 0 if on_win else mmap.PROT_READ
 mmap_PROT_WRITE = 0 if on_win else mmap.PROT_WRITE
@@ -712,7 +710,7 @@ def merge_tree(
 #    at any time, but the lock within this process should all be tied to the same tracking
 #    mechanism.
 _lock_folders = (
-    os.path.join(root_dir, "locks"),
+    os.path.join(context.root_dir, "locks"),
     os.path.expanduser(os.path.join("~", ".conda_build_locks")),
 )
 
@@ -756,9 +754,7 @@ def get_conda_operation_locks(locking=True, bldpkgs_dirs=None, timeout=900):
     bldpkgs_dirs = ensure_list(bldpkgs_dirs)
     # locks enabled by default
     if locking:
-        _pkgs_dirs = pkgs_dirs[:1]
-        locked_folders = _pkgs_dirs + list(bldpkgs_dirs)
-        for folder in locked_folders:
+        for folder in (*context.pkgs_dirs[:1], *bldpkgs_dirs):
             if not os.path.isdir(folder):
                 os.makedirs(folder)
             lock = get_lock(folder, timeout=timeout)
@@ -1134,8 +1130,9 @@ def convert_path_for_cygwin_or_msys2(exe, path):
 
 
 def get_skip_message(m: MetaData) -> str:
-    return "Skipped: {} from {} defines build/skip for this configuration ({}).".format(
-        m.name(), m.path, {k: m.config.variant[k] for k in m.get_used_vars()}
+    return (
+        f"Skipped: {m.name()} from {m.path} defines build/skip for this configuration "
+        f"({({k: m.config.variant[k] for k in m.get_used_vars()})})."
     )
 
 
@@ -1902,13 +1899,11 @@ spec_ver_needing_star_re = re.compile(r"^([0-9a-zA-Z\.]+)$")
 
 
 @overload
-def ensure_valid_spec(spec: str, warn: bool = False) -> str:
-    ...
+def ensure_valid_spec(spec: str, warn: bool = False) -> str: ...
 
 
 @overload
-def ensure_valid_spec(spec: MatchSpec, warn: bool = False) -> MatchSpec:
-    ...
+def ensure_valid_spec(spec: MatchSpec, warn: bool = False) -> MatchSpec: ...
 
 
 def ensure_valid_spec(spec: str | MatchSpec, warn: bool = False) -> str | MatchSpec:
@@ -2115,7 +2110,7 @@ channeldata_cache = {}
 def download_channeldata(channel_url):
     global channeldata_cache
     if channel_url.startswith("file://") or channel_url not in channeldata_cache:
-        urls = get_conda_channel(channel_url).urls()
+        urls = Channel.from_value(channel_url).urls()
         urls = {url.rsplit("/", 1)[0] for url in urls}
         data = {}
         for url in urls:

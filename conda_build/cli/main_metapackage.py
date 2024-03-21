@@ -6,8 +6,10 @@ import argparse
 import logging
 from typing import TYPE_CHECKING
 
+from conda.base.context import context
+
 from .. import api
-from ..conda_interface import ArgumentParser, add_parser_channels, binstar_upload
+from ..conda_interface import ArgumentParser, add_parser_channels
 
 if TYPE_CHECKING:
     from argparse import Namespace
@@ -35,14 +37,14 @@ command line with the conda metapackage command.
         action="store_false",
         help="Do not ask to upload the package to anaconda.org.",
         dest="anaconda_upload",
-        default=binstar_upload,
+        default=context.binstar_upload,
     )
     parser.add_argument(
         "--no-binstar-upload",
         action="store_false",
         help=argparse.SUPPRESS,
         dest="anaconda_upload",
-        default=binstar_upload,
+        default=context.binstar_upload,
     )
     parser.add_argument("--token", help="Token to pass through to anaconda upload")
     parser.add_argument(

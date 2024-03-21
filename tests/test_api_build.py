@@ -3,6 +3,7 @@
 """
 This module tests the build API.  These are high-level integration tests.
 """
+
 from __future__ import annotations
 
 import json
@@ -26,6 +27,7 @@ import pytest
 import yaml
 from binstar_client.commands import remove, show
 from binstar_client.errors import NotFound
+from conda.base.context import reset_context
 from conda.common.compat import on_linux, on_mac, on_win
 from conda.exceptions import ClobberError, CondaMultiError
 from conda_index.api import update_index
@@ -35,7 +37,6 @@ from conda_build.conda_interface import (
     CondaError,
     LinkError,
     context,
-    reset_context,
     url_path,
 )
 from conda_build.config import Config
@@ -306,9 +307,7 @@ def test_output_build_path_git_source(testing_config):
     test_path = os.path.join(
         testing_config.croot,
         testing_config.host_subdir,
-        "conda-build-test-source-git-jinja2-1.20.2-py{}{}{}_0_g262d444.tar.bz2".format(
-            sys.version_info.major, sys.version_info.minor, _hash
-        ),
+        f"conda-build-test-source-git-jinja2-1.20.2-py{sys.version_info.major}{sys.version_info.minor}{_hash}_0_g262d444.tar.bz2",
     )
     assert output == test_path
 
@@ -819,15 +818,15 @@ def test_noarch(testing_workdir):
 def test_disable_pip(testing_metadata):
     testing_metadata.config.disable_pip = True
     testing_metadata.meta["requirements"] = {"host": ["python"], "run": ["python"]}
-    testing_metadata.meta["build"][
-        "script"
-    ] = 'python -c "import pip; print(pip.__version__)"'
+    testing_metadata.meta["build"]["script"] = (
+        'python -c "import pip; print(pip.__version__)"'
+    )
     with pytest.raises(subprocess.CalledProcessError):
         api.build(testing_metadata)
 
-    testing_metadata.meta["build"][
-        "script"
-    ] = 'python -c "import setuptools; print(setuptools.__version__)"'
+    testing_metadata.meta["build"]["script"] = (
+        'python -c "import setuptools; print(setuptools.__version__)"'
+    )
     with pytest.raises(subprocess.CalledProcessError):
         api.build(testing_metadata)
 
