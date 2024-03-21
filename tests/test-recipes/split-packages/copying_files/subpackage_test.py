@@ -32,9 +32,9 @@ if hasattr(contents, 'decode'):
 assert 'weee' in contents, 'incorrect file contents: %s' % contents
 print('glob OK')
 
-external_host_file = 'lib/libdav1d.so.7'
+external_host_file = 'lib/libdav1d.so.6'
 if 'osx' in os.getenv('target_platform', ''):
-    external_host_file = 'lib/libdav1d.7.dylib'
+    external_host_file = 'lib/libdav1d.6.dylib'
 if 'win' in os.getenv('target_platform', ''):
     external_host_file = 'Library/bin/dav1d.dll'
 

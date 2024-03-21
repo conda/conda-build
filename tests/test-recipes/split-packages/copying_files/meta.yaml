@@ -4,13 +4,17 @@ package:
 
 requirements:
   run:
-    - my_script_subpackage
+    - my_script_subpackage_files
+    - my_script_subpackage_include_exclude
 
 outputs:
   - name: my_script_subpackage_files
+    build:
+      ignore_run_exports_from:
+        - dav1d
     requirements:
       host:
-        - libdav1d7
+        - dav1d=1.2.1
     files:
       - subpackage_file1
       - somedir
@@ -22,9 +26,12 @@ outputs:
       script: subpackage_test.py
       script_interpreter: python
   - name: my_script_subpackage_include_exclude
+    build:
+      ignore_run_exports_from:
+        - dav1d
     requirements:
       host:
-        - libdav1d7
+        - dav1d=1.2.1
     files:
       include:
         - subpackage_file1
