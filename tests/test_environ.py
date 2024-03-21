@@ -5,8 +5,9 @@ import sys
 
 import pytest
 from conda.core.prefix_data import PrefixData
+from packaging.version import parse
 
-from conda_build.deprecations import deprecated
+import conda_build
 from conda_build.environ import Environment, create_env
 
 
@@ -26,7 +27,7 @@ def test_environment():
     """Asserting PrefixData can accomplish the same thing as Environment."""
     with pytest.warns(
         PendingDeprecationWarning
-        if deprecated._version_less_than("24.3")
+        if parse(conda_build.__version__) < parse("24.3")
         else DeprecationWarning,
     ):
         assert (specs := Environment(sys.prefix).package_specs())
