@@ -4,6 +4,8 @@
 Tools for converting conda packages
 """
 
+from __future__ import annotations
+
 import glob
 import hashlib
 import json
@@ -776,26 +778,26 @@ def convert_from_windows_to_unix(
 
 
 def conda_convert(
-    file_path,
-    output_dir=".",
-    show_imports=False,
-    platforms=None,
-    force=False,
-    dependencies=None,
-    verbose=False,
-    quiet=False,
-    dry_run=False,
-):
+    file_path: str,
+    output_dir: str = ".",
+    show_imports: bool = False,
+    platforms: list[str] = [],
+    force: bool = False,
+    dependencies: list[str] = [],
+    verbose: bool = False,
+    quiet: bool = False,
+    dry_run: bool = False,
+) -> None:
     """Convert a conda package between different platforms and architectures.
 
     Positional arguments:
     file_path (str) -- the file path to the source package's tar file
     output_dir (str) -- the file path to where to output the converted tar file
     show_imports (bool) -- show all C extensions found in the source package
-    platforms (str) -- the platforms to convert to: 'win-64', 'win-32', 'linux-64',
+    platforms list[str] -- the platforms to convert to: 'win-64', 'win-32', 'linux-64',
         'linux-32', 'osx-64', or 'all'
     force (bool) -- force conversion of packages that contain C extensions
-    dependencies (List[str]) -- the new dependencies to add to the source package's
+    dependencies (list[str]) -- the new dependencies to add to the source package's
         existing dependencies
     verbose (bool) -- show output of items that are updated
     quiet (bool) -- hide all output except warnings and errors
