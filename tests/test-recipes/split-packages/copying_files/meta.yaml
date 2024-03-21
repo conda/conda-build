@@ -7,12 +7,32 @@ requirements:
     - my_script_subpackage
 
 outputs:
-  - name: my_script_subpackage
+  - name: my_script_subpackage_files
+    requirements:
+      host:
+        - libdav1d7
+    files:
+      - subpackage_file1
+      - somedir
+      - "*.ext"
+      # Libs should match because they are in the prefix
+      - "lib/libdav1d*"
+      - "Library/bin/dav1d*"
+    test:
+      script: subpackage_test.py
+      script_interpreter: python
+  - name: my_script_subpackage_include_exclude
+    requirements:
+      host:
+        - libdav1d7
     files:
       include:
         - subpackage_file1
         - somedir
         - "*.ext"
+        # Libs should not match because they come from a different package
+        - "lib/libdav1d*"
+        - "Library/bin/dav1d*"
       exclude:
         - "*3.ext"
     test:
