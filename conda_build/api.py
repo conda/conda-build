@@ -446,7 +446,7 @@ def convert(
         raise RuntimeError("cannot convert: %s" % package_file)
 
 
-def test_installable(channel="defaults"):
+def test_installable(channel: str = "defaults") -> bool:
     """Check to make sure that packages in channel are installable.
     This is a consistency check for the channel."""
     from .inspect_pkg import test_installable
