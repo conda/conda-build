@@ -4,6 +4,8 @@
 Tools for converting PyPI packages to conda recipes.
 """
 
+from __future__ import annotations
+
 import keyword
 import logging
 import os
@@ -15,6 +17,7 @@ from os import chdir, getcwd, listdir, makedirs
 from os.path import abspath, exists, isdir, isfile, join
 from shutil import copy2
 from tempfile import mkdtemp
+from typing import TYPE_CHECKING
 from urllib.parse import urljoin, urlsplit
 
 import pkginfo
@@ -48,6 +51,9 @@ from ..utils import (
     tar_xf,
 )
 from ..version import _parse as parse_version
+
+if TYPE_CHECKING:
+    from typing import Iterable
 
 pypi_example = """
 Examples:
@@ -254,30 +260,26 @@ def _formating_value(attribute_name, attribute_value):
 
 
 def skeletonize(
-    packages,
-    output_dir=".",
-    version=None,
-    recursive=False,
-    all_urls=False,
-    pypi_url="https://pypi.io/pypi/",
-    noprompt=True,
-    version_compare=False,
-    python_version=None,
-    manual_url=False,
-    all_extras=False,
-    noarch_python=False,
-    config=None,
-    setup_options=None,
-    extra_specs=[],
-    pin_numpy=False,
-):
+    packages: list[str],
+    output_dir: str = ".",
+    version: str | None = None,
+    recursive: bool = False,
+    all_urls: bool = False,
+    pypi_url: str = "https://pypi.io/pypi/",
+    noprompt: bool = True,
+    version_compare: bool = False,
+    python_version: str | None = None,
+    manual_url: bool = False,
+    all_extras: bool = False,
+    noarch_python: bool = False,
+    config: Config | None = None,
+    setup_options: str | Iterable[str] | None = None,
+    extra_specs: list[str] = [],
+    pin_numpy: bool = False,
+) -> None:
     package_dicts = {}
 
-    if not setup_options:
-        setup_options = []
-
-    if isinstance(setup_options, str):
-        setup_options = [setup_options]
+    setup_options = ensure_list(setup_options)
 
     if not config:
         config = Config()
