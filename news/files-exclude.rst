@@ -1,7 +1,7 @@
 Enhancements:
 -------------
 
-* implemented new include/exclude sections for glob expressions in multi-output `outputs/files`
+* implemented new include/exclude sections for glob expressions in multi-output `outputs/files`. (#4196 via #5216)
 
 Bug fixes:
 ----------
