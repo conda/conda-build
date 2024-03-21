@@ -1,3 +1,6 @@
+if [[ -z "$CC" ]]; then
+  conda activate $BUILD_PREFIX
+fi
 echo "int main() {}" > main.c
 mkdir -p $PREFIX/bin
 $CC main.c -o $PREFIX/bin/_file_hash
