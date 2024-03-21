@@ -36,7 +36,7 @@ from .utils import (
 )
 
 if TYPE_CHECKING:
-    from typing import Any
+    from typing import Any, Literal
 
 
 def render(
@@ -336,8 +336,14 @@ def list_skeletons() -> list[str]:
 
 
 def skeletonize(
-    packages, repo, output_dir=".", version=None, recursive=False, config=None, **kwargs
-):
+    packages: str | Iterable[str],
+    repo: Literal["cpan", "cran", "luarocks", "pypi", "rpm"],
+    output_dir: str = ".",
+    version: str | None = None,
+    recursive: bool = False,
+    config: Config | None = None,
+    **kwargs,
+) -> None:
     """Generate a conda recipe from an external repo.  Translates metadata from external
     sources into expected conda recipe format."""
 
