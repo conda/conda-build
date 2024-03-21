@@ -455,14 +455,14 @@ def test_installable(channel: str = "defaults") -> bool:
 
 
 def inspect_linkages(
-    packages,
-    prefix=sys.prefix,
-    untracked=False,
-    all_packages=False,
-    show_files=False,
-    groupby="package",
-    sysroot="",
-):
+    packages: str | Iterable[str],
+    prefix: str | os.PathLike | Path = sys.prefix,
+    untracked: bool = False,
+    all_packages: bool = False,
+    show_files: bool = False,
+    groupby: Literal["package", "dependency"] = "package",
+    sysroot: str = "",
+) -> str:
     from .inspect_pkg import inspect_linkages
 
     packages = ensure_list(packages)

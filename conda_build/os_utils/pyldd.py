@@ -1047,7 +1047,7 @@ def codefile_class(
         return None
 
 
-def _trim_sysroot(sysroot):
+def _trim_sysroot(sysroot: str) -> str:
     if sysroot:
         while sysroot.endswith("/") or sysroot.endswith("\\"):
             sysroot = sysroot[:-1]
@@ -1065,7 +1065,7 @@ def _get_arch_if_native(arch):
 
 # TODO :: Consider memoizing instead of repeatedly scanning
 # TODO :: libc.so/libSystem.dylib when inspect_linkages(recurse=True)
-def _inspect_linkages_this(filename, sysroot="", arch="native"):
+def _inspect_linkages_this(filename, sysroot: str = "", arch="native"):
     """
 
     :param filename:
@@ -1099,7 +1099,7 @@ def _inspect_linkages_this(filename, sysroot="", arch="native"):
 
 # TODO :: Consider returning a tree structure or a dict when recurse is True?
 def inspect_linkages(
-    filename, resolve_filenames=True, recurse=True, sysroot="", arch="native"
+    filename, resolve_filenames=True, recurse=True, sysroot: str = "", arch="native"
 ):
     already_seen = set()
     todo = {filename}
