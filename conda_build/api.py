@@ -382,7 +382,7 @@ def skeletonize(
         if arg in kwargs:
             del kwargs[arg]
     with config:
-        skeleton_return = module.skeletonize(
+        module.skeletonize(
             packages,
             output_dir=output_dir,
             version=version,
@@ -390,7 +390,6 @@ def skeletonize(
             config=config,
             **kwargs,
         )
-    return skeleton_return
 
 
 def develop(
