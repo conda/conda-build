@@ -393,20 +393,20 @@ def skeletonize(
 
 
 def develop(
-    recipe_dir,
-    prefix=sys.prefix,
-    no_pth_file=False,
-    build_ext=False,
-    clean=False,
-    uninstall=False,
-):
+    recipe_dir: str | Iterable[str],
+    prefix: str = sys.prefix,
+    no_pth_file: bool = False,
+    build_ext: bool = False,
+    clean: bool = False,
+    uninstall: bool = False,
+) -> None:
     """Install a Python package in 'development mode'.
 
     This works by creating a conda.pth file in site-packages."""
     from .develop import execute
 
     recipe_dir = ensure_list(recipe_dir)
-    return execute(recipe_dir, prefix, no_pth_file, build_ext, clean, uninstall)
+    execute(recipe_dir, prefix, no_pth_file, build_ext, clean, uninstall)
 
 
 def convert(
