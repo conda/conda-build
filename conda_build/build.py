@@ -88,11 +88,12 @@ from .variants import (
     set_language_env_vars,
 )
 
-if TYPE_CHECKING:
-    from typing import Any, Iterable
-
 if on_win:
     from . import windows
+
+if TYPE_CHECKING:
+    from pathlib import Path
+    from typing import Any, Iterable
 
 if "bsd" in sys.platform:
     shell_path = "/bin/sh"
@@ -3337,12 +3338,12 @@ def write_test_scripts(
 
 
 def test(
-    recipedir_or_package_or_metadata,
-    config,
-    stats,
-    move_broken=True,
-    provision_only=False,
-):
+    recipedir_or_package_or_metadata: str | os.PathLike | Path | MetaData,
+    config: Config,
+    stats: dict,
+    move_broken: bool = True,
+    provision_only: bool = False,
+) -> bool:
     """
     Execute any test scripts for the given package.
 

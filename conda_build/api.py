@@ -286,12 +286,12 @@ def build(
 
 
 def test(
-    recipedir_or_package_or_metadata,
-    move_broken=True,
-    config=None,
-    stats=None,
+    recipedir_or_package_or_metadata: str | os.PathLike | Path | MetaData,
+    move_broken: bool = True,
+    config: Config | None = None,
+    stats: dict | None = None,
     **kwargs,
-):
+) -> bool:
     """Run tests on either packages (.tar.bz2 or extracted) or recipe folders
 
     For a recipe folder, it renders the recipe enough to know what package to download, and obtains
@@ -305,21 +305,19 @@ def test(
 
     # if people don't pass in an object to capture stats in, they won't get them returned.
     #     We'll still track them, though.
-    if not stats:
-        stats = {}
+    stats = stats or {}
 
     with config:
         # This will create a new local build folder if and only if config
         #   doesn't already have one. What this means is that if we're
         #   running a test immediately after build, we use the one that the
         #   build already provided
-        test_result = test(
+        return test(
             recipedir_or_package_or_metadata,
             config=config,
             move_broken=move_broken,
             stats=stats,
         )
-    return test_result
 
 
 def list_skeletons():
