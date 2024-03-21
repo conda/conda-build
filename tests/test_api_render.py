@@ -311,7 +311,7 @@ def test_pin_subpackage_benchmark(testing_config):
     # Create variant config of size comparable (for subdir linux-64) to
     #   https://github.com/conda-forge/conda-forge-pinning-feedstock/blob/3c7d60f56a8cb7d1b8f5a8da0b02ae1f1f0982d7/recipe/conda_build_config.yaml
     # Addendum: Changed number of single-value keys from 327 to 33 to reduce benchmark duration.
-    def create_variant():
+    def create_variants():
         # ("pkg_1, ("1.1", "1.2", ...)), ("pkg_2", ("2.1", "2.2", ...)), ...
         packages = ((f"pkg_{i}", (f"{i}.{j}" for j in count(1))) for i in count(1))
         variant = {}
@@ -330,6 +330,6 @@ def test_pin_subpackage_benchmark(testing_config):
         return variant
 
     ms = api.render(
-        recipe, config=testing_config, channels=[], variant=create_variant()
+        recipe, config=testing_config, channels=[], variants=create_variants()
     )
     assert len(ms) == 11 - 3  # omits libarrow-all, pyarrow, pyarrow-tests
