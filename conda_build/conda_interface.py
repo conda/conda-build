@@ -10,7 +10,7 @@ from importlib import import_module as _import_module
 from conda import __version__
 from conda.base.context import context as _context
 from conda.base.context import determine_target_prefix as _determine_target_prefix
-from conda.base.context import non_x86_machines as non_x86_linux_machines  # noqa: F401
+from conda.base.context import non_x86_machines as _non_x86_linux_machines
 from conda.base.context import reset_context as _reset_context
 from conda.core.package_cache import ProgressiveFetchExtract  # noqa: F401
 from conda.exceptions import (  # noqa: F401
@@ -101,6 +101,13 @@ deprecated.constant(
     "determine_target_prefix",
     _determine_target_prefix,
     addendum="Use `conda.base.context.determine_target_prefix` instead.",
+)
+deprecated.constant(
+    "24.5",
+    "24.7",
+    "non_x86_linux_machines",
+    _non_x86_linux_machines,
+    addendum="Use `conda.base.context.non_x86_machines` instead.",
 )
 
 deprecated.constant("24.1.0", "24.5.0", "get_index", _get_index)
