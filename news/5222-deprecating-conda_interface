@@ -27,6 +27,7 @@
 * Deprecate `conda_build.conda_interface.os` module. Use `os` instead. (#????)
 * Deprecate `conda_build.conda_interface.partial` function. Use `functools.partial` instead. (#????)
 * Deprecate `conda_build.conda_interface.import_module` function. Use `importlib.import_module` instead. (#????)
+* Deprecate `conda_build.conda_interface.determine_target_prefix` function. Use `conda.base.context.determine_target_prefix` instead. (#????)
 
 ### Docs
 

@@ -9,7 +9,7 @@ from importlib import import_module as _import_module
 
 from conda import __version__
 from conda.base.context import context as _context
-from conda.base.context import determine_target_prefix
+from conda.base.context import determine_target_prefix as _determine_target_prefix
 from conda.base.context import non_x86_machines as non_x86_linux_machines  # noqa: F401
 from conda.base.context import reset_context as _reset_context
 from conda.core.package_cache import ProgressiveFetchExtract  # noqa: F401
@@ -95,6 +95,13 @@ deprecated.constant(
     _context,
     addendum="Use `conda.base.context.context` instead.",
 )
+deprecated.constant(
+    "24.5",
+    "24.7",
+    "determine_target_prefix",
+    _determine_target_prefix,
+    addendum="Use `conda.base.context.determine_target_prefix` instead.",
+)
 
 deprecated.constant("24.1.0", "24.5.0", "get_index", _get_index)
 deprecated.constant(
@@ -179,7 +186,7 @@ deprecated.constant(
     "24.5",
     "24.7",
     "get_prefix",
-    _partial(determine_target_prefix, _context),
+    _partial(_determine_target_prefix, _context),
     addendum="Use `conda.base.context.context.target_prefix` instead.",
 )
 cc_conda_build = _context.conda_build if hasattr(_context, "conda_build") else {}
