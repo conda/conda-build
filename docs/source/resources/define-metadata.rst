@@ -123,8 +123,8 @@ They will be attempted in order, should one fail.
 
    source:
      url:
-      - https://archive.linux.duke.edu/cran/src/contrib/ggblanket_6.0.0.tar.gz
-      - https://archive.linux.duke.edu/cran/src/contrib/Archive/ggblanket/ggblanket_6.0.0.tar.gz
+       - https://archive.linux.duke.edu/cran/src/contrib/ggblanket_6.0.0.tar.gz
+       - https://archive.linux.duke.edu/cran/src/contrib/Archive/ggblanket/ggblanket_6.0.0.tar.gz
      sha256: cd2181fe3d3365eaf36ff8bbbc90ea9d76c56d40e63386b4eefa0e3120ec6665
 
 
