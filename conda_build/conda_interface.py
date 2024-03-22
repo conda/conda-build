@@ -61,7 +61,7 @@ from conda.exports import (  # noqa: F401
     win_path_to_unix,
 )
 from conda.exports import get_index as _get_index
-from conda.gateways.disk.read import compute_sum
+from conda.gateways.disk.read import compute_sum as _compute_sum
 from conda.models.channel import get_conda_build_local_url  # noqa: F401
 
 from .deprecations import deprecated
@@ -166,7 +166,13 @@ deprecated.constant(
     addendum="Use `conda.exceptions.UnsatisfiableError` instead.",
 )
 
-deprecated.constant("24.1.0", "24.5.0", "get_index", _get_index)
+deprecated.constant(
+    "24.1.0",
+    "24.5.0",
+    "get_index",
+    _get_index,
+    addendum="Use `conda.core.index.get_index` instead.",
+)
 deprecated.constant(
     "24.5",
     "24.7",
@@ -280,7 +286,7 @@ deprecated.constant(
     "24.3",
     "24.5",
     "hashsum_file",
-    compute_sum,
+    _compute_sum,
     addendum="Use `conda.gateways.disk.read.compute_sum` instead.",
 )
 
@@ -291,7 +297,7 @@ deprecated.constant(
     addendum="Use `conda.gateways.disk.read.compute_sum(path, 'md5')` instead.",
 )
 def md5_file(path: str | _os.PathLike) -> str:
-    return compute_sum(path, "md5")
+    return _compute_sum(path, "md5")
 
 
 deprecated.constant(
