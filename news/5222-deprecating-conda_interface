@@ -22,6 +22,7 @@
 * Deprecate `conda_build.conda_interface.get_prefix` function. Use `conda.base.context.context.target_prefix` instead. (#5222)
 * Deprecate `conda_build.conda_interface.get_conda_channel` function. Use `conda.models.channel.Channel.from_value` instead. (#5222)
 * Deprecate `conda_build.conda_interface.reset_context` function. Use `conda.base.context.reset_context` instead. (#5222)
+* Deprecate `conda_build.conda_interface.context` singleton. Use `conda.base.context.context` instead. (#????)
 
 ### Docs
 

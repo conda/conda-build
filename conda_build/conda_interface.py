@@ -8,7 +8,8 @@ from functools import partial
 from importlib import import_module  # noqa: F401
 
 from conda import __version__
-from conda.base.context import context, determine_target_prefix
+from conda.base.context import context as _context
+from conda.base.context import determine_target_prefix
 from conda.base.context import non_x86_machines as non_x86_linux_machines  # noqa: F401
 from conda.base.context import reset_context as _reset_context
 from conda.core.package_cache import ProgressiveFetchExtract  # noqa: F401
@@ -65,6 +66,14 @@ from conda.models.channel import get_conda_build_local_url  # noqa: F401
 
 from .deprecations import deprecated
 
+deprecated.constant(
+    "24.5",
+    "24.7",
+    "context",
+    _context,
+    addendum="Use `conda.base.context.context` instead.",
+)
+
 deprecated.constant("24.1.0", "24.5.0", "get_index", _get_index)
 deprecated.constant(
     "24.5",
@@ -77,63 +86,63 @@ deprecated.constant(
     "24.5",
     "24.7",
     "binstar_upload",
-    context.binstar_upload,
+    _context.binstar_upload,
     addendum="Use `conda.base.context.context.binstar_upload` instead.",
 )
 deprecated.constant(
     "24.5",
     "24.7",
     "default_python",
-    context.default_python,
+    _context.default_python,
     addendum="Use `conda.base.context.context.default_python` instead.",
 )
 deprecated.constant(
     "24.5",
     "24.7",
     "envs_dirs",
-    context.envs_dirs,
+    _context.envs_dirs,
     addendum="Use `conda.base.context.context.envs_dirs` instead.",
 )
 deprecated.constant(
     "24.5",
     "24.7",
     "pkgs_dirs",
-    list(context.pkgs_dirs),
+    list(_context.pkgs_dirs),
     addendum="Use `conda.base.context.context.pkgs_dirs` instead.",
 )
 deprecated.constant(
     "24.5",
     "24.7",
     "cc_platform",
-    context.platform,
+    _context.platform,
     addendum="Use `conda.base.context.context.platform` instead.",
 )
 deprecated.constant(
     "24.5",
     "24.7",
     "root_dir",
-    context.root_dir,
+    _context.root_dir,
     addendum="Use `conda.base.context.context.root_dir` instead.",
 )
 deprecated.constant(
     "24.5",
     "24.7",
     "root_writable",
-    context.root_writable,
+    _context.root_writable,
     addendum="Use `conda.base.context.context.root_writable` instead.",
 )
 deprecated.constant(
     "24.5",
     "24.7",
     "subdir",
-    context.subdir,
+    _context.subdir,
     addendum="Use `conda.base.context.context.subdir` instead.",
 )
 deprecated.constant(
     "24.5",
     "24.7",
     "create_default_packages",
-    context.create_default_packages,
+    _context.create_default_packages,
     addendum="Use `conda.base.context.context.create_default_packages` instead.",
 )
 
@@ -141,17 +150,17 @@ deprecated.constant(
     "24.5",
     "24.7",
     "get_rc_urls",
-    lambda: list(context.channels),
+    lambda: list(_context.channels),
     addendum="Use `conda.base.context.context.channels` instead.",
 )
 deprecated.constant(
     "24.5",
     "24.7",
     "get_prefix",
-    partial(determine_target_prefix, context),
+    partial(determine_target_prefix, _context),
     addendum="Use `conda.base.context.context.target_prefix` instead.",
 )
-cc_conda_build = context.conda_build if hasattr(context, "conda_build") else {}
+cc_conda_build = _context.conda_build if hasattr(_context, "conda_build") else {}
 
 deprecated.constant(
     "24.5",
