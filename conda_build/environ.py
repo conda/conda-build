@@ -28,7 +28,7 @@ from conda.base.context import context, reset_context
 from conda.common.io import env_vars
 from conda.core.index import LAST_CHANNEL_URLS
 from conda.core.link import PrefixSetup, UnlinkLinkTransaction
-from conda.core.package_cache_data import PackageCacheData
+from conda.core.package_cache_data import PackageCacheData, ProgressiveFetchExtract
 from conda.core.prefix_data import PrefixData
 from conda.exceptions import (
     CondaError,
@@ -42,12 +42,7 @@ from conda.models.channel import prioritize_channels
 from conda.models.match_spec import MatchSpec
 
 from . import utils
-from .conda_interface import (
-    Channel,
-    PackageRecord,
-    ProgressiveFetchExtract,
-    TemporaryDirectory,
-)
+from .conda_interface import Channel, PackageRecord, TemporaryDirectory
 from .deprecations import deprecated
 from .exceptions import BuildLockError, DependencyNeedsBuildingError
 from .features import feature_list

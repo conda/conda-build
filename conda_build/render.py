@@ -26,11 +26,11 @@ from pathlib import Path
 
 import yaml
 from conda.base.context import context
+from conda.core.package_cache_data import ProgressiveFetchExtract
 
 from . import environ, exceptions, source, utils
 from .conda_interface import (
     PackageRecord,
-    ProgressiveFetchExtract,
     TemporaryDirectory,
     UnsatisfiableError,
     specs_from_url,

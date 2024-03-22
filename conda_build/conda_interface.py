@@ -12,7 +12,9 @@ from conda.base.context import context as _context
 from conda.base.context import determine_target_prefix as _determine_target_prefix
 from conda.base.context import non_x86_machines as _non_x86_linux_machines
 from conda.base.context import reset_context as _reset_context
-from conda.core.package_cache import ProgressiveFetchExtract  # noqa: F401
+from conda.core.package_cache_data import (
+    ProgressiveFetchExtract as _ProgressiveFetchExtract,
+)
 from conda.exceptions import (  # noqa: F401
     CondaError,
     CondaHTTPError,
@@ -108,6 +110,13 @@ deprecated.constant(
     "non_x86_linux_machines",
     _non_x86_linux_machines,
     addendum="Use `conda.base.context.non_x86_machines` instead.",
+)
+deprecated.constant(
+    "24.5",
+    "24.7",
+    "ProgressiveFetchExtract",
+    _ProgressiveFetchExtract,
+    addendum="Use `conda.core.package_cache_data.ProgressiveFetchExtract` instead.",
 )
 
 deprecated.constant("24.1.0", "24.5.0", "get_index", _get_index)
