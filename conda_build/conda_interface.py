@@ -17,8 +17,8 @@ from conda.core.package_cache_data import (
 )
 from conda.exceptions import CondaError as _CondaError
 from conda.exceptions import CondaHTTPError as _CondaHTTPError
+from conda.exceptions import LinkError as _LinkError
 from conda.exceptions import (  # noqa: F401
-    LinkError,
     LockError,
     NoPackagesFoundError,
     PaddingError,
@@ -131,6 +131,13 @@ deprecated.constant(
     "CondaHTTPError",
     _CondaHTTPError,
     addendum="Use `conda.exceptions.CondaHTTPError` instead.",
+)
+deprecated.constant(
+    "24.5",
+    "24.7",
+    "LinkError",
+    _LinkError,
+    addendum="Use `conda.exceptions.LinkError` instead.",
 )
 
 deprecated.constant("24.1.0", "24.5.0", "get_index", _get_index)
