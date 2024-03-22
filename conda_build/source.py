@@ -15,14 +15,10 @@ from subprocess import CalledProcessError
 from typing import TYPE_CHECKING
 from urllib.parse import urljoin
 
+from conda.exceptions import CondaHTTPError
 from conda.gateways.disk.read import compute_sum
 
-from .conda_interface import (
-    CondaHTTPError,
-    TemporaryDirectory,
-    download,
-    url_path,
-)
+from .conda_interface import TemporaryDirectory, download, url_path
 from .exceptions import MissingDependency
 from .os_utils import external
 from .utils import (

@@ -16,8 +16,8 @@ from conda.core.package_cache_data import (
     ProgressiveFetchExtract as _ProgressiveFetchExtract,
 )
 from conda.exceptions import CondaError as _CondaError
+from conda.exceptions import CondaHTTPError as _CondaHTTPError
 from conda.exceptions import (  # noqa: F401
-    CondaHTTPError,
     LinkError,
     LockError,
     NoPackagesFoundError,
@@ -124,6 +124,13 @@ deprecated.constant(
     "CondaError",
     _CondaError,
     addendum="Use `conda.exceptions.CondaError` instead.",
+)
+deprecated.constant(
+    "24.5",
+    "24.7",
+    "CondaHTTPError",
+    _CondaHTTPError,
+    addendum="Use `conda.exceptions.CondaHTTPError` instead.",
 )
 
 deprecated.constant("24.1.0", "24.5.0", "get_index", _get_index)

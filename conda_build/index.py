@@ -10,10 +10,11 @@ from os.path import dirname
 
 from conda.base.context import context
 from conda.core.index import get_index
+from conda.excetions import CondaHTTPError
 from conda_index.index import update_index as _update_index
 
 from . import utils
-from .conda_interface import CondaHTTPError, url_path
+from .conda_interface import url_path
 from .deprecations import deprecated
 from .utils import (
     CONDA_PACKAGE_EXTENSION_V1,
