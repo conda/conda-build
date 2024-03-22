@@ -21,9 +21,7 @@ from conda.exceptions import LinkError as _LinkError
 from conda.exceptions import LockError as _LockError
 from conda.exceptions import NoPackagesFoundError as _NoPackagesFoundError
 from conda.exceptions import PaddingError as _PaddingError
-from conda.exceptions import (  # noqa: F401
-    UnsatisfiableError,
-)
+from conda.exceptions import UnsatisfiableError as _UnsatisfiableError
 from conda.exports import (  # noqa: F401
     ArgumentParser,
     Channel,
@@ -159,6 +157,13 @@ deprecated.constant(
     "PaddingError",
     _PaddingError,
     addendum="Use `conda.exceptions.PaddingError` instead.",
+)
+deprecated.constant(
+    "24.5",
+    "24.7",
+    "UnsatisfiableError",
+    _UnsatisfiableError,
+    addendum="Use `conda.exceptions.UnsatisfiableError` instead.",
 )
 
 deprecated.constant("24.1.0", "24.5.0", "get_index", _get_index)
