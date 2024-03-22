@@ -35,6 +35,7 @@
 * Deprecate `conda_build.conda_interface.LinkError` class. Use `conda.exceptions.LinkError` instead. (#????)
 * Deprecate `conda_build.conda_interface.LockError` class. Use `conda.exceptions.LockError` instead. (#????)
 * Deprecate `conda_build.conda_interface.NoPackagesFoundError` class. Use `conda.exceptions.NoPackagesFoundError` instead. (#????)
+* Deprecate `conda_build.conda_interface.PaddingError` class. Use `conda.exceptions.PaddingError` instead. (#????)
 
 ### Docs
 
