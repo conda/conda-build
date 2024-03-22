@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from __future__ import annotations
 
-import configparser  # noqa: F401
+import configparser as _configparser
 import os
 from functools import partial
 from importlib import import_module  # noqa: F401
@@ -66,6 +66,13 @@ from conda.models.channel import get_conda_build_local_url  # noqa: F401
 
 from .deprecations import deprecated
 
+deprecated.constant(
+    "24.5",
+    "24.7",
+    "configparser",
+    _configparser,
+    addendum="Use `configparser` instead.",
+)
 deprecated.constant(
     "24.5",
     "24.7",
