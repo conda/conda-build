@@ -165,7 +165,7 @@ def get_output_file_paths(
         and isinstance(recipe[0], MetaData)
         for recipe in recipe_path_or_metadata
     ):
-        pass
+        metadata = recipe_path_or_metadata
 
     else:
         raise ValueError(
