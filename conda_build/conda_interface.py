@@ -5,7 +5,7 @@ from __future__ import annotations
 import configparser as _configparser
 import os as _os
 from functools import partial as _partial
-from importlib import import_module  # noqa: F401
+from importlib import import_module as _import_module
 
 from conda import __version__
 from conda.base.context import context as _context
@@ -80,6 +80,13 @@ deprecated.constant(
     "partial",
     _partial,
     addendum="Use `functools.partial` instead.",
+)
+deprecated.constant(
+    "24.5",
+    "24.7",
+    "import_module",
+    _import_module,
+    addendum="Use `importlib.import_module` instead.",
 )
 deprecated.constant(
     "24.5",
