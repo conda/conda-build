@@ -62,7 +62,7 @@ from conda.exports import (  # noqa: F401
 )
 from conda.exports import get_index as _get_index
 from conda.gateways.disk.read import compute_sum as _compute_sum
-from conda.models.channel import get_conda_build_local_url  # noqa: F401
+from conda.models.channel import get_conda_build_local_url as _get_conda_build_local_url
 
 from .deprecations import deprecated
 
@@ -165,7 +165,13 @@ deprecated.constant(
     _UnsatisfiableError,
     addendum="Use `conda.exceptions.UnsatisfiableError` instead.",
 )
-
+deprecated.constant(
+    "24.5",
+    "24.7",
+    "get_conda_build_local_url",
+    _get_conda_build_local_url,
+    addendum="Use `conda.models.channel.get_conda_build_local_url` instead.",
+)
 deprecated.constant(
     "24.1.0",
     "24.5.0",

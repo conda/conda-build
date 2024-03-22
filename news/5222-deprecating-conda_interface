@@ -37,6 +37,7 @@
 * Deprecate `conda_build.conda_interface.NoPackagesFoundError` class. Use `conda.exceptions.NoPackagesFoundError` instead. (#????)
 * Deprecate `conda_build.conda_interface.PaddingError` class. Use `conda.exceptions.PaddingError` instead. (#????)
 * Deprecate `conda_build.conda_interface.UnsatisfiableError` class. Use `conda.exceptions.UnsatisfiableError` instead. (#????)
+* Deprecate `conda_build.conda_interface.get_conda_build_local_url` class. Use `conda.models.channel.get_conda_build_local_url` instead. (#????)
 
 ### Docs
 
