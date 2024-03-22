@@ -31,6 +31,10 @@
 * Deprecate `conda_build.conda_interface.non_x86_linux_machines` constant. Use `conda.base.context.non_x86_machines` instead. (#????)
 * Deprecate `conda_build.conda_interface.ProgressiveFetchExtract` class. Use `conda.core.package_cache.ProgressiveFetchExtract` instead. (#????)
 * Deprecate `conda_build.conda_interface.CondaError` class. Use `conda.exceptions.CondaError` instead. (#????)
+* Deprecate `conda_build.conda_interface.CondaHTTPError` class. Use `conda.exceptions.CondaHTTPError` instead. (#????)
+* Deprecate `conda_build.conda_interface.LinkError` class. Use `conda.exceptions.LinkError` instead. (#????)
+* Deprecate `conda_build.conda_interface.LockError` class. Use `conda.exceptions.LockError` instead. (#????)
+* Deprecate `conda_build.conda_interface.NoPackagesFoundError` class. Use `conda.exceptions.NoPackagesFoundError` instead. (#????)
 
 ### Docs
 
