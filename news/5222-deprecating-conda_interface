@@ -22,22 +22,6 @@
 * Deprecate `conda_build.conda_interface.get_prefix` function. Use `conda.base.context.context.target_prefix` instead. (#5222)
 * Deprecate `conda_build.conda_interface.get_conda_channel` function. Use `conda.models.channel.Channel.from_value` instead. (#5222)
 * Deprecate `conda_build.conda_interface.reset_context` function. Use `conda.base.context.reset_context` instead. (#5222)
-* Deprecate `conda_build.conda_interface.context` singleton. Use `conda.base.context.context` instead. (#????)
-* Deprecate `conda_build.conda_interface.configparser` module. Use `configparser` instead. (#????)
-* Deprecate `conda_build.conda_interface.os` module. Use `os` instead. (#????)
-* Deprecate `conda_build.conda_interface.partial` function. Use `functools.partial` instead. (#????)
-* Deprecate `conda_build.conda_interface.import_module` function. Use `importlib.import_module` instead. (#????)
-* Deprecate `conda_build.conda_interface.determine_target_prefix` function. Use `conda.base.context.determine_target_prefix` instead. (#????)
-* Deprecate `conda_build.conda_interface.non_x86_linux_machines` constant. Use `conda.base.context.non_x86_machines` instead. (#????)
-* Deprecate `conda_build.conda_interface.ProgressiveFetchExtract` class. Use `conda.core.package_cache.ProgressiveFetchExtract` instead. (#????)
-* Deprecate `conda_build.conda_interface.CondaError` class. Use `conda.exceptions.CondaError` instead. (#????)
-* Deprecate `conda_build.conda_interface.CondaHTTPError` class. Use `conda.exceptions.CondaHTTPError` instead. (#????)
-* Deprecate `conda_build.conda_interface.LinkError` class. Use `conda.exceptions.LinkError` instead. (#????)
-* Deprecate `conda_build.conda_interface.LockError` class. Use `conda.exceptions.LockError` instead. (#????)
-* Deprecate `conda_build.conda_interface.NoPackagesFoundError` class. Use `conda.exceptions.NoPackagesFoundError` instead. (#????)
-* Deprecate `conda_build.conda_interface.PaddingError` class. Use `conda.exceptions.PaddingError` instead. (#????)
-* Deprecate `conda_build.conda_interface.UnsatisfiableError` class. Use `conda.exceptions.UnsatisfiableError` instead. (#????)
-* Deprecate `conda_build.conda_interface.get_conda_build_local_url` class. Use `conda.models.channel.get_conda_build_local_url` instead. (#????)
 
 ### Docs
 
