@@ -158,5 +158,5 @@ filterwarnings = [
   "error::PendingDeprecationWarning:conda_build",
   "error::DeprecationWarning:conda_build",
   # ignore numpy.distutils error
-  "ignore:\\s+`numpy.distutils` is deprecated:DeprecationWarning:conda_build._load_setup_py_data",
+  'ignore:\s+`numpy.distutils` is deprecated:DeprecationWarning:conda_build._load_setup_py_data',
 ]
