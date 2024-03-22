@@ -24,6 +24,7 @@
 * Deprecate `conda_build.conda_interface.reset_context` function. Use `conda.base.context.reset_context` instead. (#5222)
 * Deprecate `conda_build.conda_interface.context` singleton. Use `conda.base.context.context` instead. (#????)
 * Deprecate `conda_build.conda_interface.configparser` module. Use `configparser` instead. (#????)
+* Deprecate `conda_build.conda_interface.os` module. Use `os` instead. (#????)
 
 ### Docs
 

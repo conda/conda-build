@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import configparser as _configparser
-import os
+import os as _os
 from functools import partial
 from importlib import import_module  # noqa: F401
 
@@ -73,6 +73,7 @@ deprecated.constant(
     _configparser,
     addendum="Use `configparser` instead.",
 )
+deprecated.constant("24.5", "24.7", "os", _os, addendum="Use `os` instead.")
 deprecated.constant(
     "24.5",
     "24.7",
@@ -179,7 +180,7 @@ deprecated.constant(
 
 # When deactivating envs (e.g. switching from root to build/test) this env var is used,
 # except the PR that removed this has been reverted (for now) and Windows doesn't need it.
-env_path_backup_var_exists = os.environ.get("CONDA_PATH_BACKUP", None)
+env_path_backup_var_exists = _os.getenv("CONDA_PATH_BACKUP")
 
 
 @deprecated(
@@ -205,7 +206,7 @@ deprecated.constant(
     "24.5",
     addendum="Use `conda.gateways.disk.read.compute_sum(path, 'md5')` instead.",
 )
-def md5_file(path: str | os.PathLike) -> str:
+def md5_file(path: str | _os.PathLike) -> str:
     return compute_sum(path, "md5")
 
 
