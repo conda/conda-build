@@ -1560,6 +1560,7 @@ information displays in the Anaconda.org channel.
     license: BSD 3-Clause
     license_file: LICENSE
     license_family: BSD
+    license_url: https://github.com/bacchusrx/bsdiff4/blob/master/LICENSE
     summary: binary diff and patch using the BSDIFF4 format
     description: |
       This module provides an interface to the BSDIFF4 format, command line interfaces
