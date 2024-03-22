@@ -25,6 +25,7 @@
 * Deprecate `conda_build.conda_interface.context` singleton. Use `conda.base.context.context` instead. (#????)
 * Deprecate `conda_build.conda_interface.configparser` module. Use `configparser` instead. (#????)
 * Deprecate `conda_build.conda_interface.os` module. Use `os` instead. (#????)
+* Deprecate `conda_build.conda_interface.partial` function. Use `functools.partial` instead. (#????)
 
 ### Docs
 

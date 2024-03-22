@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import configparser as _configparser
 import os as _os
-from functools import partial
+from functools import partial as _partial
 from importlib import import_module  # noqa: F401
 
 from conda import __version__
@@ -74,6 +74,13 @@ deprecated.constant(
     addendum="Use `configparser` instead.",
 )
 deprecated.constant("24.5", "24.7", "os", _os, addendum="Use `os` instead.")
+deprecated.constant(
+    "24.5",
+    "24.7",
+    "partial",
+    _partial,
+    addendum="Use `functools.partial` instead.",
+)
 deprecated.constant(
     "24.5",
     "24.7",
@@ -165,7 +172,7 @@ deprecated.constant(
     "24.5",
     "24.7",
     "get_prefix",
-    partial(determine_target_prefix, _context),
+    _partial(determine_target_prefix, _context),
     addendum="Use `conda.base.context.context.target_prefix` instead.",
 )
 cc_conda_build = _context.conda_build if hasattr(_context, "conda_build") else {}
