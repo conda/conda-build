@@ -3,6 +3,7 @@
 """
 Module that does most of the heavy lifting for the ``conda build`` command.
 """
+
 import fnmatch
 import json
 import os
@@ -22,6 +23,9 @@ import conda_package_handling.api
 import yaml
 from bs4 import UnicodeDammit
 from conda import __version__ as conda_version
+from conda.base.context import context, reset_context
+from conda.core.prefix_data import PrefixData
+from conda.models.channel import Channel
 
 from . import __version__ as conda_build_version
 from . import environ, noarch_python, source, tarcheck, utils
@@ -34,14 +38,8 @@ from .conda_interface import (
     PathType,
     TemporaryDirectory,
     UnsatisfiableError,
-    context,
     env_path_backup_var_exists,
-    get_conda_channel,
-    get_rc_urls,
-    pkgs_dirs,
     prefix_placeholder,
-    reset_context,
-    root_dir,
     url_path,
 )
 from .config import Config
@@ -1333,7 +1331,7 @@ def record_prefix_files(m, files_with_prefix):
 
 
 def sanitize_channel(channel):
-    return get_conda_channel(channel).urls(with_credentials=False, subdirs=[""])[0]
+    return Channel.from_value(channel).urls(with_credentials=False, subdirs=[""])[0]
 
 
 def write_info_files_file(m, files):
@@ -1405,7 +1403,7 @@ def write_about_json(m):
         # conda env will be in most, but not necessarily all installations.
         #    Don't die if we don't see it.
         stripped_channels = []
-        for channel in get_rc_urls() + list(m.config.channel_urls):
+        for channel in (*context.channels, *m.config.channel_urls):
             stripped_channels.append(sanitize_channel(channel))
         d["channels"] = stripped_channels
         evars = ["CIO_TEST"]
@@ -1421,8 +1419,10 @@ def write_about_json(m):
                 m.config.extra_meta,
             )
             extra.update(m.config.extra_meta)
-        env = environ.Environment(root_dir)
-        d["root_pkgs"] = env.package_specs()
+        d["root_pkgs"] = [
+            f"{prec.name} {prec.version} {prec.build}"
+            for prec in PrefixData(context.root_dir).iter_records()
+        ]
         # Include the extra section of the metadata in the about.json
         d["extra"] = extra
         json.dump(d, fo, indent=2, sort_keys=True)
@@ -3385,7 +3385,7 @@ def test(
         and recipedir_or_package_or_metadata.endswith(CONDA_PACKAGE_EXTENSIONS)
         and any(
             os.path.dirname(recipedir_or_package_or_metadata) in pkgs_dir
-            for pkgs_dir in pkgs_dirs
+            for pkgs_dir in context.pkgs_dirs
         )
     )
     if not in_pkg_cache:
@@ -4157,8 +4157,10 @@ def is_package_built(metadata, env, include_local=True):
         _delegated_update_index(d, verbose=metadata.config.debug, warn=False, threads=1)
     subdir = getattr(metadata.config, f"{env}_subdir")
 
-    urls = [url_path(metadata.config.output_folder), "local"] if include_local else []
-    urls += get_rc_urls()
+    urls = [
+        *([url_path(metadata.config.output_folder), "local"] if include_local else []),
+        *context.channels,
+    ]
     if metadata.config.channel_urls:
         urls.extend(metadata.config.channel_urls)
 

@@ -1,5 +1,6 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+
 from .__version__ import __version__
 
 __all__ = ["__version__"]
@@ -15,3 +16,17 @@ sub_commands = [
     "render",
     "skeleton",
 ]
+
+# Skip context logic for doc generation since we don't install all dependencies in the CI doc build environment,
+# see .readthedocs.yml file
+try:
+    import os
+
+    from conda.base.context import reset_context
+
+    # Disallow softlinks. This avoids a lot of dumb issues, at the potential cost of disk space.
+    os.environ["CONDA_ALLOW_SOFTLINKS"] = "false"
+    reset_context()
+
+except ImportError:
+    pass

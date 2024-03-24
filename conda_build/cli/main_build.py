@@ -13,10 +13,11 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from conda.auxlib.ish import dals
+from conda.base.context import context
 from conda.common.io import dashlist
 
 from .. import api, build, source, utils
-from ..conda_interface import add_parser_channels, binstar_upload, cc_conda_build
+from ..conda_interface import add_parser_channels, cc_conda_build
 from ..config import (
     get_channel_urls,
     get_or_merge_config,
@@ -55,14 +56,14 @@ def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
         action="store_false",
         help="Do not ask to upload the package to anaconda.org.",
         dest="anaconda_upload",
-        default=binstar_upload,
+        default=context.binstar_upload,
     )
     parser.add_argument(
         "--no-binstar-upload",
         action="store_false",
         help=argparse.SUPPRESS,
         dest="anaconda_upload",
-        default=binstar_upload,
+        default=context.binstar_upload,
     )
     parser.add_argument(
         "--no-include-recipe",

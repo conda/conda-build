@@ -24,6 +24,7 @@ from conda.base.constants import (
     DEFAULTS_CHANNEL_NAME,
     UNKNOWN_CHANNEL,
 )
+from conda.base.context import context, reset_context
 from conda.common.io import env_vars
 from conda.core.index import LAST_CHANNEL_URLS
 from conda.core.link import PrefixSetup, UnlinkLinkTransaction
@@ -46,11 +47,6 @@ from .conda_interface import (
     PackageRecord,
     ProgressiveFetchExtract,
     TemporaryDirectory,
-    context,
-    create_default_packages,
-    pkgs_dirs,
-    reset_context,
-    root_dir,
 )
 from .deprecations import deprecated
 from .exceptions import BuildLockError, DependencyNeedsBuildingError
@@ -425,7 +421,7 @@ def conda_build_vars(prefix, config):
         "HTTP_PROXY": os.getenv("HTTP_PROXY", ""),
         "REQUESTS_CA_BUNDLE": os.getenv("REQUESTS_CA_BUNDLE", ""),
         "DIRTY": "1" if config.dirty else "",
-        "ROOT": root_dir,
+        "ROOT": context.root_dir,
     }
 
 
@@ -827,18 +823,21 @@ def os_vars(m, prefix):
     return d
 
 
+@deprecated("24.3", "24.5")
 class InvalidEnvironment(Exception):
     pass
 
 
 # Stripped-down Environment class from conda-tools ( https://github.com/groutr/conda-tools )
 # Vendored here to avoid the whole dependency for just this bit.
+@deprecated("24.3", "24.5")
 def _load_json(path):
     with open(path) as fin:
         x = json.load(fin)
     return x
 
 
+@deprecated("24.3", "24.5")
 def _load_all_json(path):
     """
     Load all json files in a directory.  Return dictionary with filenames mapped to json
@@ -852,6 +851,7 @@ def _load_all_json(path):
     return result
 
 
+@deprecated("24.3", "24.5", addendum="Use `conda.core.prefix_data.PrefixData` instead.")
 class Environment:
     def __init__(self, path):
         """
@@ -917,7 +917,7 @@ def get_install_actions(
     conda_log_level = logging.WARN
     specs = list(specs)
     if specs:
-        specs.extend(create_default_packages)
+        specs.extend(context.create_default_packages)
     if verbose or debug:
         capture = contextlib.nullcontext
         if debug:
@@ -989,7 +989,7 @@ def get_install_actions(
                             pkg_dir = str(exc)
                             folder = 0
                             while (
-                                os.path.dirname(pkg_dir) not in pkgs_dirs
+                                os.path.dirname(pkg_dir) not in context.pkgs_dirs
                                 and folder < 20
                             ):
                                 pkg_dir = os.path.dirname(pkg_dir)
@@ -999,7 +999,7 @@ def get_install_actions(
                                 "Removing the folder and retrying",
                                 pkg_dir,
                             )
-                            if pkg_dir in pkgs_dirs and os.path.isdir(pkg_dir):
+                            if pkg_dir in context.pkgs_dirs and os.path.isdir(pkg_dir):
                                 utils.rm_rf(pkg_dir)
                     if retries < max_env_retry:
                         log.warn(
@@ -1190,7 +1190,10 @@ def create_env(
                     with utils.try_acquire_locks(locks, timeout=config.timeout):
                         pkg_dir = str(exc)
                         folder = 0
-                        while os.path.dirname(pkg_dir) not in pkgs_dirs and folder < 20:
+                        while (
+                            os.path.dirname(pkg_dir) not in context.pkgs_dirs
+                            and folder < 20
+                        ):
                             pkg_dir = os.path.dirname(pkg_dir)
                             folder += 1
                         log.warn(
@@ -1264,9 +1267,9 @@ def get_pkg_dirs_locks(dirs, config):
 
 def clean_pkg_cache(dist: str, config: Config) -> None:
     with utils.LoggingContext(logging.DEBUG if config.debug else logging.WARN):
-        locks = get_pkg_dirs_locks([config.bldpkgs_dir] + pkgs_dirs, config)
+        locks = get_pkg_dirs_locks((config.bldpkgs_dir, *context.pkgs_dirs), config)
         with utils.try_acquire_locks(locks, timeout=config.timeout):
-            for pkgs_dir in pkgs_dirs:
+            for pkgs_dir in context.pkgs_dirs:
                 if any(
                     os.path.exists(os.path.join(pkgs_dir, f"{dist}{ext}"))
                     for ext in ("", *CONDA_PACKAGE_EXTENSIONS)
@@ -1282,7 +1285,7 @@ def clean_pkg_cache(dist: str, config: Config) -> None:
 
         # Note that this call acquires the relevant locks, so this must be called
         # outside the lock context above.
-        remove_existing_packages(pkgs_dirs, [dist], config)
+        remove_existing_packages(context.pkgs_dirs, [dist], config)
 
 
 def remove_existing_packages(dirs, fns, config):
