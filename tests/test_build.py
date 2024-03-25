@@ -5,16 +5,24 @@ This file tests the build.py module.  It sits lower in the stack than the API te
 and is more unit-test oriented.
 """
 
+from __future__ import annotations
+
 import json
 import os
 import sys
 from pathlib import Path
+from typing import TYPE_CHECKING
 
+import pytest
 from conda.common.compat import on_win
 
 from conda_build import api, build
+from conda_build.exceptions import CondaBuildUserError
 
 from .utils import get_noarch_python_meta, metadata_dir
+
+if TYPE_CHECKING:
+    from conda_build.metadata import MetaData
 
 PREFIX_TESTS = {"normal": os.path.sep}
 if on_win:
@@ -302,3 +310,14 @@ def test_rewrite_output(testing_config, capsys):
         assert "LIBDIR=$PREFIX/lib" in stdout
         assert "PWD=$SRC_DIR" in stdout
         assert "BUILD_PREFIX=$BUILD_PREFIX" in stdout
+
+
+@pytest.mark.parametrize("readme", ["README.md", "README.rst", "README"])
+def test_copy_readme(testing_metadata: MetaData, readme: str):
+    testing_metadata.meta["about"]["readme"] = readme
+    with pytest.raises(CondaBuildUserError):
+        build.copy_readme(testing_metadata)
+
+    Path(testing_metadata.config.work_dir, readme).touch()
+    build.copy_readme(testing_metadata)
+    assert Path(testing_metadata.config.info_dir, readme).exists()

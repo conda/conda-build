@@ -4,6 +4,8 @@
 Module that does most of the heavy lifting for the ``conda build`` command.
 """
 
+from __future__ import annotations
+
 import fnmatch
 import json
 import os
@@ -888,7 +890,7 @@ def copy_recipe(m):
             yaml.dump(m.config.variant, f)
 
 
-def copy_readme(m):
+def copy_readme(m: MetaData):
     readme = m.get_value("about/readme")
     if readme:
         src = join(m.config.work_dir, readme)
