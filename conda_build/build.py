@@ -42,7 +42,11 @@ from . import __version__ as conda_build_version
 from . import environ, noarch_python, source, tarcheck, utils
 from .config import Config
 from .create_test import create_all_test_files
-from .exceptions import CondaBuildException, DependencyNeedsBuildingError
+from .exceptions import (
+    CondaBuildException,
+    CondaBuildUserError,
+    DependencyNeedsBuildingError,
+)
 from .index import _delegated_update_index, get_build_index
 from .metadata import FIELDS, MetaData
 from .os_utils import external
@@ -774,7 +778,7 @@ def copy_readme(m):
     if readme:
         src = join(m.config.work_dir, readme)
         if not isfile(src):
-            sys.exit(f"Error: no readme file: {readme}")
+            raise CondaBuildUserError(f"`about/readme` file ({readme}) doesn't exist")
         dst = join(m.config.info_dir, readme)
         utils.copy_into(src, dst, m.config.timeout, locking=m.config.locking)
         if os.path.split(readme)[1] not in {"README.md", "README.rst", "README"}:
