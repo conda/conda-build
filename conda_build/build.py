@@ -46,6 +46,7 @@ from .deprecations import deprecated
 from .exceptions import (
     BuildScriptException,
     CondaBuildException,
+    CondaBuildUserError,
     DependencyNeedsBuildingError,
 )
 from .index import _delegated_update_index, get_build_index
@@ -779,7 +780,7 @@ def copy_readme(m):
     if readme:
         src = join(m.config.work_dir, readme)
         if not isfile(src):
-            sys.exit(f"Error: no readme file: {readme}")
+            raise CondaBuildUserError(f"`about/readme` file ({readme}) doesn't exist")
         dst = join(m.config.info_dir, readme)
         utils.copy_into(src, dst, m.config.timeout, locking=m.config.locking)
         if os.path.split(readme)[1] not in {"README.md", "README.rst", "README"}:
