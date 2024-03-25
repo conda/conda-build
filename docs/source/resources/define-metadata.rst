@@ -116,6 +116,18 @@ If an extracted archive contains only 1 folder at its top level, its contents
 will be moved 1 level up, so that the extracted package contents sit in the
 root of the work folder.
 
+You can also specify multiple URLs for the same source archive.
+They will be attempted in order, should one fail.
+
+.. code-block:: yaml
+
+   source:
+     url:
+       - https://archive.linux.duke.edu/cran/src/contrib/ggblanket_6.0.0.tar.gz
+       - https://archive.linux.duke.edu/cran/src/contrib/Archive/ggblanket/ggblanket_6.0.0.tar.gz
+     sha256: cd2181fe3d3365eaf36ff8bbbc90ea9d76c56d40e63386b4eefa0e3120ec6665
+
+
 Source from git
 ---------------
 
@@ -1560,6 +1572,7 @@ information displays in the Anaconda.org channel.
     license: BSD 3-Clause
     license_file: LICENSE
     license_family: BSD
+    license_url: https://github.com/bacchusrx/bsdiff4/blob/master/LICENSE
     summary: binary diff and patch using the BSDIFF4 format
     description: |
       This module provides an interface to the BSDIFF4 format, command line interfaces
