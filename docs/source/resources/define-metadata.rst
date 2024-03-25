@@ -116,6 +116,18 @@ If an extracted archive contains only 1 folder at its top level, its contents
 will be moved 1 level up, so that the extracted package contents sit in the
 root of the work folder.
 
+You can also specify multiple URLs for the same source archive.
+They will be attempted in order, should one fail.
+
+.. code-block:: yaml
+
+   source:
+     url:
+       - https://archive.linux.duke.edu/cran/src/contrib/ggblanket_6.0.0.tar.gz
+       - https://archive.linux.duke.edu/cran/src/contrib/Archive/ggblanket/ggblanket_6.0.0.tar.gz
+     sha256: cd2181fe3d3365eaf36ff8bbbc90ea9d76c56d40e63386b4eefa0e3120ec6665
+
+
 Source from git
 ---------------
 
@@ -125,7 +137,7 @@ The git_url can also be a relative path to the recipe directory.
 
    source:
      git_url: https://github.com/ilanschnell/bsdiff4.git
-     git_rev: 1.1.4
+     git_rev: 1.1.4 # (Defaults to "HEAD")
      git_depth: 1 # (Defaults to -1/not shallow)
 
 The depth argument relates to the ability to perform a shallow clone.
@@ -734,7 +746,7 @@ implicitly added by host requirements (e.g. libpng exports libpng), and with
        - libpng
 
 Here, because no specific kind of ``run_exports`` is specified, libpng's ``run_exports``
-are considered "weak." This means they will only apply when libpng is in the
+are considered "weak". This means they will only apply when libpng is in the
 host section, when they will add their export to the run section. If libpng were
 listed in the build section, the ``run_exports`` would not apply to the run section.
 
@@ -745,6 +757,9 @@ listed in the build section, the ``run_exports`` would not apply to the run sect
      run_exports:
        strong:
          - libgcc
+
+There is also ``run_exports/weak`` which is equivalent to an unspecific kind of
+``run_exports`` but useful if you want to define both strong and weak run exports.
 
 Strong ``run_exports`` are used for things like runtimes, where the same runtime
 needs to be present in the host and the run environment, and exactly which
@@ -1554,9 +1569,17 @@ information displays in the Anaconda.org channel.
 
   about:
     home: https://github.com/ilanschnell/bsdiff4
-    license: BSD
+    license: BSD 3-Clause
     license_file: LICENSE
-    summary: binary diff and patch using the BSDIFF4-format
+    license_family: BSD
+    license_url: https://github.com/bacchusrx/bsdiff4/blob/master/LICENSE
+    summary: binary diff and patch using the BSDIFF4 format
+    description: |
+      This module provides an interface to the BSDIFF4 format, command line interfaces
+      (bsdiff4, bspatch4) and tests.
+    dev_url: https://github.com/ilanschnell/bsdiff4
+    doc_url: https://bsdiff4.readthedocs.io
+    doc_source_url: https://github.com/ilanschnell/bsdiff4/blob/main/README.rst
 
 
 License file

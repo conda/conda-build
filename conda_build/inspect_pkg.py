@@ -14,15 +14,14 @@ from tempfile import TemporaryDirectory
 from typing import TYPE_CHECKING
 
 from conda.api import Solver
+from conda.base.context import context
 from conda.core.index import get_index
 from conda.core.prefix_data import PrefixData
 from conda.models.records import PrefixRecord
 
-from . import conda_interface
 from .conda_interface import (
     specs_from_args,
 )
-from .deprecations import deprecated
 from .os_utils.ldd import (
     get_linkages,
     get_package_obj_files,
@@ -96,9 +95,6 @@ class _untracked_package:
 untracked_package = _untracked_package()
 
 
-@deprecated.argument("24.1.0", "24.3.0", "platform", rename="subdir")
-@deprecated.argument("24.1.0", "24.3.0", "prepend")
-@deprecated.argument("24.1.0", "24.3.0", "minimal_hint")
 def check_install(
     packages: Iterable[str],
     subdir: str | None = None,
@@ -108,14 +104,14 @@ def check_install(
         Solver(
             prefix,
             channel_urls,
-            [subdir or conda_interface.subdir],
+            [subdir or context.subdir],
             specs_from_args(packages),
         ).solve_for_transaction(ignore_pinned=True).print_transaction_summary()
 
 
 def print_linkages(
     depmap: dict[
-        PrefixRecord | Literal["not found" | "system" | "untracked"],
+        PrefixRecord | Literal["not found", "system", "untracked"],
         list[tuple[str, str, str]],
     ],
     show_files: bool = False,
@@ -221,7 +217,7 @@ def inspect_linkages(
     untracked: bool = False,
     all_packages: bool = False,
     show_files: bool = False,
-    groupby: Literal["package" | "dependency"] = "package",
+    groupby: Literal["package", "dependency"] = "package",
     sysroot="",
 ):
     if not packages and not untracked and not all_packages:

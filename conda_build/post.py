@@ -35,13 +35,13 @@ from subprocess import CalledProcessError, call, check_output
 from typing import TYPE_CHECKING
 
 from conda.core.prefix_data import PrefixData
+from conda.gateways.disk.read import compute_sum
 from conda.models.records import PrefixRecord
 
 from . import utils
 from .conda_interface import (
     TemporaryDirectory,
     lchmod,
-    md5_file,
     walk_prefix,
 )
 from .exceptions import OverDependingError, OverLinkingError, RunPathError
@@ -393,7 +393,7 @@ def find_lib(link, prefix, files, path=None):
             # multiple places.
             md5s = set()
             for f in file_names[link]:
-                md5s.add(md5_file(join(prefix, f)))
+                md5s.add(compute_sum(join(prefix, f), "md5"))
             if len(md5s) > 1:
                 sys.exit(
                     f"Error: Found multiple instances of {link}: {file_names[link]}"
@@ -1402,9 +1402,11 @@ def check_overlinking_impl(
             if diffs:
                 log = utils.get_logger(__name__)
                 log.warning(
-                    "Partially parsed some '.tbd' files in sysroot {}, pretending .tbds are their install-names\n"
+                    "Partially parsed some '.tbd' files in sysroot %s, pretending .tbds are their install-names\n"
                     "Adding support to 'conda-build' for parsing these in 'liefldd.py' would be easy and useful:\n"
-                    "{} ...".format(sysroot, list(diffs)[1:3])
+                    "%s...",
+                    sysroot,
+                    list(diffs)[1:3],
                 )
                 sysroots_files[srs] = sysroot_files
     sysroots_files = OrderedDict(

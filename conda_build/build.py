@@ -3,6 +3,7 @@
 """
 Module that does most of the heavy lifting for the ``conda build`` command.
 """
+
 import fnmatch
 import json
 import os
@@ -22,6 +23,9 @@ import conda_package_handling.api
 import yaml
 from bs4 import UnicodeDammit
 from conda import __version__ as conda_version
+from conda.base.context import context, reset_context
+from conda.core.prefix_data import PrefixData
+from conda.models.channel import Channel
 
 from . import __version__ as conda_build_version
 from . import environ, noarch_python, source, tarcheck, utils
@@ -34,18 +38,13 @@ from .conda_interface import (
     PathType,
     TemporaryDirectory,
     UnsatisfiableError,
-    context,
     env_path_backup_var_exists,
-    get_conda_channel,
-    get_rc_urls,
-    pkgs_dirs,
     prefix_placeholder,
-    reset_context,
-    root_dir,
     url_path,
 )
 from .config import Config
 from .create_test import create_all_test_files
+from .deprecations import deprecated
 from .exceptions import CondaBuildException, DependencyNeedsBuildingError
 from .index import _delegated_update_index, get_build_index
 from .metadata import FIELDS, MetaData
@@ -184,6 +183,7 @@ def prefix_replacement_excluded(path):
     return False
 
 
+@deprecated("24.3", "24.5")
 def have_prefix_files(files, prefix):
     """
     Yields files that contain the current prefix in them, and modifies them
@@ -1231,31 +1231,6 @@ def get_files_with_prefix(m, replacements, files_in, prefix):
             end - start,
         )
     )
-    """
-    # Keeping this around just for a while.
-    files_with_prefix2 = sorted(have_prefix_files(files_in, prefix))
-    end = time.time()
-    print("INFO :: Time taken to do replacements (prefix only) was: {}".format(end - start))
-
-    ignore_files = m.ignore_prefix_files()
-    ignore_types = set()
-    if not hasattr(ignore_files, "__iter__"):
-        if ignore_files is True:
-            ignore_types.update((FileMode.text.name, FileMode.binary.name))
-        ignore_files = []
-    if (not m.get_value('build/detect_binary_files_with_prefix', True) and
-        not m.get_value('build/binary_has_prefix_files', None)):
-        ignore_types.update((FileMode.binary.name,))
-    # files_with_prefix is a list of tuples containing (prefix_placeholder, file_type, file_path)
-    ignore_files.extend(
-        f[2] for f in files_with_prefix2 if f[1] in ignore_types and f[2] not in ignore_files)
-    files_with_prefix2 = [f for f in files_with_prefix2 if f[2] not in ignore_files]
-    end2 = time.time()
-    print("INFO :: Time taken to do replacements (prefix only) was: {}".format(end2 - start2))
-    files1 = set([f for _, _, f in files_with_prefix])
-    files2 = set([f for _, _, f in files_with_prefix2])
-    assert not (files2 - files1), "New ripgrep prefix search missed the following files:\n{}\n".format(files2 - files1)
-    """
     return sorted(files_with_prefix)
 
 
@@ -1356,7 +1331,7 @@ def record_prefix_files(m, files_with_prefix):
 
 
 def sanitize_channel(channel):
-    return get_conda_channel(channel).urls(with_credentials=False, subdirs=[""])[0]
+    return Channel.from_value(channel).urls(with_credentials=False, subdirs=[""])[0]
 
 
 def write_info_files_file(m, files):
@@ -1428,7 +1403,7 @@ def write_about_json(m):
         # conda env will be in most, but not necessarily all installations.
         #    Don't die if we don't see it.
         stripped_channels = []
-        for channel in get_rc_urls() + list(m.config.channel_urls):
+        for channel in (*context.channels, *m.config.channel_urls):
             stripped_channels.append(sanitize_channel(channel))
         d["channels"] = stripped_channels
         evars = ["CIO_TEST"]
@@ -1444,8 +1419,10 @@ def write_about_json(m):
                 m.config.extra_meta,
             )
             extra.update(m.config.extra_meta)
-        env = environ.Environment(root_dir)
-        d["root_pkgs"] = env.package_specs()
+        d["root_pkgs"] = [
+            f"{prec.name} {prec.version} {prec.build}"
+            for prec in PrefixData(context.root_dir).iter_records()
+        ]
         # Include the extra section of the metadata in the about.json
         d["extra"] = extra
         json.dump(d, fo, indent=2, sort_keys=True)
@@ -3408,7 +3385,7 @@ def test(
         and recipedir_or_package_or_metadata.endswith(CONDA_PACKAGE_EXTENSIONS)
         and any(
             os.path.dirname(recipedir_or_package_or_metadata) in pkgs_dir
-            for pkgs_dir in pkgs_dirs
+            for pkgs_dir in context.pkgs_dirs
         )
     )
     if not in_pkg_cache:
@@ -3524,7 +3501,7 @@ def test(
         AssertionError,
     ) as exc:
         log.warn(
-            "failed to get install actions, retrying.  exception was: %s", str(exc)
+            "failed to get package records, retrying.  exception was: %s", str(exc)
         )
         tests_failed(
             metadata,
@@ -4180,8 +4157,10 @@ def is_package_built(metadata, env, include_local=True):
         _delegated_update_index(d, verbose=metadata.config.debug, warn=False, threads=1)
     subdir = getattr(metadata.config, f"{env}_subdir")
 
-    urls = [url_path(metadata.config.output_folder), "local"] if include_local else []
-    urls += get_rc_urls()
+    urls = [
+        *([url_path(metadata.config.output_folder), "local"] if include_local else []),
+        *context.channels,
+    ]
     if metadata.config.channel_urls:
         urls.extend(metadata.config.channel_urls)
 

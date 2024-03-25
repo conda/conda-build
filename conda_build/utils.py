@@ -41,7 +41,7 @@ from os.path import (
 )
 from pathlib import Path
 from threading import Thread
-from typing import TYPE_CHECKING, Iterable
+from typing import TYPE_CHECKING, Iterable, overload
 
 import conda_package_handling.api
 import filelock
@@ -53,40 +53,38 @@ from conda.base.constants import (
     CONDA_PACKAGE_EXTENSIONS,
     KNOWN_SUBDIRS,
 )
-from conda.core.prefix_data import PrefixData
-from conda.models.dist import Dist
+from conda.base.context import context
+from conda.gateways.disk.read import compute_sum
+from conda.models.channel import Channel
+from conda.models.match_spec import MatchSpec
 
 from .conda_interface import (
     CondaHTTPError,
-    MatchSpec,
     PackageRecord,
     StringIO,
     TemporaryDirectory,
     VersionOrder,
     cc_conda_build,
-    context,
     download,
-    get_conda_channel,
-    hashsum_file,
-    md5_file,
-    pkgs_dirs,
-    root_dir,
     unix_path_to_win,
     win_path_to_unix,
 )
 from .conda_interface import rm_rf as _rm_rf
-from .deprecations import deprecated
 from .exceptions import BuildLockError
 
 if TYPE_CHECKING:
-    from conda.models.records import PrefixRecord
+    from typing import Mapping, TypeVar
+
+    T = TypeVar("T")
+    K = TypeVar("K")
+    V = TypeVar("V")
 
 on_win = sys.platform == "win32"
 on_mac = sys.platform == "darwin"
 on_linux = sys.platform == "linux"
 
 codec = getpreferredencoding() or "utf-8"
-root_script_dir = os.path.join(root_dir, "Scripts" if on_win else "bin")
+root_script_dir = os.path.join(context.root_dir, "Scripts" if on_win else "bin")
 mmap_MAP_PRIVATE = 0 if on_win else mmap.MAP_PRIVATE
 mmap_PROT_READ = 0 if on_win else mmap.PROT_READ
 mmap_PROT_WRITE = 0 if on_win else mmap.PROT_WRITE
@@ -710,7 +708,7 @@ def merge_tree(
 #    at any time, but the lock within this process should all be tied to the same tracking
 #    mechanism.
 _lock_folders = (
-    os.path.join(root_dir, "locks"),
+    os.path.join(context.root_dir, "locks"),
     os.path.expanduser(os.path.join("~", ".conda_build_locks")),
 )
 
@@ -754,9 +752,7 @@ def get_conda_operation_locks(locking=True, bldpkgs_dirs=None, timeout=900):
     bldpkgs_dirs = ensure_list(bldpkgs_dirs)
     # locks enabled by default
     if locking:
-        _pkgs_dirs = pkgs_dirs[:1]
-        locked_folders = _pkgs_dirs + list(bldpkgs_dirs)
-        for folder in locked_folders:
+        for folder in (*context.pkgs_dirs[:1], *bldpkgs_dirs):
             if not os.path.isdir(folder):
                 os.makedirs(folder)
             lock = get_lock(folder, timeout=timeout)
@@ -876,8 +872,8 @@ def tar_xf(tarball, dir_path):
 def file_info(path):
     return {
         "size": getsize(path),
-        "md5": md5_file(path),
-        "sha256": hashsum_file(path, "sha256"),
+        "md5": compute_sum(path, "md5"),
+        "sha256": compute_sum(path, "sha256"),
         "mtime": getmtime(path),
     }
 
@@ -1132,8 +1128,9 @@ def convert_path_for_cygwin_or_msys2(exe, path):
 
 
 def get_skip_message(m):
-    return "Skipped: {} from {} defines build/skip for this configuration ({}).".format(
-        m.name(), m.path, {k: m.config.variant[k] for k in m.get_used_vars()}
+    return (
+        f"Skipped: {m.name()} from {m.path} defines build/skip for this configuration "
+        f"({({k: m.config.variant[k] for k in m.get_used_vars()})})."
     )
 
 
@@ -1162,7 +1159,7 @@ def package_has_file(package_path, file_path, refresh_mode="modified"):
         return content
 
 
-def ensure_list(arg, include_dict=True):
+def ensure_list(arg: T | Iterable[T] | None, include_dict: bool = True) -> list[T]:
     """
     Ensure the object is a list. If not return it in a list.
 
@@ -1181,7 +1178,11 @@ def ensure_list(arg, include_dict=True):
         return [arg]
 
 
-def islist(arg, uniform=False, include_dict=True):
+def islist(
+    arg: T | Iterable[T],
+    uniform: bool = False,
+    include_dict: bool = True,
+) -> bool:
     """
     Check whether `arg` is a `list`. Optionally determine whether the list elements
     are all uniform.
@@ -1767,7 +1768,10 @@ def merge_or_update_dict(
     return base
 
 
-def merge_dicts_of_lists(dol1, dol2):
+def merge_dicts_of_lists(
+    dol1: Mapping[K, Iterable[V]],
+    dol2: Mapping[K, Iterable[V]],
+) -> dict[K, list[V]]:
     """
     From Alex Martelli: https://stackoverflow.com/a/1495821/3257826
     """
@@ -1889,7 +1893,15 @@ spec_needing_star_re = re.compile(
 spec_ver_needing_star_re = re.compile(r"^([0-9a-zA-Z\.]+)$")
 
 
-def ensure_valid_spec(spec, warn=False):
+@overload
+def ensure_valid_spec(spec: str, warn: bool = False) -> str: ...
+
+
+@overload
+def ensure_valid_spec(spec: MatchSpec, warn: bool = False) -> MatchSpec: ...
+
+
+def ensure_valid_spec(spec: str | MatchSpec, warn: bool = False) -> str | MatchSpec:
     if isinstance(spec, MatchSpec):
         if (
             hasattr(spec, "version")
@@ -2093,7 +2105,7 @@ channeldata_cache = {}
 def download_channeldata(channel_url):
     global channeldata_cache
     if channel_url.startswith("file://") or channel_url not in channeldata_cache:
-        urls = get_conda_channel(channel_url).urls()
+        urls = Channel.from_value(channel_url).urls()
         urls = {url.rsplit("/", 1)[0] for url in urls}
         data = {}
         for url in urls:
@@ -2110,21 +2122,6 @@ def download_channeldata(channel_url):
     else:
         data = channeldata_cache[channel_url]
     return data
-
-
-@deprecated("24.1.0", "24.3.0")
-def linked_data_no_multichannels(
-    prefix: str | os.PathLike | Path,
-) -> dict[Dist, PrefixRecord]:
-    """
-    Return a dictionary of the linked packages in prefix, with correct channels, hopefully.
-    cc @kalefranz.
-    """
-    prefix = Path(prefix)
-    return {
-        Dist.from_string(prec.fn, channel_override=prec.channel.name): prec
-        for prec in PrefixData(str(prefix)).iter_records()
-    }
 
 
 def shutil_move_more_retrying(src, dest, debug_name):

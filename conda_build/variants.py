@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 """This file handles the parsing of feature specifications from files,
 ending up with a configuration matrix"""
+
 import os.path
 import re
 import sys
@@ -11,8 +12,9 @@ from functools import lru_cache
 from itertools import product
 
 import yaml
+from conda.base.context import context
 
-from .conda_interface import cc_conda_build, subdir
+from .conda_interface import cc_conda_build
 from .utils import ensure_list, get_logger, islist, on_win, trim_empty_keys
 from .version import _parse as parse_version
 
@@ -84,7 +86,7 @@ DEFAULT_COMPILERS = {
     },
 }
 
-arch_name = subdir.rsplit("-", 1)[-1]
+arch_name = context.subdir.rsplit("-", 1)[-1]
 
 SUFFIX_MAP = {
     "PY": "python",
@@ -303,15 +305,10 @@ def _combine_spec_dictionaries(
                                         ensure_list(v)
                                     ):
                                         raise ValueError(
-                                            "All entries associated by a zip_key "
-                                            "field must be the same length.  In {}, {} and {} are "
-                                            "different ({} and {})".format(
-                                                spec_source,
-                                                k,
-                                                group_item,
-                                                len(ensure_list(v)),
-                                                len(ensure_list(spec[group_item])),
-                                            )
+                                            f"All entries associated by a zip_key "
+                                            f"field must be the same length.  In {spec_source}, {k} and {group_item} "
+                                            f"are different ({len(ensure_list(v))} and "
+                                            f"{len(ensure_list(spec[group_item]))})"
                                         )
                                     values[group_item] = ensure_list(spec[group_item])
                             elif k in values:
@@ -338,17 +335,10 @@ def _combine_spec_dictionaries(
                                 ]
                                 if len(missing_subvalues):
                                     raise ValueError(
-                                        "variant config in {} is ambiguous because it\n"
-                                        "does not fully implement all zipped keys (To be clear: missing {})\n"
-                                        "or specifies a subspace that is not fully implemented (To be clear:\n"
-                                        ".. we did not find {} from {} in {}:{}).".format(
-                                            spec_source,
-                                            missing_group_items,
-                                            missing_subvalues,
-                                            spec,
-                                            k,
-                                            values[k],
-                                        )
+                                        f"variant config in {spec_source} is ambiguous because it does not fully "
+                                        f"implement all zipped keys (missing {missing_group_items}) or specifies a "
+                                        f"subspace that is not fully implemented (we did not find {missing_subvalues} "
+                                        f"from {spec} in {k}:{values[k]})."
                                     )
 
     return values
@@ -727,15 +717,17 @@ def find_used_variables_in_text(variant, recipe_text, selectors_only=False):
     recipe_lines = recipe_text.splitlines()
     for v in variant:
         all_res = []
-        compiler_match = re.match(r"(.*?)_compiler(_version)?$", v)
-        if compiler_match and not selectors_only:
-            compiler_lang = compiler_match.group(1)
-            compiler_regex = r"\{\s*compiler\([\'\"]%s[\"\'][^\{]*?\}" % re.escape(
-                compiler_lang
+        target_match = re.match(r"(.*?)_(compiler|stdlib)(_version)?$", v)
+        if target_match and not selectors_only:
+            target_lang = target_match.group(1)
+            target_kind = target_match.group(2)
+            target_lang_regex = re.escape(target_lang)
+            target_regex = (
+                rf"\{{\s*{target_kind}\([\'\"]{target_lang_regex}[\"\'][^\{{]*?\}}"
             )
-            all_res.append(compiler_regex)
+            all_res.append(target_regex)
             variant_lines = [
-                line for line in recipe_lines if v in line or compiler_lang in line
+                line for line in recipe_lines if v in line or target_lang in line
             ]
         else:
             variant_lines = [
@@ -760,7 +752,7 @@ def find_used_variables_in_text(variant, recipe_text, selectors_only=False):
         all_res = r"|".join(all_res)
         if any(re.search(all_res, line) for line in variant_lines):
             used_variables.add(v)
-            if v in ("c_compiler", "cxx_compiler"):
+            if v in ("c_stdlib", "c_compiler", "cxx_compiler"):
                 if "CONDA_BUILD_SYSROOT" in variant:
                     used_variables.add("CONDA_BUILD_SYSROOT")
     return used_variables

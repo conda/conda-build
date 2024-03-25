@@ -12,9 +12,9 @@ import sys
 import tarfile
 import tempfile
 from collections import OrderedDict, defaultdict
+from contextlib import contextmanager
 from functools import lru_cache
 from os.path import (
-    abspath,
     dirname,
     isabs,
     isdir,
@@ -23,8 +23,10 @@ from os.path import (
     normpath,
 )
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import yaml
+from conda.base.context import context
 
 from . import environ, exceptions, source, utils
 from .conda_interface import (
@@ -32,11 +34,8 @@ from .conda_interface import (
     ProgressiveFetchExtract,
     TemporaryDirectory,
     UnsatisfiableError,
-    pkgs_dirs,
     specs_from_url,
 )
-from .deprecations import deprecated
-from .environ import LINK_ACTION
 from .exceptions import DependencyNeedsBuildingError
 from .index import get_build_index
 from .metadata import MetaData, combine_top_level_metadata_with_output
@@ -50,6 +49,11 @@ from .variants import (
     get_package_variants,
     list_of_dicts_to_dict_of_lists,
 )
+
+if TYPE_CHECKING:
+    from typing import Iterator
+
+    from .config import Config
 
 
 def odict_representer(dumper, data):
@@ -89,13 +93,6 @@ def bldpkg_path(m):
             f"{m.type} file for {m.name()} in: {join(m.config.output_folder, subdir)}"
         )
     return path
-
-
-@deprecated("24.1.0", "24.3.0")
-def actions_to_pins(actions):
-    if LINK_ACTION in actions:
-        return [package_record_to_requirement(prec) for prec in actions[LINK_ACTION]]
-    return []
 
 
 def _categorize_deps(m, specs, exclude_pattern, variant):
@@ -158,7 +155,7 @@ def get_env_dependencies(
     )
     with TemporaryDirectory(prefix="_", suffix=random_string) as tmpdir:
         try:
-            actions = environ.get_install_actions(
+            precs = environ.get_package_records(
                 tmpdir,
                 tuple(dependencies),
                 env,
@@ -180,19 +177,17 @@ def get_env_dependencies(
             else:
                 unsat = e.message
             if permit_unsatisfiable_variants:
-                actions = {}
+                precs = []
             else:
                 raise
 
-    specs = [
-        package_record_to_requirement(prec) for prec in actions.get(LINK_ACTION, [])
-    ]
+    specs = [package_record_to_requirement(prec) for prec in precs]
     return (
         utils.ensure_list(
             (specs + subpackages + pass_through_deps)
             or m.get_value(f"requirements/{env}", [])
         ),
-        actions,
+        precs,
         unsat,
     )
 
@@ -258,7 +253,7 @@ def _filter_run_exports(specs, ignore_list):
 def find_pkg_dir_or_file_in_pkgs_dirs(
     distribution: str, m: MetaData, files_only: bool = False
 ) -> str | None:
-    for cache in map(Path, (*pkgs_dirs, *m.config.bldpkgs_dirs)):
+    for cache in map(Path, (*context.pkgs_dirs, *m.config.bldpkgs_dirs)):
         package = cache / (distribution + CONDA_PACKAGE_EXTENSION_V1)
         if package.is_file():
             return str(package)
@@ -285,6 +280,7 @@ def find_pkg_dir_or_file_in_pkgs_dirs(
                     archive.add(entry, arcname=entry.name)
 
             return str(package)
+    return None
 
 
 @lru_cache(maxsize=None)
@@ -329,7 +325,6 @@ def _read_specs_from_package(pkg_loc, pkg_dist):
     return specs
 
 
-@deprecated.argument("24.1.0", "24.3.0", "actions", rename="precs")
 def execute_download_actions(m, precs, env, package_subset=None, require_files=False):
     subdir = getattr(m.config, f"{env}_subdir")
     index, _, _ = get_build_index(
@@ -359,8 +354,6 @@ def execute_download_actions(m, precs, env, package_subset=None, require_files=F
 
     pkg_files = {}
 
-    if hasattr(precs, "keys"):
-        precs = precs.get(LINK_ACTION, [])
     if isinstance(package_subset, PackageRecord):
         package_subset = [package_subset]
     else:
@@ -399,7 +392,7 @@ def execute_download_actions(m, precs, env, package_subset=None, require_files=F
             pfe = ProgressiveFetchExtract(link_prefs=(link_prec,))
             with utils.LoggingContext():
                 pfe.execute()
-            for pkg_dir in pkgs_dirs:
+            for pkg_dir in context.pkgs_dirs:
                 _loc = join(pkg_dir, prec.fn)
                 if isfile(_loc):
                     pkg_loc = _loc
@@ -409,14 +402,11 @@ def execute_download_actions(m, precs, env, package_subset=None, require_files=F
     return pkg_files
 
 
-@deprecated.argument("24.1.0", "24.3.0", "actions", rename="precs")
 def get_upstream_pins(m: MetaData, precs, env):
     """Download packages from specs, then inspect each downloaded package for additional
     downstream dependency specs.  Return these additional specs."""
     env_specs = m.get_value(f"requirements/{env}", [])
     explicit_specs = [req.split(" ")[0] for req in env_specs] if env_specs else []
-    if hasattr(precs, "keys"):
-        precs = precs.get(LINK_ACTION, [])
     precs = [prec for prec in precs if prec.name in explicit_specs]
 
     ignore_pkgs_list = utils.ensure_list(m.get_value("build/ignore_run_exports_from"))
@@ -453,7 +443,7 @@ def _read_upstream_pin_files(
     permit_unsatisfiable_variants,
     exclude_pattern,
 ):
-    deps, actions, unsat = get_env_dependencies(
+    deps, precs, unsat = get_env_dependencies(
         m,
         env,
         m.config.variant,
@@ -462,7 +452,7 @@ def _read_upstream_pin_files(
     )
     # extend host deps with strong build run exports.  This is important for things like
     #    vc feature activation to work correctly in the host env.
-    extra_run_specs = get_upstream_pins(m, actions, env)
+    extra_run_specs = get_upstream_pins(m, precs, env)
     return (
         list(set(deps)) or m.get_value(f"requirements/{env}", []),
         unsat,
@@ -945,15 +935,37 @@ def expand_outputs(metadata_tuples):
     return list(expanded_outputs.values())
 
 
+@contextmanager
+def open_recipe(recipe: str | os.PathLike | Path) -> Iterator[Path]:
+    """Open the recipe from a file (meta.yaml), directory (recipe), or tarball (package)."""
+    recipe = Path(recipe)
+
+    if not recipe.exists():
+        sys.exit(f"Error: non-existent: {recipe}")
+    elif recipe.is_dir():
+        # read the recipe from the current directory
+        yield recipe
+    elif recipe.suffixes in [[".tar"], [".tar", ".gz"], [".tgz"], [".tar", ".bz2"]]:
+        # extract the recipe to a temporary directory
+        with tempfile.TemporaryDirectory() as tmp, tarfile.open(recipe, "r:*") as tar:
+            tar.extractall(path=tmp)
+            yield Path(tmp)
+    elif recipe.suffix == ".yaml":
+        # read the recipe from the parent directory
+        yield recipe.parent
+    else:
+        sys.exit(f"Error: non-recipe: {recipe}")
+
+
 def render_recipe(
-    recipe_path,
-    config,
-    no_download_source=False,
-    variants=None,
-    permit_unsatisfiable_variants=True,
-    reset_build_id=True,
-    bypass_env_check=False,
-):
+    recipe_dir: str | os.PathLike | Path,
+    config: Config,
+    no_download_source: bool = False,
+    variants: dict | None = None,
+    permit_unsatisfiable_variants: bool = True,
+    reset_build_id: bool = True,
+    bypass_env_check: bool = False,
+) -> list[tuple[MetaData, bool, bool]]:
     """Returns a list of tuples, each consisting of
 
     (metadata-object, needs_download, needs_render_in_env)
@@ -961,74 +973,45 @@ def render_recipe(
     You get one tuple per variant.  Outputs are not factored in here (subpackages won't affect these
     results returned here.)
     """
-    arg = recipe_path
-    if isfile(arg):
-        if arg.endswith((".tar", ".tar.gz", ".tgz", ".tar.bz2")):
-            recipe_dir = tempfile.mkdtemp()
-            t = tarfile.open(arg, "r:*")
-            t.extractall(path=recipe_dir)
-            t.close()
-            need_cleanup = True
-        elif arg.endswith(".yaml"):
-            recipe_dir = dirname(arg)
-            need_cleanup = False
+    with open_recipe(recipe_dir) as recipe:
+        try:
+            m = MetaData(str(recipe), config=config)
+        except exceptions.YamlParsingError as e:
+            sys.exit(e.error_msg())
+
+        # important: set build id *before* downloading source.  Otherwise source goes into a different
+        #    build folder.
+        if config.set_build_id:
+            m.config.compute_build_id(m.name(), m.version(), reset=reset_build_id)
+
+        # this source may go into a folder that doesn't match the eventual build folder.
+        #   There's no way around it AFAICT.  We must download the source to be able to render
+        #   the recipe (from anything like GIT_FULL_HASH), but we can't know the final build
+        #   folder until rendering is complete, because package names can have variant jinja2 in them.
+        if m.needs_source_for_render and not m.source_provided:
+            try_download(m, no_download_source=no_download_source)
+
+        if m.final:
+            if not getattr(m.config, "variants", None):
+                m.config.ignore_system_variants = True
+                if isfile(cbc_yaml := join(m.path, "conda_build_config.yaml")):
+                    m.config.variant_config_files = [cbc_yaml]
+                m.config.variants = get_package_variants(m, variants=variants)
+                m.config.variant = m.config.variants[0]
+            return [(m, False, False)]
         else:
-            print("Ignoring non-recipe: %s" % arg)
-            return None, None
-    else:
-        recipe_dir = abspath(arg)
-        need_cleanup = False
+            # merge any passed-in variants with any files found
+            variants = get_package_variants(m, variants=variants)
 
-    if not isdir(recipe_dir):
-        sys.exit("Error: no such directory: %s" % recipe_dir)
-
-    try:
-        m = MetaData(recipe_dir, config=config)
-    except exceptions.YamlParsingError as e:
-        sys.stderr.write(e.error_msg())
-        sys.exit(1)
-
-    rendered_metadata = {}
-
-    # important: set build id *before* downloading source.  Otherwise source goes into a different
-    #    build folder.
-    if config.set_build_id:
-        m.config.compute_build_id(m.name(), m.version(), reset=reset_build_id)
-
-    # this source may go into a folder that doesn't match the eventual build folder.
-    #   There's no way around it AFAICT.  We must download the source to be able to render
-    #   the recipe (from anything like GIT_FULL_HASH), but we can't know the final build
-    #   folder until rendering is complete, because package names can have variant jinja2 in them.
-    if m.needs_source_for_render and not m.source_provided:
-        try_download(m, no_download_source=no_download_source)
-    if m.final:
-        if not hasattr(m.config, "variants") or not m.config.variant:
-            m.config.ignore_system_variants = True
-            if isfile(join(m.path, "conda_build_config.yaml")):
-                m.config.variant_config_files = [
-                    join(m.path, "conda_build_config.yaml")
-                ]
-            m.config.variants = get_package_variants(m, variants=variants)
-            m.config.variant = m.config.variants[0]
-        rendered_metadata = [
-            (m, False, False),
-        ]
-    else:
-        # merge any passed-in variants with any files found
-        variants = get_package_variants(m, variants=variants)
-
-        # when building, we don't want to fully expand all outputs into metadata, only expand
-        #    whatever variants we have (i.e. expand top-level variants, not output-only variants)
-        rendered_metadata = distribute_variants(
-            m,
-            variants,
-            permit_unsatisfiable_variants=permit_unsatisfiable_variants,
-            allow_no_other_outputs=True,
-            bypass_env_check=bypass_env_check,
-        )
-    if need_cleanup:
-        utils.rm_rf(recipe_dir)
-    return rendered_metadata
+            # when building, we don't want to fully expand all outputs into metadata, only expand
+            #    whatever variants we have (i.e. expand top-level variants, not output-only variants)
+            return distribute_variants(
+                m,
+                variants,
+                permit_unsatisfiable_variants=permit_unsatisfiable_variants,
+                allow_no_other_outputs=True,
+                bypass_env_check=bypass_env_check,
+            )
 
 
 # Keep this out of the function below so it can be imported by other modules.
