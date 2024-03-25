@@ -17,9 +17,12 @@ from xml.etree import ElementTree as ET
 
 from ..license_family import guess_license_family
 from ..source import download_to_cache
+from ..utils import ensure_list
 from .cran import yaml_quote_string
 
 if TYPE_CHECKING:
+    from typing import Iterable
+
     from ..config import Config
 
 # This is used in two places
@@ -718,10 +721,12 @@ def skeletonize(
     recursive: bool = False,
     architecture: str = default_architecture,
     override_arch: bool = True,
-    dependency_add: list[str] = [],
+    dependency_add: str | Iterable[str] | None = None,
     config: Config | None = None,
     distro: str = default_distro,
 ):
+    dependency_add = ensure_list(dependency_add)
+
     write_conda_recipe(
         packages,
         distro,

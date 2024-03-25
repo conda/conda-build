@@ -274,12 +274,13 @@ def skeletonize(
     noarch_python: bool = False,
     config: Config | None = None,
     setup_options: str | Iterable[str] | None = None,
-    extra_specs: list[str] = [],
+    extra_specs: str | Iterable[str] | None = None,
     pin_numpy: bool = False,
 ) -> None:
     package_dicts = {}
 
     setup_options = ensure_list(setup_options)
+    extra_specs = ensure_list(extra_specs)
 
     if not config:
         config = Config()

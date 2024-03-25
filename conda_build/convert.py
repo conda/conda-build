@@ -16,8 +16,12 @@ import sys
 import tarfile
 import tempfile
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-from .utils import filter_info_files, walk
+from .utils import ensure_list, filter_info_files, walk
+
+if TYPE_CHECKING:
+    from typing import Iterable
 
 
 def retrieve_c_extensions(file_path, show_imports=False):
@@ -781,9 +785,9 @@ def conda_convert(
     file_path: str,
     output_dir: str = ".",
     show_imports: bool = False,
-    platforms: list[str] = [],
+    platforms: str | Iterable[str] | None = None,
     force: bool = False,
-    dependencies: list[str] = [],
+    dependencies: str | Iterable[str] | None = None,
     verbose: bool = False,
     quiet: bool = False,
     dry_run: bool = False,
@@ -803,6 +807,10 @@ def conda_convert(
     quiet (bool) -- hide all output except warnings and errors
     dry_run (bool) -- show which conversions will take place
     """
+
+    platforms = ensure_list(platforms)
+    dependencies = ensure_list(dependencies)
+
     if show_imports:
         imports = retrieve_c_extensions(file_path)
         if len(imports) == 0:
