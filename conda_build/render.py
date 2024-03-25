@@ -12,9 +12,9 @@ import sys
 import tarfile
 import tempfile
 from collections import OrderedDict, defaultdict
+from contextlib import contextmanager
 from functools import lru_cache
 from os.path import (
-    abspath,
     dirname,
     isabs,
     isdir,
@@ -23,6 +23,7 @@ from os.path import (
     normpath,
 )
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import yaml
 from conda.base.context import context
@@ -48,6 +49,11 @@ from .variants import (
     get_package_variants,
     list_of_dicts_to_dict_of_lists,
 )
+
+if TYPE_CHECKING:
+    from typing import Iterator
+
+    from .config import Config
 
 
 def odict_representer(dumper, data):
@@ -929,15 +935,37 @@ def expand_outputs(metadata_tuples):
     return list(expanded_outputs.values())
 
 
+@contextmanager
+def open_recipe(recipe: str | os.PathLike | Path) -> Iterator[Path]:
+    """Open the recipe from a file (meta.yaml), directory (recipe), or tarball (package)."""
+    recipe = Path(recipe)
+
+    if not recipe.exists():
+        sys.exit(f"Error: non-existent: {recipe}")
+    elif recipe.is_dir():
+        # read the recipe from the current directory
+        yield recipe
+    elif recipe.suffixes in [[".tar"], [".tar", ".gz"], [".tgz"], [".tar", ".bz2"]]:
+        # extract the recipe to a temporary directory
+        with tempfile.TemporaryDirectory() as tmp, tarfile.open(recipe, "r:*") as tar:
+            tar.extractall(path=tmp)
+            yield Path(tmp)
+    elif recipe.suffix == ".yaml":
+        # read the recipe from the parent directory
+        yield recipe.parent
+    else:
+        sys.exit(f"Error: non-recipe: {recipe}")
+
+
 def render_recipe(
-    recipe_path,
-    config,
-    no_download_source=False,
-    variants=None,
-    permit_unsatisfiable_variants=True,
-    reset_build_id=True,
-    bypass_env_check=False,
-):
+    recipe_dir: str | os.PathLike | Path,
+    config: Config,
+    no_download_source: bool = False,
+    variants: dict | None = None,
+    permit_unsatisfiable_variants: bool = True,
+    reset_build_id: bool = True,
+    bypass_env_check: bool = False,
+) -> list[tuple[MetaData, bool, bool]]:
     """Returns a list of tuples, each consisting of
 
     (metadata-object, needs_download, needs_render_in_env)
@@ -945,74 +973,45 @@ def render_recipe(
     You get one tuple per variant.  Outputs are not factored in here (subpackages won't affect these
     results returned here.)
     """
-    arg = recipe_path
-    if isfile(arg):
-        if arg.endswith((".tar", ".tar.gz", ".tgz", ".tar.bz2")):
-            recipe_dir = tempfile.mkdtemp()
-            t = tarfile.open(arg, "r:*")
-            t.extractall(path=recipe_dir)
-            t.close()
-            need_cleanup = True
-        elif arg.endswith(".yaml"):
-            recipe_dir = dirname(arg)
-            need_cleanup = False
+    with open_recipe(recipe_dir) as recipe:
+        try:
+            m = MetaData(str(recipe), config=config)
+        except exceptions.YamlParsingError as e:
+            sys.exit(e.error_msg())
+
+        # important: set build id *before* downloading source.  Otherwise source goes into a different
+        #    build folder.
+        if config.set_build_id:
+            m.config.compute_build_id(m.name(), m.version(), reset=reset_build_id)
+
+        # this source may go into a folder that doesn't match the eventual build folder.
+        #   There's no way around it AFAICT.  We must download the source to be able to render
+        #   the recipe (from anything like GIT_FULL_HASH), but we can't know the final build
+        #   folder until rendering is complete, because package names can have variant jinja2 in them.
+        if m.needs_source_for_render and not m.source_provided:
+            try_download(m, no_download_source=no_download_source)
+
+        if m.final:
+            if not getattr(m.config, "variants", None):
+                m.config.ignore_system_variants = True
+                if isfile(cbc_yaml := join(m.path, "conda_build_config.yaml")):
+                    m.config.variant_config_files = [cbc_yaml]
+                m.config.variants = get_package_variants(m, variants=variants)
+                m.config.variant = m.config.variants[0]
+            return [(m, False, False)]
         else:
-            print("Ignoring non-recipe: %s" % arg)
-            return None, None
-    else:
-        recipe_dir = abspath(arg)
-        need_cleanup = False
+            # merge any passed-in variants with any files found
+            variants = get_package_variants(m, variants=variants)
 
-    if not isdir(recipe_dir):
-        sys.exit("Error: no such directory: %s" % recipe_dir)
-
-    try:
-        m = MetaData(recipe_dir, config=config)
-    except exceptions.YamlParsingError as e:
-        sys.stderr.write(e.error_msg())
-        sys.exit(1)
-
-    rendered_metadata = {}
-
-    # important: set build id *before* downloading source.  Otherwise source goes into a different
-    #    build folder.
-    if config.set_build_id:
-        m.config.compute_build_id(m.name(), m.version(), reset=reset_build_id)
-
-    # this source may go into a folder that doesn't match the eventual build folder.
-    #   There's no way around it AFAICT.  We must download the source to be able to render
-    #   the recipe (from anything like GIT_FULL_HASH), but we can't know the final build
-    #   folder until rendering is complete, because package names can have variant jinja2 in them.
-    if m.needs_source_for_render and not m.source_provided:
-        try_download(m, no_download_source=no_download_source)
-    if m.final:
-        if not hasattr(m.config, "variants") or not m.config.variant:
-            m.config.ignore_system_variants = True
-            if isfile(join(m.path, "conda_build_config.yaml")):
-                m.config.variant_config_files = [
-                    join(m.path, "conda_build_config.yaml")
-                ]
-            m.config.variants = get_package_variants(m, variants=variants)
-            m.config.variant = m.config.variants[0]
-        rendered_metadata = [
-            (m, False, False),
-        ]
-    else:
-        # merge any passed-in variants with any files found
-        variants = get_package_variants(m, variants=variants)
-
-        # when building, we don't want to fully expand all outputs into metadata, only expand
-        #    whatever variants we have (i.e. expand top-level variants, not output-only variants)
-        rendered_metadata = distribute_variants(
-            m,
-            variants,
-            permit_unsatisfiable_variants=permit_unsatisfiable_variants,
-            allow_no_other_outputs=True,
-            bypass_env_check=bypass_env_check,
-        )
-    if need_cleanup:
-        utils.rm_rf(recipe_dir)
-    return rendered_metadata
+            # when building, we don't want to fully expand all outputs into metadata, only expand
+            #    whatever variants we have (i.e. expand top-level variants, not output-only variants)
+            return distribute_variants(
+                m,
+                variants,
+                permit_unsatisfiable_variants=permit_unsatisfiable_variants,
+                allow_no_other_outputs=True,
+                bypass_env_check=bypass_env_check,
+            )
 
 
 # Keep this out of the function below so it can be imported by other modules.
