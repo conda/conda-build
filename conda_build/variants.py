@@ -698,8 +698,12 @@ def get_vars(variants, loop_only=False):
     """For purposes of naming/identifying, provide a way of identifying which variables contribute
     to the matrix dimensionality"""
     first_variant, *other_variants = variants
-    special_keys = {"pin_run_as_build", "zip_keys", "ignore_version"}
-    special_keys.update(set(ensure_list(first_variant.get("extend_keys"))))
+    special_keys = {
+        "pin_run_as_build",
+        "zip_keys",
+        "ignore_version",
+        *ensure_list(first_variant.get("extend_keys")),
+    }
     loop_vars = [
         k
         for k, v in first_variant.items()

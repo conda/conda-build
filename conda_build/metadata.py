@@ -2641,14 +2641,11 @@ class MetaData:
         return variants.get_vars(_variants, loop_only=True)
 
     def get_used_loop_vars(self, force_top_level=False, force_global=False):
-        loop_vars = set(self.get_loop_vars())
-        return {
-            var
-            for var in self.get_used_vars(
-                force_top_level=force_top_level, force_global=force_global
-            )
-            if var in loop_vars
-        }
+        loop_vars = self.get_loop_vars()
+        used_vars = self.get_used_vars(
+            force_top_level=force_top_level, force_global=force_global
+        )
+        return set(loop_vars).intersection(used_vars)
 
     def get_rendered_recipe_text(
         self, permit_undefined_jinja=False, extract_pattern=None
