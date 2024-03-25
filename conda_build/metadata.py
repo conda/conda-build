@@ -301,6 +301,7 @@ def _split_line_selector(text: str) -> tuple[tuple[str | None, str], ...]:
 
 def select_lines(text: str, namespace: dict[str, Any], variants_in_place: bool) -> str:
     lines = []
+    selector_cache: dict[str, bool] = {}
     for i, (selector, line) in enumerate(_split_line_selector(text)):
         if not selector:
             # no selector? include line as is
@@ -308,16 +309,23 @@ def select_lines(text: str, namespace: dict[str, Any], variants_in_place: bool) 
         else:
             # include lines with a selector that evaluates to True
             try:
-                if eval_selector(selector, namespace, variants_in_place):
+                if selector_cache[selector]:
                     lines.append(line)
-            except Exception as e:
-                sys.exit(
-                    f"Error: Invalid selector in meta.yaml line {i + 1}:\n"
-                    f"offending line:\n"
-                    f"{line}\n"
-                    f"exception:\n"
-                    f"{e.__class__.__name__}: {e}\n"
-                )
+            except KeyError:
+                # KeyError: cache miss
+                try:
+                    value = bool(eval_selector(selector, namespace, variants_in_place))
+                    selector_cache[selector] = value
+                    if value:
+                        lines.append(line)
+                except Exception as e:
+                    sys.exit(
+                        f"Error: Invalid selector in meta.yaml line {i + 1}:\n"
+                        f"offending line:\n"
+                        f"{line}\n"
+                        f"exception:\n"
+                        f"{e.__class__.__name__}: {e}\n"
+                    )
     return "\n".join(lines) + "\n"
 
 
