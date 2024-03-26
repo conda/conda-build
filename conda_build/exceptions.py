@@ -2,6 +2,8 @@
 # SPDX-License-Identifier: BSD-3-Clause
 import textwrap
 
+from conda.exceptions import CondaError
+
 SEPARATOR = "-" * 70
 
 indent = lambda s: textwrap.fill(textwrap.dedent(s))
@@ -126,3 +128,8 @@ class RunPathError(RuntimeError):
         self.error = error
         self.msg = "runpaths check failed \n%s" % (error)
         super().__init__(self.msg)
+
+
+class CondaBuildUserError(CondaError):
+    return_code: int = 1
+    reportable: bool = False  # whether or not to report error to core maintainers

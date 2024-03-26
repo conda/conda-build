@@ -4,6 +4,8 @@
 Module that does most of the heavy lifting for the ``conda build`` command.
 """
 
+from __future__ import annotations
+
 import fnmatch
 import json
 import os
@@ -45,7 +47,11 @@ from .conda_interface import (
 from .config import Config
 from .create_test import create_all_test_files
 from .deprecations import deprecated
-from .exceptions import CondaBuildException, DependencyNeedsBuildingError
+from .exceptions import (
+    CondaBuildException,
+    CondaBuildUserError,
+    DependencyNeedsBuildingError,
+)
 from .index import _delegated_update_index, get_build_index
 from .metadata import FIELDS, MetaData
 from .os_utils import external
@@ -884,12 +890,12 @@ def copy_recipe(m):
             yaml.dump(m.config.variant, f)
 
 
-def copy_readme(m):
+def copy_readme(m: MetaData):
     readme = m.get_value("about/readme")
     if readme:
         src = join(m.config.work_dir, readme)
         if not isfile(src):
-            sys.exit("Error: no readme file: %s" % readme)
+            raise CondaBuildUserError(f"`about/readme` file ({readme}) doesn't exist")
         dst = join(m.config.info_dir, readme)
         utils.copy_into(src, dst, m.config.timeout, locking=m.config.locking)
         if os.path.split(readme)[1] not in {"README.md", "README.rst", "README"}:
