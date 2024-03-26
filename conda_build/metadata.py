@@ -110,6 +110,31 @@ numpy_compatible_re = re.compile(r"pin_\w+\([\'\"]numpy[\'\"]")
 # used to avoid recomputing/rescanning recipe contents for used variables
 used_vars_cache = {}
 
+# Placeholders singletons for os/os.environ used to memoize select_lines().
+_selector_placeholder_os = object()
+_selector_placeholder_os_environ = object()
+
+
+@lru_cache(maxsize=200)
+def re_findall(pattern, text, flags=0):
+    if isinstance(pattern, re.Pattern):
+        return pattern.findall(text, flags)
+    return re.findall(pattern, text, flags)
+
+
+@lru_cache(maxsize=200)
+def re_match(pattern, text, flags=0):
+    if isinstance(pattern, re.Pattern):
+        return pattern.match(text, flags)
+    return re.match(pattern, text, flags)
+
+
+@lru_cache(maxsize=200)
+def re_search(pattern, text, flags=0):
+    if isinstance(pattern, re.Pattern):
+        return pattern.search(text, flags)
+    return re.search(pattern, text, flags)
+
 
 def get_selectors(config: Config) -> dict[str, bool]:
     """Aggregates selectors for use in recipe templating.
@@ -242,7 +267,7 @@ sel_pat = re.compile(r"(.+?)\s*(#.*)?\[([^\[\]]+)\](?(2)[^\(\)]*)$")
 # "NameError: name 'var' is not defined", where var is the variable that is not defined. This gets
 #    returned
 def parseNameNotFound(error):
-    m = re.search("'(.+?)'", str(error))
+    m = re_search("'(.+?)'", str(error))
     if len(m.groups()) == 1:
         return m.group(1)
     else:
@@ -269,6 +294,58 @@ def eval_selector(selector_string, namespace, variants_in_place):
 
 
 def select_lines(data, namespace, variants_in_place):
+    # Try to turn namespace into a hashable representation for memoization.
+    try:
+        namespace_copy = namespace.copy()
+        if namespace_copy.get("os") is os:
+            namespace_copy["os"] = _selector_placeholder_os
+        if namespace_copy.get("environ") is os.environ:
+            namespace_copy["environ"] = _selector_placeholder_os_environ
+        if "pin_run_as_build" in namespace_copy:
+            # This raises TypeError if pin_run_as_build is not a dict of dicts.
+            try:
+                namespace_copy["pin_run_as_build"] = tuple(
+                    (key, tuple((k, v) for k, v in value.items()))
+                    for key, value in namespace_copy["pin_run_as_build"].items()
+                )
+            except (AttributeError, TypeError, ValueError):
+                # AttributeError: no .items method
+                # TypeError: .items() not iterable of iterables
+                # ValueError: .items() not iterable of only (k, v) tuples
+                raise TypeError
+        for k, v in namespace_copy.items():
+            # Convert list/sets/tuple to tuples (of tuples if it contains
+            # list/set elements). Copy any other type verbatim and rather fall
+            # back to the non-memoized version to avoid wrong/lossy conversions.
+            if isinstance(v, (list, set, tuple)):
+                namespace_copy[k] = tuple(
+                    tuple(e) if isinstance(e, (list, set)) else e for e in v
+                )
+        namespace_tuple = tuple(namespace_copy.items())
+        # Raise TypeError if anything in namespace_tuple is not hashable.
+        hash(namespace_tuple)
+    except TypeError:
+        return _select_lines(data, namespace, variants_in_place)
+    return _select_lines_memoized(data, namespace_tuple, variants_in_place)
+
+
+@lru_cache(maxsize=200)
+def _select_lines_memoized(data, namespace_tuple, variants_in_place):
+    # Convert namespace_tuple to dict and undo the os/environ/pin_run_as_build
+    # replacements done in select_lines.
+    namespace = dict(namespace_tuple)
+    if namespace.get("os") is _selector_placeholder_os:
+        namespace["os"] = os
+    if namespace.get("environ") is _selector_placeholder_os_environ:
+        namespace["environ"] = os.environ
+    if "pin_run_as_build" in namespace:
+        namespace["pin_run_as_build"] = {
+            key: dict(value) for key, value in namespace["pin_run_as_build"]
+        }
+    return _select_lines(data, namespace, variants_in_place)
+
+
+def _select_lines(data, namespace, variants_in_place):
     lines = []
 
     for i, line in enumerate(data.splitlines()):
@@ -281,8 +358,7 @@ def select_lines(data, namespace, variants_in_place):
         if line.lstrip().startswith("#"):
             # Don't bother with comment only lines
             continue
-        m = sel_pat.match(line)
-        if m:
+        if "[" in line and "]" in line and (m := re_match(sel_pat, line)):
             cond = m.group(3)
             try:
                 if eval_selector(cond, namespace, variants_in_place):
@@ -889,8 +965,8 @@ def get_output_dicts_from_metadata(metadata, outputs=None):
             outputs.append(OrderedDict(name=metadata.name()))
     for out in outputs:
         if (
-            "package:" in metadata.get_recipe_text()
-            and out.get("name") == metadata.name()
+            out.get("name") == metadata.name()
+            and "package:" in metadata.get_recipe_text()
         ):
             combine_top_level_metadata_with_output(metadata, out)
     return outputs
@@ -1015,9 +1091,10 @@ def get_updated_output_dict_from_reparsed_metadata(original_dict, new_outputs):
     return output_d
 
 
+@lru_cache(maxsize=200)
 def _filter_recipe_text(text, extract_pattern=None):
     if extract_pattern:
-        match = re.search(extract_pattern, text, flags=re.MULTILINE | re.DOTALL)
+        match = re_search(extract_pattern, text, flags=re.MULTILINE | re.DOTALL)
         text = (
             "\n".join({string for string in match.groups() if string}) if match else ""
         )
@@ -1621,7 +1698,7 @@ class MetaData:
             dependencies = [
                 req
                 for req in dependencies
-                if not exclude_pattern.match(req) or " " in self.config.variant[req]
+                if not re_match(exclude_pattern, req) or " " in self.config.variant[req]
             ]
 
         # retrieve values - this dictionary is what makes up the hash.
@@ -1665,12 +1742,11 @@ class MetaData:
             raise RuntimeError(
                 f"Couldn't extract raw recipe text for {self.name()} output"
             )
-        raw_recipe_text = self.extract_package_and_build_text()
-        raw_manual_build_string = re.search(r"\s*string:", raw_recipe_text)
+        raw_manual_build_string = re_search(r"\s*string:", raw_recipe_text)
         # user setting their own build string.  Don't modify it.
         if manual_build_string and not (
             raw_manual_build_string
-            and re.findall(r"h\{\{\s*PKG_HASH\s*\}\}", raw_manual_build_string.string)
+            and re_findall(r"h\{\{\s*PKG_HASH\s*\}\}", raw_manual_build_string.string)
         ):
             check_bad_chrs(manual_build_string, "build/string")
             out = manual_build_string
@@ -1679,7 +1755,7 @@ class MetaData:
             out = build_string_from_metadata(self)
             if self.config.filename_hashing and self.final:
                 hash_ = self.hash_dependencies()
-                if not re.findall("h[0-9a-f]{%s}" % self.config.hash_length, out):
+                if not re_findall("h[0-9a-f]{%s}" % self.config.hash_length, out):
                     ret = out.rsplit("_", 1)
                     try:
                         int(ret[0])
@@ -2037,7 +2113,7 @@ class MetaData:
             return False
         with open(self.meta_path, "rb") as f:
             meta_text = UnicodeDammit(f.read()).unicode_markup
-            matches = re.findall(r"{{.*}}", meta_text)
+            matches = re_findall(r"{{.*}}", meta_text)
         return len(matches) > 0
 
     @property
@@ -2052,7 +2128,7 @@ class MetaData:
             with open(self.meta_path, "rb") as f:
                 meta_text = UnicodeDammit(f.read()).unicode_markup
                 for _vcs in vcs_types:
-                    matches = re.findall(rf"{_vcs.upper()}_[^\.\s\'\"]+", meta_text)
+                    matches = re_findall(rf"{_vcs.upper()}_[^\.\s\'\"]+", meta_text)
                     if len(matches) > 0 and _vcs != self.get_value("package/name"):
                         if _vcs == "hg":
                             _vcs = "mercurial"
@@ -2075,7 +2151,7 @@ class MetaData:
                         #   1. the vcs command, optionally with an exe extension
                         #   2. a subcommand - for example, "clone"
                         #   3. a target url or other argument
-                        matches = re.findall(
+                        matches = re_findall(
                             rf"{vcs}(?:\.exe)?(?:\s+\w+\s+[\w\/\.:@]+)",
                             build_script,
                             flags=re.IGNORECASE,
@@ -2145,7 +2221,7 @@ class MetaData:
         # first, need to figure out which index in our list of outputs the name matches.
         #    We have to do this on rendered data, because templates can be used in output names
         recipe_text = self.extract_outputs_text(apply_selectors=apply_selectors)
-        output_matches = output_re.findall(recipe_text)
+        output_matches = re_findall(output_re, recipe_text)
         outputs = self.meta.get("outputs") or (
             self.parent_outputs if hasattr(self, "parent_outputs") else None
         )
@@ -2186,15 +2262,15 @@ class MetaData:
         """This is legacy syntax that we need to support for a while.  numpy x.x means
         "pin run as build" for numpy.  It was special-cased to only numpy."""
         text = self.extract_requirements_text()
-        return bool(numpy_xx_re.search(text))
+        return bool(re_search(numpy_xx_re, text))
 
     @property
     def uses_numpy_pin_compatible_without_xx(self) -> tuple[bool, bool]:
         text = self.extract_requirements_text()
-        compatible_search = numpy_compatible_re.search(text)
+        compatible_search = re_search(numpy_compatible_re, text)
         max_pin_search = None
         if compatible_search:
-            max_pin_search = numpy_compatible_x_re.search(text)
+            max_pin_search = re_search(numpy_compatible_x_re, text)
         # compatible_search matches simply use of pin_compatible('numpy')
         # max_pin_search quantifies the actual number of x's in the max_pin field.  The max_pin
         #     field can be absent, which is equivalent to a single 'x'
@@ -2211,7 +2287,8 @@ class MetaData:
             if "name" in out:
                 name_re = re.compile(r"^{}(\s|\Z|$)".format(out["name"]))
                 in_reqs = any(
-                    name_re.match(req) for req in self.get_depends_top_and_out("run")
+                    re_match(name_re, req)
+                    for req in self.get_depends_top_and_out("run")
                 )
                 if in_reqs:
                     break
@@ -2219,13 +2296,13 @@ class MetaData:
         if not in_reqs and self.meta_path:
             data = self.extract_requirements_text(force_top_level=True)
             if data:
-                subpackage_pin = re.search(r"{{\s*pin_subpackage\(.*\)\s*}}", data)
+                subpackage_pin = re_search(r"{{\s*pin_subpackage\(.*\)\s*}}", data)
         return in_reqs or bool(subpackage_pin)
 
     @property
     def uses_new_style_compiler_activation(self):
         text = self.extract_requirements_text()
-        return bool(re.search(r"\{\{\s*compiler\(.*\)\s*\}\}", text))
+        return bool(re_search(r"\{\{\s*compiler\(.*\)\s*\}\}", text))
 
     def validate_features(self):
         if any(
@@ -2286,7 +2363,7 @@ class MetaData:
             # We use this variant in the top-level recipe.
             # constrain the stored variants to only this version in the output
             #     variant mapping
-            if re.search(
+            if re_search(
                 r"\s*\{\{\s*%s\s*(?:.*?)?\}\}" % key, self.extract_source_text()
             ):
                 return True
@@ -2370,15 +2447,19 @@ class MetaData:
                 )
                 if build_reqs:
                     build_reqs = [
-                        req for req in build_reqs if not subpackage_pattern.match(req)
+                        req
+                        for req in build_reqs
+                        if not re_match(subpackage_pattern, req)
                     ]
                 if host_reqs:
                     host_reqs = [
-                        req for req in host_reqs if not subpackage_pattern.match(req)
+                        req
+                        for req in host_reqs
+                        if not re_match(subpackage_pattern, req)
                     ]
                 if run_reqs:
                     run_reqs = [
-                        req for req in run_reqs if not subpackage_pattern.match(req)
+                        req for req in run_reqs if not re_match(subpackage_pattern, req)
                     ]
 
             requirements = {}
@@ -2641,12 +2722,13 @@ class MetaData:
         return variants.get_vars(_variants, loop_only=True)
 
     def get_used_loop_vars(self, force_top_level=False, force_global=False):
+        loop_vars = set(self.get_loop_vars())
         return {
             var
             for var in self.get_used_vars(
                 force_top_level=force_top_level, force_global=force_global
             )
-            if var in self.get_loop_vars()
+            if var in loop_vars
         }
 
     def get_rendered_recipe_text(
@@ -2812,7 +2894,7 @@ class MetaData:
             reqs_re = re.compile(
                 r"requirements:.+?(?=^\w|\Z|^\s+-\s(?=name|type))", flags=re.M | re.S
             )
-            reqs_text = reqs_re.search(recipe_text)
+            reqs_text = re_search(reqs_re, recipe_text)
             reqs_text = reqs_text.group() if reqs_text else ""
 
         return reqs_text, recipe_text
