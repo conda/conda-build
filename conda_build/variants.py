@@ -697,16 +697,18 @@ def get_package_variants(recipedir_or_metadata, config=None, variants=None):
 def get_vars(variants, loop_only=False):
     """For purposes of naming/identifying, provide a way of identifying which variables contribute
     to the matrix dimensionality"""
-    special_keys = {"pin_run_as_build", "zip_keys", "ignore_version"}
-    special_keys.update(set(ensure_list(variants[0].get("extend_keys"))))
+    first_variant, *other_variants = variants
+    special_keys = {
+        "pin_run_as_build",
+        "zip_keys",
+        "ignore_version",
+        *ensure_list(first_variant.get("extend_keys")),
+    }
     loop_vars = [
         k
-        for k in variants[0]
+        for k, v in first_variant.items()
         if k not in special_keys
-        and (
-            not loop_only
-            or any(variant[k] != variants[0][k] for variant in variants[1:])
-        )
+        and (not loop_only or any(variant[k] != v for variant in other_variants))
     ]
     return loop_vars
 
@@ -763,6 +765,8 @@ def find_used_variables_in_shell_script(variant, file_path):
         text = f.read()
     used_variables = set()
     for v in variant:
+        if v not in text:
+            continue
         variant_regex = r"(^[^$]*?\$\{?\s*%s\s*[\s|\}])" % v
         if re.search(variant_regex, text, flags=re.MULTILINE | re.DOTALL):
             used_variables.add(v)
@@ -774,6 +778,8 @@ def find_used_variables_in_batch_script(variant, file_path):
         text = f.read()
     used_variables = set()
     for v in variant:
+        if v not in text:
+            continue
         variant_regex = r"\%" + v + r"\%"
         if re.search(variant_regex, text, flags=re.MULTILINE | re.DOTALL):
             used_variables.add(v)

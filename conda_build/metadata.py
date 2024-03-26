@@ -36,7 +36,7 @@ from .utils import (
 )
 
 if TYPE_CHECKING:
-    from typing import Literal
+    from typing import Any, Literal
 
 try:
     import yaml
@@ -268,38 +268,65 @@ def eval_selector(selector_string, namespace, variants_in_place):
         return eval_selector(next_string, namespace, variants_in_place)
 
 
-def select_lines(data, namespace, variants_in_place):
-    lines = []
-
-    for i, line in enumerate(data.splitlines()):
+@lru_cache(maxsize=None)
+def _split_line_selector(text: str) -> tuple[tuple[str | None, str], ...]:
+    lines: list[tuple[str | None, str]] = []
+    for line in text.splitlines():
         line = line.rstrip()
 
+        # skip comment lines, include a blank line as a placeholder
+        if line.lstrip().startswith("#"):
+            lines.append((None, ""))
+            continue
+
+        # include blank lines
+        if not line:
+            lines.append((None, ""))
+            continue
+
+        # user may have quoted entire line to make YAML happy
         trailing_quote = ""
         if line and line[-1] in ("'", '"'):
             trailing_quote = line[-1]
 
-        if line.lstrip().startswith("#"):
-            # Don't bother with comment only lines
-            continue
-        m = sel_pat.match(line)
-        if m:
-            cond = m.group(3)
-            try:
-                if eval_selector(cond, namespace, variants_in_place):
-                    lines.append(m.group(1) + trailing_quote)
-            except Exception as e:
-                sys.exit(
-                    """\
-Error: Invalid selector in meta.yaml line %d:
-offending line:
-%s
-exception:
-%s
-"""
-                    % (i + 1, line, str(e))
-                )
+        # Checking for "[" and "]" before regex matching every line is a bit faster.
+        if "[" in line and "]" in line and (match := sel_pat.match(line)):
+            if selector := match.group(3):
+                # found a selector
+                lines.append((selector, (match.group(1) + trailing_quote).rstrip()))
         else:
+            # no selector found
+            lines.append((None, line))
+    return tuple(lines)
+
+
+def select_lines(text: str, namespace: dict[str, Any], variants_in_place: bool) -> str:
+    lines = []
+    selector_cache: dict[str, bool] = {}
+    for i, (selector, line) in enumerate(_split_line_selector(text)):
+        if not selector:
+            # no selector? include line as is
             lines.append(line)
+        else:
+            # include lines with a selector that evaluates to True
+            try:
+                if selector_cache[selector]:
+                    lines.append(line)
+            except KeyError:
+                # KeyError: cache miss
+                try:
+                    value = bool(eval_selector(selector, namespace, variants_in_place))
+                    selector_cache[selector] = value
+                    if value:
+                        lines.append(line)
+                except Exception as e:
+                    sys.exit(
+                        f"Error: Invalid selector in meta.yaml line {i + 1}:\n"
+                        f"offending line:\n"
+                        f"{line}\n"
+                        f"exception:\n"
+                        f"{e.__class__.__name__}: {e}\n"
+                    )
     return "\n".join(lines) + "\n"
 
 
@@ -889,8 +916,8 @@ def get_output_dicts_from_metadata(metadata, outputs=None):
             outputs.append(OrderedDict(name=metadata.name()))
     for out in outputs:
         if (
-            "package:" in metadata.get_recipe_text()
-            and out.get("name") == metadata.name()
+            out.get("name") == metadata.name()
+            and "package:" in metadata.get_recipe_text()
         ):
             combine_top_level_metadata_with_output(metadata, out)
     return outputs
@@ -1015,6 +1042,7 @@ def get_updated_output_dict_from_reparsed_metadata(original_dict, new_outputs):
     return output_d
 
 
+@lru_cache(maxsize=200)
 def _filter_recipe_text(text, extract_pattern=None):
     if extract_pattern:
         match = re.search(extract_pattern, text, flags=re.MULTILINE | re.DOTALL)
@@ -1665,7 +1693,6 @@ class MetaData:
             raise RuntimeError(
                 f"Couldn't extract raw recipe text for {self.name()} output"
             )
-        raw_recipe_text = self.extract_package_and_build_text()
         raw_manual_build_string = re.search(r"\s*string:", raw_recipe_text)
         # user setting their own build string.  Don't modify it.
         if manual_build_string and not (
@@ -2641,13 +2668,11 @@ class MetaData:
         return variants.get_vars(_variants, loop_only=True)
 
     def get_used_loop_vars(self, force_top_level=False, force_global=False):
-        return {
-            var
-            for var in self.get_used_vars(
-                force_top_level=force_top_level, force_global=force_global
-            )
-            if var in self.get_loop_vars()
-        }
+        loop_vars = self.get_loop_vars()
+        used_vars = self.get_used_vars(
+            force_top_level=force_top_level, force_global=force_global
+        )
+        return set(loop_vars).intersection(used_vars)
 
     def get_rendered_recipe_text(
         self, permit_undefined_jinja=False, extract_pattern=None
