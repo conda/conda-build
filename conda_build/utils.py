@@ -54,12 +54,12 @@ from conda.base.constants import (
     KNOWN_SUBDIRS,
 )
 from conda.base.context import context
+from conda.exceptions import CondaHTTPError
 from conda.gateways.disk.read import compute_sum
 from conda.models.channel import Channel
 from conda.models.match_spec import MatchSpec
 
 from .conda_interface import (
-    CondaHTTPError,
     PackageRecord,
     StringIO,
     TemporaryDirectory,

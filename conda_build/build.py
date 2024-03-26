@@ -25,19 +25,17 @@ from bs4 import UnicodeDammit
 from conda import __version__ as conda_version
 from conda.base.context import context, reset_context
 from conda.core.prefix_data import PrefixData
+from conda.exceptions import CondaError, NoPackagesFoundError, UnsatisfiableError
 from conda.models.channel import Channel
 
 from . import __version__ as conda_build_version
 from . import environ, noarch_python, source, tarcheck, utils
 from .conda_interface import (
-    CondaError,
     EntityEncoder,
     FileMode,
     MatchSpec,
-    NoPackagesFoundError,
     PathType,
     TemporaryDirectory,
-    UnsatisfiableError,
     env_path_backup_var_exists,
     prefix_placeholder,
     url_path,

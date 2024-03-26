@@ -9,6 +9,7 @@ import os
 import re
 import struct
 import sys
+from functools import partial
 from pathlib import Path
 
 from ..utils import ensure_list, get_logger, on_linux, on_mac, on_win
@@ -1208,8 +1209,6 @@ def main(argv):
 
 def main_maybe_test():
     if sys.argv[1] == "test":
-        import functools
-
         tool = sys.argv[2]
         if tool != "otool" and tool != "ldd":
             if on_mac:
@@ -1228,21 +1227,21 @@ def main_maybe_test():
         else:
             sysroot = ""
         if tool == "otool":
-            test_this = functools.partial(
+            test_this = partial(
                 inspect_linkages,
                 sysroot=sysroot,
                 resolve_filenames=False,
                 recurse=False,
             )
             if on_mac:
-                test_that = functools.partial(inspect_linkages_otool)
+                test_that = partial(inspect_linkages_otool)
             SOEXT = "dylib"
         elif tool == "ldd":
-            test_this = functools.partial(
+            test_this = partial(
                 inspect_linkages, sysroot=sysroot, resolve_filenames=True, recurse=True
             )
             if on_linux:
-                test_that = functools.partial(inspect_linkages_ldd)
+                test_that = partial(inspect_linkages_ldd)
             SOEXT = "so"
         # Find a load of dylibs or elfs and compare
         # the output against 'otool -L' or 'ldd'

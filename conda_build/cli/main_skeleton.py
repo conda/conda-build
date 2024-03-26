@@ -2,11 +2,11 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from __future__ import annotations
 
-import importlib
 import logging
 import os
 import pkgutil
 import sys
+from importlib import import_module
 from typing import TYPE_CHECKING
 
 from .. import api
@@ -43,7 +43,7 @@ options available.
     for skeleton in skeletons:
         if skeleton.startswith("_"):
             continue
-        module = importlib.import_module("conda_build.skeletons." + skeleton)
+        module = import_module("conda_build.skeletons." + skeleton)
         module.add_parser(repos)
 
     return parser, parser.parse_args(args)
