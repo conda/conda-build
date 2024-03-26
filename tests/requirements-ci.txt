@@ -1,4 +1,5 @@
 anaconda-client
+conda-forge::pytest-split
 conda-forge::xdoctest
 conda-verify
 contextlib2

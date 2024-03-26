@@ -64,16 +64,12 @@ def testing_workdir(monkeypatch: MonkeyPatch, tmp_path: Path) -> Iterator[str]:
 
 
 @pytest.fixture(scope="function")
-def testing_homedir() -> Iterator[Path]:
+def testing_homedir(monkeypatch: MonkeyPatch) -> Iterator[Path]:
     """Create a temporary testing directory in the users home directory; cd into dir before test, cd out after."""
-    saved = Path.cwd()
     try:
         with tempfile.TemporaryDirectory(dir=Path.home(), prefix=".pytest_") as home:
-            os.chdir(home)
-
-            yield home
-
-            os.chdir(saved)
+            monkeypatch.chdir(home)
+            yield Path(home)
     except OSError:
         pytest.xfail(
             f"failed to create temporary directory () in {'%HOME%' if on_win else '${HOME}'} "
@@ -82,7 +78,7 @@ def testing_homedir() -> Iterator[Path]:
 
 
 @pytest.fixture(scope="function")
-def testing_config(testing_workdir):
+def testing_config(testing_workdir: str) -> Config:
     def boolify(v):
         return v == "true"
 

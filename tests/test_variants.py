@@ -1,11 +1,15 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
+
 import json
+import logging
 import os
 import platform
 import re
 import sys
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 import yaml
@@ -22,6 +26,11 @@ from conda_build.variants import (
 )
 
 from .utils import variants_dir
+
+if TYPE_CHECKING:
+    from pytest import LogCaptureFixture
+
+    from conda_build.config import Config
 
 
 @pytest.mark.parametrize(
@@ -272,11 +281,16 @@ def test_variant_input_with_zip_keys_keeps_zip_keys_list():
 
 @pytest.mark.serial
 @pytest.mark.xfail(sys.platform == "win32", reason="console readout issues on appveyor")
-def test_ensure_valid_spec_on_run_and_test(testing_config, caplog):
+def test_ensure_valid_spec_on_run_and_test(
+    testing_config: Config,
+    caplog: LogCaptureFixture,
+):
     testing_config.debug = True
     testing_config.verbose = True
     recipe = os.path.join(variants_dir, "14_variant_in_run_and_test")
-    api.render(recipe, config=testing_config)
+
+    with caplog.at_level(logging.WARNING):
+        api.render(recipe, config=testing_config)
 
     text = caplog.text
     assert "Adding .* to spec 'pytest  3.2'" in text
@@ -422,13 +436,14 @@ def test_variants_used_in_jinja2_conditionals():
     assert sum(m.config.variant["blas_impl"] == "openblas" for m, _, _ in ms) == 1
 
 
-def test_build_run_exports_act_on_host(caplog):
+def test_build_run_exports_act_on_host(caplog: LogCaptureFixture):
     """Regression test for https://github.com/conda/conda-build/issues/2559"""
-    api.render(
-        os.path.join(variants_dir, "22_run_exports_rerendered_for_other_variants"),
-        platform="win",
-        arch="64",
-    )
+    with caplog.at_level(logging.WARNING):
+        api.render(
+            os.path.join(variants_dir, "22_run_exports_rerendered_for_other_variants"),
+            platform="win",
+            arch="64",
+        )
     assert "failed to get package records, retrying" not in caplog.text
 
 

@@ -1,7 +1,10 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
+
 import os
 import sys
+from typing import TYPE_CHECKING
 
 import pytest
 import yaml
@@ -11,6 +14,12 @@ from conda_build.cli import main_render
 from conda_build.conda_interface import TemporaryDirectory
 
 from ..utils import metadata_dir
+
+if TYPE_CHECKING:
+    from pytest import CaptureFixture
+
+    from conda_build.config import Config
+    from conda_build.metadata import MetaData
 
 
 def test_render_add_channel():
@@ -67,7 +76,10 @@ def test_render_without_channel_fails(tmp_path):
 
 
 def test_render_output_build_path(
-    testing_workdir, testing_config, testing_metadata, capfd, caplog
+    testing_workdir: str,
+    testing_config: Config,
+    testing_metadata: MetaData,
+    capfd: CaptureFixture,
 ):
     api.output_yaml(testing_metadata, "meta.yaml")
     args = ["--output", testing_workdir]
@@ -83,7 +95,10 @@ def test_render_output_build_path(
 
 
 def test_render_output_build_path_and_file(
-    testing_workdir, testing_config, testing_metadata, capfd, caplog
+    testing_workdir: str,
+    testing_config: Config,
+    testing_metadata: MetaData,
+    capfd: CaptureFixture,
 ):
     api.output_yaml(testing_metadata, "meta.yaml")
     rendered_filename = "out.yaml"
