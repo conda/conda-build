@@ -218,8 +218,8 @@ def inspect_linkages(
     all_packages: bool = False,
     show_files: bool = False,
     groupby: Literal["package", "dependency"] = "package",
-    sysroot="",
-):
+    sysroot: str = "",
+) -> str:
     if not packages and not untracked and not all_packages:
         sys.exit("At least one package or --untracked or --all must be provided")
     elif on_win:

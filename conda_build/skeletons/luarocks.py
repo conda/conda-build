@@ -8,6 +8,8 @@ Tools for converting luarocks packages to conda recipes.
 # - mingw32 support (really any windows support, completely untested)
 # - replace manual "luajit -e require 'blah'" with built-in entry-point testing
 
+from __future__ import annotations
+
 import json
 import os
 import subprocess
@@ -224,7 +226,12 @@ def ensure_base_deps(deps):
     return deps
 
 
-def skeletonize(packages, output_dir=".", version=None, recursive=False):
+def skeletonize(
+    packages: list[str],
+    output_dir: str = ".",
+    version: str | None = None,
+    recursive: bool = False,
+) -> None:
     # Check that we have Lua installed (any version)
 
     # Check that we have luarocks installed

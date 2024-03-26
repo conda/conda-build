@@ -15,7 +15,6 @@ from collections import OrderedDict, defaultdict
 from contextlib import contextmanager
 from functools import lru_cache
 from os.path import (
-    dirname,
     isabs,
     isdir,
     isfile,
@@ -51,7 +50,8 @@ from .variants import (
 )
 
 if TYPE_CHECKING:
-    from typing import Iterator
+    import os
+    from typing import Any, Iterator
 
     from .config import Config
 
@@ -65,7 +65,7 @@ yaml.add_representer(tuple, yaml.representer.SafeRepresenter.represent_list)
 yaml.add_representer(OrderedDict, odict_representer)
 
 
-def bldpkg_path(m):
+def bldpkg_path(m: MetaData) -> str:
     """
     Returns path to built package's tarball given its ``Metadata``.
     """
@@ -961,7 +961,7 @@ def render_recipe(
     recipe_dir: str | os.PathLike | Path,
     config: Config,
     no_download_source: bool = False,
-    variants: dict | None = None,
+    variants: dict[str, Any] | None = None,
     permit_unsatisfiable_variants: bool = True,
     reset_build_id: bool = True,
     bypass_env_check: bool = False,
@@ -1059,7 +1059,11 @@ yaml.add_representer(str, _unicode_representer)
 unicode = None  # silence pyflakes about unicode not existing in py3
 
 
-def output_yaml(metadata, filename=None, suppress_outputs=False):
+def output_yaml(
+    metadata: MetaData,
+    filename: str | os.PathLike | Path | None = None,
+    suppress_outputs: bool = False,
+) -> str:
     local_metadata = metadata.copy()
     if (
         suppress_outputs
@@ -1074,13 +1078,9 @@ def output_yaml(metadata, filename=None, suppress_outputs=False):
         indent=2,
     )
     if filename:
-        if any(sep in filename for sep in ("\\", "/")):
-            try:
-                os.makedirs(dirname(filename))
-            except OSError:
-                pass
-        with open(filename, "w") as f:
-            f.write(output)
-        return "Wrote yaml to %s" % filename
+        filename = Path(filename)
+        filename.parent.mkdir(parents=True, exist_ok=True)
+        filename.write_text(output)
+        return f"Wrote yaml to {filename}"
     else:
         return output
