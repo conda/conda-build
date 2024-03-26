@@ -281,8 +281,8 @@ def select_lines(data, namespace, variants_in_place):
         if line.lstrip().startswith("#"):
             # Don't bother with comment only lines
             continue
-        m = sel_pat.match(line)
-        if m:
+        # Checking for "[" and "]" before regex matching every line is a bit faster.
+        if "[" in line and "]" in line and (m := sel_pat.match(line)):
             cond = m.group(3)
             try:
                 if eval_selector(cond, namespace, variants_in_place):
@@ -889,8 +889,8 @@ def get_output_dicts_from_metadata(metadata, outputs=None):
             outputs.append(OrderedDict(name=metadata.name()))
     for out in outputs:
         if (
-            "package:" in metadata.get_recipe_text()
-            and out.get("name") == metadata.name()
+            out.get("name") == metadata.name()
+            and "package:" in metadata.get_recipe_text()
         ):
             combine_top_level_metadata_with_output(metadata, out)
     return outputs
@@ -1015,6 +1015,7 @@ def get_updated_output_dict_from_reparsed_metadata(original_dict, new_outputs):
     return output_d
 
 
+@lru_cache(maxsize=200)
 def _filter_recipe_text(text, extract_pattern=None):
     if extract_pattern:
         match = re.search(extract_pattern, text, flags=re.MULTILINE | re.DOTALL)
@@ -1665,7 +1666,6 @@ class MetaData:
             raise RuntimeError(
                 f"Couldn't extract raw recipe text for {self.name()} output"
             )
-        raw_recipe_text = self.extract_package_and_build_text()
         raw_manual_build_string = re.search(r"\s*string:", raw_recipe_text)
         # user setting their own build string.  Don't modify it.
         if manual_build_string and not (
@@ -2641,13 +2641,11 @@ class MetaData:
         return variants.get_vars(_variants, loop_only=True)
 
     def get_used_loop_vars(self, force_top_level=False, force_global=False):
-        return {
-            var
-            for var in self.get_used_vars(
-                force_top_level=force_top_level, force_global=force_global
-            )
-            if var in self.get_loop_vars()
-        }
+        loop_vars = self.get_loop_vars()
+        used_vars = self.get_used_vars(
+            force_top_level=force_top_level, force_global=force_global
+        )
+        return set(loop_vars).intersection(used_vars)
 
     def get_rendered_recipe_text(
         self, permit_undefined_jinja=False, extract_pattern=None
