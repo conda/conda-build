@@ -150,3 +150,13 @@ markers = [
   "no_default_testing_config: used internally to disable monkeypatching for testing_config",
   "benchmark: execute the benchmark tests",
 ]
+filterwarnings = [
+  # elevate conda's deprecated warning to an error
+  "error::PendingDeprecationWarning:conda",
+  "error::DeprecationWarning:conda",
+  # elevate conda-build's deprecated warning to an error
+  "error::PendingDeprecationWarning:conda_build",
+  "error::DeprecationWarning:conda_build",
+  # ignore numpy.distutils error
+  'ignore:\s+`numpy.distutils` is deprecated:DeprecationWarning:conda_build._load_setup_py_data',
+]

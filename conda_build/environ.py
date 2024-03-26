@@ -416,7 +416,7 @@ def conda_build_vars(prefix, config):
         "HTTP_PROXY": os.getenv("HTTP_PROXY", ""),
         "REQUESTS_CA_BUNDLE": os.getenv("REQUESTS_CA_BUNDLE", ""),
         "DIRTY": "1" if config.dirty else "",
-        "ROOT": context.root_dir,
+        "ROOT": context.root_prefix,
     }
 
 
