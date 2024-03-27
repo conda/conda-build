@@ -1780,22 +1780,25 @@ def merge_dicts_of_lists(
     return {k: dol1.get(k, no) + dol2.get(k, no) for k in keys}
 
 
-def prefix_files(prefix):
+def prefix_files(prefix: str | os.PathLike | Path) -> set[str]:
     """
     Returns a set of all files in prefix.
     """
-    res = set()
-    prefix_rep = prefix + os.path.sep
-    for root, dirs, files in walk(prefix):
-        for fn in files:
-            # this is relpath, just hacked to be faster
-            res.add(join(root, fn).replace(prefix_rep, "", 1))
-        for dn in dirs:
-            path = join(root, dn)
-            if islink(path):
-                res.add(path.replace(prefix_rep, "", 1))
-                res.update(expand_globs((path,), prefix))
-    return res
+    prefix = f"{prefix}{os.path.sep}"
+
+    def relpath(*path: str) -> str:
+        # this is os.path.relpath, just hacked to be faster
+        return join(*path).replace(prefix, "", 1).lstrip(os.path.sep)
+
+    prefix_files = set()
+    for root, directories, files in walk(prefix):
+        for file in files:
+            prefix_files.add(relpath(root, file))
+        for directory in directories:
+            # symlink directories are "files"
+            if islink(path := join(root, directory)):
+                prefix_files.add(relpath(path))
+    return prefix_files
 
 
 def mmap_mmap(
