@@ -433,3 +433,25 @@ def test_is_conda_pkg(tmpdir, value: str, expected: bool, is_dir: bool, create: 
                 fp.write("test")
 
     assert utils.is_conda_pkg(value) == expected
+
+
+def test_prefix_files(tmp_path: Path):
+    # all files within the prefix are found
+    (prefix := tmp_path / "prefix1").mkdir()
+    (file1 := prefix / "file1").touch()
+    (dirA := prefix / "dirA").mkdir()
+    (file2 := dirA / "file2").touch()
+    (dirB := prefix / "dirB").mkdir()
+    (file3 := dirB / "file3").touch()
+
+    # files outside of the prefix are not found
+    (prefix2 := tmp_path / "prefix2").mkdir()
+    (prefix2 / "file4").touch()
+    (dirC := prefix2 / "dirC").mkdir()
+    (dirC / "file5").touch()
+
+    # even if they are symlinked
+    (link1 := prefix / "dirC").symlink_to(dirC)
+
+    paths = {str(path.relative_to(prefix)) for path in (file1, file2, file3, link1)}
+    assert paths == utils.prefix_files(str(prefix))
