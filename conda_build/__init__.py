@@ -1,7 +1,20 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
 
-from .__version__ import __version__
+try:
+    from ._version import __version__
+except ImportError:
+    # _version.py is only created after running `pip install`
+    try:
+        from setuptools_scm import get_version
+
+        __version__ = get_version(root="..", relative_to=__file__)
+    except (ImportError, OSError):
+        # ImportError: setuptools_scm isn't installed
+        # OSError: git isn't installed
+        # Conda-build abides by CEP-8 which specifies using CalVer, so the dev version is:
+        #     YY.MM.MICRO.devN+gHASH[.dirty]
+        __version__ = "0.0.0.dev0+placeholder"
 
 __all__ = ["__version__"]
 
