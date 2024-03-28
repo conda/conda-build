@@ -1,5 +1,5 @@
 if [[ -z "$CC" ]]; then
-  source $BUILD_PREFIX/bin/activate
+  source $(dirname CONDA_EXE)/activate $BUILD_PREFIX
 fi
 echo "int main() {}" > main.c
 mkdir -p $PREFIX/bin
