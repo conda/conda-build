@@ -32,6 +32,8 @@ if TYPE_CHECKING:
     from conda_build.metadata import MetaData
 
 if TYPE_CHECKING:
+    from pytest_mock import MockerFixture
+
     from conda_build.metadata import MetaData
 
 PREFIX_TESTS = {"normal": os.path.sep}
