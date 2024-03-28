@@ -1,0 +1,26 @@
+[build-system]
+requires = ["poetry_core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "conda-build-test-pyproject"
+version = "1.0"
+author = "Continuum Analytics Inc."
+url = "https://github.com/conda/conda-build"
+license = "BSD-3-Clause"
+description = "test package for testing conda-build"
+    
+packages = [
+    { include = "conda_build_test2" }
+]
+
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+]
