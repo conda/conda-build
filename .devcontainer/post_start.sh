@@ -21,4 +21,3 @@ conda list -p "$BASE_CONDA"
 conda info
 conda config --show-sources
 set +x
-
