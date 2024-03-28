@@ -1301,9 +1301,9 @@ build prefix. Explicit file lists support glob expressions.
 Directory names are also supported, and they recursively include
 contents.
 
-.. warning:: Files installed to the prefix by host dependencies will
-be matched by glob expressions and included as contents of directories for
-explicit file lists.
+.. warning:: When defining `outputs/files` as a list, any file in the prefix
+(including those installed by host dependencies) matching one of the glob
+expressions is included in the output.
 
 .. code-block:: yaml
 
@@ -1315,10 +1315,14 @@ explicit file lists.
          - *.some-extension
          - somefolder/*.some-extension
 
-Files can be excluded by specifying `files` as a dictionary separating
-files to `include` from those to `exclude`. Files installed to the prefix
-by host dependencies are automatically excluded when the include/exclude
-syntax is used:
+Greater control over file matching may be
+achieved by defining `files` as a dictionary separating files to
+`include` from those to `exclude`.
+When using include/exclude, only files installed by
+the current recipe are considered. i.e. files in the prefix installed
+by host dependencies are excluded. include/exclude may not be used
+simultaneously with glob expressions listed directly in `outputs/files`.
+Files matching both include and exclude expressions will be excluded.
 
 .. code-block:: yaml
 
@@ -1332,6 +1336,7 @@ syntax is used:
            - somefolder/*.some-extension
          exclude:
            - *.exclude-extension
+           - a-folder/**/*.some-extension
 
 Scripts that create or move files into the build prefix can be
 any kind of script. Known script types need only specify the
