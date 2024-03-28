@@ -1947,7 +1947,7 @@ def test_add_pip_as_python_dependency_from_condarc_file(
     testing_metadata, testing_workdir, add_pip_as_python_dependency, monkeypatch
 ):
     """
-    Test whether settings from .condarc files are heeded.
+    Test whether settings from .condarc files are needed.
     ref: https://github.com/conda/conda-libmamba-solver/issues/393
     """
     # TODO: SubdirData._cache_ clearing might not be needed for future conda versions.
@@ -1970,3 +1970,36 @@ def test_add_pip_as_python_dependency_from_condarc_file(
     with env_var("CONDARC", conda_rc, reset_context):
         with check_build_fails:
             api.build(testing_metadata)
+
+
+@pytest.mark.parametrize("recipe", sorted(Path(metadata_dir, "_build_script_errors").glob("*")))
+@pytest.mark.parametrize("debug", (False, True))
+def test_conda_build_script_errors_without_conda_info_handlers(tmp_path, recipe, debug):
+    ""
+    env = os.environ.copy()
+    if debug:
+        env["CONDA_VERBOSITY"] = "3"
+    process = subprocess.run(
+        ["conda", "build", recipe],
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+        cwd=tmp_path,
+    )
+    assert process.returncode > 0
+    all_output = process.stdout + "\n" + process.stderr
+
+    # These should NOT appear in the output
+    assert ">>> ERROR REPORT <<<" not in all_output
+    assert "An unexpected error has occurred." not in all_output
+    assert "Conda has prepared the above report." not in all_output
+
+    # These should appear
+    assert "returned non-zero exit status 1" in all_output
+
+    # With verbose mode, we should actually see the traceback
+    if debug:
+        assert "Traceback" in all_output
+        assert "CalledProcessError" in all_output
+        assert "returned non-zero exit status 1" in all_output
