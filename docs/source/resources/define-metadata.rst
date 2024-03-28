@@ -1299,8 +1299,11 @@ You can specify files to be included in the package in 1 of
 Explicit file lists are relative paths from the root of the
 build prefix. Explicit file lists support glob expressions.
 Directory names are also supported, and they recursively include
-contents. Files installed to the prefix by host dependencies will
-be matched by glob expressions.
+contents.
+
+.. warning:: Files installed to the prefix by host dependencies will
+be matched by glob expressions and included as contents of directories for
+explicit file lists.
 
 .. code-block:: yaml
 
