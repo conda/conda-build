@@ -1753,13 +1753,16 @@ def bundle_conda(
                     output["script"],
                     args[0],
                 )
-            if "system32" in args[0] and "bash" in args[0]:
-                print(
-                    "ERROR :: WSL bash.exe detected, this will not work (PRs welcome!). Please\n"
-                    "         use MSYS2 packages. Add `m2-base` and more (depending on what your"
-                    "         script needs) to `requirements/build` instead."
+            if (
+                # WSL bash is always the same path, it is an alias to the default
+                # distribution as configured by the user
+                on_win and Path("C:\\Windows\\System32\\bash.exe").samefile(args[0])
+            ):
+                raise CondaBuildUserError(
+                    "WSL bash.exe is not supported. Please use MSYS2 packages. Add "
+                    "`m2-base` and more (depending on what your script needs) to "
+                    "`requirements/build` instead."
                 )
-                sys.exit(1)
         else:
             args = interpreter.split(" ")
 
