@@ -1972,7 +1972,9 @@ def test_add_pip_as_python_dependency_from_condarc_file(
             api.build(testing_metadata)
 
 
-@pytest.mark.parametrize("recipe", sorted(Path(metadata_dir, "_build_script_errors").glob("*")))
+@pytest.mark.parametrize(
+    "recipe", sorted(Path(metadata_dir, "_build_script_errors").glob("*"))
+)
 @pytest.mark.parametrize("debug", (False, True))
 def test_conda_build_script_errors_without_conda_info_handlers(tmp_path, recipe, debug):
     ""
