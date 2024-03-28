@@ -41,6 +41,7 @@ from conda_build.conda_interface import (
 )
 from conda_build.config import Config
 from conda_build.exceptions import (
+    BuildScriptException,
     CondaBuildException,
     DependencyNeedsBuildingError,
     OverDependingError,
@@ -388,7 +389,7 @@ def test_dirty_variable_available_in_build_scripts(testing_config):
     testing_config.dirty = True
     api.build(recipe, config=testing_config)
 
-    with pytest.raises(subprocess.CalledProcessError):
+    with pytest.raises(BuildScriptException):
         testing_config.dirty = False
         api.build(recipe, config=testing_config)
 
@@ -821,13 +822,13 @@ def test_disable_pip(testing_metadata):
     testing_metadata.meta["build"]["script"] = (
         'python -c "import pip; print(pip.__version__)"'
     )
-    with pytest.raises(subprocess.CalledProcessError):
+    with pytest.raises(BuildScriptException):
         api.build(testing_metadata)
 
     testing_metadata.meta["build"]["script"] = (
         'python -c "import setuptools; print(setuptools.__version__)"'
     )
-    with pytest.raises(subprocess.CalledProcessError):
+    with pytest.raises(BuildScriptException):
         api.build(testing_metadata)
 
 
@@ -1542,7 +1543,7 @@ def test_setup_py_data_in_env(testing_config):
     # should pass with any modern python (just not 3.5)
     api.build(recipe, config=testing_config)
     # make sure it fails with our special python logic
-    with pytest.raises(subprocess.CalledProcessError):
+    with pytest.raises(BuildScriptException):
         api.build(recipe, config=testing_config, python="3.5")
 
 
@@ -1963,7 +1964,7 @@ def test_add_pip_as_python_dependency_from_condarc_file(
     if add_pip_as_python_dependency:
         check_build_fails = nullcontext()
     else:
-        check_build_fails = pytest.raises(subprocess.CalledProcessError)
+        check_build_fails = pytest.raises(BuildScriptException)
 
     conda_rc = Path(testing_workdir, ".condarc")
     conda_rc.write_text(f"add_pip_as_python_dependency: {add_pip_as_python_dependency}")
