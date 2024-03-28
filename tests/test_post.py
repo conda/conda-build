@@ -169,7 +169,7 @@ def test_file_hash(testing_config, caplog, tmp_path):
     with caplog.at_level(logging.INFO):
         api.build(
             str(recipe_tmp), config=testing_config, notest=True, variants=variants
-        )[0]
+        )
 
 
 @pytest.mark.skipif(on_win, reason="rpath fixup not done on Windows.")
