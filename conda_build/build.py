@@ -1645,16 +1645,6 @@ def post_process_files(m: MetaData, initial_prefix_files):
     current_prefix_files = utils.prefix_files(prefix=host_prefix)
     new_files = sorted(current_prefix_files - initial_prefix_files)
     new_files = utils.filter_files(new_files, prefix=host_prefix)
-    meta_dir = m.config.meta_dir
-    if any(meta_dir in join(host_prefix, f) for f in new_files):
-        meta_files = (
-            tuple(f for f in new_files if m.config.meta_dir in join(host_prefix, f)),
-        )
-        sys.exit(
-            f"Error: Untracked file(s) {meta_files} found in conda-meta directory. This error usually comes "
-            "from using conda in the build script. Avoid doing this, as it can lead to packages "
-            "that include their dependencies."
-        )
     post_build(m, new_files, build_python=python)
 
     entry_point_script_names = get_entry_point_script_names(
