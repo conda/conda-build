@@ -1,0 +1,7 @@
+package:
+  name: pkg
+  version: '1.0'
+source:
+  path: .
+build:
+  script: exit 1

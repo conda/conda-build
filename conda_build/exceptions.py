@@ -2,12 +2,14 @@
 # SPDX-License-Identifier: BSD-3-Clause
 import textwrap
 
+from conda import CondaError
+
 SEPARATOR = "-" * 70
 
 indent = lambda s: textwrap.fill(textwrap.dedent(s))
 
 
-class CondaBuildException(Exception):
+class CondaBuildException(CondaError):
     pass
 
 
@@ -107,22 +109,26 @@ class BuildLockError(CondaBuildException):
     """Raised when we failed to acquire a lock."""
 
 
-class OverLinkingError(RuntimeError):
+class OverLinkingError(RuntimeError, CondaBuildException):
     def __init__(self, error, *args):
         self.error = error
         self.msg = "overlinking check failed \n%s" % (error)
         super().__init__(self.msg)
 
 
-class OverDependingError(RuntimeError):
+class OverDependingError(RuntimeError, CondaBuildException):
     def __init__(self, error, *args):
         self.error = error
         self.msg = "overdepending check failed \n%s" % (error)
         super().__init__(self.msg)
 
 
-class RunPathError(RuntimeError):
+class RunPathError(RuntimeError, CondaBuildException):
     def __init__(self, error, *args):
         self.error = error
         self.msg = "runpaths check failed \n%s" % (error)
         super().__init__(self.msg)
+
+
+class BuildScriptException(CondaBuildException):
+    pass

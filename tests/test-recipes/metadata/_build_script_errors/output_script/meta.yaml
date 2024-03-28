@@ -1,0 +1,9 @@
+package:
+  name: pkg
+  version: '1.0'
+source:
+  path: .
+outputs:
+  - name: pkg-output
+    script: exit_1.sh   # [unix]
+    script: exit_1.bat  # [win]
