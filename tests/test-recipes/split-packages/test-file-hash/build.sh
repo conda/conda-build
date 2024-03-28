@@ -1,5 +1,5 @@
 if [[ -z "$CC" ]]; then
-  conda activate $BUILD_PREFIX
+  source $BUILD_PREFIX/bin/activate
 fi
 echo "int main() {}" > main.c
 mkdir -p $PREFIX/bin
