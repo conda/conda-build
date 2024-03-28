@@ -2894,16 +2894,22 @@ def build(
     return new_pkgs
 
 
+INTERPRETER_BASH = ("bash.exe", "-el") if on_win else ("bash", "-e")
+INTERPRETER_BAT = (os.getenv("COMSPEC", "cmd.exe"), "/d", "/c")
+INTERPRETER_POWERSHELL = ("powershell", "-ExecutionPolicy", "ByPass", "-File")
+INTERPRETER_PYTHON = ("python",)
+
+
 def guess_interpreter(script_filename):
     # -l is needed for MSYS2 as the login scripts set some env. vars (TMP, TEMP)
     # Since the MSYS2 installation is probably a set of conda packages we do not
     # need to worry about system environmental pollution here. For that reason I
     # do not pass -l on other OSes.
     extensions_to_run_commands = {
-        ".sh": ["bash.exe", "-el"] if utils.on_win else ["bash", "-e"],
-        ".bat": [os.environ.get("COMSPEC", "cmd.exe"), "/d", "/c"],
-        ".ps1": ["powershell", "-executionpolicy", "bypass", "-File"],
-        ".py": ["python"],
+        ".sh": INTERPRETER_BASH,
+        ".bat": INTERPRETER_BAT,
+        ".ps1": INTERPRETER_POWERSHELL,
+        ".py": INTERPRETER_PYTHON,
     }
     file_ext = os.path.splitext(script_filename)[1]
     for ext, command in extensions_to_run_commands.items():
