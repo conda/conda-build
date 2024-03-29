@@ -17,6 +17,7 @@ import sys
 import time
 import warnings
 from collections import OrderedDict, deque
+from logging import getLogger
 from os.path import dirname, isdir, isfile, islink, join
 
 import conda_package_handling.api
@@ -1847,7 +1848,9 @@ def bundle_conda(output, metadata: MetaData, env, stats, **kw):
         interpreter = output.get("script_interpreter")
         if not interpreter:
             args = list(guess_interpreter(output["script"]))
+            getLogger("testing").debug("guess_interpreter yields: %s", args)
             args[0] = external.find_executable(args[0], metadata.config.build_prefix)
+            getLogger("testing").debug("find_executable yields: %s", args[0])
             if not args[0]:
                 log.error(
                     "Did not find an interpreter to run %s, looked for %s",
