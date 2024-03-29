@@ -1846,20 +1846,15 @@ def bundle_conda(output, metadata: MetaData, env, stats, **kw):
 
         interpreter = output.get("script_interpreter")
         if not interpreter:
-            interpreter_and_args = guess_interpreter(output["script"])
-            interpreter_and_args[0] = external.find_executable(
-                interpreter_and_args[0], metadata.config.build_prefix
-            )
-            if not interpreter_and_args[0]:
+            args = guess_interpreter(output["script"])
+            args[0] = external.find_executable(args[0], metadata.config.build_prefix)
+            if not args[0]:
                 log.error(
                     "Did not find an interpreter to run {}, looked for {}".format(
-                        output["script"], interpreter_and_args[0]
+                        output["script"], args[0]
                     )
                 )
-            if (
-                "system32" in interpreter_and_args[0]
-                and "bash" in interpreter_and_args[0]
-            ):
+            if "system32" in args[0] and "bash" in args[0]:
                 print(
                     "ERROR :: WSL bash.exe detected, this will not work (PRs welcome!). Please\n"
                     "         use MSYS2 packages. Add `m2-base` and more (depending on what your"
@@ -1867,7 +1862,7 @@ def bundle_conda(output, metadata: MetaData, env, stats, **kw):
                 )
                 sys.exit(1)
         else:
-            interpreter_and_args = interpreter.split(" ")
+            args = interpreter.split(" ")
 
         initial_files = utils.prefix_files(metadata.config.host_prefix)
         env_output = env.copy()
@@ -1903,7 +1898,7 @@ def bundle_conda(output, metadata: MetaData, env, stats, **kw):
 
         bundle_stats = {}
         utils.check_call_env(
-            interpreter_and_args + [dest_file],
+            [*args, dest_file],
             cwd=metadata.config.work_dir,
             env=env_output,
             stats=bundle_stats,
@@ -2110,11 +2105,11 @@ def bundle_wheel(output, metadata: MetaData, env, stats):
         env["TOP_PKG_VERSION"] = env["PKG_VERSION"]
         env["PKG_VERSION"] = metadata.version()
         env["PKG_NAME"] = metadata.name()
-        interpreter_and_args = guess_interpreter(dest_file)
+        args = guess_interpreter(dest_file)
 
         bundle_stats = {}
         utils.check_call_env(
-            interpreter_and_args + [dest_file],
+            [*args, dest_file],
             cwd=metadata.config.work_dir,
             env=env,
             stats=bundle_stats,
