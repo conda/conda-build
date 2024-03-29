@@ -1850,9 +1850,9 @@ def bundle_conda(output, metadata: MetaData, env, stats, **kw):
             args[0] = external.find_executable(args[0], metadata.config.build_prefix)
             if not args[0]:
                 log.error(
-                    "Did not find an interpreter to run {}, looked for {}".format(
-                        output["script"], args[0]
-                    )
+                    "Did not find an interpreter to run %s, looked for %s",
+                    output["script"],
+                    args[0],
                 )
             if "system32" in args[0] and "bash" in args[0]:
                 print(
