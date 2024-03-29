@@ -1846,7 +1846,7 @@ def bundle_conda(output, metadata: MetaData, env, stats, **kw):
 
         interpreter = output.get("script_interpreter")
         if not interpreter:
-            args = guess_interpreter(output["script"])
+            args = list(guess_interpreter(output["script"]))
             args[0] = external.find_executable(args[0], metadata.config.build_prefix)
             if not args[0]:
                 log.error(
