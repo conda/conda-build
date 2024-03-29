@@ -331,10 +331,10 @@ def test_rewrite_output(testing_config, capsys):
         ("foo.bat.other", NotImplementedError, None),
         ("foo.ps1.other", NotImplementedError, None),
         ("foo.py.other", NotImplementedError, None),
-        ("foo.sh_what", None, build.INTERPRETER_BASH),  # not valid
-        ("foo.bat_what", None, build.INTERPRETER_BAT),  # not valid
-        ("foo.ps1_what", None, build.INTERPRETER_POWERSHELL),  # not valid
-        ("foo.py_what", None, build.INTERPRETER_PYTHON),  # not valid
+        ("foo.sh_what", NotImplementedError, None),
+        ("foo.bat_what", NotImplementedError, None),
+        ("foo.ps1_what", NotImplementedError, None),
+        ("foo.py_what", NotImplementedError, None),
     ],
 )
 def test_guess_interpreter(

@@ -4,6 +4,8 @@
 Module that does most of the heavy lifting for the ``conda build`` command.
 """
 
+from __future__ import annotations
+
 import fnmatch
 import json
 import os
@@ -18,6 +20,7 @@ import time
 import warnings
 from collections import OrderedDict, deque
 from os.path import dirname, isdir, isfile, islink, join
+from pathlib import Path
 
 import conda_package_handling.api
 import yaml
@@ -2889,34 +2892,31 @@ def build(
     return new_pkgs
 
 
+# -l is needed for MSYS2 as the login scripts set some env. vars (TMP, TEMP)
+# Since the MSYS2 installation is probably a set of conda packages we do not
+# need to worry about system environmental pollution here. For that reason I
+# do not pass -l on other OSes.
 INTERPRETER_BASH = ("bash.exe", "-el") if on_win else ("bash", "-e")
 INTERPRETER_BAT = (os.getenv("COMSPEC", "cmd.exe"), "/d", "/c")
 INTERPRETER_POWERSHELL = ("powershell", "-ExecutionPolicy", "ByPass", "-File")
 INTERPRETER_PYTHON = ("python",)
 
 
-def guess_interpreter(script_filename):
-    # -l is needed for MSYS2 as the login scripts set some env. vars (TMP, TEMP)
-    # Since the MSYS2 installation is probably a set of conda packages we do not
-    # need to worry about system environmental pollution here. For that reason I
-    # do not pass -l on other OSes.
-    extensions_to_run_commands = {
-        ".sh": INTERPRETER_BASH,
-        ".bat": INTERPRETER_BAT,
-        ".ps1": INTERPRETER_POWERSHELL,
-        ".py": INTERPRETER_PYTHON,
-    }
-    file_ext = os.path.splitext(script_filename)[1]
-    for ext, command in extensions_to_run_commands.items():
-        if file_ext.lower().startswith(ext):
-            interpreter_command = command
-            break
-    else:
+def guess_interpreter(script_filename: str | os.PathLike | Path) -> tuple[str, ...]:
+    suffix = Path(script_filename).suffix
+    try:
+        return {
+            ".sh": INTERPRETER_BASH,
+            ".bat": INTERPRETER_BAT,
+            ".ps1": INTERPRETER_POWERSHELL,
+            ".py": INTERPRETER_PYTHON,
+        }[suffix]
+    except KeyError:
+        # KeyError: unknown suffix
         raise NotImplementedError(
-            f"Don't know how to run {file_ext} file.   Please specify "
+            f"Don't know how to run {suffix} file. Please specify "
             f"script_interpreter for {script_filename} output"
         )
-    return interpreter_command
 
 
 def warn_on_use_of_SRC_DIR(metadata):
