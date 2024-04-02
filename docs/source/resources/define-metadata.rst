@@ -1301,9 +1301,10 @@ build prefix. Explicit file lists support glob expressions.
 Directory names are also supported, and they recursively include
 contents.
 
-.. warning:: When defining `outputs/files` as a list, any file in the prefix
-   (including those installed by host dependencies) matching one of the glob
-   expressions is included in the output.
+.. warning::
+   When defining `outputs/files` as a list, any file in the
+   prefix (including those installed by host dependencies) matching
+   one of the glob expressions is included in the output.
 
 .. code-block:: yaml
 
