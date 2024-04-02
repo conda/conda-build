@@ -1302,9 +1302,7 @@ Directory names are also supported, and they recursively include
 contents.
 
 .. warning::
-   When defining `outputs/files` as a list, any file in the
-   prefix (including those installed by host dependencies) matching
-   one of the glob expressions is included in the output.
+   When defining `outputs/files` as a list, any file in the prefix (including those installed by host dependencies) matching one of the glob expressions is included in the output.
 
 .. code-block:: yaml
 
