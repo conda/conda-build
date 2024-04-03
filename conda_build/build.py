@@ -89,6 +89,9 @@ from .variants import (
     set_language_env_vars,
 )
 
+if TYPE_CHECKING:
+    from typing import Iterable
+
 if on_win:
     from . import windows
 
