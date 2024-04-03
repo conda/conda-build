@@ -313,7 +313,9 @@ def inspect_objects(
     groupby: str = "package",
 ):
     if not on_mac:
-        sys.exit("Error: conda inspect objects is only implemented in OS X")
+        raise CondaBuildUserError(
+            "Error: conda inspect objects is only implemented in OS X"
+        )
 
     prefix = Path(prefix)
     installed = {prec.name: prec for prec in PrefixData(str(prefix)).iter_records()}
