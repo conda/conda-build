@@ -42,6 +42,7 @@ from . import __version__ as conda_build_version
 from . import environ, noarch_python, source, tarcheck, utils
 from .config import Config
 from .create_test import create_all_test_files
+from .deprecations import deprecated
 from .exceptions import (
     CondaBuildException,
     CondaBuildUserError,
@@ -3506,6 +3507,7 @@ def tests_failed(
     raise CondaBuildUserError("TESTS FAILED: " + os.path.basename(pkg))
 
 
+@deprecated("24.5", "24.7")
 def check_external():
     if on_linux:
         patchelf = external.find_executable("patchelf")
