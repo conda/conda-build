@@ -1784,20 +1784,19 @@ def prefix_files(prefix: str | os.PathLike | Path) -> set[str]:
     """
     Returns a set of all files in prefix.
     """
-    prefix = f"{prefix}{os.path.sep}"
-
-    def relpath(*path: str) -> str:
-        # this is os.path.relpath, just hacked to be faster
-        return join(*path).replace(prefix, "", 1).lstrip(os.path.sep)
-
-    prefix_files = set()
+    prefix = f"{os.path.abspath(prefix)}{os.path.sep}"
+    prefix_files: set[str] = set()
     for root, directories, files in walk(prefix):
-        for file in files:
-            prefix_files.add(relpath(root, file))
-        for directory in directories:
-            # symlink directories are "files"
-            if islink(path := join(root, directory)):
-                prefix_files.add(relpath(path))
+        # this is effectively os.path.relpath, just hacked to be faster
+        relroot = root[len(prefix) :].lstrip(os.path.sep)
+        # add all files
+        prefix_files.update(join(relroot, file) for file in files)
+        # add all symlink directories (they are "files")
+        prefix_files.update(
+            join(relroot, directory)
+            for directory in directories
+            if islink(join(root, directory))
+        )
     return prefix_files
 
 
