@@ -10,7 +10,8 @@ from uuid import uuid4
 import pytest
 from conda.core.prefix_data import PrefixData
 
-from conda_build.inspect_pkg import which_package
+from conda_build.exceptions import CondaBuildUserError
+from conda_build.inspect_pkg import inspect_linkages, which_package
 from conda_build.utils import on_win
 
 
@@ -271,3 +272,14 @@ def test_which_package_battery(tmp_path: Path):
 
     # missing files should return no packages
     assert not len(list(which_package(tmp_path / "missing", tmp_path)))
+
+
+def test_inspect_linkages_no_packages():
+    with pytest.raises(CondaBuildUserError):
+        inspect_linkages([])
+
+
+@pytest.mark.skipif(not on_win, reason="inspect_linkages is available")
+def test_inspect_linkages_on_win():
+    with pytest.raises(CondaBuildUserError):
+        inspect_linkages(["packages"])
