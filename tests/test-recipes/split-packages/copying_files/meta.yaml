@@ -20,8 +20,8 @@ outputs:
       - somedir
       - "*.ext"
       # Libs should match because they are in the prefix
-      - "lib/libdav1d*"
-      - "Library/bin/dav1d*"
+      - "lib/libdav1d*"       # [unix]
+      - "Library/bin/dav1d*"  # [win]
     test:
       script: subpackage_test.py
       script_interpreter: python
@@ -38,8 +38,8 @@ outputs:
         - somedir
         - "*.ext"
         # Libs should not match because they come from a different package
-        - "lib/libdav1d*"
-        - "Library/bin/dav1d*"
+        - "lib/libdav1d*"       # [unix]
+        - "Library/bin/dav1d*"  # [win]
       exclude:
         - "*3.ext"
     test:
