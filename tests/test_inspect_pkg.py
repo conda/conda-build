@@ -283,3 +283,9 @@ def test_inspect_linkages_no_packages():
 def test_inspect_linkages_on_win():
     with pytest.raises(CondaBuildUserError):
         inspect_linkages(["packages"])
+
+
+@pytest.mark.skipif(on_win, reason="inspect_linkages is not available")
+def test_inspect_linkages_not_installed():
+    with pytest.raises(CondaBuildUserError):
+        inspect_linkages(["not_installed_pkg"])

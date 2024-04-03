@@ -242,7 +242,7 @@ def inspect_linkages(
         if name == untracked_package:
             obj_files = get_untracked_obj_files(prefix)
         elif name not in installed:
-            sys.exit(f"Package {name} is not installed in {prefix}")
+            raise CondaBuildUserError(f"Package {name} is not installed in {prefix}")
         else:
             obj_files = get_package_obj_files(installed[name], prefix)
 
