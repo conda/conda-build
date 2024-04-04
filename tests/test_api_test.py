@@ -4,13 +4,20 @@
 This module tests the test API.  These are high-level integration tests.
 """
 
+from __future__ import annotations
+
 import os
+from typing import TYPE_CHECKING
 
 import pytest
 
 from conda_build import api
+from conda_build.exceptions import CondaBuildUserError
 
 from .utils import metadata_dir
+
+if TYPE_CHECKING:
+    from conda_build.metadata import MetaData
 
 
 @pytest.mark.sanity
@@ -55,7 +62,7 @@ def test_package_with_jinja2_does_not_redownload_source(
 
 
 @pytest.mark.sanity
-def test_api_extra_dep(testing_metadata):
+def test_api_extra_dep(testing_metadata: MetaData) -> None:
     testing_metadata.meta["test"]["imports"] = ["click"]
     output = api.build(testing_metadata, notest=True, anaconda_upload=False)[0]
 
@@ -63,5 +70,5 @@ def test_api_extra_dep(testing_metadata):
     api.test(output, config=testing_metadata.config, extra_deps=["click"])
 
     # missing click dep will fail tests
-    with pytest.raises(SystemExit):
+    with pytest.raises(CondaBuildUserError):
         api.test(output, config=testing_metadata.config)
