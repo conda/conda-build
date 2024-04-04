@@ -1,11 +1,14 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
+
 import json
 import logging
 import os
 import shutil
 import sys
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -21,6 +24,9 @@ from conda_build.utils import (
 )
 
 from .utils import add_mangling, metadata_dir, subpackage_path
+
+if TYPE_CHECKING:
+    from pytest import CaptureFixture
 
 
 @pytest.mark.skipif(
@@ -227,3 +233,74 @@ def test_check_dist_info_version():
     # package installed and version does not match
     with pytest.raises(CondaBuildUserError):
         post.check_dist_info_version("name", "1.2.3", ["name-1.0.0.dist-info/METADATA"])
+
+
+def test_find_lib(capsys: CaptureFixture, tmp_path: Path) -> None:
+    (prefix := tmp_path / "prefix").mkdir()
+    (prefix / (file1 := (name := "name"))).write_text("content")
+    (prefix / (dirA := "dirA")).mkdir()
+    (prefix / (file2 := f"{dirA}{os.sep}{name}")).write_text("content")
+    (prefix / (dirB := "dirB")).mkdir()
+    (prefix / (file3 := f"{dirB}{os.sep}{name}")).write_text("other")
+
+    (external := tmp_path / "external").mkdir()
+
+    rpath = Path("@rpath")
+    executable_path = Path("@executable_path")
+
+    # /prefix/missing is in prefix but isn't in file list (i.e., doesn't exist)
+    with pytest.raises(CondaBuildUserError, match=r"Could not find"):
+        post.find_lib(prefix / "missing", prefix, [])
+
+    # /prefix/name is in prefix and is in file list (i.e., it exists)
+    assert post.find_lib(prefix / name, prefix, [file1]) == file1
+
+    # /external/name is not in prefix
+    assert post.find_lib(external / name, prefix, []) is None
+
+    # @rpath/name paths are assumed to already point to a valid file
+    assert post.find_lib(rpath / name, prefix, []) is None
+    assert post.find_lib(rpath / "extra" / name, prefix, []) is None
+
+    # name is in the file list
+    assert post.find_lib(name, prefix, [file1]) == file1
+    assert post.find_lib(name, prefix, [file2]) == file2
+
+    # @executable_path/name is in the file list
+    assert post.find_lib(executable_path / name, prefix, [file1]) == file1
+    assert post.find_lib(executable_path / name, prefix, [file2]) == file2
+
+    # @executable_path/extra/name is in the file list
+    # TODO: is this valid?
+    assert post.find_lib(executable_path / "extra" / name, prefix, [file1]) == file1
+    assert post.find_lib(executable_path / "extra" / name, prefix, [file2]) == file2
+
+    # name matches multiples in the file list (and they're all the same file)
+    capsys.readouterr()  # clear buffer
+    assert post.find_lib(name, prefix, [file1, file2]) == file2
+    stdout, stderr = capsys.readouterr()
+    assert stdout == (
+        f"Found multiple instances of {name!r}: {[file2, file1]!r}. "
+        f"Choosing the first one.\n"
+    )
+    assert not stderr
+
+    # name matches multiples in file list (and they're not the same file)
+    with pytest.raises(CondaBuildUserError, match=r"Found multiple instances"):
+        post.find_lib(name, prefix, [file1, file3])
+
+    # missing is not in the file list
+    with pytest.raises(CondaBuildUserError, match=r"Could not find"):
+        post.find_lib("missing", prefix, [file1, file2])
+
+    # name matches multiples in file list but an explicit path is given
+    assert post.find_lib(name, prefix, [file1, file2, file3], file1) == file1
+    assert post.find_lib(name, prefix, [file1, file2, file3], file2) == file2
+    assert post.find_lib(name, prefix, [file1, file2, file3], file3) == file3
+
+    # relative/name is not in prefix and doesn't match any of the files
+    capsys.readouterr()  # clear buffer
+    assert post.find_lib(link := Path("relative", name), prefix, []) is None
+    stdout, stderr = capsys.readouterr()
+    assert stdout == f"Don't know how to find '{link}', skipping\n"
+    assert not stderr

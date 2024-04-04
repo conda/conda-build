@@ -382,25 +382,35 @@ def post_process(
     check_dist_info_version(name, version, files)
 
 
-def find_lib(link, prefix, files, path=None):
+def find_lib(
+    link: str | os.PathLike | Path,
+    prefix: str | os.PathLike | Path,
+    files: Iterable[str | os.PathLike | Path],
+    path: str | os.PathLike | Path | None = None,
+) -> str | None:
+    link = str(link)
+    prefix = str(prefix)
+    files = map(str, utils.ensure_list(files))
+    path = str(path) if path else None
+
     if link.startswith(prefix):
         link = normpath(link[len(prefix) + 1 :])
         if not any(link == normpath(w) for w in files):
-            sys.exit(f"Error: Could not find {link}")
+            raise CondaBuildUserError(f"Could not find {link!r}")
         return link
     if link.startswith("/"):  # but doesn't start with the build prefix
-        return
+        return None
     if link.startswith("@rpath/"):
         # Assume the rpath already points to lib, so there is no need to
         # change it.
-        return
+        return None
     if "/" not in link or link.startswith("@executable_path/"):
         link = basename(link)
         file_names = defaultdict(list)
-        for f in files:
-            file_names[basename(f)].append(f)
+        for file in files:
+            file_names[basename(file)].append(file)
         if link not in file_names:
-            sys.exit(f"Error: Could not find {link}")
+            raise CondaBuildUserError(f"Could not find {link!r}")
         if len(file_names[link]) > 1:
             if path and basename(path) == link:
                 # The link is for the file itself, just use it
@@ -408,20 +418,22 @@ def find_lib(link, prefix, files, path=None):
             # Allow for the possibility of the same library appearing in
             # multiple places.
             md5s = set()
-            for f in file_names[link]:
-                md5s.add(compute_sum(join(prefix, f), "md5"))
+            for file in file_names[link]:
+                md5s.add(compute_sum(join(prefix, file), "md5"))
             if len(md5s) > 1:
-                sys.exit(
-                    f"Error: Found multiple instances of {link}: {file_names[link]}"
+                raise CondaBuildUserError(
+                    f"Found multiple instances of {link!r}: {file_names[link]!r}"
                 )
             else:
                 file_names[link].sort()
                 print(
-                    f"Found multiple instances of {link} ({file_names[link]}).  "
-                    "Choosing the first one."
+                    f"Found multiple instances of {link!r}: {file_names[link]!r}. "
+                    f"Choosing the first one."
                 )
         return file_names[link][0]
-    print(f"Don't know how to find {link}, skipping")
+
+    print(f"Don't know how to find {link!r}, skipping")
+    return None
 
 
 def osx_ch_link(path, link_dict, host_prefix, build_prefix, files):
