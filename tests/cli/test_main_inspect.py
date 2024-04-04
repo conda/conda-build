@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: BSD-3-Clause
 import os
 import re
-import sys
 
 import pytest
 import yaml
@@ -10,7 +9,7 @@ import yaml
 from conda_build import api
 from conda_build.cli import main_inspect
 from conda_build.exceptions import CondaBuildUserError
-from conda_build.utils import on_win
+from conda_build.utils import on_mac, on_win
 
 from ..utils import metadata_dir
 
@@ -24,9 +23,11 @@ def test_inspect_linkages(testing_workdir, capfd):
     # get a package that has known object output
     args = ["linkages", "python"]
     if on_win:
-        with pytest.raises(CondaBuildUserError) as exc:
+        with pytest.raises(
+            CondaBuildUserError,
+            match=r"`conda inspect linkages` is only implemented on Linux and macOS",
+        ):
             main_inspect.execute(args)
-            assert "conda inspect linkages is only implemented in Linux and OS X" in exc
     else:
         main_inspect.execute(args)
         output, error = capfd.readouterr()
@@ -36,10 +37,12 @@ def test_inspect_linkages(testing_workdir, capfd):
 def test_inspect_objects(testing_workdir, capfd):
     # get a package that has known object output
     args = ["objects", "python"]
-    if sys.platform != "darwin":
-        with pytest.raises(CondaBuildUserError) as exc:
+    if not on_mac:
+        with pytest.raises(
+            CondaBuildUserError,
+            match=r"`conda inspect objects` is only implemented on macOS",
+        ):
             main_inspect.execute(args)
-            assert "conda inspect objects is only implemented in OS X" in exc
     else:
         main_inspect.execute(args)
         output, error = capfd.readouterr()
