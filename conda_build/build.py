@@ -3581,7 +3581,7 @@ def tests_failed(
         _delegated_update_index(
             os.path.dirname(os.path.dirname(pkg)), verbose=config.debug, threads=1
         )
-    raise CondaBuildUserError("TESTS FAILED: " + os.path.basename(pkg))
+    raise CondaBuildUserError(f"TESTS FAILED: {os.path.basename(pkg)}")
 
 
 @deprecated(
@@ -3594,7 +3594,7 @@ def check_external():
         patchelf = external.find_executable("patchelf")
         if patchelf is None:
             raise CondaBuildUserError(
-                f"Did not find 'patchelf' in: {os.pathsep.join(external.dir_paths)} "
+                f"Did not find 'patchelf' in: {os.pathsep.join(external._DIR_PATHS)} "
                 f"'patchelf' is necessary for building conda packages on Linux with "
                 f"relocatable ELF libraries.  You can install patchelf using conda install "
                 f"patchelf."
