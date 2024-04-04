@@ -4,6 +4,8 @@
 Module that does most of the heavy lifting for the ``conda build`` command.
 """
 
+from __future__ import annotations
+
 import fnmatch
 import json
 import os
@@ -18,6 +20,7 @@ import time
 import warnings
 from collections import OrderedDict, deque
 from os.path import dirname, isdir, isfile, islink, join
+from pathlib import Path
 
 import conda_package_handling.api
 import yaml
@@ -25,19 +28,17 @@ from bs4 import UnicodeDammit
 from conda import __version__ as conda_version
 from conda.base.context import context, reset_context
 from conda.core.prefix_data import PrefixData
+from conda.exceptions import CondaError, NoPackagesFoundError, UnsatisfiableError
 from conda.models.channel import Channel
 
 from . import __version__ as conda_build_version
 from . import environ, noarch_python, source, tarcheck, utils
 from .conda_interface import (
-    CondaError,
     EntityEncoder,
     FileMode,
     MatchSpec,
-    NoPackagesFoundError,
     PathType,
     TemporaryDirectory,
-    UnsatisfiableError,
     env_path_backup_var_exists,
     prefix_placeholder,
     url_path,
@@ -1850,20 +1851,15 @@ def bundle_conda(output, metadata: MetaData, env, stats, **kw):
 
         interpreter = output.get("script_interpreter")
         if not interpreter:
-            interpreter_and_args = guess_interpreter(output["script"])
-            interpreter_and_args[0] = external.find_executable(
-                interpreter_and_args[0], metadata.config.build_prefix
-            )
-            if not interpreter_and_args[0]:
+            args = list(guess_interpreter(output["script"]))
+            args[0] = external.find_executable(args[0], metadata.config.build_prefix)
+            if not args[0]:
                 log.error(
-                    "Did not find an interpreter to run {}, looked for {}".format(
-                        output["script"], interpreter_and_args[0]
-                    )
+                    "Did not find an interpreter to run %s, looked for %s",
+                    output["script"],
+                    args[0],
                 )
-            if (
-                "system32" in interpreter_and_args[0]
-                and "bash" in interpreter_and_args[0]
-            ):
+            if "system32" in args[0] and "bash" in args[0]:
                 print(
                     "ERROR :: WSL bash.exe detected, this will not work (PRs welcome!). Please\n"
                     "         use MSYS2 packages. Add `m2-base` and more (depending on what your"
@@ -1871,7 +1867,7 @@ def bundle_conda(output, metadata: MetaData, env, stats, **kw):
                 )
                 sys.exit(1)
         else:
-            interpreter_and_args = interpreter.split(" ")
+            args = interpreter.split(" ")
 
         initial_files = utils.prefix_files(metadata.config.host_prefix)
         env_output = env.copy()
@@ -1908,7 +1904,7 @@ def bundle_conda(output, metadata: MetaData, env, stats, **kw):
         bundle_stats = {}
         try:
             utils.check_call_env(
-                interpreter_and_args + [dest_file],
+                [*args, dest_file],
                 cwd=metadata.config.work_dir,
                 env=env_output,
                 stats=bundle_stats,
@@ -2117,11 +2113,11 @@ def bundle_wheel(output, metadata: MetaData, env, stats):
         env["TOP_PKG_VERSION"] = env["PKG_VERSION"]
         env["PKG_VERSION"] = metadata.version()
         env["PKG_NAME"] = metadata.name()
-        interpreter_and_args = guess_interpreter(dest_file)
+        args = guess_interpreter(dest_file)
 
         bundle_stats = {}
         utils.check_call_env(
-            interpreter_and_args + [dest_file],
+            [*args, dest_file],
             cwd=metadata.config.work_dir,
             env=env,
             stats=bundle_stats,
@@ -2907,28 +2903,31 @@ def build(
     return new_pkgs
 
 
-def guess_interpreter(script_filename):
-    # -l is needed for MSYS2 as the login scripts set some env. vars (TMP, TEMP)
-    # Since the MSYS2 installation is probably a set of conda packages we do not
-    # need to worry about system environmental pollution here. For that reason I
-    # do not pass -l on other OSes.
-    extensions_to_run_commands = {
-        ".sh": ["bash.exe", "-el"] if utils.on_win else ["bash", "-e"],
-        ".bat": [os.environ.get("COMSPEC", "cmd.exe"), "/d", "/c"],
-        ".ps1": ["powershell", "-executionpolicy", "bypass", "-File"],
-        ".py": ["python"],
-    }
-    file_ext = os.path.splitext(script_filename)[1]
-    for ext, command in extensions_to_run_commands.items():
-        if file_ext.lower().startswith(ext):
-            interpreter_command = command
-            break
-    else:
+# -l is needed for MSYS2 as the login scripts set some env. vars (TMP, TEMP)
+# Since the MSYS2 installation is probably a set of conda packages we do not
+# need to worry about system environmental pollution here. For that reason I
+# do not pass -l on other OSes.
+INTERPRETER_BASH = ("bash.exe", "-el") if on_win else ("bash", "-e")
+INTERPRETER_BAT = (os.getenv("COMSPEC", "cmd.exe"), "/d", "/c")
+INTERPRETER_POWERSHELL = ("powershell", "-ExecutionPolicy", "ByPass", "-File")
+INTERPRETER_PYTHON = ("python",)
+
+
+def guess_interpreter(script_filename: str | os.PathLike | Path) -> tuple[str, ...]:
+    suffix = Path(script_filename).suffix
+    try:
+        return {
+            ".sh": INTERPRETER_BASH,
+            ".bat": INTERPRETER_BAT,
+            ".ps1": INTERPRETER_POWERSHELL,
+            ".py": INTERPRETER_PYTHON,
+        }[suffix]
+    except KeyError:
+        # KeyError: unknown suffix
         raise NotImplementedError(
-            f"Don't know how to run {file_ext} file.   Please specify "
+            f"Don't know how to run {suffix} file. Please specify "
             f"script_interpreter for {script_filename} output"
         )
-    return interpreter_command
 
 
 def warn_on_use_of_SRC_DIR(metadata):
