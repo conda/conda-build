@@ -11,6 +11,7 @@ import pytest
 
 import conda_build.utils
 from conda_build import api, post
+from conda_build.exceptions import CondaBuildUserError
 from conda_build.utils import (
     get_site_packages,
     on_linux,
@@ -214,3 +215,15 @@ def test_rpath_symlink(mocker, testing_config):
     )
     # Should only be called on the actual binary, not its symlinks. (once per variant)
     assert mk_relative.call_count == 2
+
+
+def test_check_dist_info_version():
+    # package not installed
+    post.check_dist_info_version("name", "1.2.3", [])
+
+    # package installed and version matches
+    post.check_dist_info_version("name", "1.2.3", ["name-1.2.3.dist-info/METADATA"])
+
+    # package installed and version does not match
+    with pytest.raises(CondaBuildUserError):
+        post.check_dist_info_version("name", "1.2.3", ["name-1.0.0.dist-info/METADATA"])

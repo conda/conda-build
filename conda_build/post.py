@@ -43,7 +43,12 @@ from conda.misc import walk_prefix
 from conda.models.records import PrefixRecord
 
 from . import utils
-from .exceptions import OverDependingError, OverLinkingError, RunPathError
+from .exceptions import (
+    CondaBuildUserError,
+    OverDependingError,
+    OverLinkingError,
+    RunPathError,
+)
 from .inspect_pkg import which_package
 from .os_utils import external, macho
 from .os_utils.liefldd import (
@@ -64,7 +69,7 @@ from .os_utils.pyldd import (
 from .utils import on_mac, on_win, prefix_files
 
 if TYPE_CHECKING:
-    from typing import Literal
+    from typing import Iterable, Literal
 
     from .metadata import MetaData
 
@@ -329,20 +334,26 @@ def compile_missing_pyc(files, cwd, python_exe, skip_compile_pyc=()):
                 call(args + group, cwd=cwd)
 
 
-def check_dist_info_version(name, version, files):
-    for f in files:
-        if f.endswith(".dist-info" + os.sep + "METADATA"):
-            f_lower = basename(dirname(f).lower())
-            if f_lower.startswith(name + "-"):
-                f_lower, _, _ = f_lower.rpartition(".dist-info")
-                _, distname, f_lower = f_lower.rpartition(name + "-")
-                if distname == name and version != f_lower:
-                    print(
-                        f"ERROR: Top level dist-info version incorrect (is {f_lower}, should be {version})"
-                    )
-                    sys.exit(1)
-                else:
-                    return
+def check_dist_info_version(
+    name: str,
+    version: str,
+    files: Iterable[str | os.PathLike | Path],
+) -> None:
+    for file in map(Path, files):
+        if file.name != "METADATA":
+            continue
+
+        dist = file.parent.name.lower()
+        if not (dist.startswith(f"{name}-") and dist.endswith(".dist-info")):
+            continue
+
+        distversion = dist[len(name) + 1 : -10]  # remove prefix & suffix
+        if version != distversion:
+            raise CondaBuildUserError(
+                f"Top level dist-info version incorrect (is {distversion}, should be {version})"
+            )
+        else:
+            return
 
 
 def post_process(
