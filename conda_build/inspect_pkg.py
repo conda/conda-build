@@ -225,7 +225,7 @@ def inspect_linkages(
         )
     elif on_win:
         raise CondaBuildUserError(
-            "`conda inspect linkages` is only implemented in Linux and macOS"
+            "`conda inspect linkages` is only implemented on Linux and macOS"
         )
 
     prefix = Path(prefix)
@@ -314,7 +314,7 @@ def inspect_objects(
 ):
     if not on_mac:
         raise CondaBuildUserError(
-            "Error: conda inspect objects is only implemented in OS X"
+            "`conda inspect objects` is only implemented on macOS"
         )
 
     prefix = Path(prefix)
