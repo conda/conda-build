@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
-from conda.common.compat import on_win
+from conda.common.compat import on_linux, on_win
 
 from conda_build import api, build
 from conda_build.exceptions import CondaBuildUserError
@@ -448,3 +448,13 @@ def test_handle_anaconda_upload(testing_config: Config, mocker: MockerFixture):
 
     with pytest.raises(CondaBuildUserError):
         build.handle_anaconda_upload((), testing_config)
+
+
+@pytest.mark.skipif(not on_linux, reason="pathelf is only available on Linux")
+def test_check_external(mocker: MockerFixture):
+    mocker.patch(
+        "conda_build.os_utils.external.find_executable",
+        return_value=None,
+    )
+    with pytest.raises(CondaBuildUserError):
+        build.check_external()
