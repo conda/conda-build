@@ -1,11 +1,13 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
+
 import json
 import os
 import re
 import sys
 from glob import glob
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 from conda.base.context import context
@@ -16,6 +18,11 @@ from conda_build.metadata import MetaDataTuple
 from conda_build.render import finalize_metadata
 
 from .utils import get_valid_recipes, subpackage_dir
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from conda_build.config import Config
 
 
 @pytest.mark.slow
@@ -291,7 +298,7 @@ def test_per_output_tests(testing_config):
 
 
 @pytest.mark.sanity
-def test_per_output_tests_script(testing_config):
+def test_per_output_tests_script(testing_config: Config) -> None:
     recipe_dir = os.path.join(subpackage_dir, "_output_test_script")
     with pytest.raises(CondaBuildUserError):
         api.build(recipe_dir, config=testing_config)

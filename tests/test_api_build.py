@@ -267,7 +267,9 @@ def test_no_include_recipe_config_arg(testing_metadata):
 
 
 @pytest.mark.slow
-def test_no_include_recipe_meta_yaml(testing_metadata, testing_config):
+def test_no_include_recipe_meta_yaml(
+    testing_metadata: MetaData, testing_config: Config
+) -> None:
     # first, make sure that the recipe is there by default.  This test copied from above, but copied
     # as a sanity check here.
     outputs = api.build(testing_metadata, notest=True)
@@ -544,11 +546,12 @@ def test_skip_existing_url(testing_metadata, testing_workdir, capfd):
     assert "are already built" in output
 
 
-def test_failed_tests_exit_build(testing_config):
-    """https://github.com/conda/conda-build/issues/1112"""
-    with pytest.raises(CondaBuildUserError, match="TESTS FAILED"):
+def test_failed_tests_exit_build(testing_config: Config) -> None:
+    # https://github.com/conda/conda-build/issues/1112
+    with pytest.raises(CondaBuildUserError, match=r"TESTS FAILED"):
         api.build(
-            os.path.join(metadata_dir, "_test_failed_test_exits"), config=testing_config
+            os.path.join(metadata_dir, "_test_failed_test_exits"),
+            config=testing_config,
         )
 
 
@@ -1817,7 +1820,7 @@ def test_empty_package_with_python_and_compiler_in_build_barfs(testing_config):
 
 
 @pytest.mark.sanity
-def test_downstream_tests(testing_config):
+def test_downstream_tests(testing_config: Config) -> None:
     upstream = os.path.join(metadata_dir, "_test_downstreams/upstream")
     downstream = os.path.join(metadata_dir, "_test_downstreams/downstream")
     api.build(downstream, config=testing_config, notest=True)
