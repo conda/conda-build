@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING
 from conda.base.context import context
 
 from .conda_interface import cc_conda_build, url_path
+from .deprecations import deprecated
 from .utils import (
     get_build_folders,
     get_conda_operation_locks,
@@ -88,7 +89,6 @@ def _get_default_settings():
         Setting("dirty", False),
         Setting("include_recipe", True),
         Setting("no_download_source", False),
-        Setting("override_channels", False),
         Setting("skip_existing", False),
         Setting("token", None),
         Setting("user", None),
@@ -289,6 +289,10 @@ class Config:
         #     or CLI params
         for lang in ("perl", "lua", "python", "numpy", "r_base"):
             set_lang(self.variant, lang)
+
+        # --override-channels is a valid CLI argument but we no longer wish to set it here
+        # use conda.base.context.context instead
+        kwargs.pop("override_channels", None)
 
         self._build_id = kwargs.pop("build_id", getattr(self, "_build_id", ""))
         source_cache = kwargs.pop("cache_dir", None)
@@ -771,6 +775,15 @@ class Config:
     @property
     def subdirs_same(self):
         return self.host_subdir == self.build_subdir
+
+    @property
+    @deprecated(
+        "24.5",
+        "24.7",
+        addendum="Use `conda.base.context.context.override_channels` instead.",
+    )
+    def override_channels(self):
+        return context.override_channels
 
     def clean(self, remove_folders=True):
         # build folder is the whole burrito containing envs and source folders

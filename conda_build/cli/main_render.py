@@ -207,8 +207,6 @@ def execute(args: Sequence[str] | None = None) -> int:
 
     config.channel_urls = get_channel_urls(parsed.__dict__)
 
-    config.override_channels = parsed.override_channels
-
     if parsed.output:
         config.verbose = False
         config.debug = False
