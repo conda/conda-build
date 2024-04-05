@@ -22,11 +22,10 @@ from os.path import basename, dirname, exists, join
 
 import requests
 from conda.core.index import get_index
+from conda.exceptions import CondaError, CondaHTTPError
 
 from .. import environ
 from ..conda_interface import (
-    CondaError,
-    CondaHTTPError,
     MatchSpec,
     Resolve,
     TemporaryDirectory,

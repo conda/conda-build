@@ -6,6 +6,7 @@ Tools for converting PyPI packages to conda recipes.
 
 from __future__ import annotations
 
+import configparser
 import keyword
 import logging
 import os
@@ -29,7 +30,6 @@ from requests.packages.urllib3.util.url import parse_url
 
 from ..conda_interface import (
     StringIO,
-    configparser,
     download,
     human_bytes,
     input,

@@ -14,7 +14,7 @@
 * Deprecate `conda_build.conda_interface.envs_dirs` constant. Use `conda.base.context.context.envs_dirs` instead. (#5222)
 * Deprecate `conda_build.conda_interface.pkgs_dirs` constant. Use `conda.base.context.context.pkgs_dirs` instead. (#5222)
 * Deprecate `conda_build.conda_interface.cc_platform` constant. Use `conda.base.context.context.platform` instead. (#5222)
-* Deprecate `conda_build.conda_interface.root_dir` constant. Use `conda.base.context.context.root_dir` instead. (#5222)
+* Deprecate `conda_build.conda_interface.root_dir` constant. Use `conda.base.context.context.root_prefix` instead. (#5222)
 * Deprecate `conda_build.conda_interface.root_writable` constant. Use `conda.base.context.context.root_writable` instead. (#5222)
 * Deprecate `conda_build.conda_interface.subdir` constant. Use `conda.base.context.context.subdir` instead. (#5222)
 * Deprecate `conda_build.conda_interface.create_default_packages` constant. Use `conda.base.context.context.create_default_packages` instead. (#5222)

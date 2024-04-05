@@ -456,7 +456,7 @@ class Config:
             elif _bld_root_rc:
                 self._croot = abspath(expanduser(expandvars(_bld_root_rc)))
             elif context.root_writable:
-                self._croot = join(context.root_dir, "conda-bld")
+                self._croot = join(context.root_prefix, "conda-bld")
             else:
                 self._croot = abspath(expanduser("~/conda-bld"))
         return self._croot

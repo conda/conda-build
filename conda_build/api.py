@@ -54,7 +54,8 @@ def render(
     Returns a list of (metadata, needs_download, needs_reparse in env) tuples"""
     from collections import OrderedDict
 
-    from .conda_interface import NoPackagesFoundError
+    from conda.exceptions import NoPackagesFoundError
+
     from .exceptions import DependencyNeedsBuildingError
     from .render import finalize_metadata, render_recipe
 
