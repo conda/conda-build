@@ -3652,6 +3652,7 @@ def check_external():
             )
 
 
+# TODO: build_tree ==> Workflow orchetrator needs to be moved out of build
 def build_tree(
     recipe_list, config, stats, build_only=False, post=None, notest=False, variants=None
 ):
@@ -3690,6 +3691,9 @@ def build_tree(
         try:
             recipe = recipe_list.popleft()
             name = recipe.name() if hasattr(recipe, "name") else recipe
+
+            # recipe == MetaData i.e. rendered recipe
+            # TODO: Move to the post render stage or enviroments stage
             if hasattr(recipe, "config"):
                 metadata = recipe
                 cfg = metadata.config
@@ -3744,7 +3748,9 @@ def build_tree(
             # This is the "TOP LEVEL" loop. Only vars used in the top-level
             # recipe are looped over here.
 
+            # NOTE: This smells like RENDER STAGE to me
             for metadata, need_source_download, need_reparse_in_env in metadata_tuples:
+                # Maybe the needs_reparse is how the run_exports stuff works
                 get_all_replacements(metadata.config.variant)
                 if post is None:
                     utils.rm_rf(metadata.config.host_prefix)
@@ -3755,6 +3761,7 @@ def build_tree(
                         metadata.name(), metadata.version(), reset=True
                     )
 
+                # RENDER?, ENVIROMENT, FETCH, COMPILE, PACKAGE, INDEX STAGE in build function
                 packages_from_this = build(
                     metadata,
                     stats,
@@ -3764,6 +3771,7 @@ def build_tree(
                     built_packages=built_packages,
                     notest=notest,
                 )
+                # if is TEST STAGE
                 if not notest:
                     for pkg, dict_and_meta in packages_from_this.items():
                         if pkg.endswith(CONDA_PACKAGE_EXTENSIONS) and os.path.isfile(
@@ -3840,6 +3848,8 @@ def build_tree(
                                     package_subset=[dep],
                                     require_files=True,
                                 )
+
+                                # TEST STAGE
                                 # test that package, using the local channel so that our new
                                 #    upstream dep gets used
                                 test(
@@ -3852,6 +3862,7 @@ def build_tree(
                 else:
                     built_packages.update(packages_from_this)
 
+                # CLEANUP STAGE
                 if os.path.exists(metadata.config.work_dir) and not (
                     metadata.config.dirty
                     or metadata.config.keep_old_work
@@ -3882,6 +3893,8 @@ def build_tree(
             # os.unlink(os.path.join(metadata.config.work_dir, 'metadata_conda_debug.yaml'))
 
         except DependencyNeedsBuildingError as e:
+            # This is the universal orchestration error handling process.
+            # The intention is to handle interdependencies it the multi output
             skip_names = ["python", "r", "r-base", "mro-base", "perl", "lua"]
             built_package_paths = [entry[1][1].path for entry in built_packages.items()]
             add_recipes = []
@@ -3969,6 +3982,7 @@ def build_tree(
             retried_recipes.append(os.path.basename(name))
             recipe_list.extendleft(add_recipes)
 
+    # CLEANUP STAGE which upload is a part of
     tarballs = [f for f in built_packages if f.endswith(CONDA_PACKAGE_EXTENSIONS)]
     if post in [True, None]:
         # TODO: could probably use a better check for pkg type than this...
@@ -3986,6 +4000,7 @@ def build_tree(
     print(json.dumps(hash_inputs, sort_keys=True, indent=2))
     print("\n")
 
+    # ALso part of Cleanup
     total_time = time.time() - initial_time
     max_memory_used = max([step.get("rss") for step in stats.values()] or [0])
     total_disk = sum([step.get("disk") for step in stats.values()] or [0])
