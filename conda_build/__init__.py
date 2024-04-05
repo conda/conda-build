@@ -9,9 +9,10 @@ except ImportError:
         from setuptools_scm import get_version
 
         __version__ = get_version(root="..", relative_to=__file__)
-    except (ImportError, OSError):
+    except (ImportError, OSError, LookupError):
         # ImportError: setuptools_scm isn't installed
         # OSError: git isn't installed
+        # LookupError: setuptools_scm unable to detect version
         # Conda-build abides by CEP-8 which specifies using CalVer, so the dev version is:
         #     YY.MM.MICRO.devN+gHASH[.dirty]
         __version__ = "0.0.0.dev0+placeholder"
