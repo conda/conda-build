@@ -1,6 +1,6 @@
 ### Enhancements
 
-* <news item>
+* Require `conda >=23.7.0`. (#5271)
 
 ### Bug fixes
 

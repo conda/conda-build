@@ -291,7 +291,7 @@ class Config:
             set_lang(self.variant, lang)
 
         # --override-channels is a valid CLI argument but we no longer wish to set it here
-        # use conda.base.context.context instead
+        # use conda.base.context.context.override_channels instead
         kwargs.pop("override_channels", None)
 
         self._build_id = kwargs.pop("build_id", getattr(self, "_build_id", ""))
