@@ -8,6 +8,7 @@ from pprint import pprint
 from typing import TYPE_CHECKING
 
 import yaml
+from conda.base.context import context
 from yaml.parser import ParserError
 
 from .. import __version__, api
@@ -194,6 +195,7 @@ def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
 
 def execute(args: Sequence[str] | None = None) -> int:
     _, parsed = parse_args(args)
+    context.__init__(argparse_args=parsed)
 
     config = get_or_merge_config(None, **parsed.__dict__)
 

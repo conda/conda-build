@@ -8,7 +8,7 @@ from os.path import expanduser
 from pprint import pprint
 from typing import TYPE_CHECKING
 
-from conda.base.context import context, determine_target_prefix
+from conda.base.context import context
 
 from .. import api
 from ..conda_interface import ArgumentParser, add_parser_prefix
@@ -189,6 +189,7 @@ Tools for investigating conda channels.
 
 def execute(args: Sequence[str] | None = None) -> int:
     parser, parsed = parse_args(args)
+    context.__init__(argparse_args=parsed)
 
     if not parsed.subcommand:
         parser.print_help()
@@ -199,7 +200,7 @@ def execute(args: Sequence[str] | None = None) -> int:
         print(
             api.inspect_linkages(
                 parsed.packages,
-                prefix=determine_target_prefix(context, parsed),
+                prefix=context.target_prefix,
                 untracked=parsed.untracked,
                 all_packages=parsed.all,
                 show_files=parsed.show_files,
@@ -211,7 +212,7 @@ def execute(args: Sequence[str] | None = None) -> int:
         print(
             api.inspect_objects(
                 parsed.packages,
-                prefix=determine_target_prefix(context, parsed),
+                prefix=context.target_prefix,
                 groupby=parsed.groupby,
             )
         )

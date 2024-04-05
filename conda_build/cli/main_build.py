@@ -525,6 +525,8 @@ def check_action(recipe, config):
 
 def execute(args: Sequence[str] | None = None) -> int:
     _, parsed = parse_args(args)
+    context.__init__(argparse_args=parsed)
+
     config = get_or_merge_config(None, **parsed.__dict__)
     build.check_external()
 
