@@ -1,16 +1,24 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+
+from __future__ import annotations
+
 import os
 import sys
+from typing import TYPE_CHECKING
 
 import pytest
 import yaml
+from conda.exceptions import PackagesNotFoundError
 
 from conda_build import api
 from conda_build.cli import main_render
 from conda_build.conda_interface import TemporaryDirectory
 
 from ..utils import metadata_dir
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def test_render_add_channel():
@@ -44,26 +52,16 @@ def test_render_add_channel():
         ), f"Expected version number 1.0 on successful rendering, but got {required_package_details[1]}"
 
 
-def test_render_without_channel_fails(tmp_path):
-    # do make extra channel available, so the required package should not be found
-    rendered_filename = tmp_path / "out.yaml"
-    args = [
-        "--override-channels",
-        os.path.join(metadata_dir, "_recipe_requiring_external_channel"),
-        "--file",
-        str(rendered_filename),
-    ]
-    main_render.execute(args)
-    with open(rendered_filename) as rendered_file:
-        rendered_meta = yaml.safe_load(rendered_file)
-    required_package_string = [
-        pkg
-        for pkg in rendered_meta.get("requirements", {}).get("build", [])
-        if "conda_build_test_requirement" in pkg
-    ][0]
-    assert (
-        required_package_string == "conda_build_test_requirement"
-    ), f"Expected to get only base package name because it should not be found, but got :{required_package_string}"
+def test_render_with_empty_channel_fails(tmp_path: Path, empty_channel: Path) -> None:
+    with pytest.raises(PackagesNotFoundError):
+        main_render.execute(
+            [
+                "--override-channels",
+                f"--channel={empty_channel}",
+                os.path.join(metadata_dir, "_recipe_requiring_external_channel"),
+                f"--file={tmp_path / 'out.yaml'}",
+            ]
+        )
 
 
 def test_render_output_build_path(
