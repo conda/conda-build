@@ -190,7 +190,7 @@ Tools for investigating conda channels.
 def execute(args: Sequence[str] | None = None) -> int:
     from .logging import init_logging
 
-    init_logging(log)
+    init_logging()
 
     parser, parsed = parse_args(args)
 

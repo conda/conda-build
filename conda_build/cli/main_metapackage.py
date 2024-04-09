@@ -116,7 +116,7 @@ command line with the conda metapackage command.
 def execute(args: Sequence[str] | None = None) -> int:
     from .logging import init_logging
 
-    init_logging(log)
+    init_logging()
 
     _, args = parse_args(args)
     channel_urls = args.__dict__.get("channel") or args.__dict__.get("channels") or ()

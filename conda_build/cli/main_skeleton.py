@@ -52,7 +52,7 @@ options available.
 def execute(args: Sequence[str] | None = None) -> int:
     from .logging import init_logging
 
-    init_logging(log)
+    init_logging()
 
     parser, parsed = parse_args(args)
     config = Config(**parsed.__dict__)

@@ -126,7 +126,7 @@ all.""",
 def execute(args: Sequence[str] | None = None) -> int:
     from .logging import init_logging
 
-    init_logging(log)
+    init_logging()
 
     _, parsed = parse_args(args)
     files = parsed.files
