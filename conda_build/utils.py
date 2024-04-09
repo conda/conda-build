@@ -1667,7 +1667,7 @@ getLogger("conda.gateways.disk.test").setLevel(WARNING)
 def reset_deduplicator():
     """Most of the time, we want the deduplication.  There are some cases (tests especially)
     where we want to be able to control the duplication."""
-    _DuplicateFilter.clear()
+    _DuplicateFilter.msgs.clear()
 
 
 @deprecated("24.5", "24.7", addendum="Use `conda.cli.logging.init_logging` instead.")
