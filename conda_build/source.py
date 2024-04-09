@@ -9,6 +9,7 @@ import shutil
 import sys
 import tempfile
 import time
+from logging import getLogger
 from os.path import abspath, basename, exists, expanduser, isdir, isfile, join, normpath
 from pathlib import Path
 from subprocess import CalledProcessError
@@ -30,7 +31,6 @@ from .utils import (
     copy_into,
     decompressible_exts,
     ensure_list,
-    get_logger,
     on_win,
     rm_rf,
     safe_print_unicode,
@@ -40,7 +40,7 @@ from .utils import (
 if TYPE_CHECKING:
     from typing import Iterable
 
-log = get_logger(__name__)
+log = getLogger(__name__)
 
 git_submod_re = re.compile(r"(?:.+)\.(.+)\.(?:.+)\s(.+)")
 ext_re = re.compile(r"(.*?)(\.(?:tar\.)?[^.]+)$")
@@ -634,7 +634,7 @@ def get_repository_info(recipe_path):
                 time.ctime(os.path.getmtime(join(recipe_path, "meta.yaml"))),
             )
     except CalledProcessError:
-        get_logger(__name__).debug("Failed to checkout source in " + recipe_path)
+        log.debug("Failed to checkout source in " + recipe_path)
         return "{}, last modified {}".format(
             recipe_path, time.ctime(os.path.getmtime(join(recipe_path, "meta.yaml")))
         )

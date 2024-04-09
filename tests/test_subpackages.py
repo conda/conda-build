@@ -11,6 +11,7 @@ import pytest
 from conda.base.context import context
 
 from conda_build import api, utils
+from conda_build.cli.logging import DuplicateFilter
 from conda_build.render import finalize_metadata
 
 from .utils import get_valid_recipes, subpackage_dir
@@ -262,7 +263,7 @@ def test_subpackage_hash_inputs(testing_config):
 
 def test_overlapping_files(testing_config, caplog):
     recipe_dir = os.path.join(subpackage_dir, "_overlapping_files")
-    utils.reset_deduplicator()
+    DuplicateFilter.msgs.clear()
     outputs = api.build(recipe_dir, config=testing_config)
     assert len(outputs) == 3
     assert sum(int("Exact overlap" in rec.message) for rec in caplog.records) == 1

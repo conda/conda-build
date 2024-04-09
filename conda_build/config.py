@@ -13,6 +13,7 @@ import re
 import shutil
 import time
 from collections import namedtuple
+from logging import getLogger
 from os.path import abspath, expanduser, expandvars, join
 from typing import TYPE_CHECKING
 
@@ -22,7 +23,6 @@ from .conda_interface import cc_conda_build, url_path
 from .utils import (
     get_build_folders,
     get_conda_operation_locks,
-    get_logger,
     on_win,
     rm_rf,
 )
@@ -30,6 +30,8 @@ from .variants import get_default_variant
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+log = getLogger(__name__)
 
 invocation_time = ""
 
@@ -320,7 +322,6 @@ class Config:
 
     @arch.setter
     def arch(self, value):
-        log = get_logger(__name__)
         log.warn(
             "Setting build arch. This is only useful when pretending to be on another "
             "arch, such as for rendering necessary dependencies on a non-native arch. "
@@ -336,7 +337,6 @@ class Config:
 
     @platform.setter
     def platform(self, value):
-        log = get_logger(__name__)
         log.warn(
             "Setting build platform. This is only useful when "
             "pretending to be on another platform, such as "
@@ -832,7 +832,7 @@ class Config:
             and e_type is None
             and not getattr(self, "keep_old_work")
         ):
-            get_logger(__name__).info(
+            log.info(
                 "--dirty flag and --keep-old-work not specified. "
                 "Removing build/test folder after successful build/test.\n"
             )

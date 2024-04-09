@@ -10,6 +10,7 @@ import re
 import time
 from functools import partial
 from io import StringIO, TextIOBase
+from logging import getLogger
 from warnings import warn
 
 import jinja2
@@ -33,7 +34,6 @@ from .utils import (
     copy_into,
     ensure_valid_spec,
     get_installed_packages,
-    get_logger,
     rm_rf,
 )
 from .variants import DEFAULT_COMPILERS
@@ -41,7 +41,7 @@ from .variants import DEFAULT_COMPILERS
 if TYPE_CHECKING:
     from typing import IO, Any
 
-log = get_logger(__name__)
+log = getLogger(__name__)
 
 
 class UndefinedNeverFail(jinja2.Undefined):

@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import argparse
-import logging
 import sys
 import warnings
 from glob import glob
 from itertools import chain
+from logging import CRITICAL, getLogger
 from os.path import abspath, expanduser, expandvars
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -32,6 +32,8 @@ if TYPE_CHECKING:
     from typing import Sequence
 
     from ..conda_interface import ArgumentParser
+
+log = getLogger(__name__)
 
 
 def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
@@ -502,7 +504,7 @@ def check_recipe(path_list):
 
 
 def output_action(recipe, config):
-    with LoggingContext(logging.CRITICAL + 1):
+    with LoggingContext(CRITICAL + 1):
         config.verbose = False
         config.debug = False
         paths = api.get_output_file_paths(recipe, config=config)
@@ -524,6 +526,10 @@ def check_action(recipe, config):
 
 
 def execute(args: Sequence[str] | None = None) -> int:
+    from .logging import init_logging
+
+    init_logging(log)
+
     _, parsed = parse_args(args)
     config = get_or_merge_config(None, **parsed.__dict__)
     build.check_external()

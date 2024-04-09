@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import argparse
-import logging
+from logging import getLogger
 from typing import TYPE_CHECKING
 
 from conda.base.context import context
@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from argparse import Namespace
     from typing import Sequence
 
-logging.basicConfig(level=logging.INFO)
+log = getLogger(__name__)
 
 
 def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
@@ -114,6 +114,10 @@ command line with the conda metapackage command.
 
 
 def execute(args: Sequence[str] | None = None) -> int:
+    from .logging import init_logging
+
+    init_logging(log)
+
     _, args = parse_args(args)
     channel_urls = args.__dict__.get("channel") or args.__dict__.get("channels") or ()
     api.create_metapackage(channel_urls=channel_urls, **args.__dict__)
