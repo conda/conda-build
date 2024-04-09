@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 import os
 import pprint
+from logging import getLogger
 from os.path import dirname, isdir, isfile, join
 
 # importing setuptools patches distutils so that it knows how to find VC for python 2.7
@@ -22,11 +23,12 @@ from . import environ
 from .utils import (
     check_call_env,
     copy_into,
-    get_logger,
     path_prepended,
     write_bat_activation_text,
 )
 from .variants import get_default_variant, set_language_env_vars
+
+log = getLogger(__name__)
 
 VS_VERSION_STRING = {
     "8.0": "Visual Studio 8 2005",
@@ -101,7 +103,6 @@ def msvc_env_cmd(bits, config, override=None):
     # TODO: this function will likely break on `win-arm64`. However, unless
     # there's clear user demand, it's not clear that we should invest the
     # effort into updating a known deprecated function for a new platform.
-    log = get_logger(__name__)
     log.warning(
         "Using legacy MSVC compiler setup.  This will be removed in conda-build 4.0. "
         "If this recipe does not use a compiler, this message is safe to ignore.  "

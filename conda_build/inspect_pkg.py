@@ -7,6 +7,7 @@ import os
 import sys
 from collections import defaultdict
 from itertools import groupby
+from logging import getLogger
 from operator import itemgetter
 from os.path import abspath, basename, dirname, exists, join, normcase
 from pathlib import Path
@@ -31,7 +32,6 @@ from .os_utils.macho import get_rpaths, human_filetype
 from .utils import (
     comma_join,
     ensure_list,
-    get_logger,
     on_linux,
     on_mac,
     on_win,
@@ -41,7 +41,7 @@ from .utils import (
 if TYPE_CHECKING:
     from typing import Iterable, Literal
 
-log = get_logger(__name__)
+log = getLogger(__name__)
 
 
 def which_package(
@@ -263,7 +263,7 @@ def inspect_linkages(
                 if relative:
                     precs = list(which_package(relative, prefix))
                     if len(precs) > 1:
-                        get_logger(__name__).warning(
+                        log.warning(
                             "Warning: %s comes from multiple packages: %s",
                             path,
                             comma_join(map(str, precs)),

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import argparse
-import logging
+from logging import getLogger
 from typing import TYPE_CHECKING
 
 from conda.base.context import context
@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from argparse import ArgumentParser, Namespace
     from typing import Sequence
 
-logging.basicConfig(level=logging.INFO)
+log = getLogger(__name__)
 
 
 def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
@@ -121,6 +121,10 @@ command line with the conda metapackage command.
 
 
 def execute(args: Sequence[str] | None = None) -> int:
+    from .logging import init_logging
+
+    init_logging(log)
+
     _, parsed = parse_args(args)
     context.__init__(argparse_args=parsed)
 

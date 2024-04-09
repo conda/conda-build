@@ -9,8 +9,8 @@ from conda.gateways.disk.create import TemporaryDirectory
 from conda.gateways.disk.read import compute_sum
 
 from conda_build import source
+from conda_build.cli.logging import DuplicateFilter
 from conda_build.source import download_to_cache
-from conda_build.utils import reset_deduplicator
 
 from .utils import thisdir
 
@@ -198,5 +198,5 @@ def test_append_hash_to_fn(testing_metadata):
     testing_metadata.meta["source"] = [
         {"folder": "f1", "url": os.path.join(thisdir, "archives", "a.tar.bz2")}
     ]
-    reset_deduplicator()
+    DuplicateFilter.msgs.clear()
     source.provide(testing_metadata)

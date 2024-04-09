@@ -2,8 +2,8 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from __future__ import annotations
 
-import logging
 import sys
+from logging import getLogger
 from typing import TYPE_CHECKING
 
 from conda.base.context import context
@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from argparse import ArgumentParser
     from typing import Sequence
 
-logging.basicConfig(level=logging.INFO)
+log = getLogger(__name__)
 
 
 def get_parser() -> ArgumentParser:
@@ -94,6 +94,10 @@ Set up environments and activation scripts to debug your build or test phase.
 
 
 def execute(args: Sequence[str] | None = None) -> int:
+    from .logging import init_logging
+
+    init_logging(log)
+
     parser = get_parser()
     parsed = parser.parse_args(args)
     context.__init__(argparse_args=parsed)

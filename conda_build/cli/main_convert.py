@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from __future__ import annotations
 
-import logging
+from logging import getLogger
 from os.path import abspath, expanduser
 from typing import TYPE_CHECKING
 
@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from argparse import ArgumentParser, Namespace
     from typing import Sequence
 
-logging.basicConfig(level=logging.INFO)
+log = getLogger(__name__)
 
 epilog = """
 
@@ -127,6 +127,10 @@ all.""",
 
 
 def execute(args: Sequence[str] | None = None) -> int:
+    from .logging import init_logging
+
+    init_logging(log)
+
     _, parsed = parse_args(args)
     context.__init__(argparse_args=parsed)
 

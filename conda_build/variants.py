@@ -14,15 +14,18 @@ from functools import lru_cache
 from itertools import product
 from pathlib import Path
 from typing import TYPE_CHECKING
+from logging import getLogger
 
 import yaml
 from conda.base.context import context
 
-from .utils import ensure_list, get_logger, islist, on_win, trim_empty_keys
+from .utils import ensure_list, islist, on_win, trim_empty_keys
 from .version import _parse as parse_version
 
 if TYPE_CHECKING:
     from typing import Any, Iterable
+
+log = getLogger(__name__)
 
 DEFAULT_VARIANTS = {
     "python": f"{sys.version_info.major}.{sys.version_info.minor}",
@@ -263,7 +266,6 @@ def _combine_spec_dictionaries(
     for spec_source, spec in specs.items():
         if spec:
             if log_output:
-                log = get_logger(__name__)
                 log.info(f"Adding in variants from {spec_source}")
             for k, v in spec.items():
                 if not keys or k in keys:
@@ -496,7 +498,6 @@ def filter_by_key_value(variants, key, values, source_name):
             if variant.get(key) is not None and variant.get(key) in values:
                 reduced_variants.append(variant)
             else:
-                log = get_logger(__name__)
                 log.debug(
                     f"Filtering variant with key {key} not matching target value(s) "
                     f"({values}) from {source_name}, actual {variant.get(key)}"

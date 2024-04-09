@@ -2,11 +2,11 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from __future__ import annotations
 
-import logging
 import os
 import pkgutil
 import sys
 from importlib import import_module
+from logging import getLogger
 from typing import TYPE_CHECKING
 
 from conda.base.context import context
@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from typing import Sequence
 
 thisdir = os.path.dirname(os.path.abspath(__file__))
-logging.basicConfig(level=logging.INFO)
+log = getLogger(__name__)
 
 
 def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
@@ -53,6 +53,10 @@ options available.
 
 
 def execute(args: Sequence[str] | None = None) -> int:
+    from .logging import init_logging
+
+    init_logging(log)
+
     parser, parsed = parse_args(args)
     context.__init__(argparse_args=parsed)
 

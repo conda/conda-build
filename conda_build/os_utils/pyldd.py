@@ -4,17 +4,17 @@ from __future__ import annotations
 
 import argparse
 import glob
-import logging
 import os
 import re
 import struct
 import sys
 from functools import partial
+from logging import getLogger
 from pathlib import Path
 
-from ..utils import ensure_list, get_logger, on_linux, on_mac, on_win
+from ..utils import ensure_list, on_linux, on_mac, on_win
 
-logging.basicConfig(level=logging.INFO)
+log = getLogger(__name__)
 
 
 '''
@@ -690,7 +690,7 @@ class elfheader:
         (self.shstrndx,) = struct.unpack(endian + "H", file.read(2))
         loc = file.tell()
         if loc != self.ehsize:
-            get_logger(__name__).warning(f"file.tell()={loc} != ehsize={self.ehsize}")
+            log.warning(f"file.tell()={loc} != ehsize={self.ehsize}")
 
     def __str__(self):
         return (
@@ -1088,7 +1088,7 @@ def _inspect_linkages_this(filename, sysroot: str = "", arch="native"):
         except IncompleteRead:
             # the file was incomplete, can occur if a package ships a test file
             # which looks like an ELF file but is not.  Orange3 does this.
-            get_logger(__name__).warning(f"problems inspecting linkages for {filename}")
+            log.warning(f"problems inspecting linkages for {filename}")
             return None, [], []
         dirname = os.path.dirname(filename)
         results = cf.get_resolved_shared_libraries(dirname, dirname, sysroot)

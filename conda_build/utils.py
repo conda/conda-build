@@ -6,8 +6,6 @@ import contextlib
 import fnmatch
 import hashlib
 import json
-import logging
-import logging.config
 import mmap
 import os
 import re
@@ -27,6 +25,8 @@ from io import StringIO
 from itertools import filterfalse
 from json.decoder import JSONDecodeError
 from locale import getpreferredencoding
+from logging import INFO, WARNING, Formatter, StreamHandler, getLogger
+from logging.config import dictConfig
 from os import walk
 from os.path import (
     abspath,
@@ -66,6 +66,21 @@ from conda.models.records import PackageRecord
 from conda.models.version import VersionOrder
 from conda.utils import unix_path_to_win
 
+from .cli.logging import DuplicateFilter as _DuplicateFilter
+from .cli.logging import GreaterThanFilter as _GreaterThanFilter
+from .cli.logging import LessThanFilter as _LessThanFilter
+from .conda_interface import (
+    PackageRecord,
+    StringIO,
+    TemporaryDirectory,
+    VersionOrder,
+    cc_conda_build,
+    download,
+    unix_path_to_win,
+    win_path_to_unix,
+)
+from .conda_interface import rm_rf as _rm_rf
+from .deprecations import deprecated
 from .exceptions import BuildLockError
 
 if TYPE_CHECKING:
@@ -76,6 +91,8 @@ if TYPE_CHECKING:
     T = TypeVar("T")
     K = TypeVar("K")
     V = TypeVar("V")
+
+log = getLogger(__name__)
 
 on_win = sys.platform == "win32"
 on_mac = sys.platform == "darwin"
@@ -256,7 +273,6 @@ class PopenWrapper:
         except ImportError as e:
             psutil = None
             psutil_exceptions = (OSError, ValueError)
-            log = get_logger(__name__)
             log.warning(f"psutil import failed.  Error was {e}")
             log.warning(
                 "only disk usage and time statistics will be available.  Install psutil to "
@@ -548,7 +564,6 @@ def copy_into(
     src, dst, timeout=900, symlinks=False, lock=None, locking=True, clobber=False
 ):
     """Copy all the files and directories in src to the directory dst"""
-    log = get_logger(__name__)
     if symlinks and islink(src):
         try:
             os.makedirs(os.path.dirname(dst))
@@ -624,7 +639,6 @@ def move_with_fallback(src, dst):
             copy_into(src, dst)
             os.unlink(src)
         except PermissionError:
-            log = get_logger(__name__)
             log.debug(
                 f"Failed to copy/remove path from {src} to {dst} due to permission error"
             )
@@ -1118,7 +1132,6 @@ def convert_path_for_cygwin_or_msys2(exe, path):
                 .decode(getpreferredencoding())
             )
         except OSError:
-            log = get_logger(__name__)
             log.debug(
                 "cygpath executable not found.  Passing native path.  This is OK for msys2."
             )
@@ -1274,7 +1287,6 @@ def expand_globs(
             # File compared to the globs use / as separator independently of the os
             glob_files = glob(path, recursive=True)
             if not glob_files:
-                log = get_logger(__name__)
                 log.error(f"Glob {path} did not match in root_dir {root_dir}")
             # https://docs.python.org/3/library/glob.html#glob.glob states that
             # "whether or not the results are sorted depends on the file system".
@@ -1318,7 +1330,7 @@ def find_recipe(path: str) -> str:
 
     metas = [m for m in VALID_METAS if os.path.isfile(os.path.join(path, m))]
     if len(metas) == 1:
-        get_logger(__name__).warning(
+        log.warning(
             "Multiple meta files found. "
             f"The {metas[0]} file in the base directory ({path}) "
             "will be used."
@@ -1356,7 +1368,7 @@ class LoggingContext:
         "conda_index.index.convert_cache",
     ]
 
-    def __init__(self, level=logging.WARN, handler=None, close=True, loggers=None):
+    def __init__(self, level=WARNING, handler=None, close=True, loggers=None):
         self.level = level
         self.old_levels = {}
         self.handler = handler
@@ -1370,11 +1382,11 @@ class LoggingContext:
     def __enter__(self):
         for logger in self.loggers:
             if isinstance(logger, str):
-                log = logging.getLogger(logger)
+                log = getLogger(logger)
             self.old_levels[logger] = log.level
             log.setLevel(
                 self.level
-                if ("install" not in logger or self.level < logging.INFO)
+                if ("install" not in logger or self.level < INFO)
                 else self.level + 10
             )
         if self.handler:
@@ -1384,7 +1396,7 @@ class LoggingContext:
 
     def __exit__(self, et, ev, tb):
         for logger, level in self.old_levels.items():
-            logging.getLogger(logger).setLevel(level)
+            getLogger(logger).setLevel(level)
         if self.handler:
             self.logger.removeHandler(self.handler)
         if self.handler and self.close:
@@ -1588,60 +1600,78 @@ def rm_rf(path: str | os.PathLike) -> None:
     delete_prefix_from_linked_data(str(path))
 
 
-# https://stackoverflow.com/a/31459386/1170370
-class LessThanFilter(logging.Filter):
-    def __init__(self, exclusive_maximum, name=""):
-        super().__init__(name)
-        self.max_level = exclusive_maximum
+deprecated.constant(
+    "24.5",
+    "24.7",
+    "LessThanFilter",
+    _LessThanFilter,
+    addendum="Use `conda_build.cli.logging.LessThanFilter` instead.",
+)
+deprecated.constant(
+    "24.5",
+    "24.7",
+    "GreaterThanFilter",
+    _GreaterThanFilter,
+    addendum="Use `conda_build.cli.logging.GreaterThanFilter` instead.",
+)
+deprecated.constant(
+    "24.5",
+    "24.7",
+    "DuplicateFilter",
+    _DuplicateFilter,
+    addendum="Use `conda_build.cli.logging.DuplicateFilter` instead.",
+)
 
-    def filter(self, record):
-        # non-zero return means we log this message
-        return 1 if record.levelno < self.max_level else 0
-
-
-class GreaterThanFilter(logging.Filter):
-    def __init__(self, exclusive_minimum, name=""):
-        super().__init__(name)
-        self.min_level = exclusive_minimum
-
-    def filter(self, record):
-        # non-zero return means we log this message
-        return 1 if record.levelno > self.min_level else 0
-
-
-# unclutter logs - show messages only once
-class DuplicateFilter(logging.Filter):
-    def __init__(self):
-        self.msgs = set()
-
-    def filter(self, record):
-        log = record.msg not in self.msgs
-        self.msgs.add(record.msg)
-        return int(log)
-
-
-dedupe_filter = DuplicateFilter()
-info_debug_stdout_filter = LessThanFilter(logging.WARNING)
-warning_error_stderr_filter = GreaterThanFilter(logging.INFO)
-level_formatter = logging.Formatter("%(levelname)s: %(message)s")
+deprecated.constant(
+    "24.5",
+    "24.7",
+    "dedupe_filter",
+    _dedupe_filter := _DuplicateFilter(),
+    addendum="Use `conda_build.cli.logging.DuplicateFilter()` instead.",
+)
+deprecated.constant(
+    "24.5",
+    "24.7",
+    "info_debug_stdout_filter",
+    _info_debug_stdout_filter := _LessThanFilter(WARNING),
+    addendum="Use `conda_build.cli.logging.LessThanFilter(logging.WARNING)` instead.",
+)
+deprecated.constant(
+    "24.5",
+    "24.7",
+    "warning_error_stderr_filter",
+    _warning_error_stderr_filter := _GreaterThanFilter(INFO),
+    addendum="Use `conda_build.cli.logging.GreaterThanFilter(logging.INFO)` instead.",
+)
+deprecated.constant(
+    "24.5",
+    "24.7",
+    "level_formatter",
+    _level_formatter := Formatter("%(levelname)s: %(message)s"),
+)
 
 # set filelock's logger to only show warnings by default
-logging.getLogger("filelock").setLevel(logging.WARN)
+getLogger("filelock").setLevel(WARNING)
 
 # quiet some of conda's less useful output
-logging.getLogger("conda.core.linked_data").setLevel(logging.WARN)
-logging.getLogger("conda.gateways.disk.delete").setLevel(logging.WARN)
-logging.getLogger("conda.gateways.disk.test").setLevel(logging.WARN)
+getLogger("conda.core.linked_data").setLevel(WARNING)
+getLogger("conda.gateways.disk.delete").setLevel(WARNING)
+getLogger("conda.gateways.disk.test").setLevel(WARNING)
 
 
+@deprecated(
+    "24.5",
+    "24.7",
+    addendum="Use `conda_build.cli.logging.DuplicateFilter.msgs.clear` instead.",
+)
 def reset_deduplicator():
     """Most of the time, we want the deduplication.  There are some cases (tests especially)
     where we want to be able to control the duplication."""
-    global dedupe_filter
-    dedupe_filter = DuplicateFilter()
+    _DuplicateFilter.clear()
 
 
-def get_logger(name, level=logging.INFO, dedupe=True, add_stdout_stderr_handlers=True):
+@deprecated("24.5", "24.7", addendum="Use `conda.cli.logging.init_logging` instead.")
+def get_logger(name, level=INFO, dedupe=True, add_stdout_stderr_handlers=True):
     config_file = None
     if log_config_file := context.conda_build.get("log_config_file"):
         config_file = abspath(expanduser(expandvars(log_config_file)))
@@ -1650,26 +1680,25 @@ def get_logger(name, level=logging.INFO, dedupe=True, add_stdout_stderr_handlers
     if config_file:
         with open(config_file) as f:
             config_dict = yaml.safe_load(f)
-        logging.config.dictConfig(config_dict)
+        dictConfig(config_dict)
         level = config_dict.get("loggers", {}).get(name, {}).get("level", level)
-    log = logging.getLogger(name)
-    if log.level != level:
-        log.setLevel(level)
+    log = getLogger(name)
+    log.setLevel(level)
     if dedupe:
-        log.addFilter(dedupe_filter)
+        log.addFilter(_dedupe_filter)
 
     # these are defaults.  They can be overridden by configuring a log config yaml file.
     top_pkg = name.split(".")[0]
     if top_pkg == "conda_build":
         # we don't want propagation in CLI, but we do want it in tests
         # this is a pytest limitation: https://github.com/pytest-dev/pytest/issues/3697
-        logging.getLogger(top_pkg).propagate = "PYTEST_CURRENT_TEST" in os.environ
+        getLogger(top_pkg).propagate = "PYTEST_CURRENT_TEST" in os.environ
     if add_stdout_stderr_handlers and not log.handlers:
-        stdout_handler = logging.StreamHandler(sys.stdout)
-        stderr_handler = logging.StreamHandler(sys.stderr)
-        stdout_handler.addFilter(info_debug_stdout_filter)
-        stderr_handler.addFilter(warning_error_stderr_filter)
-        stderr_handler.setFormatter(level_formatter)
+        stdout_handler = StreamHandler(sys.stdout)
+        stderr_handler = StreamHandler(sys.stderr)
+        stdout_handler.addFilter(_info_debug_stdout_filter)
+        stderr_handler.addFilter(_warning_error_stderr_filter)
+        stderr_handler.setFormatter(_level_formatter)
         stdout_handler.setLevel(level)
         stderr_handler.setLevel(level)
         log.addHandler(stdout_handler)
@@ -1695,7 +1724,6 @@ def merge_or_update_dict(
 ):
     if base == new:
         return base
-    log = get_logger(__name__)
     for key, value in new.items():
         if key in base or add_missing_keys:
             base_value = base.get(key, value)
@@ -1890,7 +1918,6 @@ def ensure_valid_spec(spec: str | MatchSpec, warn: bool = False) -> str | MatchS
             else:
                 if "*" not in spec:
                     if match.group(1) not in ("python", "vc") and warn:
-                        log = get_logger(__name__)
                         log.warning(
                             f"Adding .* to spec '{spec}' to ensure satisfiability.  Please "
                             "consider putting {{{{ var_name }}}}.* or some relational "
@@ -2093,7 +2120,6 @@ def download_channeldata(channel_url):
 
 
 def shutil_move_more_retrying(src, dest, debug_name):
-    log = get_logger(__name__)
     log.info(f"Renaming {debug_name} directory '{src}' to '{dest}'")
     attempts_left = 5
 

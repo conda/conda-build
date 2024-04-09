@@ -16,6 +16,7 @@ from fnmatch import filter as fnmatch_filter
 from fnmatch import fnmatch
 from fnmatch import translate as fnmatch_translate
 from functools import partial
+from logging import getLogger
 from os.path import (
     basename,
     dirname,
@@ -67,6 +68,8 @@ if TYPE_CHECKING:
     from typing import Literal
 
     from .metadata import MetaData
+
+log = getLogger(__name__)
 
 filetypes_for_platform = {
     "win": (DLLfile, EXEfile),
@@ -1421,7 +1424,6 @@ def check_overlinking_impl(
                 sysroot_files.append(replaced)
             diffs = set(orig_sysroot_files) - set(sysroot_files)
             if diffs:
-                log = utils.get_logger(__name__)
                 log.warning(
                     "Partially parsed some '.tbd' files in sysroot %s, pretending .tbds are their install-names\n"
                     "Adding support to 'conda-build' for parsing these in 'liefldd.py' would be easy and useful:\n"
@@ -1630,7 +1632,6 @@ def post_process_shared_lib(m, f, files, host_prefix=None):
         )
     elif codefile == machofile:
         if m.config.host_platform != "osx":
-            log = utils.get_logger(__name__)
             log.warning(
                 "Found Mach-O file but patching is only supported on macOS, skipping: %s",
                 path,
@@ -1666,7 +1667,6 @@ def fix_permissions(files, prefix):
             try:
                 lchmod(path, new_mode)
             except (OSError, utils.PermissionError) as e:
-                log = utils.get_logger(__name__)
                 log.warning(str(e))
 
 
@@ -1687,7 +1687,6 @@ def check_menuinst_json(files, prefix) -> None:
         return
 
     print("Validating Menu/*.json files")
-    log = utils.get_logger(__name__, dedupe=False)
     try:
         import jsonschema
         from menuinst.utils import data_path
