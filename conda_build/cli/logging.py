@@ -15,7 +15,6 @@ from yaml import safe_load
 
 if TYPE_CHECKING:
     from logging import Logger, LogRecord
-    from typing import Self
 
 
 # https://stackoverflow.com/a/31459386/1170370
@@ -45,10 +44,6 @@ class DuplicateFilter(Filter):
             return record.msg not in self.msgs
         finally:
             self.msgs.add(record.msg)
-
-    @classmethod
-    def clear(cls: type[Self]) -> None:
-        cls.msgs.clear()
 
 
 def init_logging(log: Logger) -> None:
