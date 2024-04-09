@@ -96,7 +96,7 @@ Set up environments and activation scripts to debug your build or test phase.
 def execute(args: Sequence[str] | None = None) -> int:
     from .logging import init_logging
 
-    init_logging(log)
+    init_logging()
 
     parser = get_parser()
     parsed = parser.parse_args(args)

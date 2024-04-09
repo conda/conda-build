@@ -160,8 +160,8 @@ def test_filter_files():
 
 @pytest.mark.serial
 def test_logger_filtering(caplog: LogCaptureFixture, capsys: CaptureFixture) -> None:
-    log = getLogger(__name__)
-    init_logging(log)
+    log = getLogger("conda_build.tests")
+    init_logging()
     caplog.set_level(DEBUG)
 
     log.debug("test debug message")
@@ -216,7 +216,7 @@ def test_logger_config_from_file(
                     }
                 },
                 "loggers": {
-                    __name__: {
+                    "conda_build": {
                         "level": "WARN",
                         "handlers": ["console"],
                         "propagate": False,
@@ -233,8 +233,8 @@ def test_logger_config_from_file(
         return_value={"log_config_file": test_file},
     )
 
-    log = getLogger(__name__)
-    init_logging(log)
+    log = getLogger("conda_build.tests")
+    init_logging()
 
     # default log level is INFO, but our config file should set level to DEBUG
     log.warning("test message")

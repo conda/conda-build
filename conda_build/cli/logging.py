@@ -14,7 +14,7 @@ from conda.base.context import context
 from yaml import safe_load
 
 if TYPE_CHECKING:
-    from logging import Logger, LogRecord
+    from logging import LogRecord
 
 
 # https://stackoverflow.com/a/31459386/1170370
@@ -46,7 +46,7 @@ class DuplicateFilter(Filter):
             self.msgs.add(record.msg)
 
 
-def init_logging(log: Logger) -> None:
+def init_logging() -> None:
     """
     Default initialization of logging for conda-build CLI.
 
@@ -58,9 +58,11 @@ def init_logging(log: Logger) -> None:
         config_file = os.path.expandvars(config_file)
         dictConfig(safe_load(Path(config_file).expanduser().resolve().read_text()))
 
+    log = getLogger("conda_build")
+
     # we don't want propagation in CLI, but we do want it in tests
     # this is a pytest limitation: https://github.com/pytest-dev/pytest/issues/3697
-    getLogger("conda_build").propagate = "PYTEST_CURRENT_TEST" in os.environ
+    log.propagate = "PYTEST_CURRENT_TEST" in os.environ
 
     if not log.handlers:
         log.addHandler(stdout := StreamHandler(sys.stdout))
