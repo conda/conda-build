@@ -35,7 +35,6 @@ from conda.exports import (  # noqa: F401
     InstalledPackages,  # unused
     NoPackagesFound,  # unused
     Unsatisfiable,  # unused
-    normalized_version,
     prefix_placeholder,
     rm_rf,
     spec_from_line,
@@ -61,6 +60,7 @@ from conda.models.enums import PathType as _PathType
 from conda.models.match_spec import MatchSpec as _MatchSpec
 from conda.models.records import PackageRecord as _PackageRecord
 from conda.models.version import VersionOrder as _VersionOrder
+from conda.models.version import normalized_version as _normalized_version
 from conda.resolve import Resolve as _Resolve
 from conda.utils import human_bytes as _human_bytes
 
@@ -129,6 +129,13 @@ deprecated.constant(
     "VersionOrder",
     _VersionOrder,
     addendum="Use `conda.models.version.VersionOrder` instead.",
+)
+deprecated.constant(
+    "24.5",
+    "24.7",
+    "normalized_version",
+    _normalized_version,
+    addendum="Use `conda.models.version.normalized_version` instead.",
 )
 
 deprecated.constant(
