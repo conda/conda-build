@@ -6,6 +6,7 @@ import configparser as _configparser
 import os as _os
 from functools import partial as _partial
 from importlib import import_module as _import_module
+from io import StringIO as _StringIO
 
 from conda import __version__
 from conda.auxlib.entity import EntityEncoder as _EntityEncoder
@@ -31,7 +32,6 @@ from conda.exports import (  # noqa: F401
     CondaSession,  # unused
     InstalledPackages,  # unused
     NoPackagesFound,  # unused
-    StringIO,
     TemporaryDirectory,
     TmpDownload,
     Unsatisfiable,
@@ -162,6 +162,14 @@ deprecated.constant(
     _import_module,
     addendum="Use `importlib.import_module` instead.",
 )
+deprecated.constant(
+    "24.5",
+    "24.7",
+    "StringIO",
+    _StringIO,
+    addendum="Use `io.StringIO` instead.",
+)
+
 deprecated.constant(
     "24.5",
     "24.7",

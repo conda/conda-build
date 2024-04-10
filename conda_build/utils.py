@@ -23,6 +23,7 @@ import urllib.request as urllib
 from collections import OrderedDict, defaultdict
 from functools import lru_cache
 from glob import glob
+from io import StringIO
 from itertools import filterfalse
 from json.decoder import JSONDecodeError
 from locale import getpreferredencoding
@@ -61,7 +62,6 @@ from conda.models.match_spec import MatchSpec
 from conda.models.records import PackageRecord
 
 from .conda_interface import (
-    StringIO,
     TemporaryDirectory,
     VersionOrder,
     cc_conda_build,

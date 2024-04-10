@@ -12,6 +12,7 @@ import re
 import subprocess
 import sys
 from collections import OrderedDict, defaultdict
+from io import StringIO
 from os import chdir, getcwd, listdir, makedirs
 from os.path import abspath, exists, isdir, isfile, join
 from shutil import copy2
@@ -26,7 +27,6 @@ from conda.gateways.disk.read import compute_sum
 from requests.packages.urllib3.util.url import parse_url
 
 from ..conda_interface import (
-    StringIO,
     download,
     human_bytes,
     input,
