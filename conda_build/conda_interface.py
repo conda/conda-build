@@ -32,7 +32,6 @@ from conda.exports import (  # noqa: F401
     CondaSession,  # unused
     InstalledPackages,  # unused
     NoPackagesFound,  # unused
-    TmpDownload,
     Unsatisfiable,
     VersionOrder,
     _toposort,
@@ -54,6 +53,7 @@ from conda.exports import (  # noqa: F401
     win_path_to_unix,
 )
 from conda.exports import get_index as _get_index
+from conda.gateways.connection.download import TmpDownload as _TmpDownload
 from conda.gateways.disk.create import TemporaryDirectory as _TemporaryDirectory
 from conda.gateways.disk.read import compute_sum as _compute_sum
 from conda.models.channel import Channel as _Channel
@@ -144,6 +144,13 @@ deprecated.constant(
     "TemporaryDirectory",
     _TemporaryDirectory,
     addendum="Use `conda.gateways.disk.create.TemporaryDirectory` instead.",
+)
+deprecated.constant(
+    "24.5",
+    "24.7",
+    "TmpDownload",
+    _TmpDownload,
+    addendum="Use `conda.gateways.connection.download.TmpDownload` instead.",
 )
 
 deprecated.constant(
