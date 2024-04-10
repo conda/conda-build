@@ -22,10 +22,10 @@ import requests
 from conda.core.index import get_index
 from conda.exceptions import CondaError, CondaHTTPError
 from conda.models.match_spec import MatchSpec
+from conda.resolve import Resolve
 
 from .. import environ
 from ..conda_interface import (
-    Resolve,
     TemporaryDirectory,
     TmpDownload,
     download,

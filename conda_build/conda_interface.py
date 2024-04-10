@@ -31,7 +31,6 @@ from conda.exports import (  # noqa: F401
     CondaSession,  # unused
     InstalledPackages,  # unused
     NoPackagesFound,  # unused
-    Resolve,
     StringIO,
     TemporaryDirectory,
     TmpDownload,
@@ -63,6 +62,7 @@ from conda.models.enums import FileMode as _FileMode
 from conda.models.enums import PathType as _PathType
 from conda.models.match_spec import MatchSpec as _MatchSpec
 from conda.models.records import PackageRecord as _PackageRecord
+from conda.resolve import Resolve as _Resolve
 
 from .deprecations import deprecated
 
@@ -130,6 +130,14 @@ deprecated.constant(
     "EntityEncoder",
     _EntityEncoder,
     addendum="Use `conda.auxlib.entity.EntityEncoder` instead.",
+)
+
+deprecated.constant(
+    "24.5",
+    "24.7",
+    "Resolve",
+    _Resolve,
+    addendum="Use `conda.resolve.Resolve` instead.",
 )
 
 deprecated.constant(
