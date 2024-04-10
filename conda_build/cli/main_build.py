@@ -14,10 +14,11 @@ from typing import TYPE_CHECKING
 
 from conda.auxlib.ish import dals
 from conda.base.context import context
+from conda.cli.helpers import add_parser_channels
 from conda.common.io import dashlist
 
 from .. import api, build, source, utils
-from ..conda_interface import add_parser_channels, cc_conda_build
+from ..conda_interface import cc_conda_build
 from ..config import (
     get_channel_urls,
     get_or_merge_config,

@@ -12,6 +12,9 @@ from conda.base.context import context as _context
 from conda.base.context import determine_target_prefix as _determine_target_prefix
 from conda.base.context import non_x86_machines as _non_x86_linux_machines
 from conda.base.context import reset_context as _reset_context
+from conda.cli.conda_argparse import ArgumentParser as _ArgumentParser
+from conda.cli.helpers import add_parser_channels as _add_parser_channels
+from conda.cli.helpers import add_parser_prefix as _add_parser_prefix
 from conda.core.package_cache_data import (
     ProgressiveFetchExtract as _ProgressiveFetchExtract,
 )
@@ -22,7 +25,6 @@ from conda.exceptions import LockError as _LockError
 from conda.exceptions import NoPackagesFoundError as _NoPackagesFoundError
 from conda.exceptions import PaddingError as _PaddingError
 from conda.exceptions import UnsatisfiableError as _UnsatisfiableError
-from conda.exports import ArgumentParser as _ArgumentParser
 from conda.exports import (  # noqa: F401
     Channel,
     Completer,
@@ -41,8 +43,6 @@ from conda.exports import (  # noqa: F401
     Unsatisfiable,
     VersionOrder,
     _toposort,
-    add_parser_channels,
-    add_parser_prefix,
     download,
     human_bytes,
     input,
@@ -72,6 +72,20 @@ deprecated.constant(
     "ArgumentParser",
     _ArgumentParser,
     addendum="Use `conda.cli.conda_argparse.ArgumentParser` instead.",
+)
+deprecated.constant(
+    "24.5",
+    "24.7",
+    "add_parser_channels",
+    _add_parser_channels,
+    addendum="Use `conda.cli.helpers.add_parser_channels` instead.",
+)
+deprecated.constant(
+    "24.5",
+    "24.7",
+    "add_parser_prefix",
+    _add_parser_prefix,
+    addendum="Use `conda.cli.helpers.add_parser_prefix` instead.",
 )
 
 deprecated.constant(
