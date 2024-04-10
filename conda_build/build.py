@@ -31,13 +31,12 @@ from conda.base.context import context, reset_context
 from conda.core.prefix_data import PrefixData
 from conda.exceptions import CondaError, NoPackagesFoundError, UnsatisfiableError
 from conda.models.channel import Channel
+from conda.models.enums import FileMode, PathType
 
 from . import __version__ as conda_build_version
 from . import environ, noarch_python, source, tarcheck, utils
 from .conda_interface import (
-    FileMode,
     MatchSpec,
-    PathType,
     TemporaryDirectory,
     env_path_backup_var_exists,
     prefix_placeholder,

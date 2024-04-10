@@ -29,12 +29,10 @@ from conda.exceptions import UnsatisfiableError as _UnsatisfiableError
 from conda.exports import (  # noqa: F401
     Completer,  # unused
     CondaSession,  # unused
-    FileMode,
     InstalledPackages,
     MatchSpec,
     NoPackagesFound,
     PackageRecord,
-    PathType,
     Resolve,
     StringIO,
     TemporaryDirectory,
@@ -63,6 +61,8 @@ from conda.exports import get_index as _get_index
 from conda.gateways.disk.read import compute_sum as _compute_sum
 from conda.models.channel import Channel as _Channel
 from conda.models.channel import get_conda_build_local_url as _get_conda_build_local_url
+from conda.models.enums import FileMode as _FileMode
+from conda.models.enums import PathType as _PathType
 
 from .deprecations import deprecated
 
@@ -94,6 +94,20 @@ deprecated.constant(
     "Channel",
     _Channel,
     addendum="Use `conda.models.channel.Channel` instead.",
+)
+deprecated.constant(
+    "24.5",
+    "24.7",
+    "FileMode",
+    _FileMode,
+    addendum="Use `conda.models.enums.FileMode` instead.",
+)
+deprecated.constant(
+    "24.5",
+    "24.7",
+    "PathType",
+    _PathType,
+    addendum="Use `conda.models.enums.PathType` instead.",
 )
 
 deprecated.constant(
