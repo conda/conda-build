@@ -8,16 +8,18 @@ from typing import TYPE_CHECKING
 from conda.base.context import context, determine_target_prefix
 
 from .. import api
-from ..conda_interface import ArgumentParser, add_parser_prefix
+from ..conda_interface import add_parser_prefix
 
 if TYPE_CHECKING:
-    from argparse import Namespace
+    from argparse import ArgumentParser, Namespace
     from typing import Sequence
 
 logging.basicConfig(level=logging.INFO)
 
 
 def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
+    from conda.cli.conda_argparse import ArgumentParser
+
     parser = ArgumentParser(
         prog="conda develop",
         description="""

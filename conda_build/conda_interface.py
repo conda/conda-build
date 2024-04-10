@@ -22,8 +22,8 @@ from conda.exceptions import LockError as _LockError
 from conda.exceptions import NoPackagesFoundError as _NoPackagesFoundError
 from conda.exceptions import PaddingError as _PaddingError
 from conda.exceptions import UnsatisfiableError as _UnsatisfiableError
+from conda.exports import ArgumentParser as _ArgumentParser
 from conda.exports import (  # noqa: F401
-    ArgumentParser,
     Channel,
     Completer,
     CondaSession,
@@ -65,6 +65,14 @@ from conda.gateways.disk.read import compute_sum as _compute_sum
 from conda.models.channel import get_conda_build_local_url as _get_conda_build_local_url
 
 from .deprecations import deprecated
+
+deprecated.constant(
+    "24.5",
+    "24.7",
+    "ArgumentParser",
+    _ArgumentParser,
+    addendum="Use `conda.cli.conda_argparse.ArgumentParser` instead.",
+)
 
 deprecated.constant(
     "24.5",

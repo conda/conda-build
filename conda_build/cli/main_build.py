@@ -28,10 +28,8 @@ from .actions import KeyValueAction
 from .main_render import get_render_parser
 
 if TYPE_CHECKING:
-    from argparse import Namespace
+    from argparse import ArgumentParser, Namespace
     from typing import Sequence
-
-    from ..conda_interface import ArgumentParser
 
 
 def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
