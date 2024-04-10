@@ -8,6 +8,7 @@ from functools import partial as _partial
 from importlib import import_module as _import_module
 
 from conda import __version__
+from conda.auxlib.entity import EntityEncoder as _EntityEncoder
 from conda.base.context import context as _context
 from conda.base.context import determine_target_prefix as _determine_target_prefix
 from conda.base.context import non_x86_machines as _non_x86_linux_machines
@@ -26,9 +27,8 @@ from conda.exceptions import NoPackagesFoundError as _NoPackagesFoundError
 from conda.exceptions import PaddingError as _PaddingError
 from conda.exceptions import UnsatisfiableError as _UnsatisfiableError
 from conda.exports import (  # noqa: F401
-    Completer,
-    CondaSession,
-    EntityEncoder,
+    Completer,  # unused
+    CondaSession,  # unused
     FileMode,
     InstalledPackages,
     MatchSpec,
@@ -94,6 +94,14 @@ deprecated.constant(
     "Channel",
     _Channel,
     addendum="Use `conda.models.channel.Channel` instead.",
+)
+
+deprecated.constant(
+    "24.5",
+    "24.7",
+    "EntityEncoder",
+    _EntityEncoder,
+    addendum="Use `conda.auxlib.entity.EntityEncoder` instead.",
 )
 
 deprecated.constant(
