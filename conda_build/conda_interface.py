@@ -34,7 +34,6 @@ from conda.exports import (  # noqa: F401
     InstalledPackages,  # unused
     NoPackagesFound,  # unused
     Unsatisfiable,  # unused
-    human_bytes,
     input,
     lchmod,
     normalized_version,
@@ -63,6 +62,7 @@ from conda.models.match_spec import MatchSpec as _MatchSpec
 from conda.models.records import PackageRecord as _PackageRecord
 from conda.models.version import VersionOrder as _VersionOrder
 from conda.resolve import Resolve as _Resolve
+from conda.utils import human_bytes as _human_bytes
 
 from .deprecations import deprecated
 
@@ -172,6 +172,13 @@ deprecated.constant(
     "_toposort",
     __toposort,
     addendum="Use `conda.common.toposort._toposort` instead.",
+)
+deprecated.constant(
+    "24.5",
+    "24.7",
+    "human_bytes",
+    _human_bytes,
+    addendum="Use `conda.utils.human_bytes` instead.",
 )
 
 deprecated.constant(

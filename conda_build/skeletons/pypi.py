@@ -25,14 +25,10 @@ import yaml
 from conda.base.context import context
 from conda.gateways.connection.download import download
 from conda.gateways.disk.read import compute_sum
+from conda.utils import human_bytes
 from requests.packages.urllib3.util.url import parse_url
 
-from ..conda_interface import (
-    human_bytes,
-    input,
-    normalized_version,
-    spec_from_line,
-)
+from ..conda_interface import input, normalized_version, spec_from_line
 from ..config import Config
 from ..environ import create_env
 from ..license_family import allowed_license_families, guess_license_family
