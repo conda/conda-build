@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import configparser as _configparser
 import os as _os
+from builtins import input as _input
 from functools import partial as _partial
 from importlib import import_module as _import_module
 from io import StringIO as _StringIO
@@ -34,7 +35,6 @@ from conda.exports import (  # noqa: F401
     InstalledPackages,  # unused
     NoPackagesFound,  # unused
     Unsatisfiable,  # unused
-    input,
     lchmod,
     normalized_version,
     prefix_placeholder,
@@ -209,6 +209,13 @@ deprecated.constant(
     "StringIO",
     _StringIO,
     addendum="Use `io.StringIO` instead.",
+)
+deprecated.constant(
+    "24.5",
+    "24.7",
+    "input",
+    _input,
+    addendum="Use `input` instead.",
 )
 
 deprecated.constant(
