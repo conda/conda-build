@@ -18,9 +18,9 @@ from typing import TYPE_CHECKING, overload
 from bs4 import UnicodeDammit
 from conda.base.context import context
 from conda.gateways.disk.read import compute_sum
+from conda.models.match_spec import MatchSpec
 
 from . import exceptions, utils, variants
-from .conda_interface import MatchSpec
 from .config import Config, get_or_merge_config
 from .features import feature_list
 from .license_family import ensure_valid_license_family

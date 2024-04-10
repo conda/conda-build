@@ -29,8 +29,7 @@ from conda.exceptions import UnsatisfiableError as _UnsatisfiableError
 from conda.exports import (  # noqa: F401
     Completer,  # unused
     CondaSession,  # unused
-    InstalledPackages,
-    MatchSpec,
+    InstalledPackages,  # unused
     NoPackagesFound,
     PackageRecord,
     Resolve,
@@ -63,6 +62,7 @@ from conda.models.channel import Channel as _Channel
 from conda.models.channel import get_conda_build_local_url as _get_conda_build_local_url
 from conda.models.enums import FileMode as _FileMode
 from conda.models.enums import PathType as _PathType
+from conda.models.match_spec import MatchSpec as _MatchSpec
 
 from .deprecations import deprecated
 
@@ -108,6 +108,13 @@ deprecated.constant(
     "PathType",
     _PathType,
     addendum="Use `conda.models.enums.PathType` instead.",
+)
+deprecated.constant(
+    "24.5",
+    "24.7",
+    "MatchSpec",
+    _MatchSpec,
+    addendum="Use `conda.models.match_spec.MatchSpec` instead.",
 )
 
 deprecated.constant(

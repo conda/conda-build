@@ -32,11 +32,11 @@ from conda.core.prefix_data import PrefixData
 from conda.exceptions import CondaError, NoPackagesFoundError, UnsatisfiableError
 from conda.models.channel import Channel
 from conda.models.enums import FileMode, PathType
+from conda.models.match_spec import MatchSpec
 
 from . import __version__ as conda_build_version
 from . import environ, noarch_python, source, tarcheck, utils
 from .conda_interface import (
-    MatchSpec,
     TemporaryDirectory,
     env_path_backup_var_exists,
     prefix_placeholder,
@@ -2350,8 +2350,6 @@ def create_build_envs(m: MetaData, notest):
             )
     except DependencyNeedsBuildingError as e:
         # subpackages are not actually missing.  We just haven't built them yet.
-        from .conda_interface import MatchSpec
-
         other_outputs = (
             m.other_outputs.values()
             if hasattr(m, "other_outputs")
