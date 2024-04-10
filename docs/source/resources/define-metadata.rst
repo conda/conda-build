@@ -1327,12 +1327,12 @@ contents.
          - somefolder/*.some-extension
 
 Greater control over file matching may be
-achieved by defining `files` as a dictionary separating files to
-`include` from those to `exclude`.
+achieved by defining ``files`` as a dictionary separating files to
+``include`` from those to ``exclude``.
 When using include/exclude, only files installed by
 the current recipe are considered. i.e. files in the prefix installed
 by host dependencies are excluded. include/exclude may not be used
-simultaneously with glob expressions listed directly in `outputs/files`.
+simultaneously with glob expressions listed directly in ``outputs/files``.
 Files matching both include and exclude expressions will be excluded.
 
 .. code-block:: yaml
