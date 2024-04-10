@@ -26,7 +26,6 @@ from conda.exceptions import NoPackagesFoundError as _NoPackagesFoundError
 from conda.exceptions import PaddingError as _PaddingError
 from conda.exceptions import UnsatisfiableError as _UnsatisfiableError
 from conda.exports import (  # noqa: F401
-    Channel,
     Completer,
     CondaSession,
     EntityEncoder,
@@ -62,6 +61,7 @@ from conda.exports import (  # noqa: F401
 )
 from conda.exports import get_index as _get_index
 from conda.gateways.disk.read import compute_sum as _compute_sum
+from conda.models.channel import Channel as _Channel
 from conda.models.channel import get_conda_build_local_url as _get_conda_build_local_url
 
 from .deprecations import deprecated
@@ -86,6 +86,14 @@ deprecated.constant(
     "add_parser_prefix",
     _add_parser_prefix,
     addendum="Use `conda.cli.helpers.add_parser_prefix` instead.",
+)
+
+deprecated.constant(
+    "24.5",
+    "24.7",
+    "Channel",
+    _Channel,
+    addendum="Use `conda.models.channel.Channel` instead.",
 )
 
 deprecated.constant(
@@ -292,7 +300,7 @@ deprecated.constant(
     "24.5",
     "24.7",
     "get_conda_channel",
-    Channel.from_value,
+    _Channel.from_value,
     addendum="Use `conda.models.channel.Channel.from_value` instead.",
 )
 

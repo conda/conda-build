@@ -38,11 +38,11 @@ from conda.exceptions import (
     PaddingError,
     UnsatisfiableError,
 )
-from conda.models.channel import prioritize_channels
+from conda.models.channel import Channel, prioritize_channels
 from conda.models.match_spec import MatchSpec
 
 from . import utils
-from .conda_interface import Channel, PackageRecord, TemporaryDirectory
+from .conda_interface import PackageRecord, TemporaryDirectory
 from .deprecations import deprecated
 from .exceptions import BuildLockError, DependencyNeedsBuildingError
 from .features import feature_list
