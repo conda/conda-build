@@ -1398,10 +1398,9 @@ A subpackage does not automatically inherit any dependencies from its top-level
 recipe, so any build or run requirements needed by the subpackage must be
 explicitly specified.
 
-.. code-block:: none
+.. code-block:: yaml
 
    outputs:
-
      - name: subpackage-name
        requirements:
          build:
