@@ -56,6 +56,7 @@ from conda.base.constants import (
 )
 from conda.base.context import context
 from conda.exceptions import CondaHTTPError
+from conda.gateways.connection.download import download
 from conda.gateways.disk.create import TemporaryDirectory
 from conda.gateways.disk.read import compute_sum
 from conda.models.channel import Channel
@@ -65,7 +66,6 @@ from conda.models.records import PackageRecord
 from .conda_interface import (
     VersionOrder,
     cc_conda_build,
-    download,
     unix_path_to_win,
     win_path_to_unix,
 )

@@ -23,11 +23,11 @@ import pkginfo
 import requests
 import yaml
 from conda.base.context import context
+from conda.gateways.connection.download import download
 from conda.gateways.disk.read import compute_sum
 from requests.packages.urllib3.util.url import parse_url
 
 from ..conda_interface import (
-    download,
     human_bytes,
     input,
     normalized_version,

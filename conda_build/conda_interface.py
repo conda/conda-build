@@ -35,7 +35,6 @@ from conda.exports import (  # noqa: F401
     Unsatisfiable,
     VersionOrder,
     _toposort,
-    download,
     human_bytes,
     input,
     lchmod,
@@ -54,6 +53,7 @@ from conda.exports import (  # noqa: F401
 )
 from conda.exports import get_index as _get_index
 from conda.gateways.connection.download import TmpDownload as _TmpDownload
+from conda.gateways.connection.download import download as _download
 from conda.gateways.disk.create import TemporaryDirectory as _TemporaryDirectory
 from conda.gateways.disk.read import compute_sum as _compute_sum
 from conda.models.channel import Channel as _Channel
@@ -151,6 +151,13 @@ deprecated.constant(
     "TmpDownload",
     _TmpDownload,
     addendum="Use `conda.gateways.connection.download.TmpDownload` instead.",
+)
+deprecated.constant(
+    "24.5",
+    "24.7",
+    "download",
+    _download,
+    addendum="Use `conda.gateways.connection.download.download` instead.",
 )
 
 deprecated.constant(
