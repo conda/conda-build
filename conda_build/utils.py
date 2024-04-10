@@ -62,9 +62,9 @@ from conda.gateways.disk.read import compute_sum
 from conda.models.channel import Channel
 from conda.models.match_spec import MatchSpec
 from conda.models.records import PackageRecord
+from conda.models.version import VersionOrder
 
 from .conda_interface import (
-    VersionOrder,
     cc_conda_build,
     unix_path_to_win,
     win_path_to_unix,

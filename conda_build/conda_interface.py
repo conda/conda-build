@@ -32,8 +32,7 @@ from conda.exports import (  # noqa: F401
     CondaSession,  # unused
     InstalledPackages,  # unused
     NoPackagesFound,  # unused
-    Unsatisfiable,
-    VersionOrder,
+    Unsatisfiable,  # unused
     _toposort,
     human_bytes,
     input,
@@ -62,6 +61,7 @@ from conda.models.enums import FileMode as _FileMode
 from conda.models.enums import PathType as _PathType
 from conda.models.match_spec import MatchSpec as _MatchSpec
 from conda.models.records import PackageRecord as _PackageRecord
+from conda.models.version import VersionOrder as _VersionOrder
 from conda.resolve import Resolve as _Resolve
 
 from .deprecations import deprecated
@@ -122,6 +122,13 @@ deprecated.constant(
     "PackageRecord",
     _PackageRecord,
     addendum="Use `conda.models.records.PackageRecord` instead.",
+)
+deprecated.constant(
+    "24.5",
+    "24.7",
+    "VersionOrder",
+    _VersionOrder,
+    addendum="Use `conda.models.version.VersionOrder` instead.",
 )
 
 deprecated.constant(

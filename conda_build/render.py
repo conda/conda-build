@@ -30,6 +30,7 @@ from conda.core.package_cache_data import ProgressiveFetchExtract
 from conda.exceptions import UnsatisfiableError
 from conda.gateways.disk.create import TemporaryDirectory
 from conda.models.records import PackageRecord
+from conda.models.version import VersionOrder
 
 from . import environ, exceptions, source, utils
 from .conda_interface import specs_from_url
@@ -807,8 +808,6 @@ def distribute_variants(
     # which python version we prefer. `python_age` can use used to tweak which
     # python gets used here.
     if metadata.noarch or metadata.noarch_python:
-        from .conda_interface import VersionOrder
-
         age = int(
             metadata.get_value(
                 "build/noarch_python_build_age", metadata.config.noarch_python_build_age

@@ -13,6 +13,8 @@ from functools import partial
 from pathlib import Path
 from subprocess import PIPE, Popen
 
+from conda.models.version import VersionOrder
+
 from ..utils import on_mac, on_win, rec_glob
 from .external import find_executable
 
@@ -963,7 +965,6 @@ def get_static_lib_exports_dumpbin(filename):
                     results.append((result, version))
                 except:
                     pass
-        from ..conda_interface import VersionOrder
 
         results = sorted(results, key=lambda x: VersionOrder(x[1]))
         dumpbin_exe = results[-1][0]
