@@ -11,6 +11,7 @@ from io import StringIO as _StringIO
 
 from conda import __version__
 from conda.auxlib.entity import EntityEncoder as _EntityEncoder
+from conda.base.constants import PREFIX_PLACEHOLDER as _PREFIX_PLACEHOLDER
 from conda.base.context import context as _context
 from conda.base.context import determine_target_prefix as _determine_target_prefix
 from conda.base.context import non_x86_machines as _non_x86_linux_machines
@@ -35,7 +36,6 @@ from conda.exports import (  # noqa: F401
     InstalledPackages,  # unused
     NoPackagesFound,  # unused
     Unsatisfiable,  # unused
-    prefix_placeholder,
     rm_rf,
     spec_from_line,
     specs_from_args,
@@ -193,6 +193,13 @@ deprecated.constant(
     "lchmod",
     _lchmod,
     addendum="Use `conda.gateways.disk.link.lchmod` instead.",
+)
+deprecated.constant(
+    "24.5",
+    "24.7",
+    "prefix_placeholder",
+    _PREFIX_PLACEHOLDER,
+    addendum="Use `conda.base.constants.PREFIX_PLACEHOLDER` instead.",
 )
 
 deprecated.constant(

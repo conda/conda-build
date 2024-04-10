@@ -27,6 +27,7 @@ import yaml
 from bs4 import UnicodeDammit
 from conda import __version__ as conda_version
 from conda.auxlib.entity import EntityEncoder
+from conda.base.constants import PREFIX_PLACEHOLDER
 from conda.base.context import context, reset_context
 from conda.core.prefix_data import PrefixData
 from conda.exceptions import CondaError, NoPackagesFoundError, UnsatisfiableError
@@ -37,11 +38,7 @@ from conda.models.match_spec import MatchSpec
 
 from . import __version__ as conda_build_version
 from . import environ, noarch_python, source, tarcheck, utils
-from .conda_interface import (
-    env_path_backup_var_exists,
-    prefix_placeholder,
-    url_path,
-)
+from .conda_interface import env_path_backup_var_exists, url_path
 from .config import Config
 from .create_test import create_all_test_files
 from .deprecations import deprecated
@@ -194,7 +191,7 @@ def have_prefix_files(files, prefix):
     """
 
     prefix_bytes = prefix.encode(utils.codec)
-    prefix_placeholder_bytes = prefix_placeholder.encode(utils.codec)
+    prefix_placeholder_bytes = PREFIX_PLACEHOLDER.encode(utils.codec)
     searches = {prefix: prefix_bytes}
     if utils.on_win:
         # some windows libraries use unix-style path separators
@@ -205,7 +202,7 @@ def have_prefix_files(files, prefix):
         double_backslash_prefix = prefix.replace("\\", "\\\\")
         double_backslash_prefix_bytes = double_backslash_prefix.encode(utils.codec)
         searches[double_backslash_prefix] = double_backslash_prefix_bytes
-    searches[prefix_placeholder] = prefix_placeholder_bytes
+    searches[PREFIX_PLACEHOLDER] = prefix_placeholder_bytes
     min_prefix = min(len(k) for k, _ in searches.items())
 
     # mm.find is incredibly slow, so ripgrep is used to pre-filter the list.
@@ -1148,13 +1145,13 @@ def get_files_with_prefix(m, replacements, files_in, prefix):
             prefix[0].upper() + prefix[1:],
             prefix[0].lower() + prefix[1:],
             prefix_u,
-            prefix_placeholder.replace("\\", "'"),
-            prefix_placeholder.replace("/", "\\"),
+            PREFIX_PLACEHOLDER.replace("\\", "'"),
+            PREFIX_PLACEHOLDER.replace("/", "\\"),
         ]
         # some python/json files store an escaped version of prefix
         pfx_variants.extend([pfx.replace("\\", "\\\\") for pfx in pfx_variants])
     else:
-        pfx_variants = (prefix, prefix_placeholder)
+        pfx_variants = (prefix, PREFIX_PLACEHOLDER)
     # replacing \ with \\ here is for regex escaping
     re_test = (
         b"("
