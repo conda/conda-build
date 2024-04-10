@@ -17,6 +17,7 @@ from conda.base.context import reset_context as _reset_context
 from conda.cli.conda_argparse import ArgumentParser as _ArgumentParser
 from conda.cli.helpers import add_parser_channels as _add_parser_channels
 from conda.cli.helpers import add_parser_prefix as _add_parser_prefix
+from conda.common.toposort import _toposort as __toposort
 from conda.core.package_cache_data import (
     ProgressiveFetchExtract as _ProgressiveFetchExtract,
 )
@@ -33,7 +34,6 @@ from conda.exports import (  # noqa: F401
     InstalledPackages,  # unused
     NoPackagesFound,  # unused
     Unsatisfiable,  # unused
-    _toposort,
     human_bytes,
     input,
     lchmod,
@@ -165,6 +165,13 @@ deprecated.constant(
     "download",
     _download,
     addendum="Use `conda.gateways.connection.download.download` instead.",
+)
+deprecated.constant(
+    "24.5",
+    "24.7",
+    "_toposort",
+    __toposort,
+    addendum="Use `conda.common.toposort._toposort` instead.",
 )
 
 deprecated.constant(
