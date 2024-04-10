@@ -35,7 +35,6 @@ from conda.exports import (  # noqa: F401
     InstalledPackages,  # unused
     NoPackagesFound,  # unused
     Unsatisfiable,  # unused
-    lchmod,
     normalized_version,
     prefix_placeholder,
     rm_rf,
@@ -53,6 +52,7 @@ from conda.exports import get_index as _get_index
 from conda.gateways.connection.download import TmpDownload as _TmpDownload
 from conda.gateways.connection.download import download as _download
 from conda.gateways.disk.create import TemporaryDirectory as _TemporaryDirectory
+from conda.gateways.disk.link import lchmod as _lchmod
 from conda.gateways.disk.read import compute_sum as _compute_sum
 from conda.models.channel import Channel as _Channel
 from conda.models.channel import get_conda_build_local_url as _get_conda_build_local_url
@@ -179,6 +179,13 @@ deprecated.constant(
     "human_bytes",
     _human_bytes,
     addendum="Use `conda.utils.human_bytes` instead.",
+)
+deprecated.constant(
+    "24.5",
+    "24.7",
+    "lchmod",
+    _lchmod,
+    addendum="Use `conda.gateways.disk.link.lchmod` instead.",
 )
 
 deprecated.constant(
