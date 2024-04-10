@@ -32,7 +32,6 @@ from conda.exports import (  # noqa: F401
     CondaSession,  # unused
     InstalledPackages,  # unused
     NoPackagesFound,  # unused
-    TemporaryDirectory,
     TmpDownload,
     Unsatisfiable,
     VersionOrder,
@@ -55,6 +54,7 @@ from conda.exports import (  # noqa: F401
     win_path_to_unix,
 )
 from conda.exports import get_index as _get_index
+from conda.gateways.disk.create import TemporaryDirectory as _TemporaryDirectory
 from conda.gateways.disk.read import compute_sum as _compute_sum
 from conda.models.channel import Channel as _Channel
 from conda.models.channel import get_conda_build_local_url as _get_conda_build_local_url
@@ -131,13 +131,19 @@ deprecated.constant(
     _EntityEncoder,
     addendum="Use `conda.auxlib.entity.EntityEncoder` instead.",
 )
-
 deprecated.constant(
     "24.5",
     "24.7",
     "Resolve",
     _Resolve,
     addendum="Use `conda.resolve.Resolve` instead.",
+)
+deprecated.constant(
+    "24.5",
+    "24.7",
+    "TemporaryDirectory",
+    _TemporaryDirectory,
+    addendum="Use `conda.gateways.disk.create.TemporaryDirectory` instead.",
 )
 
 deprecated.constant(

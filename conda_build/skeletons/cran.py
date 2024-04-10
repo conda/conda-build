@@ -42,9 +42,10 @@ except ImportError:
 from typing import TYPE_CHECKING
 
 from conda.common.io import dashlist
+from conda.gateways.disk.create import TemporaryDirectory
 
 from .. import source
-from ..conda_interface import TemporaryDirectory, cc_conda_build
+from ..conda_interface import cc_conda_build
 from ..config import get_or_merge_config
 from ..license_family import allowed_license_families, guess_license_family
 from ..metadata import MetaData

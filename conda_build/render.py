@@ -10,7 +10,6 @@ import string
 import subprocess
 import sys
 import tarfile
-import tempfile
 from collections import OrderedDict, defaultdict
 from contextlib import contextmanager
 from functools import lru_cache
@@ -29,10 +28,11 @@ import yaml
 from conda.base.context import context
 from conda.core.package_cache_data import ProgressiveFetchExtract
 from conda.exceptions import UnsatisfiableError
+from conda.gateways.disk.create import TemporaryDirectory
 from conda.models.records import PackageRecord
 
 from . import environ, exceptions, source, utils
-from .conda_interface import TemporaryDirectory, specs_from_url
+from .conda_interface import specs_from_url
 from .exceptions import DependencyNeedsBuildingError
 from .index import get_build_index
 from .metadata import MetaData, combine_top_level_metadata_with_output
@@ -944,7 +944,7 @@ def open_recipe(recipe: str | os.PathLike | Path) -> Iterator[Path]:
         yield recipe
     elif recipe.suffixes in [[".tar"], [".tar", ".gz"], [".tgz"], [".tar", ".bz2"]]:
         # extract the recipe to a temporary directory
-        with tempfile.TemporaryDirectory() as tmp, tarfile.open(recipe, "r:*") as tar:
+        with TemporaryDirectory() as tmp, tarfile.open(recipe, "r:*") as tar:
             tar.extractall(path=tmp)
             yield Path(tmp)
     elif recipe.suffix == ".yaml":

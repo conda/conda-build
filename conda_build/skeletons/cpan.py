@@ -21,12 +21,12 @@ from os.path import basename, dirname, exists, join
 import requests
 from conda.core.index import get_index
 from conda.exceptions import CondaError, CondaHTTPError
+from conda.gateways.disk.create import TemporaryDirectory
 from conda.models.match_spec import MatchSpec
 from conda.resolve import Resolve
 
 from .. import environ
 from ..conda_interface import (
-    TemporaryDirectory,
     TmpDownload,
     download,
 )
