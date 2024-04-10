@@ -58,9 +58,9 @@ from conda.exceptions import CondaHTTPError
 from conda.gateways.disk.read import compute_sum
 from conda.models.channel import Channel
 from conda.models.match_spec import MatchSpec
+from conda.models.records import PackageRecord
 
 from .conda_interface import (
-    PackageRecord,
     StringIO,
     TemporaryDirectory,
     VersionOrder,

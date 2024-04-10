@@ -29,9 +29,10 @@ import yaml
 from conda.base.context import context
 from conda.core.package_cache_data import ProgressiveFetchExtract
 from conda.exceptions import UnsatisfiableError
+from conda.models.records import PackageRecord
 
 from . import environ, exceptions, source, utils
-from .conda_interface import PackageRecord, TemporaryDirectory, specs_from_url
+from .conda_interface import TemporaryDirectory, specs_from_url
 from .exceptions import DependencyNeedsBuildingError
 from .index import get_build_index
 from .metadata import MetaData, combine_top_level_metadata_with_output

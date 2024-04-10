@@ -30,8 +30,7 @@ from conda.exports import (  # noqa: F401
     Completer,  # unused
     CondaSession,  # unused
     InstalledPackages,  # unused
-    NoPackagesFound,
-    PackageRecord,
+    NoPackagesFound,  # unused
     Resolve,
     StringIO,
     TemporaryDirectory,
@@ -63,6 +62,7 @@ from conda.models.channel import get_conda_build_local_url as _get_conda_build_l
 from conda.models.enums import FileMode as _FileMode
 from conda.models.enums import PathType as _PathType
 from conda.models.match_spec import MatchSpec as _MatchSpec
+from conda.models.records import PackageRecord as _PackageRecord
 
 from .deprecations import deprecated
 
@@ -115,6 +115,13 @@ deprecated.constant(
     "MatchSpec",
     _MatchSpec,
     addendum="Use `conda.models.match_spec.MatchSpec` instead.",
+)
+deprecated.constant(
+    "24.5",
+    "24.7",
+    "PackageRecord",
+    _PackageRecord,
+    addendum="Use `conda.models.records.PackageRecord` instead.",
 )
 
 deprecated.constant(
