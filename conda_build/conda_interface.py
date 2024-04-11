@@ -535,9 +535,13 @@ deprecated.constant(
     addendum="Use `conda.models.channel.Channel.from_value` instead.",
 )
 
-# When deactivating envs (e.g. switching from root to build/test) this env var is used,
-# except the PR that removed this has been reverted (for now) and Windows doesn't need it.
-env_path_backup_var_exists = _os.getenv("CONDA_PATH_BACKUP")
+deprecated.constant(
+    "24.5",
+    "24.7",
+    "env_path_backup_var_exists",
+    _os.getenv("CONDA_PATH_BACKUP"),
+    addendum="Unused.",
+)
 
 
 @deprecated(

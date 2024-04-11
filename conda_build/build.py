@@ -39,7 +39,6 @@ from conda.utils import url_path
 
 from . import __version__ as conda_build_version
 from . import environ, noarch_python, source, tarcheck, utils
-from .conda_interface import env_path_backup_var_exists
 from .config import Config
 from .create_test import create_all_test_files
 from .deprecations import deprecated
@@ -2411,8 +2410,6 @@ def build(
     with utils.path_prepended(m.config.build_prefix):
         env = environ.get_dict(m=m)
     env["CONDA_BUILD_STATE"] = "BUILD"
-    if env_path_backup_var_exists:
-        env["CONDA_PATH_BACKUP"] = os.environ["CONDA_PATH_BACKUP"]
 
     # this should be a no-op if source is already here
     if m.needs_source_for_render:
@@ -3442,8 +3439,6 @@ def test(
         env.update(environ.get_dict(m=metadata, prefix=config.test_prefix))
         env["CONDA_BUILD_STATE"] = "TEST"
         env["CONDA_BUILD"] = "1"
-        if env_path_backup_var_exists:
-            env["CONDA_PATH_BACKUP"] = os.environ["CONDA_PATH_BACKUP"]
 
     if not metadata.config.activate or metadata.name() == "conda":
         # prepend bin (or Scripts) directory
@@ -3526,8 +3521,6 @@ def test(
         env = dict(os.environ.copy())
         env.update(environ.get_dict(m=metadata, prefix=metadata.config.test_prefix))
         env["CONDA_BUILD_STATE"] = "TEST"
-        if env_path_backup_var_exists:
-            env["CONDA_PATH_BACKUP"] = os.environ["CONDA_PATH_BACKUP"]
 
     if config.test_run_post:
         from .utils import get_installed_packages
