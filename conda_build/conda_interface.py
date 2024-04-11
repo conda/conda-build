@@ -39,8 +39,7 @@ from conda.exports import (  # noqa: F401
     InstalledPackages,  # unused
     NoPackagesFound,  # unused
     Unsatisfiable,  # unused
-    symlink_conda,
-    unix_path_to_win,
+    symlink_conda,  # unused
     untracked,
     url_path,
     walk_prefix,
@@ -62,6 +61,7 @@ from conda.models.version import VersionOrder as _VersionOrder
 from conda.models.version import normalized_version as _normalized_version
 from conda.resolve import Resolve as _Resolve
 from conda.utils import human_bytes as _human_bytes
+from conda.utils import unix_path_to_win as _unix_path_to_win
 
 from .deprecations import deprecated
 from .utils import rm_rf as _rm_rf
@@ -228,6 +228,13 @@ deprecated.constant(
     "specs_from_url",
     _specs_from_url,
     addendum="Use `conda.cli.common.specs_from_url` instead.",
+)
+deprecated.constant(
+    "24.5",
+    "24.7",
+    "unix_path_to_win",
+    _unix_path_to_win,
+    addendum="Use `conda.utils.unix_path_to_win` instead.",
 )
 
 deprecated.constant(
