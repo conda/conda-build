@@ -38,10 +38,10 @@ from conda.core.prefix_data import PrefixData
 from conda.gateways.disk.create import TemporaryDirectory
 from conda.gateways.disk.link import lchmod
 from conda.gateways.disk.read import compute_sum
+from conda.misc import walk_prefix
 from conda.models.records import PrefixRecord
 
 from . import utils
-from .conda_interface import walk_prefix
 from .exceptions import OverDependingError, OverLinkingError, RunPathError
 from .inspect_pkg import which_package
 from .os_utils import external, macho

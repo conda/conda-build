@@ -40,7 +40,6 @@ from conda.exports import (  # noqa: F401
     NoPackagesFound,  # unused
     Unsatisfiable,  # unused
     symlink_conda,  # unused
-    walk_prefix,
     win_path_to_unix,
 )
 from conda.exports import get_index as _get_index
@@ -50,6 +49,7 @@ from conda.gateways.disk.create import TemporaryDirectory as _TemporaryDirectory
 from conda.gateways.disk.link import lchmod as _lchmod
 from conda.gateways.disk.read import compute_sum as _compute_sum
 from conda.misc import untracked as _untracked
+from conda.misc import walk_prefix as _walk_prefix
 from conda.models.channel import Channel as _Channel
 from conda.models.channel import get_conda_build_local_url as _get_conda_build_local_url
 from conda.models.enums import FileMode as _FileMode
@@ -249,6 +249,13 @@ deprecated.constant(
     "url_path",
     _url_path,
     addendum="Use `conda.utils.url_path` instead.",
+)
+deprecated.constant(
+    "24.5",
+    "24.7",
+    "walk_prefix",
+    _walk_prefix,
+    addendum="Use `conda.misc.walk_prefix` instead.",
 )
 
 deprecated.constant(
