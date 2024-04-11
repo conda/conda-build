@@ -519,7 +519,13 @@ deprecated.constant(
     _partial(_determine_target_prefix, _context),
     addendum="Use `conda.base.context.context.target_prefix` instead.",
 )
-cc_conda_build = _context.conda_build if hasattr(_context, "conda_build") else {}
+deprecated.constant(
+    "24.5",
+    "24.7",
+    "cc_conda_build",
+    _context.conda_build,
+    addendum="Use `conda.base.context.context.conda_build` instead.",
+)
 
 deprecated.constant(
     "24.5",

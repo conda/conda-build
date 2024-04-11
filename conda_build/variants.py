@@ -14,7 +14,6 @@ from itertools import product
 import yaml
 from conda.base.context import context
 
-from .conda_interface import cc_conda_build
 from .utils import ensure_list, get_logger, islist, on_win, trim_empty_keys
 from .version import _parse as parse_version
 
@@ -224,8 +223,8 @@ def find_config_files(metadata_or_path, config):
 
     if not files and not config.ignore_system_variants:
         # user config
-        if cc_conda_build.get("config_file"):
-            cfg = resolve(cc_conda_build["config_file"])
+        if config_file := context.conda_build.get("config_file"):
+            cfg = resolve(config_file)
         else:
             cfg = resolve(os.path.join("~", "conda_build_config.yaml"))
         if os.path.isfile(cfg):

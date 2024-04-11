@@ -204,8 +204,11 @@ root:
   handlers: [console]
 """
         )
-    cc_conda_build = mocker.patch.object(utils, "cc_conda_build")
-    cc_conda_build.get.return_value = test_file
+    mocker.patch(
+        "conda.base.context.Context.conda_build",
+        new_callable=mocker.PropertyMock,
+        return_value={"log_config_file": test_file},
+    )
     log = utils.get_logger(__name__)
     # default log level is INFO, but our config file should set level to DEBUG
     log.warn("test message")

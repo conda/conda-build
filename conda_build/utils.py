@@ -66,7 +66,6 @@ from conda.models.records import PackageRecord
 from conda.models.version import VersionOrder
 from conda.utils import unix_path_to_win
 
-from .conda_interface import cc_conda_build
 from .deprecations import deprecated
 from .exceptions import BuildLockError
 
@@ -1679,10 +1678,8 @@ def reset_deduplicator():
 
 def get_logger(name, level=logging.INFO, dedupe=True, add_stdout_stderr_handlers=True):
     config_file = None
-    if cc_conda_build.get("log_config_file"):
-        config_file = abspath(
-            expanduser(expandvars(cc_conda_build.get("log_config_file")))
-        )
+    if log_config_file := context.conda_build.get("log_config_file"):
+        config_file = abspath(expanduser(expandvars(log_config_file)))
     # by loading config file here, and then only adding handlers later, people
     # should be able to override conda-build's logger settings here.
     if config_file:
