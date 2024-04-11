@@ -40,7 +40,6 @@ from conda.exports import (  # noqa: F401
     NoPackagesFound,  # unused
     Unsatisfiable,  # unused
     symlink_conda,  # unused
-    untracked,
     url_path,
     walk_prefix,
     win_path_to_unix,
@@ -51,6 +50,7 @@ from conda.gateways.connection.download import download as _download
 from conda.gateways.disk.create import TemporaryDirectory as _TemporaryDirectory
 from conda.gateways.disk.link import lchmod as _lchmod
 from conda.gateways.disk.read import compute_sum as _compute_sum
+from conda.misc import untracked as _untracked
 from conda.models.channel import Channel as _Channel
 from conda.models.channel import get_conda_build_local_url as _get_conda_build_local_url
 from conda.models.enums import FileMode as _FileMode
@@ -235,6 +235,13 @@ deprecated.constant(
     "unix_path_to_win",
     _unix_path_to_win,
     addendum="Use `conda.utils.unix_path_to_win` instead.",
+)
+deprecated.constant(
+    "24.5",
+    "24.7",
+    "untracked",
+    _untracked,
+    addendum="Use `conda.misc.untracked` instead.",
 )
 
 deprecated.constant(
