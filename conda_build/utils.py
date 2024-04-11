@@ -55,6 +55,7 @@ from conda.base.constants import (
     KNOWN_SUBDIRS,
 )
 from conda.base.context import context
+from conda.common.path import win_path_to_unix
 from conda.exceptions import CondaHTTPError
 from conda.gateways.connection.download import download
 from conda.gateways.disk.create import TemporaryDirectory
@@ -65,10 +66,7 @@ from conda.models.records import PackageRecord
 from conda.models.version import VersionOrder
 from conda.utils import unix_path_to_win
 
-from .conda_interface import (
-    cc_conda_build,
-    win_path_to_unix,
-)
+from .conda_interface import cc_conda_build
 from .deprecations import deprecated
 from .exceptions import BuildLockError
 

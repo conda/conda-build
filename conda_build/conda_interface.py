@@ -22,6 +22,7 @@ from conda.cli.common import specs_from_url as _specs_from_url
 from conda.cli.conda_argparse import ArgumentParser as _ArgumentParser
 from conda.cli.helpers import add_parser_channels as _add_parser_channels
 from conda.cli.helpers import add_parser_prefix as _add_parser_prefix
+from conda.common.path import win_path_to_unix as _win_path_to_unix
 from conda.common.toposort import _toposort as __toposort
 from conda.core.package_cache_data import (
     ProgressiveFetchExtract as _ProgressiveFetchExtract,
@@ -40,7 +41,6 @@ from conda.exports import (  # noqa: F401
     NoPackagesFound,  # unused
     Unsatisfiable,  # unused
     symlink_conda,  # unused
-    win_path_to_unix,
 )
 from conda.exports import get_index as _get_index
 from conda.gateways.connection.download import TmpDownload as _TmpDownload
@@ -256,6 +256,13 @@ deprecated.constant(
     "walk_prefix",
     _walk_prefix,
     addendum="Use `conda.misc.walk_prefix` instead.",
+)
+deprecated.constant(
+    "24.5",
+    "24.7",
+    "win_path_to_unix",
+    _win_path_to_unix,
+    addendum="Use `conda.common.path.win_path_to_unix` instead.",
 )
 
 deprecated.constant(
