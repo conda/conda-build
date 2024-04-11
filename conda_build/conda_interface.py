@@ -36,7 +36,6 @@ from conda.exports import (  # noqa: F401
     InstalledPackages,  # unused
     NoPackagesFound,  # unused
     Unsatisfiable,  # unused
-    rm_rf,
     spec_from_line,
     specs_from_args,
     specs_from_url,
@@ -65,6 +64,7 @@ from conda.resolve import Resolve as _Resolve
 from conda.utils import human_bytes as _human_bytes
 
 from .deprecations import deprecated
+from .utils import rm_rf as _rm_rf
 
 deprecated.constant(
     "24.5",
@@ -200,6 +200,13 @@ deprecated.constant(
     "prefix_placeholder",
     _PREFIX_PLACEHOLDER,
     addendum="Use `conda.base.constants.PREFIX_PLACEHOLDER` instead.",
+)
+deprecated.constant(
+    "24.5",
+    "24.7",
+    "rm_rf",
+    _rm_rf,
+    addendum="Use `conda_build.utils.rm_rf` instead.",
 )
 
 deprecated.constant(

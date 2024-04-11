@@ -69,7 +69,7 @@ from .conda_interface import (
     unix_path_to_win,
     win_path_to_unix,
 )
-from .conda_interface import rm_rf as _rm_rf
+from .deprecations import deprecated
 from .exceptions import BuildLockError
 
 if TYPE_CHECKING:
@@ -1617,8 +1617,13 @@ def filter_info_files(files_list, prefix):
     )
 
 
-def rm_rf(path, config=None):
-    return _rm_rf(path)
+@deprecated.argument("24.5", "24.7", "config")
+def rm_rf(path):
+    from conda.core.prefix_data import delete_prefix_from_linked_data
+    from conda.gateways.disk.delete import rm_rf as rm_rf
+
+    rm_rf(path)
+    delete_prefix_from_linked_data(path)
 
 
 # https://stackoverflow.com/a/31459386/1170370
