@@ -26,7 +26,7 @@ from conda.base.context import context
 from conda.cli.common import spec_from_line
 from conda.gateways.connection.download import download
 from conda.gateways.disk.read import compute_sum
-from conda.modules.version import normalized_version
+from conda.models.version import normalized_version
 from conda.utils import human_bytes
 from requests.packages.urllib3.util.url import parse_url
 
