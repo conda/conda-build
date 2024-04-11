@@ -16,6 +16,9 @@ from conda.base.context import context as _context
 from conda.base.context import determine_target_prefix as _determine_target_prefix
 from conda.base.context import non_x86_machines as _non_x86_linux_machines
 from conda.base.context import reset_context as _reset_context
+from conda.cli.common import spec_from_line as _spec_from_line
+from conda.cli.common import specs_from_args as _specs_from_args
+from conda.cli.common import specs_from_url as _specs_from_url
 from conda.cli.conda_argparse import ArgumentParser as _ArgumentParser
 from conda.cli.helpers import add_parser_channels as _add_parser_channels
 from conda.cli.helpers import add_parser_prefix as _add_parser_prefix
@@ -36,9 +39,6 @@ from conda.exports import (  # noqa: F401
     InstalledPackages,  # unused
     NoPackagesFound,  # unused
     Unsatisfiable,  # unused
-    spec_from_line,
-    specs_from_args,
-    specs_from_url,
     symlink_conda,
     unix_path_to_win,
     untracked,
@@ -207,6 +207,27 @@ deprecated.constant(
     "rm_rf",
     _rm_rf,
     addendum="Use `conda_build.utils.rm_rf` instead.",
+)
+deprecated.constant(
+    "24.5",
+    "24.7",
+    "spec_from_line",
+    _spec_from_line,
+    addendum="Use `conda.cli.common.spec_from_line` instead.",
+)
+deprecated.constant(
+    "24.5",
+    "24.7",
+    "specs_from_args",
+    _specs_from_args,
+    addendum="Use `conda.cli.common.specs_from_args` instead.",
+)
+deprecated.constant(
+    "24.5",
+    "24.7",
+    "specs_from_url",
+    _specs_from_url,
+    addendum="Use `conda.cli.common.specs_from_url` instead.",
 )
 
 deprecated.constant(
