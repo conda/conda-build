@@ -35,10 +35,11 @@ from conda.gateways.disk.create import TemporaryDirectory
 from conda.models.channel import Channel
 from conda.models.enums import FileMode, PathType
 from conda.models.match_spec import MatchSpec
+from conda.utils import url_path
 
 from . import __version__ as conda_build_version
 from . import environ, noarch_python, source, tarcheck, utils
-from .conda_interface import env_path_backup_var_exists, url_path
+from .conda_interface import env_path_backup_var_exists
 from .config import Config
 from .create_test import create_all_test_files
 from .deprecations import deprecated

@@ -19,8 +19,8 @@ from conda.exceptions import CondaHTTPError
 from conda.gateways.connection.download import download
 from conda.gateways.disk.create import TemporaryDirectory
 from conda.gateways.disk.read import compute_sum
+from conda.utils import url_path
 
-from .conda_interface import url_path
 from .exceptions import MissingDependency
 from .os_utils import external
 from .utils import (

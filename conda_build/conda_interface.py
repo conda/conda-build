@@ -40,7 +40,6 @@ from conda.exports import (  # noqa: F401
     NoPackagesFound,  # unused
     Unsatisfiable,  # unused
     symlink_conda,  # unused
-    url_path,
     walk_prefix,
     win_path_to_unix,
 )
@@ -62,6 +61,7 @@ from conda.models.version import normalized_version as _normalized_version
 from conda.resolve import Resolve as _Resolve
 from conda.utils import human_bytes as _human_bytes
 from conda.utils import unix_path_to_win as _unix_path_to_win
+from conda.utils import url_path as _url_path
 
 from .deprecations import deprecated
 from .utils import rm_rf as _rm_rf
@@ -242,6 +242,13 @@ deprecated.constant(
     "untracked",
     _untracked,
     addendum="Use `conda.misc.untracked` instead.",
+)
+deprecated.constant(
+    "24.5",
+    "24.7",
+    "url_path",
+    _url_path,
+    addendum="Use `conda.utils.url_path` instead.",
 )
 
 deprecated.constant(
