@@ -9,13 +9,18 @@ from typing import TYPE_CHECKING
 
 import yaml
 from conda.base.context import context
-from conda.cli.helpers import add_parser_channels
 from yaml.parser import ParserError
 
 from .. import __version__, api
 from ..config import get_channel_urls, get_or_merge_config
 from ..utils import LoggingContext
 from ..variants import get_package_variants, set_language_env_vars
+
+try:
+    from conda.cli.helpers import add_parser_channels
+except ImportError:
+    # conda<23.11
+    from conda.cli.conda_argparse import add_parser_channels
 
 if TYPE_CHECKING:
     from argparse import ArgumentParser, Namespace

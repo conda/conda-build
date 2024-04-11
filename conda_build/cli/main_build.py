@@ -14,7 +14,6 @@ from typing import TYPE_CHECKING
 
 from conda.auxlib.ish import dals
 from conda.base.context import context
-from conda.cli.helpers import add_parser_channels
 from conda.common.io import dashlist
 
 from .. import api, build, source, utils
@@ -26,6 +25,12 @@ from ..config import (
 from ..utils import LoggingContext
 from .actions import KeyValueAction
 from .main_render import get_render_parser
+
+try:
+    from conda.cli.helpers import add_parser_channels
+except ImportError:
+    # conda<23.11
+    from conda.cli.conda_argparse import add_parser_channels
 
 if TYPE_CHECKING:
     from argparse import ArgumentParser, Namespace

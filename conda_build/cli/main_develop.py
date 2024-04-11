@@ -6,9 +6,14 @@ import logging
 from typing import TYPE_CHECKING
 
 from conda.base.context import context, determine_target_prefix
-from conda.cli.helpers import add_parser_prefix
 
 from .. import api
+
+try:
+    from conda.cli.helpers import add_parser_prefix
+except ImportError:
+    # conda<23.11
+    from conda.cli.conda_argparse import add_parser_prefix
 
 if TYPE_CHECKING:
     from argparse import ArgumentParser, Namespace

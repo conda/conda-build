@@ -7,9 +7,14 @@ import logging
 from typing import TYPE_CHECKING
 
 from conda.base.context import context
-from conda.cli.helpers import add_parser_channels
 
 from .. import api
+
+try:
+    from conda.cli.helpers import add_parser_channels
+except ImportError:
+    # conda<23.11
+    from conda.cli.conda_argparse import add_parser_channels
 
 if TYPE_CHECKING:
     from argparse import ArgumentParser, Namespace

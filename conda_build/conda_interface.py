@@ -20,8 +20,6 @@ from conda.cli.common import spec_from_line as _spec_from_line
 from conda.cli.common import specs_from_args as _specs_from_args
 from conda.cli.common import specs_from_url as _specs_from_url
 from conda.cli.conda_argparse import ArgumentParser as _ArgumentParser
-from conda.cli.helpers import add_parser_channels as _add_parser_channels
-from conda.cli.helpers import add_parser_prefix as _add_parser_prefix
 from conda.common.path import win_path_to_unix as _win_path_to_unix
 from conda.common.toposort import _toposort as __toposort
 from conda.core.package_cache_data import (
@@ -62,6 +60,14 @@ from conda.utils import url_path as _url_path
 
 from .deprecations import deprecated
 from .utils import rm_rf as _rm_rf
+
+try:
+    from conda.cli.helpers import add_parser_channels as _add_parser_channels
+    from conda.cli.helpers import add_parser_prefix as _add_parser_prefix
+except ImportError:
+    # conda<23.11
+    from conda.cli.conda_argparse import add_parser_channels as _add_parser_channels
+    from conda.cli.conda_argparse import add_parser_prefix as _add_parser_prefix
 
 deprecated.constant(
     "24.5",
