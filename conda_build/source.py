@@ -1113,7 +1113,8 @@ def provide(metadata):
                     expected_content_hash = source_dict[hash_type]
                     if expected_content_hash in (None, ""):
                         raise ValueError(f"Empty {hash_type} hash provided for source item #{idx}")
-                    obtained_content_hash = compute_content_hash(src_dir, hash_type)
+                    algorithm = hash_type[len("content_"): ]
+                    obtained_content_hash = compute_content_hash(src_dir, algorithm)
                     if expected_content_hash != obtained_content_hash:
                         raise RuntimeError(
                             f"{hash_type.upper()} mismatch: "
