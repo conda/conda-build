@@ -4,7 +4,7 @@ package:
 
 build:
   number: 0
-  # skip: True  # [not linux64]
+  skip: True  # [not linux64]
   error_overlinking: true
 
 requirements:
