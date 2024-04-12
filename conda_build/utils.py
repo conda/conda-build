@@ -70,6 +70,7 @@ from .conda_interface import (
     win_path_to_unix,
 )
 from .conda_interface import rm_rf as _rm_rf
+from .deprecations import deprecated
 from .exceptions import BuildLockError
 
 if TYPE_CHECKING:
@@ -1407,6 +1408,7 @@ def get_installed_packages(path):
     return installed
 
 
+@deprecated("24.5", "24.7", addendum="Use `frozendict` instead.")
 def _convert_lists_to_sets(_dict):
     for k, v in _dict.items():
         if hasattr(v, "keys"):
@@ -1419,6 +1421,7 @@ def _convert_lists_to_sets(_dict):
     return _dict
 
 
+@deprecated("24.5", "24.7", addendum="Use `frozendict` instead.")
 class HashableDict(dict):
     """use hashable frozen dictionaries for resources and resource types so that they can be in sets"""
 
@@ -1430,6 +1433,7 @@ class HashableDict(dict):
         return hash(json.dumps(self, sort_keys=True))
 
 
+@deprecated("24.5", "24.7", addendum="Use `frozendict` instead.")
 def represent_hashabledict(dumper, data):
     value = []
 
