@@ -157,7 +157,7 @@ def test_menuinst_validation_fails_bad_json(testing_config, caplog, tmp_path):
 
 
 def test_file_hash(testing_config, caplog, tmp_path):
-    "3rd check - non-parsable JSON fails validation"
+    "check that the post-link check caching takes the file path into consideration"
     recipe = Path(subpackage_path, "_test-file-hash")
     recipe_tmp = tmp_path / "test-file-hash"
     shutil.copytree(recipe, recipe_tmp)
