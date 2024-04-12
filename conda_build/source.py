@@ -25,6 +25,7 @@ from .utils import (
     LoggingContext,
     check_call_env,
     check_output_env,
+    compute_content_hash,
     convert_path_for_cygwin_or_msys2,
     convert_unix_path_to_win,
     copy_into,
@@ -44,6 +45,8 @@ log = get_logger(__name__)
 
 git_submod_re = re.compile(r"(?:.+)\.(.+)\.(?:.+)\s(.+)")
 ext_re = re.compile(r"(.*?)(\.(?:tar\.)?[^.]+)$")
+HASH_KEYS = ("md5", "sha1", "sha256")
+CONTENT_HASH_KEYS = ("content_md5", "content_sha1", "content_sha256")
 
 
 def append_hash_to_fn(fn, hash_value):
@@ -64,7 +67,7 @@ def download_to_cache(cache_folder, recipe_path, source_dict, verbose=False):
         source_dict["fn"] if "fn" in source_dict else basename(source_urls[0])
     )
     hash_added = False
-    for hash_type in ("md5", "sha1", "sha256"):
+    for hash_type in HASH_KEYS:
         if hash_type in source_dict:
             if source_dict[hash_type] in (None, ""):
                 raise ValueError(f"Empty {hash_type} hash provided for {fn}")
@@ -73,7 +76,7 @@ def download_to_cache(cache_folder, recipe_path, source_dict, verbose=False):
             break
     else:
         log.warn(
-            f"No hash (md5, sha1, sha256) provided for {unhashed_fn}.  Source download forced.  "
+            f"No hash {HASH_KEYS} provided for {unhashed_fn}.  Source download forced.  "
             "Add hash to recipe to use source cache."
         )
     path = join(cache_folder, fn)
@@ -114,7 +117,7 @@ def download_to_cache(cache_folder, recipe_path, source_dict, verbose=False):
             raise RuntimeError("Could not download %s" % url)
 
     hashed = None
-    for tp in ("md5", "sha1", "sha256"):
+    for tp in HASH_KEYS:
         if tp in source_dict:
             expected_hash = source_dict[tp]
             hashed = compute_sum(path, tp)
@@ -1026,7 +1029,7 @@ def provide(metadata):
     git = None
 
     try:
-        for source_dict in metadata.get_section("source"):
+        for idx, source_dict in enumerate(metadata.get_section("source")):
             folder = source_dict.get("folder")
             src_dir = os.path.join(metadata.config.work_dir, folder if folder else "")
             if any(k in source_dict for k in ("fn", "url")):
@@ -1105,6 +1108,17 @@ def provide(metadata):
                 if not isdir(src_dir):
                     os.makedirs(src_dir)
 
+            for hash_type in CONTENT_HASH_KEYS:
+                if hash_type in source_dict:
+                    expected_content_hash = source_dict[hash_type]
+                    if expected_content_hash in (None, ""):
+                        raise ValueError(f"Empty {hash_type} hash provided for source item #{idx}")
+                    obtained_content_hash = compute_content_hash(src_dir, hash_type)
+                    if expected_content_hash != obtained_content_hash:
+                        raise RuntimeError(
+                            f"{hash_type.upper()} mismatch: "
+                            f"'{obtained_content_hash}' != '{expected_content_hash}'"
+                        )
             patches = ensure_list(source_dict.get("patches", []))
             patch_attributes_output = []
             for patch in patches:

@@ -21,7 +21,7 @@ import time
 import urllib.parse as urlparse
 import urllib.request as urllib
 from collections import OrderedDict, defaultdict
-from functools import lru_cache
+from functools import lru_cache, partial
 from glob import glob
 from itertools import filterfalse
 from json.decoder import JSONDecodeError
@@ -2015,6 +2015,21 @@ def sha256_checksum(filename, buffersize=65536):
         for block in iter(lambda: f.read(buffersize), b""):
             sha256.update(block)
     return sha256.hexdigest()
+
+
+def compute_content_hash(directory, algorithm="sha256"):
+    "Compute the hash of the recursively traversed and sorted contents of a directory."
+    log = get_logger(__name__)
+    files = sorted(glob("**", root_dir=directory, recursive=True, include_hidden=True))
+    hasher = hashlib.new(algorithm)
+    for path in files:
+        try:
+            with open(path, "rb") as fh:
+                for chunk in iter(partial(fh.read, 8192), b""):
+                    hasher.update(chunk)
+        except OSError as exc:
+            log.debug("Skipping %s for hashing", path, exc_info=exc)
+    return hasher.hexdigest()
 
 
 def write_bat_activation_text(file_handle, m):
