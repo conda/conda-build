@@ -1,10 +1,10 @@
 package:
-  name: _file_hash
+  name: _file_hash-split
   version: 0.0.1
 
 build:
   number: 0
-  skip: True  # [not linux64]
+  # skip: True  # [not linux64]
   error_overlinking: true
 
 requirements:

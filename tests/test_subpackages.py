@@ -268,6 +268,12 @@ def test_overlapping_files(testing_config, caplog):
     assert sum(int("Exact overlap" in rec.message) for rec in caplog.records) == 1
 
 
+def test_hash_file_contents(testing_config):
+    recipe = os.path.join(subpackage_dir, "_test-file-hash")
+    testing_config.activate = True
+    api.build(recipe, config=testing_config)
+
+
 @pytest.mark.sanity
 def test_per_output_tests(testing_config):
     recipe_dir = os.path.join(subpackage_dir, "_per_output_tests")
