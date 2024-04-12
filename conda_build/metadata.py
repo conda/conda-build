@@ -290,10 +290,13 @@ def _split_line_selector(text: str) -> tuple[tuple[str | None, str], ...]:
             trailing_quote = line[-1]
 
         # Checking for "[" and "]" before regex matching every line is a bit faster.
-        if "[" in line and "]" in line and (match := sel_pat.match(line)):
-            if selector := match.group(3):
-                # found a selector
-                lines.append((selector, (match.group(1) + trailing_quote).rstrip()))
+        if (
+            ("[" in line and "]" in line)
+            and (match := sel_pat.match(line))
+            and (selector := match.group(3))
+        ):
+            # found a selector
+            lines.append((selector, (match.group(1) + trailing_quote).rstrip()))
         else:
             # no selector found
             lines.append((None, line))
