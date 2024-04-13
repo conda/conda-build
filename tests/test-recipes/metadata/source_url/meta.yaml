@@ -3,12 +3,23 @@ package:
   version: 1.0
 
 source:
-  fn: conda-build-1.8.1.tar.gz
-  url: https://github.com/conda/conda-build/archive/1.8.1.tar.gz
-  md5: 0bf1f3598a659a0e8fb5ee6bbb3fd9fd
-  sha1: c464a8995ad6bbf0480abd2883876cc9b4913fa7
-  sha256: f82b0bd5c809c9a7c7256c26364a0065e57732788b7a74c7ea2169135ed2f598
-  content_sha256: "pending calculation"
+  - fn: conda-build-1.8.1.tar.gz
+    url: https://github.com/conda/conda-build/archive/1.8.1.tar.gz
+    md5: 0bf1f3598a659a0e8fb5ee6bbb3fd9fd
+    sha1: c464a8995ad6bbf0480abd2883876cc9b4913fa7
+    sha256: f82b0bd5c809c9a7c7256c26364a0065e57732788b7a74c7ea2169135ed2f598
+    content_md5: 1088a8437a8317991713f6442b601c32
+    content_sha1: 501514b1b9b6b1558698ac88a15940b2edb6eeef
+    content_sha256: fed99dc3815124b2fc896c022797dfa3d844b86b1de43581f784b37bd80144a6
+  # This is the same tarball but compressed differently. They should have the same content hashes!
+  - fn: conda-build-1.8.1.zip
+    url: https://github.com/conda/conda-build/archive/1.8.1.zip
+    md5: 25d59bc816f3d1107f063d77ddfcbe76
+    sha1: 195104165d395a92c7ecd4c7f98975906950b9dd
+    sha256: 6d142da3f0f47613d1d0124ec8caf0faf66ec524e6aa356ac49987c3e32b6d95
+    content_md5: 1088a8437a8317991713f6442b601c32
+    content_sha1: 501514b1b9b6b1558698ac88a15940b2edb6eeef
+    content_sha256: fed99dc3815124b2fc896c022797dfa3d844b86b1de43581f784b37bd80144a6
 
 requirements:
   build:

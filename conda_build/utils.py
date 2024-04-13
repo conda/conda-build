@@ -2018,17 +2018,31 @@ def sha256_checksum(filename, buffersize=65536):
 
 
 def compute_content_hash(directory, algorithm="sha256"):
-    "Compute the hash of the recursively traversed and sorted contents of a directory."
+    """
+    Compute the hash of the recursively traversed and sorted contents of a directory.
+    The hash will include these elements, in this order:
+    - Relative path to 'directory'
+    - Type of file / path
+    - Executable bit(s) of the file / path
+    - Contents of the file, if readable. Following symlinks.
+    """
     log = get_logger(__name__)
-    files = sorted(glob("**", root_dir=directory, recursive=True, include_hidden=True))
     hasher = hashlib.new(algorithm)
-    for path in files:
-        try:
-            with open(path, "rb") as fh:
-                for chunk in iter(partial(fh.read, 8192), b""):
-                    hasher.update(chunk)
-        except OSError as exc:
-            log.debug("Skipping %s for hashing", path, exc_info=exc)
+    for entry in sorted(os.scandir(directory), key=lambda f: f.name):
+        # encode the relative path to directory, for files, dirs and others
+        hasher.update(entry.name.encode("utf-8"))
+        st_mode = entry.stat().st_mode
+        file_type = stat.S_IFMT(st_mode)
+        hasher.update(file_type.to_bytes(2, "little"))
+        executable = file_type & (stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+        hasher.update(executable.to_bytes(2, "little"))
+        if entry.is_file():
+            try:
+                with open(entry.path, "rb") as fh:
+                    for chunk in iter(partial(fh.read, 8192), b""):
+                        hasher.update(chunk)
+            except OSError as exc:
+                log.debug("Skipping %s for hashing", entry.name, exc_info=exc)
     return hasher.hexdigest()
 
 
