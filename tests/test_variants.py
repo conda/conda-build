@@ -8,10 +8,9 @@ import sys
 from pathlib import Path
 
 import pytest
-import yaml
 from conda.common.compat import on_mac
 
-from conda_build import api, exceptions
+from conda_build import api, exceptions, yaml
 from conda_build.utils import ensure_list, package_has_file
 from conda_build.variants import (
     combine_specs,
@@ -66,7 +65,7 @@ def test_python_variants(testing_workdir, testing_config, as_yaml):
     # write variants to disk
     if as_yaml:
         variants_path = Path(testing_workdir, "variant_example.yaml")
-        variants_path.write_text(yaml.dump(variants, default_flow_style=False))
+        variants_path.write_text(yaml.safe_dump(variants))
         testing_config.variant_config_files = [str(variants_path)]
 
     # render the metadata
@@ -501,19 +500,15 @@ def test_numpy_used_variable_looping():
 
 def test_exclusive_config_files():
     with open("conda_build_config.yaml", "w") as f:
-        yaml.dump({"abc": ["someval"], "cwd": ["someval"]}, f, default_flow_style=False)
+        yaml.safe_dump({"abc": ["someval"], "cwd": ["someval"]}, f)
     os.makedirs("config_dir")
     with open(os.path.join("config_dir", "config-0.yaml"), "w") as f:
-        yaml.dump(
-            {"abc": ["super_0"], "exclusive_0": ["0"], "exclusive_both": ["0"]},
-            f,
-            default_flow_style=False,
+        yaml.safe_dump(
+            {"abc": ["super_0"], "exclusive_0": ["0"], "exclusive_both": ["0"]}, f
         )
     with open(os.path.join("config_dir", "config-1.yaml"), "w") as f:
-        yaml.dump(
-            {"abc": ["super_1"], "exclusive_1": ["1"], "exclusive_both": ["1"]},
-            f,
-            default_flow_style=False,
+        yaml.safe_dump(
+            {"abc": ["super_1"], "exclusive_1": ["1"], "exclusive_both": ["1"]}, f
         )
     exclusive_config_files = (
         os.path.join("config_dir", "config-0.yaml"),
@@ -538,12 +533,10 @@ def test_exclusive_config_files():
 
 def test_exclusive_config_file():
     with open("conda_build_config.yaml", "w") as f:
-        yaml.dump({"abc": ["someval"], "cwd": ["someval"]}, f, default_flow_style=False)
+        yaml.safe_dump({"abc": ["someval"], "cwd": ["someval"]}, f)
     os.makedirs("config_dir")
     with open(os.path.join("config_dir", "config.yaml"), "w") as f:
-        yaml.dump(
-            {"abc": ["super"], "exclusive": ["someval"]}, f, default_flow_style=False
-        )
+        yaml.safe_dump({"abc": ["super"], "exclusive": ["someval"]}, f)
     output = api.render(
         os.path.join(variants_dir, "exclusive_config_file"),
         exclusive_config_file=os.path.join("config_dir", "config.yaml"),

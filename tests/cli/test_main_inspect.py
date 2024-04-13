@@ -5,9 +5,8 @@ import re
 import sys
 
 import pytest
-import yaml
 
-from conda_build import api
+from conda_build import api, yaml
 from conda_build.cli import main_inspect
 from conda_build.utils import on_win
 
@@ -77,7 +76,7 @@ def test_inspect_hash_input(testing_metadata, testing_workdir, capfd):
     api.output_yaml(testing_metadata, "meta.yaml")
     output = api.build(testing_workdir, notest=True)[0]
     with open(os.path.join(testing_workdir, "conda_build_config.yaml"), "w") as f:
-        yaml.dump({"zlib": ["1.2.11"]}, f)
+        yaml.safe_dump({"zlib": ["1.2.11"]}, f)
     args = ["hash-inputs", output]
     main_inspect.execute(args)
     output, error = capfd.readouterr()

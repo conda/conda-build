@@ -20,9 +20,10 @@ from conda.base.context import context
 from conda.gateways.disk.read import compute_sum
 from frozendict import deepfreeze
 
-from . import exceptions, utils, variants
+from . import exceptions, utils, variants, yaml
 from .conda_interface import MatchSpec
 from .config import Config, get_or_merge_config
+from .deprecations import deprecated
 from .features import feature_list
 from .license_family import ensure_valid_license_family
 from .utils import (
@@ -34,50 +35,19 @@ from .utils import (
     insert_variant_versions,
     on_win,
 )
+from .yaml import _StringifyNumbersLoader
 
 if TYPE_CHECKING:
     from typing import Literal
 
-try:
-    import yaml
-except ImportError:
-    sys.exit(
-        "Error: could not import yaml (required to read meta.yaml "
-        "files of conda recipes)"
-    )
+deprecated.constant(
+    "24.5",
+    "24.7",
+    "StringifyNumbersLoader",
+    _StringifyNumbersLoader,
+    addendum="Use `conda_build.yaml._StringifyNumbersLoader` instead.",
+)
 
-try:
-    Loader = yaml.CLoader
-except AttributeError:
-    Loader = yaml.Loader
-
-
-class StringifyNumbersLoader(Loader):
-    @classmethod
-    def remove_implicit_resolver(cls, tag):
-        if "yaml_implicit_resolvers" not in cls.__dict__:
-            cls.yaml_implicit_resolvers = {
-                k: v[:] for k, v in cls.yaml_implicit_resolvers.items()
-            }
-        for ch in tuple(cls.yaml_implicit_resolvers):
-            resolvers = [(t, r) for t, r in cls.yaml_implicit_resolvers[ch] if t != tag]
-            if resolvers:
-                cls.yaml_implicit_resolvers[ch] = resolvers
-            else:
-                del cls.yaml_implicit_resolvers[ch]
-
-    @classmethod
-    def remove_constructor(cls, tag):
-        if "yaml_constructors" not in cls.__dict__:
-            cls.yaml_constructors = cls.yaml_constructors.copy()
-        if tag in cls.yaml_constructors:
-            del cls.yaml_constructors[tag]
-
-
-StringifyNumbersLoader.remove_implicit_resolver("tag:yaml.org,2002:float")
-StringifyNumbersLoader.remove_implicit_resolver("tag:yaml.org,2002:int")
-StringifyNumbersLoader.remove_constructor("tag:yaml.org,2002:float")
-StringifyNumbersLoader.remove_constructor("tag:yaml.org,2002:int")
 
 # arches that don't follow exact names in the subdir need to be mapped here
 ARCH_MAP = {"32": "x86", "64": "x86_64"}
@@ -305,15 +275,8 @@ exception:
 
 def yamlize(data):
     try:
-        return yaml.load(data, Loader=StringifyNumbersLoader)
-    except yaml.error.YAMLError as e:
-        if "{{" in data:
-            try:
-                import jinja2
-
-                jinja2  # Avoid pyflakes failure: 'jinja2' imported but unused
-            except ImportError:
-                raise exceptions.UnableToParseMissingJinja2(original=e)
+        return yaml.safe_load(data, stringify_numbers=True)
+    except yaml.YAMLError as e:
         print("Problematic recipe:", file=sys.stderr)
         print(data, file=sys.stderr)
         raise exceptions.UnableToParse(original=e)
