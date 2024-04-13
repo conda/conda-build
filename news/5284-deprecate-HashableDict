@@ -1,0 +1,21 @@
+### Enhancements
+
+* <news item>
+
+### Bug fixes
+
+* <news item>
+
+### Deprecations
+
+* Deprecate `conda_build.utils.HashableDict`. Use `frozendict` instead. (#5284)
+* Deprecate `conda_build.utils._convert_lists_to_sets`. Use `frozendict` instead. (#5284)
+* Deprecate `conda_build.utils.represent_hashabledict`. Use `frozendict` instead. (#5284)
+
+### Docs
+
+* <news item>
+
+### Other
+
+* <news item>
