@@ -13,3 +13,7 @@ updates:
       # Allow only production updates for Sphinx
       - dependency-name: "sphinx"
         dependency-type: "production"
+  - package-ecosystem: github-actions
+    directory: /.github/workflows
+    schedule:
+      interval: "weekly"
