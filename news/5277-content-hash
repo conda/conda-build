@@ -1,0 +1,20 @@
+### Enhancements
+
+* Add new hashing methods (`content_md5`, `content_sha1`, `content_sha256`) to calculate the
+  checksum of the extracted contents of the downloaded artifacts. (#4821 via #5277)
+
+### Bug fixes
+
+* <news item>
+
+### Deprecations
+
+* <news item>
+
+### Docs
+
+* <news item>
+
+### Other
+
+* <news item>
