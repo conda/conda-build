@@ -2027,14 +2027,14 @@ def compute_content_hash(directory: str, algorithm="sha256"):
         - If the path is directory or symlink, use the bytes for "directory" and "symlink",
           respectively.
         - If the path is a file cand can be read, the contents of the file.
-    - Empty string, as a separator.
+    - Single dash string, as a separator.
     """
     log = get_logger(__name__)
     hasher = hashlib.new(algorithm)
     for entry in sorted(os.scandir(directory), key=lambda f: f.name):
         # encode the relative path to directory, for files, dirs and others
         hasher.update(entry.name.replace("\\", "/").encode("utf-8"))
-        hasher.update(b"")
+        hasher.update(b"-")
         if entry.is_dir(follow_symlinks=False):
             hasher.update(b"directory")
         elif entry.is_symlink():
@@ -2046,7 +2046,7 @@ def compute_content_hash(directory: str, algorithm="sha256"):
                         hasher.update(chunk)
             except OSError as exc:
                 log.debug("Skipping %s for hashing", entry.name, exc_info=exc)
-        hasher.update(b"")
+        hasher.update(b"-")
     return hasher.hexdigest()
 
 
