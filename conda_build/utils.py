@@ -2017,32 +2017,36 @@ def sha256_checksum(filename, buffersize=65536):
     return sha256.hexdigest()
 
 
-def compute_content_hash(directory, algorithm="sha256"):
+def compute_content_hash(directory: str, algorithm="sha256"):
     """
     Compute the hash of the recursively traversed and sorted contents of a directory.
     The hash will include these elements, in this order:
-    - Relative path to 'directory'
-    - Type of file / path
-    - Executable bit(s) of the file / path
-    - Contents of the file, if readable. Following symlinks.
+    - Relative path to 'directory', normalized (backslash as forward slashes).
+    - Empty string, as a separator.
+    - "Contents" of the path:
+        - If the path is directory or symlink, use the bytes for "directory" and "symlink",
+          respectively.
+        - If the path is a file cand can be read, the contents of the file.
+    - Empty string, as a separator.
     """
     log = get_logger(__name__)
     hasher = hashlib.new(algorithm)
     for entry in sorted(os.scandir(directory), key=lambda f: f.name):
         # encode the relative path to directory, for files, dirs and others
-        hasher.update(entry.name.encode("utf-8"))
-        st_mode = entry.stat().st_mode
-        file_type = stat.S_IFMT(st_mode)
-        hasher.update(file_type.to_bytes(2, "little"))
-        executable = file_type & (stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
-        hasher.update(executable.to_bytes(2, "little"))
-        if entry.is_file():
+        hasher.update(entry.name.replace("\\", "/").encode("utf-8"))
+        hasher.update(b"")
+        if entry.is_dir(follow_symlinks=False):
+            hasher.update(b"directory")
+        elif entry.is_symlink():
+            hasher.update(b"symlink")
+        elif entry.is_file():
             try:
                 with open(entry.path, "rb") as fh:
                     for chunk in iter(partial(fh.read, 8192), b""):
                         hasher.update(chunk)
             except OSError as exc:
                 log.debug("Skipping %s for hashing", entry.name, exc_info=exc)
+        hasher.update(b"")
     return hasher.hexdigest()
 
 
