@@ -5,9 +5,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
+from frozendict import deepfreeze
 
 from conda_build import jinja_context
-from conda_build.utils import HashableDict
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -99,7 +99,7 @@ def test_pin_subpackage_exact(testing_metadata):
     testing_metadata.meta["outputs"] = [output_dict]
     fm = testing_metadata.get_output_metadata(output_dict)
     testing_metadata.other_outputs = {
-        (name, HashableDict(testing_metadata.config.variant)): (output_dict, fm)
+        (name, deepfreeze(testing_metadata.config.variant)): (output_dict, fm)
     }
     pin = jinja_context.pin_subpackage(testing_metadata, name, exact=True)
     assert len(pin.split()) == 3
@@ -111,7 +111,7 @@ def test_pin_subpackage_expression(testing_metadata):
     testing_metadata.meta["outputs"] = [output_dict]
     fm = testing_metadata.get_output_metadata(output_dict)
     testing_metadata.other_outputs = {
-        (name, HashableDict(testing_metadata.config.variant)): (output_dict, fm)
+        (name, deepfreeze(testing_metadata.config.variant)): (output_dict, fm)
     }
     pin = jinja_context.pin_subpackage(testing_metadata, name)
     assert len(pin.split()) == 2
