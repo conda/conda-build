@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING, overload
 from bs4 import UnicodeDammit
 from conda.base.context import context
 from conda.gateways.disk.read import compute_sum
+from frozendict import deepfreeze
 
 from . import exceptions, utils, variants
 from .conda_interface import MatchSpec
@@ -26,7 +27,6 @@ from .features import feature_list
 from .license_family import ensure_valid_license_family
 from .utils import (
     DEFAULT_SUBDIRS,
-    HashableDict,
     ensure_list,
     expand_globs,
     find_recipe,
@@ -959,15 +959,8 @@ def finalize_outputs_pass(
                 fm = om
             if not output_d.get("type") or output_d.get("type").startswith("conda"):
                 outputs[
-                    (
-                        fm.name(),
-                        HashableDict(
-                            {
-                                k: copy.deepcopy(fm.config.variant[k])
-                                for k in fm.get_used_vars()
-                            }
-                        ),
-                    )
+                    fm.name(),
+                    deepfreeze({k: fm.config.variant[k] for k in fm.get_used_vars()}),
                 ] = (output_d, fm)
         except exceptions.DependencyNeedsBuildingError as e:
             if not permit_unsatisfiable_variants:
@@ -979,15 +972,13 @@ def finalize_outputs_pass(
                     f"{e.packages}"
                 )
                 outputs[
-                    (
-                        metadata.name(),
-                        HashableDict(
-                            {
-                                k: copy.deepcopy(metadata.config.variant[k])
-                                for k in metadata.get_used_vars()
-                            }
-                        ),
-                    )
+                    metadata.name(),
+                    deepfreeze(
+                        {
+                            k: metadata.config.variant[k]
+                            for k in metadata.get_used_vars()
+                        }
+                    ),
                 ] = (output_d, metadata)
     # in-place modification
     base_metadata.other_outputs = outputs
@@ -995,12 +986,8 @@ def finalize_outputs_pass(
     final_outputs = OrderedDict()
     for k, (out_d, m) in outputs.items():
         final_outputs[
-            (
-                m.name(),
-                HashableDict(
-                    {k: copy.deepcopy(m.config.variant[k]) for k in m.get_used_vars()}
-                ),
-            )
+            m.name(),
+            deepfreeze({k: m.config.variant[k] for k in m.get_used_vars()}),
         ] = (out_d, m)
     return final_outputs
 
@@ -1668,7 +1655,6 @@ class MetaData:
             raise RuntimeError(
                 f"Couldn't extract raw recipe text for {self.name()} output"
             )
-        raw_recipe_text = self.extract_package_and_build_text()
         raw_manual_build_string = re.search(r"\s*string:", raw_recipe_text)
         # user setting their own build string.  Don't modify it.
         if manual_build_string and not (
@@ -2544,17 +2530,15 @@ class MetaData:
                         #    also refine this collection as each output metadata object is
                         #    finalized - see the finalize_outputs_pass function
                         all_output_metadata[
-                            (
-                                out_metadata.name(),
-                                HashableDict(
-                                    {
-                                        k: copy.deepcopy(out_metadata.config.variant[k])
-                                        for k in out_metadata.get_used_vars()
-                                    }
-                                ),
-                            )
+                            out_metadata.name(),
+                            deepfreeze(
+                                {
+                                    k: out_metadata.config.variant[k]
+                                    for k in out_metadata.get_used_vars()
+                                }
+                            ),
                         ] = (out, out_metadata)
-                        out_metadata_map[HashableDict(out)] = out_metadata
+                        out_metadata_map[deepfreeze(out)] = out_metadata
                         ref_metadata.other_outputs = out_metadata.other_outputs = (
                             all_output_metadata
                         )
@@ -2581,12 +2565,7 @@ class MetaData:
                 ):
                     conda_packages[
                         m.name(),
-                        HashableDict(
-                            {
-                                k: copy.deepcopy(m.config.variant[k])
-                                for k in m.get_used_vars()
-                            }
-                        ),
+                        deepfreeze({k: m.config.variant[k] for k in m.get_used_vars()}),
                     ] = (output_d, m)
                 elif output_d.get("type") == "wheel":
                     if not output_d.get("requirements", {}).get("build") or not any(
@@ -2723,11 +2702,7 @@ class MetaData:
         global used_vars_cache
         recipe_dir = self.path
 
-        # `HashableDict` does not handle lists of other dictionaries correctly. Also it
-        # is constructed inplace, taking references to sub-elements of the input dict
-        # and thus corrupting it. Also, this was being called in 3 places in this function
-        # so caching it is probably a good thing.
-        hashed_variants = HashableDict(copy.deepcopy(self.config.variant))
+        hashed_variants = deepfreeze(self.config.variant)
         if hasattr(self.config, "used_vars"):
             used_vars = self.config.used_vars
         elif (
