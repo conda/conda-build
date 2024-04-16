@@ -1,3 +1,4 @@
+---
 # disable autofixing PRs, commenting "pre-commit.ci autofix" on a pull request triggers a autofix
 ci:
   autofix_prs: false
@@ -61,6 +62,18 @@ repos:
         args: [--fix]
       # compatible replacement for black
       - id: ruff-format
+  - repo: https://github.com/jumanjihouse/pre-commit-hook-yamlfmt
+    rev: 0.2.3
+    hooks:
+      - id: yamlfmt
+        # ruamel.yaml doesn't line wrap correctly (?) so set width to 1M to avoid issues
+        args: [--mapping, '2', --offset, '2', --sequence, '4', --width, '1000000']
+        exclude: |
+          (?x)^(
+            .authors.yml |
+            recipe/meta.yaml |
+            tests/
+          )
   - repo: https://github.com/python-jsonschema/check-jsonschema
     rev: 0.28.1
     hooks:
