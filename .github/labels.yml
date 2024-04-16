@@ -1,10 +1,10 @@
 # Builds
 - name: build::review
   description: trigger a build for this PR
-  color: "7B4052"
+  color: '#7b4052'
 
 # Tags
 - name: tag::noarch
   description: related to noarch builds
-  color: "86C579"
+  color: '#86c579'
   aliases: []
