@@ -1,3 +1,4 @@
+---
 name: CI docs
 
 on:
@@ -7,15 +8,15 @@ on:
     branches:
       - main
     paths:
-      - '.github/workflows/docs.yml'
-      - 'docs/**'
+      - .github/workflows/docs.yml
+      - docs/**
 
   # NOTE: github.event context is pull_request payload:
   # https://docs.github.com/en/developers/webhooks-and-events/webhooks/webhook-events-and-payloads#pull_request
   pull_request:
     paths:
-      - '.github/workflows/docs.yml'
-      - 'docs/**'
+      - .github/workflows/docs.yml
+      - docs/**
 
 jobs:
   docs:
@@ -26,9 +27,9 @@ jobs:
         with:
           fetch-depth: 0
       - name: Setup
-        run : |
+        run: |
           make env-docs
       - name: Build the docs
-        run : |
+        run: |
           cd docs
           conda run --name conda-build-docs make html

@@ -1,3 +1,4 @@
+---
 name: Tests
 
 on:
@@ -18,7 +19,7 @@ on:
   # no payload
   schedule:
       # https://crontab.guru/#37_18_*_*_*
-      - cron: 37 18 * * *
+    - cron: 37 18 * * *
 
 concurrency:
   # Concurrency group that uses the workflow name and PR number if available
@@ -122,7 +123,8 @@ jobs:
           run-post: false  # skip post cleanup
 
       - name: Conda Install
-        run: conda install
+        run: >
+          conda install
           --yes
           --file tests/requirements.txt
           --file tests/requirements-${{ runner.os }}.txt
@@ -142,7 +144,8 @@ jobs:
         run: conda list --show-channel-urls
 
       - name: Run Tests
-        run: pytest
+        run: >
+          pytest
           --cov=conda_build
           -n auto
           -m "${{ env.PYTEST_MARKER }}"
@@ -200,7 +203,8 @@ jobs:
           run-post: false  # skip post cleanup
 
       - name: Conda Install
-        run: conda install
+        run: >
+          conda install
           --yes
           --file tests/requirements.txt
           --file tests/requirements-${{ runner.os }}.txt
@@ -283,7 +287,8 @@ jobs:
         run: choco install visualstudio2017-workload-vctools
 
       - name: Conda Install
-        run: conda install
+        run: >
+          conda install
           --yes
           --file tests\requirements.txt
           --file tests\requirements-${{ runner.os }}.txt
@@ -305,7 +310,8 @@ jobs:
       - name: Run Tests
         # Windows is sensitive to long paths, using `--basetemp=${{ runner.temp }} to
         # keep the test directories shorter
-        run: pytest
+        run: >
+          pytest
           --cov=conda_build
           --basetemp=${{ runner.temp }}
           -n auto
@@ -380,7 +386,8 @@ jobs:
         run: sudo xcode-select --switch /Applications/Xcode_11.7.app
 
       - name: Conda Install
-        run: conda install
+        run: >
+          conda install
           --yes
           --file tests/requirements.txt
           --file tests/requirements-${{ runner.os }}.txt
@@ -400,7 +407,8 @@ jobs:
         run: conda list --show-channel-urls
 
       - name: Run Tests
-        run: pytest
+        run: >
+          pytest
           --cov=conda_build
           -n auto
           -m "${{ env.PYTEST_MARKER }}"
