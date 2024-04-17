@@ -37,6 +37,8 @@ from .utils import (
 if TYPE_CHECKING:
     from typing import Any, Literal
 
+    StatsDict = dict[str, Any]
+
 
 def render(
     recipe_path: str | os.PathLike | Path,
@@ -241,7 +243,7 @@ def build(
     notest: bool = False,
     config: Config | None = None,
     variants: dict[str, Any] | None = None,
-    stats: dict | None = None,
+    stats: StatsDict | None = None,
     **kwargs,
 ) -> list[str]:
     """Run the build step.
@@ -290,7 +292,7 @@ def test(
     recipedir_or_package_or_metadata: str | os.PathLike | Path | MetaData,
     move_broken: bool = True,
     config: Config | None = None,
-    stats: dict | None = None,
+    stats: StatsDict | None = None,
     **kwargs,
 ) -> bool:
     """Run tests on either packages (.tar.bz2 or extracted) or recipe folders
