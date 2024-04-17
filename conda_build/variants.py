@@ -18,6 +18,7 @@ import yaml
 from conda.base.context import context
 
 from .conda_interface import cc_conda_build
+from .deprecations import deprecated
 from .utils import ensure_list, get_logger, islist, on_win, trim_empty_keys
 from .version import _parse as parse_version
 
@@ -700,27 +701,22 @@ def get_package_variants(recipedir_or_metadata, config=None, variants=None):
     return filter_combined_spec_to_used_keys(combined_spec, specs=specs)
 
 
-def get_vars(variants: Iterable[dict[str, Any]], loop_only: bool = False) -> set[str]:
+@deprecated.argument("24.5", "24.7", "loop_only")
+def get_vars(variants: Iterable[dict[str, Any]]) -> set[str]:
     """For purposes of naming/identifying, provide a way of identifying which variables contribute
     to the matrix dimensionality"""
-    first_variant, *other_variants = variants
+    first, *others = variants
     special_keys = {
         "pin_run_as_build",
         "zip_keys",
         "ignore_version",
-        *ensure_list(first_variant.get("extend_keys")),
+        *ensure_list(first.get("extend_keys")),
     }
-    loop_vars = set(first_variant) - special_keys
-    if loop_only:
-        loop_vars = {
-            var
-            for var in loop_vars
-            if any(
-                first_variant[var] != other_variant[var]
-                for other_variant in other_variants
-            )
-        }
-    return loop_vars
+    return {
+        var
+        for var in set(first) - special_keys
+        if any(first[var] != other[var] for other in others)
+    }
 
 
 @lru_cache(maxsize=None)

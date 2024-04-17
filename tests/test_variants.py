@@ -714,5 +714,4 @@ def test_get_vars():
         {"python": "3.12", "nodejs": "20"},
     ]
 
-    assert get_vars(variants, loop_only=False) == {"python", "nodejs"}
-    assert get_vars(variants, loop_only=True) == {"nodejs"}
+    assert get_vars(variants) == {"nodejs"}

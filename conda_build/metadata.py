@@ -2638,7 +2638,7 @@ class MetaData:
             if hasattr(self.config, "input_variants")
             else self.config.variants
         )
-        return variants.get_vars(_variants, loop_only=True)
+        return variants.get_vars(_variants)
 
     def get_used_loop_vars(self, force_top_level=False, force_global=False):
         loop_vars = self.get_loop_vars()
