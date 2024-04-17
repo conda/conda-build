@@ -1002,6 +1002,7 @@ def get_updated_output_dict_from_reparsed_metadata(original_dict, new_outputs):
     return output_d
 
 
+@lru_cache(maxsize=200)
 def _filter_recipe_text(text, extract_pattern=None):
     if extract_pattern:
         match = re.search(extract_pattern, text, flags=re.MULTILINE | re.DOTALL)
