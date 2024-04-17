@@ -1,8 +1,8 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+import logging
 import os
 import pprint
-from logging import getLogger
 from os.path import dirname, isdir, isfile, join
 
 # importing setuptools patches distutils so that it knows how to find VC for python 2.7
@@ -28,7 +28,7 @@ from .utils import (
 )
 from .variants import get_default_variant, set_language_env_vars
 
-log = getLogger(__name__)
+log = logging.getLogger(__name__)
 
 VS_VERSION_STRING = {
     "8.0": "Visual Studio 8 2005",

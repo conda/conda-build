@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import logging
 import os
 import re
 import sys
@@ -12,7 +13,6 @@ import time
 import warnings
 from collections import OrderedDict
 from functools import lru_cache
-from logging import getLogger
 from os.path import isfile, join
 from typing import TYPE_CHECKING, overload
 
@@ -47,7 +47,7 @@ except ImportError:
         "files of conda recipes)"
     )
 
-log = getLogger(__name__)
+log = logging.getLogger(__name__)
 
 try:
     Loader = yaml.CLoader

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import fnmatch
 import json
+import logging
 import os
 import random
 import re
@@ -19,7 +20,6 @@ import sys
 import time
 import warnings
 from collections import OrderedDict, deque
-from logging import getLogger
 from os.path import dirname, isdir, isfile, islink, join
 from pathlib import Path
 
@@ -90,7 +90,7 @@ from .variants import (
 if on_win:
     from . import windows
 
-log = getLogger(__name__)
+log = logging.getLogger(__name__)
 
 if "bsd" in sys.platform:
     shell_path = "/bin/sh"

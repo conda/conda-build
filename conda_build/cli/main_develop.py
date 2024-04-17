@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from __future__ import annotations
 
-from logging import getLogger
+import logging
 from typing import TYPE_CHECKING
 
 from conda.base.context import context, determine_target_prefix
@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from argparse import Namespace
     from typing import Sequence
 
-log = getLogger(__name__)
+log = logging.getLogger(__name__)
 
 
 def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:

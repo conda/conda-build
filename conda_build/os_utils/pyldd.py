@@ -4,17 +4,17 @@ from __future__ import annotations
 
 import argparse
 import glob
+import logging
 import os
 import re
 import struct
 import sys
 from functools import partial
-from logging import getLogger
 from pathlib import Path
 
 from ..utils import ensure_list, on_linux, on_mac, on_win
 
-log = getLogger(__name__)
+log = logging.getLogger(__name__)
 
 
 '''

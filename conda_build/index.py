@@ -1,10 +1,10 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
 import json
+import logging
 import os
 import time
 from concurrent.futures import Executor
-from logging import CRITICAL, DEBUG, INFO, WARNING, getLogger
 from os.path import dirname
 
 from conda.base.context import context
@@ -22,7 +22,7 @@ from .utils import (
     on_win,
 )
 
-log = getLogger(__name__)
+log = logging.getLogger(__name__)
 
 
 @deprecated("24.3", "24.5")
@@ -105,11 +105,11 @@ def get_build_index(
 
         loggers = utils.LoggingContext.default_loggers + [__name__]
         if debug:
-            log_level = DEBUG
+            log_level = logging.DEBUG
         elif verbose:
-            log_level = WARNING
+            log_level = logging.WARNING
         else:
-            log_level = CRITICAL + 1
+            log_level = logging.CRITICAL + 1
         with utils.LoggingContext(log_level, loggers=loggers):
             # this is where we add the "local" channel.  It's a little smarter than conda, because
             #     conda does not know about our output_folder when it is not the default setting.
@@ -233,11 +233,11 @@ def _delegated_update_index(
         subdirs = [dirname]
 
     if debug:
-        log_level = DEBUG
+        log_level = logging.DEBUG
     elif verbose:
-        log_level = INFO
+        log_level = logging.INFO
     else:
-        log_level = WARNING
+        log_level = logging.WARNING
     with utils.LoggingContext(log_level):
         return _update_index(
             dir_path,

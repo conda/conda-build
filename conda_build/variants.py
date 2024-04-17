@@ -3,6 +3,7 @@
 """This file handles the parsing of feature specifications from files,
 ending up with a configuration matrix"""
 
+import logging
 import os.path
 import re
 import sys
@@ -10,7 +11,6 @@ from collections import OrderedDict
 from copy import copy
 from functools import lru_cache
 from itertools import product
-from logging import getLogger
 
 import yaml
 from conda.base.context import context
@@ -19,7 +19,7 @@ from .conda_interface import cc_conda_build
 from .utils import ensure_list, islist, on_win, trim_empty_keys
 from .version import _parse as parse_version
 
-log = getLogger(__name__)
+log = logging.getLogger(__name__)
 
 DEFAULT_VARIANTS = {
     "python": f"{sys.version_info.major}.{sys.version_info.minor}",

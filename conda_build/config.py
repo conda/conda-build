@@ -7,13 +7,13 @@ Module to store conda build settings.
 from __future__ import annotations
 
 import copy
+import logging
 import math
 import os
 import re
 import shutil
 import time
 from collections import namedtuple
-from logging import getLogger
 from os.path import abspath, expanduser, expandvars, join
 from typing import TYPE_CHECKING
 
@@ -31,7 +31,7 @@ from .variants import get_default_variant
 if TYPE_CHECKING:
     from pathlib import Path
 
-log = getLogger(__name__)
+log = logging.getLogger(__name__)
 
 invocation_time = ""
 

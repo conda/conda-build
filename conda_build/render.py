@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import random
 import re
@@ -14,7 +15,6 @@ import tempfile
 from collections import OrderedDict, defaultdict
 from contextlib import contextmanager
 from functools import lru_cache
-from logging import getLogger
 from os.path import (
     dirname,
     isabs,
@@ -52,7 +52,7 @@ if TYPE_CHECKING:
 
     from .config import Config
 
-log = getLogger(__name__)
+log = logging.getLogger(__name__)
 
 
 def odict_representer(dumper, data):
