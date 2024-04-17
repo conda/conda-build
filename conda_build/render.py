@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import os
 import random
 import re
 import string
@@ -15,7 +14,6 @@ from collections import OrderedDict, defaultdict
 from contextlib import contextmanager
 from functools import lru_cache
 from os.path import (
-    dirname,
     isabs,
     isdir,
     isfile,
@@ -25,13 +23,14 @@ from os.path import (
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import yaml
+import yaml as pyyaml
 from conda.base.context import context
 from conda.core.package_cache_data import ProgressiveFetchExtract
 from conda.exceptions import UnsatisfiableError
 
-from . import environ, exceptions, source, utils
+from . import environ, exceptions, source, utils, yaml
 from .conda_interface import PackageRecord, TemporaryDirectory, specs_from_url
+from .deprecations import deprecated
 from .exceptions import DependencyNeedsBuildingError
 from .index import get_build_index
 from .metadata import MetaData, combine_top_level_metadata_with_output
@@ -47,18 +46,15 @@ from .variants import (
 )
 
 if TYPE_CHECKING:
+    import os
     from typing import Iterator
 
     from .config import Config
 
 
+@deprecated("24.5", "24.7")
 def odict_representer(dumper, data):
     return dumper.represent_dict(data.items())
-
-
-yaml.add_representer(set, yaml.representer.SafeRepresenter.represent_list)
-yaml.add_representer(tuple, yaml.representer.SafeRepresenter.represent_list)
-yaml.add_representer(OrderedDict, odict_representer)
 
 
 def bldpkg_path(m):
@@ -1026,6 +1022,7 @@ FIELDS = [
 
 # Next bit of stuff is to support YAML output in the order we expect.
 # http://stackoverflow.com/a/17310199/1170370
+@deprecated("24.5", "24.7")
 class _MetaYaml(dict):
     fields = FIELDS
 
@@ -1033,16 +1030,19 @@ class _MetaYaml(dict):
         return [(field, self[field]) for field in _MetaYaml.fields if field in self]
 
 
+@deprecated("24.5", "24.7")
 def _represent_omap(dumper, data):
     return dumper.represent_mapping("tag:yaml.org,2002:map", data.to_omap())
 
 
+@deprecated("24.5", "24.7")
 def _unicode_representer(dumper, uni):
-    node = yaml.ScalarNode(tag="tag:yaml.org,2002:str", value=uni)
+    node = pyyaml.ScalarNode(tag="tag:yaml.org,2002:str", value=uni)
     return node
 
 
-class _IndentDumper(yaml.Dumper):
+@deprecated("24.5", "24.7")
+class _IndentDumper(pyyaml.Dumper):
     def increase_indent(self, flow=False, indentless=False):
         return super().increase_indent(flow, False)
 
@@ -1050,33 +1050,23 @@ class _IndentDumper(yaml.Dumper):
         return True
 
 
-yaml.add_representer(_MetaYaml, _represent_omap)
-yaml.add_representer(str, _unicode_representer)
-unicode = None  # silence pyflakes about unicode not existing in py3
+def output_yaml(
+    metadata: MetaData,
+    filename: str | os.PathLike | Path | None = None,
+    suppress_outputs: bool = False,
+) -> str:
+    meta = metadata.meta
+    # create a manually ordered copy of the meta dict
+    meta = {field: meta[field] for field in FIELDS if field in meta}
+    if suppress_outputs and metadata.is_output and "outputs" in meta:
+        del meta["outputs"]
 
+    output = yaml.safe_dump(meta)
 
-def output_yaml(metadata, filename=None, suppress_outputs=False):
-    local_metadata = metadata.copy()
-    if (
-        suppress_outputs
-        and local_metadata.is_output
-        and "outputs" in local_metadata.meta
-    ):
-        del local_metadata.meta["outputs"]
-    output = yaml.dump(
-        _MetaYaml(local_metadata.meta),
-        Dumper=_IndentDumper,
-        default_flow_style=False,
-        indent=2,
-    )
-    if filename:
-        if any(sep in filename for sep in ("\\", "/")):
-            try:
-                os.makedirs(dirname(filename))
-            except OSError:
-                pass
-        with open(filename, "w") as f:
-            f.write(output)
-        return "Wrote yaml to %s" % filename
-    else:
+    if not filename:
         return output
+
+    filename = Path(filename)
+    filename.parent.mkdir(parents=True, exist_ok=True)
+    filename.write_text(output)
+    return "Wrote yaml to %s" % filename

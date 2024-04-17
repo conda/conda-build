@@ -2,6 +2,8 @@
 # SPDX-License-Identifier: BSD-3-Clause
 import textwrap
 
+from .deprecations import deprecated
+
 SEPARATOR = "-" * 70
 
 indent = lambda s: textwrap.fill(textwrap.dedent(s))
@@ -42,6 +44,7 @@ class UnableToParse(YamlParsingError):
         return f"Error Message:\n--> {indent(orig)}\n\n"
 
 
+@deprecated("24.5", "24.7", addendum="Unused.")
 class UnableToParseMissingJinja2(UnableToParse):
     def error_body(self):
         return "\n".join(

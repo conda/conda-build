@@ -29,18 +29,10 @@ from os.path import (
     realpath,
     relpath,
 )
+from typing import TYPE_CHECKING
 
 import requests
 import yaml
-
-# try to import C dumper
-try:
-    from yaml import CSafeDumper as SafeDumper
-except ImportError:
-    from yaml import SafeDumper
-
-from typing import TYPE_CHECKING
-
 from conda.common.io import dashlist
 
 from .. import source
@@ -564,7 +556,7 @@ def yaml_quote_string(string):
     Note that this function is NOT general.
     """
     return (
-        yaml.dump(string, indent=True, Dumper=SafeDumper)
+        yaml.safe_dump(string, indent=True)
         .replace("\n...\n", "")
         .replace("\n", "\n  ")
         .rstrip("\n ")

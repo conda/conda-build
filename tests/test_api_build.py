@@ -24,7 +24,6 @@ from typing import TYPE_CHECKING
 # for version
 import conda
 import pytest
-import yaml
 from binstar_client.commands import remove, show
 from binstar_client.errors import NotFound
 from conda.base.context import context, reset_context
@@ -32,7 +31,7 @@ from conda.common.compat import on_linux, on_mac, on_win
 from conda.exceptions import ClobberError, CondaError, CondaMultiError, LinkError
 from conda_index.api import update_index
 
-from conda_build import __version__, api, exceptions
+from conda_build import __version__, api, exceptions, yaml
 from conda_build.conda_interface import url_path
 from conda_build.config import Config
 from conda_build.exceptions import (
@@ -70,21 +69,6 @@ if TYPE_CHECKING:
     from pytest_mock import MockerFixture
 
     from conda_build.metadata import MetaData
-
-
-def represent_ordereddict(dumper, data):
-    value = []
-
-    for item_key, item_value in data.items():
-        node_key = dumper.represent_data(item_key)
-        node_value = dumper.represent_data(item_value)
-
-        value.append((node_key, node_value))
-
-    return yaml.nodes.MappingNode("tag:yaml.org,2002:map", value)
-
-
-yaml.add_representer(OrderedDict, represent_ordereddict)
 
 
 class AnacondaClientArgs:
@@ -782,7 +766,7 @@ def test_relative_git_url_submodule_clone(testing_workdir, testing_config, monke
         }
 
         with open(filename, "w") as outfile:
-            outfile.write(yaml.dump(data, default_flow_style=False, width=999999999))
+            outfile.write(yaml.safe_dump(data, width=999999999))
         # Reset the path because our broken, dummy `git` would cause `render_recipe`
         # to fail, while no `git` will cause the build_dependencies to be installed.
         monkeypatch.undo()
@@ -804,7 +788,7 @@ def test_noarch(testing_workdir):
             ]
         )
         with open(filename, "w") as outfile:
-            outfile.write(yaml.dump(data, default_flow_style=False, width=999999999))
+            outfile.write(yaml.safe_dump(data, width=999999999))
         output = api.get_output_file_paths(testing_workdir)[0]
         assert os.path.sep + "noarch" + os.path.sep in output or not noarch
         assert os.path.sep + "noarch" + os.path.sep not in output or noarch

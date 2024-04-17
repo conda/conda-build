@@ -11,9 +11,9 @@ from copy import copy
 from functools import lru_cache
 from itertools import product
 
-import yaml
 from conda.base.context import context
 
+from . import yaml
 from .conda_interface import cc_conda_build
 from .utils import ensure_list, get_logger, islist, on_win, trim_empty_keys
 from .version import _parse as parse_version
@@ -136,7 +136,7 @@ def parse_config_file(path, config):
     with open(path) as f:
         contents = f.read()
     contents = select_lines(contents, get_selectors(config), variants_in_place=False)
-    content = yaml.load(contents, Loader=yaml.loader.BaseLoader) or {}
+    content = yaml.safe_load(contents) or {}
     trim_empty_keys(content)
     return content
 

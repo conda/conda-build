@@ -23,13 +23,14 @@ from os.path import dirname, isdir, isfile, islink, join
 from pathlib import Path
 
 import conda_package_handling.api
-import yaml
 from bs4 import UnicodeDammit
 from conda import __version__ as conda_version
 from conda.base.context import context, reset_context
 from conda.core.prefix_data import PrefixData
 from conda.exceptions import CondaError, NoPackagesFoundError, UnsatisfiableError
 from conda.models.channel import Channel
+
+from conda_build import yaml
 
 from . import __version__ as conda_build_version
 from . import environ, noarch_python, source, tarcheck, utils
@@ -882,7 +883,7 @@ def copy_recipe(m):
 
         # dump the full variant in use for this package to the recipe folder
         with open(os.path.join(recipe_dir, "conda_build_config.yaml"), "w") as f:
-            yaml.dump(m.config.variant, f)
+            yaml.safe_dump(m.config.variant, f)
 
 
 def copy_readme(m):
@@ -918,11 +919,12 @@ def jsonify_info_yamls(m):
                     except:
                         pass
                     with open(file) as i, open(dst, "w") as o:
-                        import yaml
-
-                        yaml = yaml.full_load(i)
                         json.dump(
-                            yaml, o, sort_keys=True, indent=2, separators=(",", ": ")
+                            yaml.safe_load(i),
+                            o,
+                            sort_keys=True,
+                            indent=2,
+                            separators=(",", ": "),
                         )
                         res.append(
                             join(os.path.basename(m.config.info_dir), ijd, bn + ".json")

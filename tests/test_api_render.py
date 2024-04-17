@@ -10,11 +10,10 @@ import re
 from itertools import count, islice
 
 import pytest
-import yaml
 from conda.base.context import context
 from conda.common.compat import on_win
 
-from conda_build import api, render
+from conda_build import api, render, yaml
 from conda_build.conda_interface import cc_conda_build
 from conda_build.variants import validate_spec
 
@@ -219,7 +218,7 @@ def test_setting_condarc_vars_with_env_var_expansion(testing_workdir):
     python_versions = ["2.6", "3.4", "3.11"]
     config = {"python": python_versions, "bzip2": ["0.9", "1.0"]}
     with open(os.path.join("config", "conda_build_config.yaml"), "w") as f:
-        yaml.dump(config, f, default_flow_style=False)
+        yaml.safe_dump(config, f)
 
     cc_conda_build_backup = cc_conda_build.copy()
     # hacky equivalent of changing condarc
