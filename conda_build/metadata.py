@@ -19,7 +19,7 @@ from bs4 import UnicodeDammit
 from conda.base.context import context
 from conda.gateways.disk.read import compute_sum
 
-from . import exceptions, utils, variants
+from . import exceptions, utils
 from .conda_interface import MatchSpec
 from .config import Config, get_or_merge_config
 from .features import feature_list
@@ -33,6 +33,15 @@ from .utils import (
     get_installed_packages,
     insert_variant_versions,
     on_win,
+)
+from .variants import (
+    dict_of_lists_to_list_of_dicts,
+    find_used_variables_in_batch_script,
+    find_used_variables_in_shell_script,
+    find_used_variables_in_text,
+    get_default_variant,
+    get_vars,
+    list_of_dicts_to_dict_of_lists,
 )
 
 if TYPE_CHECKING:
@@ -156,7 +165,7 @@ def get_selectors(config: Config) -> dict[str, bool]:
         if arch == "32":
             d["x86"] = plat.endswith(("-32", "-64"))
 
-    defaults = variants.get_default_variant(config)
+    defaults = get_default_variant(config)
     py = config.variant.get("python", defaults["python"])
     # there are times when python comes in as a tuple
     if not hasattr(py, "split"):
@@ -2448,9 +2457,7 @@ class MetaData:
 
     def get_reduced_variant_set(self, used_variables):
         # reduce variable space to limit work we need to do
-        full_collapsed_variants = variants.list_of_dicts_to_dict_of_lists(
-            self.config.variants
-        )
+        full_collapsed_variants = list_of_dicts_to_dict_of_lists(self.config.variants)
         reduced_collapsed_variants = full_collapsed_variants.copy()
         reduce_keys = set(self.config.variants[0].keys()) - set(used_variables)
 
@@ -2482,7 +2489,7 @@ class MetaData:
                 # save only one element from this key
                 reduced_collapsed_variants[key] = utils.ensure_list(next(iter(values)))
 
-        out = variants.dict_of_lists_to_list_of_dicts(reduced_collapsed_variants)
+        out = dict_of_lists_to_list_of_dicts(reduced_collapsed_variants)
         return out
 
     def get_output_metadata_set(
@@ -2633,12 +2640,7 @@ class MetaData:
         return output_tuples
 
     def get_loop_vars(self):
-        _variants = (
-            self.config.input_variants
-            if hasattr(self.config, "input_variants")
-            else self.config.variants
-        )
-        return variants.get_vars(_variants)
+        return get_vars(getattr(self.config, "input_variants", self.config.variants))
 
     def get_used_loop_vars(self, force_top_level=False, force_global=False):
         loop_vars = self.get_loop_vars()
@@ -2825,7 +2827,7 @@ class MetaData:
             apply_selectors=False,
         )
 
-        all_used_selectors = variants.find_used_variables_in_text(
+        all_used_selectors = find_used_variables_in_text(
             variant_keys, recipe_text, selectors_only=True
         )
 
@@ -2834,7 +2836,7 @@ class MetaData:
             force_global=force_global,
             apply_selectors=True,
         )
-        all_used_reqs = variants.find_used_variables_in_text(
+        all_used_reqs = find_used_variables_in_text(
             variant_keys, recipe_text, selectors_only=False
         )
 
@@ -2845,9 +2847,7 @@ class MetaData:
         if force_global:
             used = all_used
         else:
-            requirements_used = variants.find_used_variables_in_text(
-                variant_keys, reqs_text
-            )
+            requirements_used = find_used_variables_in_text(variant_keys, reqs_text)
             outside_reqs_used = all_used - requirements_used
 
             requirements_used = trim_build_only_deps(self, requirements_used)
@@ -2860,16 +2860,12 @@ class MetaData:
         buildsh = os.path.join(self.path, "build.sh")
         if os.path.isfile(buildsh):
             used_vars.update(
-                variants.find_used_variables_in_shell_script(
-                    self.config.variant, buildsh
-                )
+                find_used_variables_in_shell_script(self.config.variant, buildsh)
             )
         bldbat = os.path.join(self.path, "bld.bat")
         if self.config.platform == "win" and os.path.isfile(bldbat):
             used_vars.update(
-                variants.find_used_variables_in_batch_script(
-                    self.config.variant, bldbat
-                )
+                find_used_variables_in_batch_script(self.config.variant, bldbat)
             )
         return used_vars
 
@@ -2882,15 +2878,11 @@ class MetaData:
             script = os.path.join(self.path, this_output["script"])
             if os.path.splitext(script)[1] == ".sh":
                 used_vars.update(
-                    variants.find_used_variables_in_shell_script(
-                        self.config.variant, script
-                    )
+                    find_used_variables_in_shell_script(self.config.variant, script)
                 )
             elif os.path.splitext(script)[1] == ".bat":
                 used_vars.update(
-                    variants.find_used_variables_in_batch_script(
-                        self.config.variant, script
-                    )
+                    find_used_variables_in_batch_script(self.config.variant, script)
                 )
             else:
                 log = utils.get_logger(__name__)
@@ -2901,7 +2893,7 @@ class MetaData:
         return used_vars
 
     def get_variants_as_dict_of_lists(self):
-        return variants.list_of_dicts_to_dict_of_lists(self.config.variants)
+        return list_of_dicts_to_dict_of_lists(self.config.variants)
 
     def clean(self):
         """This ensures that clean is called with the correct build id"""
