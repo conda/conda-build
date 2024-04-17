@@ -71,6 +71,10 @@ repos:
         exclude: |
           (?x)^(
             .authors.yml |
+            conda_build/templates/npm.yaml |
+            conda_build/templates/setuptools.yaml |
+            docs/click/meta.yaml |
+            docs/source/user-guide/tutorials/meta.yaml |
             recipe/meta.yaml |
             tests/
           )
