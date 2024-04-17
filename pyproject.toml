@@ -2,7 +2,7 @@
 build-backend = "hatchling.build"
 requires = [
   "hatchling >=1.12.2",
-  "hatch-vcs >=0.2.0"
+  "hatch-vcs >=0.2.0",
 ]
 
 [project]
@@ -20,7 +20,7 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: Implementation :: CPython",
-  "Programming Language :: Python :: Implementation :: PyPy"
+  "Programming Language :: Python :: Implementation :: PyPy",
 ]
 dependencies = [
   "beautifulsoup4",
@@ -41,7 +41,7 @@ dependencies = [
   "pyyaml",
   "requests",
   "tomli ; python_version<'3.11'",
-  "tqdm"
+  "tqdm",
 ]
 description = "tools for building conda packages"
 dynamic = ["version"]
@@ -73,7 +73,7 @@ repository = "https://github.com/conda/conda-build"
 
 [tool.coverage.report]
 exclude_lines = [
-  "if TYPE_CHECKING:"  # ignoring type checking imports
+  "if TYPE_CHECKING:",  # ignoring type checking imports
 ]
 omit = ["conda_build/skeletons/_example_skeleton.py"]
 show_missing = true
@@ -112,13 +112,13 @@ addopts = [
   "--tb=native",
   "--xdoctest-modules",
   "--xdoctest-style=google",
-  "-vv"
+  "-vv",
 ]
 doctest_optionflags = [
   "NORMALIZE_WHITESPACE",
   "IGNORE_EXCEPTION_DETAIL",
   "ALLOW_UNICODE",
-  "ELLIPSIS"
+  "ELLIPSIS",
 ]
 filterwarnings = [
   # elevate conda's deprecated warning to an error
@@ -128,14 +128,14 @@ filterwarnings = [
   "error::PendingDeprecationWarning:conda_build",
   "error::DeprecationWarning:conda_build",
   # ignore numpy.distutils error
-  'ignore:\s+`numpy.distutils` is deprecated:DeprecationWarning:conda_build._load_setup_py_data'
+  'ignore:\s+`numpy.distutils` is deprecated:DeprecationWarning:conda_build._load_setup_py_data',
 ]
 markers = [
   "serial: execute test serially (to avoid race conditions)",
   "slow: execute the slow tests if active",
   "sanity: execute the sanity tests",
   "no_default_testing_config: used internally to disable monkeypatching for testing_config",
-  "benchmark: execute the benchmark tests"
+  "benchmark: execute the benchmark tests",
 ]
 minversion = 3.0
 norecursedirs = ["tests/test-recipes/*"]
@@ -149,7 +149,7 @@ flake8-type-checking = {exempt-modules = [], strict = true}
 ignore = [
   "E402",  # module level import not at top of file
   "E722",  # do not use bare 'except'
-  "E731"  # do not assign a lambda expression, use a def
+  "E731",  # do not assign a lambda expression, use a def
 ]
 pycodestyle = {max-line-length = 120}
 # see https://docs.astral.sh/ruff/rules/
@@ -162,5 +162,5 @@ select = [
   "T10",  # flake8-debugger
   "TCH",  # flake8-type-checking
   "UP",  # pyupgrade
-  "W"  # pycodestyle warnings
+  "W",  # pycodestyle warnings
 ]
