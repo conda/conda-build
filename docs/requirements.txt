@@ -1,11 +1,12 @@
+Pillow==10.0.1
+PyYAML==6.0.1
+Sphinx==7.2.6
 conda-sphinx-theme==0.2.1
 linkify-it-py==2.0.2
 myst-parser==2.0.0
-Pillow==10.0.1
-PyYAML==6.0.1
+pylint==2.17.5
 requests==2.31.0
 ruamel.yaml==0.17.32
-Sphinx==7.2.6
 sphinx-argparse==0.4.0
 sphinx-autobuild==2021.3.14
 sphinx-sitemap==2.5.1
@@ -18,4 +19,3 @@ sphinxcontrib-plantuml==0.26
 sphinxcontrib-programoutput==0.17
 sphinxcontrib-qthelp==1.0.6
 sphinxcontrib-serializinghtml==1.1.9
-pylint==2.17.5

@@ -1,16 +1,12 @@
 [build-system]
+build-backend = "hatchling.build"
 requires = [
   "hatchling >=1.12.2",
   "hatch-vcs >=0.2.0",
 ]
-build-backend = "hatchling.build"
 
 [project]
-name = "conda-build"
-description="tools for building conda packages"
-readme = "README.md"
 authors = [{name = "Anaconda, Inc.", email = "conda@continuum.io"}]
-license = {file = "LICENSE"}
 classifiers = [
   "Development Status :: 5 - Production/Stable",
   "Intended Audience :: Developers",
@@ -24,9 +20,8 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: Implementation :: CPython",
-  "Programming Language :: Python :: Implementation :: PyPy"
+  "Programming Language :: Python :: Implementation :: PyPy",
 ]
-requires-python = ">=3.8"
 dependencies = [
   "beautifulsoup4",
   "chardet",
@@ -48,34 +43,46 @@ dependencies = [
   "tomli ; python_version<'3.11'",
   "tqdm",
 ]
+description = "tools for building conda packages"
 dynamic = ["version"]
+license = {file = "LICENSE"}
+name = "conda-build"
+readme = "README.md"
+requires-python = ">=3.8"
 
-[project.urls]
-documentation = "https://docs.conda.io/projects/conda-build/en/stable/"
-repository = "https://github.com/conda/conda-build"
-changelog = "https://github.com/conda/conda-build/blob/main/CHANGELOG.md"
+[project.entry-points.conda]
+conda-build = "conda_build.plugin"
+
+[project.entry-points."distutils.commands"]
+bdist_conda = "conda_build.bdist_conda:bdist_conda"
 
 [project.scripts]
 conda-build = "conda_build.cli.main_build:execute"
 conda-convert = "conda_build.cli.main_convert:execute"
+conda-debug = "conda_build.cli.main_debug:execute"
 conda-develop = "conda_build.cli.main_develop:execute"
 conda-inspect = "conda_build.cli.main_inspect:execute"
 conda-metapackage = "conda_build.cli.main_metapackage:execute"
 conda-render = "conda_build.cli.main_render:execute"
 conda-skeleton = "conda_build.cli.main_skeleton:execute"
-conda-debug = "conda_build.cli.main_debug:execute"
 
-[project.entry-points."distutils.commands"]
-bdist_conda = "conda_build.bdist_conda:bdist_conda"
+[project.urls]
+changelog = "https://github.com/conda/conda-build/blob/main/CHANGELOG.md"
+documentation = "https://docs.conda.io/projects/conda-build/en/stable/"
+repository = "https://github.com/conda/conda-build"
 
-[project.entry-points.conda]
-conda-build = "conda_build.plugin"
+[tool.coverage.report]
+exclude_lines = [
+  "if TYPE_CHECKING:",  # ignoring type checking imports
+]
+omit = ["conda_build/skeletons/_example_skeleton.py"]
+show_missing = true
+skip_covered = true
+sort = "Miss"
 
-[tool.hatch.version]
-source = "vcs"
-
-[tool.hatch.version.raw-options]
-local_scheme = "dirty-tag"
+[tool.coverage.run]
+# store relative paths in coverage information
+relative_files = true
 
 [tool.hatch.build]
 include = ["conda_build", "conda_build/templates/*", "conda_build/cli-*.exe"]
@@ -83,44 +90,13 @@ include = ["conda_build", "conda_build/templates/*", "conda_build/cli-*.exe"]
 [tool.hatch.build.hooks.vcs]
 version-file = "conda_build/_version.py"
 
-[tool.coverage.run]
-# store relative paths in coverage information
-relative_files = true
+[tool.hatch.version]
+source = "vcs"
 
-[tool.coverage.report]
-show_missing = true
-sort = "Miss"
-skip_covered = true
-omit = ["conda_build/skeletons/_example_skeleton.py"]
-exclude_lines = [
-  "if TYPE_CHECKING:",  # ignoring type checking imports
-]
-
-[tool.ruff]
-target-version = "py38"
-
-[tool.ruff.lint]
-# E, W = pycodestyle errors and warnings
-# F = pyflakes
-# I = isort
-# UP = pyupgrade
-# ISC = flake8-implicit-str-concat
-# TCH = flake8-type-checking
-# T10 = flake8-debugger
-# FA = flake8-future-annotations
-# see also https://docs.astral.sh/ruff/rules/
-select = ["E", "W", "F", "I", "UP", "ISC", "TCH", "T10", "FA"]
-# E402 module level import not at top of file
-# E722 do not use bare 'except'
-# E731 do not assign a lambda expression, use a def
-ignore = ["E402", "E722", "E731"]
-pycodestyle = {max-line-length = 120}
-flake8-type-checking = {exempt-modules = [], strict = true}
+[tool.hatch.version.raw-options]
+local_scheme = "dirty-tag"
 
 [tool.pytest.ini_options]
-minversion = 3.0
-testpaths = ["tests"]
-norecursedirs = ["tests/test-recipes/*"]
 addopts = [
   "--color=yes",
   # "--cov=conda_build",   # passed in test runner scripts instead (avoid debugger)
@@ -144,13 +120,6 @@ doctest_optionflags = [
   "ALLOW_UNICODE",
   "ELLIPSIS",
 ]
-markers = [
-  "serial: execute test serially (to avoid race conditions)",
-  "slow: execute the slow tests if active",
-  "sanity: execute the sanity tests",
-  "no_default_testing_config: used internally to disable monkeypatching for testing_config",
-  "benchmark: execute the benchmark tests",
-]
 filterwarnings = [
   # elevate conda's deprecated warning to an error
   "error::PendingDeprecationWarning:conda",
@@ -160,4 +129,38 @@ filterwarnings = [
   "error::DeprecationWarning:conda_build",
   # ignore numpy.distutils error
   'ignore:\s+`numpy.distutils` is deprecated:DeprecationWarning:conda_build._load_setup_py_data',
+]
+markers = [
+  "serial: execute test serially (to avoid race conditions)",
+  "slow: execute the slow tests if active",
+  "sanity: execute the sanity tests",
+  "no_default_testing_config: used internally to disable monkeypatching for testing_config",
+  "benchmark: execute the benchmark tests",
+]
+minversion = 3.0
+norecursedirs = ["tests/test-recipes/*"]
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py38"
+
+[tool.ruff.lint]
+flake8-type-checking = {exempt-modules = [], strict = true}
+ignore = [
+  "E402",  # module level import not at top of file
+  "E722",  # do not use bare 'except'
+  "E731",  # do not assign a lambda expression, use a def
+]
+pycodestyle = {max-line-length = 120}
+# see https://docs.astral.sh/ruff/rules/
+select = [
+  "E",  # pycodestyle errors
+  "F",  # pyflakes
+  "FA",  # flake8-future-annotations
+  "I",  # isort
+  "ISC",  # flake8-implicit-str-concat
+  "T10",  # flake8-debugger
+  "TCH",  # flake8-type-checking
+  "UP",  # pyupgrade
+  "W",  # pycodestyle warnings
 ]

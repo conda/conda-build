@@ -7,28 +7,28 @@ on:
     branches:
       - main
     paths:
-      - '.github/workflows/docs.yml'
-      - 'docs/**'
+      - .github/workflows/docs.yml
+      - docs/**
 
   # NOTE: github.event context is pull_request payload:
   # https://docs.github.com/en/developers/webhooks-and-events/webhooks/webhook-events-and-payloads#pull_request
   pull_request:
     paths:
-      - '.github/workflows/docs.yml'
-      - 'docs/**'
+      - .github/workflows/docs.yml
+      - docs/**
 
 jobs:
   docs:
     if: '!github.event.repository.fork'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633
         with:
           fetch-depth: 0
       - name: Setup
-        run : |
+        run: |
           make env-docs
       - name: Build the docs
-        run : |
+        run: |
           cd docs
           conda run --name conda-build-docs make html

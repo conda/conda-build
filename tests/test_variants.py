@@ -18,6 +18,7 @@ from conda_build.variants import (
     dict_of_lists_to_list_of_dicts,
     filter_combined_spec_to_used_keys,
     get_package_variants,
+    get_vars,
     validate_spec,
 )
 
@@ -700,3 +701,17 @@ def test_zip_key_filtering(
     }
 
     assert filter_combined_spec_to_used_keys(combined_spec, specs=specs) == expected
+
+
+def test_get_vars():
+    variants = [
+        {
+            "python": "3.12",
+            "nodejs": "20",
+            "zip_keys": [],  # ignored
+        },
+        {"python": "3.12", "nodejs": "18"},
+        {"python": "3.12", "nodejs": "20"},
+    ]
+
+    assert get_vars(variants) == {"nodejs"}
