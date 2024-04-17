@@ -140,9 +140,9 @@ def test_resolved_packages_recipe(testing_config):
 @pytest.mark.slow
 def test_host_entries_finalized(testing_config):
     recipe = os.path.join(metadata_dir, "_host_entries_finalized")
-    metadata = api.render(recipe, config=testing_config)
-    assert len(metadata) == 2
-    outputs = api.get_output_file_paths(metadata)
+    metadata_tuples = api.render(recipe, config=testing_config)
+    assert len(metadata_tuples) == 2
+    outputs = api.get_output_file_paths(metadata_tuples)
     assert any("py27" in out for out in outputs)
     assert any("py39" in out for out in outputs)
 
@@ -160,10 +160,11 @@ def test_hash_no_apply_to_custom_build_string(testing_metadata, testing_workdir)
 def test_pin_depends(testing_config):
     """This is deprecated functionality - replaced by the more general variants pinning scheme"""
     recipe = os.path.join(metadata_dir, "_pin_depends_strict")
-    m = api.render(recipe, config=testing_config)[0][0]
+    metadata = api.render(recipe, config=testing_config)[0][0]
     # the recipe python is not pinned, but having pin_depends set will force it to be.
     assert any(
-        re.search(r"python\s+[23]\.", dep) for dep in m.meta["requirements"]["run"]
+        re.search(r"python\s+[23]\.", dep)
+        for dep in metadata.meta["requirements"]["run"]
     )
 
 
@@ -190,10 +191,10 @@ def test_noarch_with_platform_deps(testing_workdir, testing_config):
     build_ids = {}
     for subdir_ in ["linux-64", "linux-aarch64", "linux-ppc64le", "osx-64", "win-64"]:
         platform, arch = subdir_.split("-")
-        m = api.render(
+        metadata = api.render(
             recipe_path, config=testing_config, platform=platform, arch=arch
         )[0][0]
-        build_ids[subdir_] = m.build_id()
+        build_ids[subdir_] = metadata.build_id()
 
     # one hash for each platform, plus one for the archspec selector
     assert len(set(build_ids.values())) == 4
@@ -207,8 +208,10 @@ def test_noarch_with_no_platform_deps(testing_workdir, testing_config):
     recipe_path = os.path.join(metadata_dir, "_noarch_with_no_platform_deps")
     build_ids = set()
     for platform in ["osx", "linux", "win"]:
-        m = api.render(recipe_path, config=testing_config, platform=platform)[0][0]
-        build_ids.add(m.build_id())
+        metadata = api.render(recipe_path, config=testing_config, platform=platform)[0][
+            0
+        ]
+        build_ids.add(metadata.build_id())
 
     assert len(build_ids) == 1
 
@@ -230,15 +233,15 @@ def test_setting_condarc_vars_with_env_var_expansion(testing_workdir):
 
     os.environ["TEST_WORKDIR"] = testing_workdir
     try:
-        m = api.render(
+        metadata = api.render(
             os.path.join(variants_dir, "19_used_variables"),
             bypass_env_check=True,
             finalize=False,
         )[0][0]
         # this one should have gotten clobbered by the values in the recipe
-        assert m.config.variant["python"] not in python_versions
+        assert metadata.config.variant["python"] not in python_versions
         # this confirms that we loaded the config file correctly
-        assert len(m.config.squished_variants["bzip2"]) == 2
+        assert len(metadata.config.squished_variants["bzip2"]) == 2
     finally:
         cc_conda_build.clear()
         cc_conda_build.update(cc_conda_build_backup)
@@ -246,8 +249,8 @@ def test_setting_condarc_vars_with_env_var_expansion(testing_workdir):
 
 def test_self_reference_run_exports_pin_subpackage_picks_up_version_correctly():
     recipe = os.path.join(metadata_dir, "_self_reference_run_exports")
-    m = api.render(recipe)[0][0]
-    run_exports = m.meta.get("build", {}).get("run_exports", [])
+    metadata = api.render(recipe)[0][0]
+    run_exports = metadata.meta.get("build", {}).get("run_exports", [])
     assert run_exports
     assert len(run_exports) == 1
     assert run_exports[0].split()[1] == ">=1.0.0,<2.0a0"
@@ -255,11 +258,11 @@ def test_self_reference_run_exports_pin_subpackage_picks_up_version_correctly():
 
 def test_run_exports_with_pin_compatible_in_subpackages(testing_config):
     recipe = os.path.join(metadata_dir, "_run_exports_in_outputs")
-    ms = api.render(recipe, config=testing_config)
-    for m, _, _ in ms:
-        if m.name().startswith("gfortran_"):
+    metadata_tuples = api.render(recipe, config=testing_config)
+    for metadata, _, _ in metadata_tuples:
+        if metadata.name().startswith("gfortran_"):
             run_exports = set(
-                m.meta.get("build", {}).get("run_exports", {}).get("strong", [])
+                metadata.meta.get("build", {}).get("run_exports", {}).get("strong", [])
             )
             assert len(run_exports) == 1
             # len after splitting should be more than one because of pin_compatible.  If it's only zlib, we've lost the
@@ -269,38 +272,46 @@ def test_run_exports_with_pin_compatible_in_subpackages(testing_config):
 
 
 def test_ignore_build_only_deps():
-    ms = api.render(
+    metadata_tuples = api.render(
         os.path.join(variants_dir, "python_in_build_only"),
         bypass_env_check=True,
         finalize=False,
     )
-    assert len(ms) == 1
+    assert len(metadata_tuples) == 1
 
 
 def test_merge_build_host_build_key():
-    m = api.render(os.path.join(metadata_dir, "_no_merge_build_host"))[0][0]
-    assert not any("bzip2" in dep for dep in m.meta["requirements"]["run"])
+    metadata = api.render(os.path.join(metadata_dir, "_no_merge_build_host"))[0][0]
+    assert not any("bzip2" in dep for dep in metadata.meta["requirements"]["run"])
 
 
 def test_merge_build_host_empty_host_section():
-    m = api.render(os.path.join(metadata_dir, "_empty_host_avoids_merge"))[0][0]
-    assert not any("bzip2" in dep for dep in m.meta["requirements"]["run"])
+    metadata = api.render(os.path.join(metadata_dir, "_empty_host_avoids_merge"))[0][0]
+    assert not any("bzip2" in dep for dep in metadata.meta["requirements"]["run"])
 
 
 def test_pin_expression_works_with_prereleases(testing_config):
     recipe = os.path.join(metadata_dir, "_pinning_prerelease")
-    ms = api.render(recipe, config=testing_config)
-    assert len(ms) == 2
-    m = next(m_[0] for m_ in ms if m_[0].meta["package"]["name"] == "bar")
-    assert "foo >=3.10.0.rc1,<3.11.0a0" in m.meta["requirements"]["run"]
+    metadata_tuples = api.render(recipe, config=testing_config)
+    assert len(metadata_tuples) == 2
+    metadata = next(
+        metadata
+        for metadata, _, _ in metadata_tuples
+        if metadata.meta["package"]["name"] == "bar"
+    )
+    assert "foo >=3.10.0.rc1,<3.11.0a0" in metadata.meta["requirements"]["run"]
 
 
 def test_pin_expression_works_with_python_prereleases(testing_config):
     recipe = os.path.join(metadata_dir, "_pinning_prerelease_python")
-    ms = api.render(recipe, config=testing_config)
-    assert len(ms) == 2
-    m = next(m_[0] for m_ in ms if m_[0].meta["package"]["name"] == "bar")
-    assert "python >=3.10.0rc1,<3.11.0a0" in m.meta["requirements"]["run"]
+    metadata_tuples = api.render(recipe, config=testing_config)
+    assert len(metadata_tuples) == 2
+    metadata = next(
+        metadata
+        for metadata, _, _ in metadata_tuples
+        if metadata.meta["package"]["name"] == "bar"
+    )
+    assert "python >=3.10.0rc1,<3.11.0a0" in metadata.meta["requirements"]["run"]
 
 
 @pytest.mark.benchmark
@@ -329,7 +340,7 @@ def test_pin_subpackage_benchmark(testing_config):
         validate_spec("<generated>", variant)
         return variant
 
-    ms = api.render(
+    metadata_tuples = api.render(
         recipe, config=testing_config, channels=[], variants=create_variants()
     )
-    assert len(ms) == 11 - 3  # omits libarrow-all, pyarrow, pyarrow-tests
+    assert len(metadata_tuples) == 11 - 3  # omits libarrow-all, pyarrow, pyarrow-tests

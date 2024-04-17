@@ -799,7 +799,9 @@ def distribute_variants(
     allow_no_other_outputs=False,
     bypass_env_check=False,
 ) -> list[MetaDataTuple]:
-    rendered_metadata: dict[tuple[str, str, tuple[tuple[str, str]]], MetaDataTuple] = {}
+    rendered_metadata: dict[
+        tuple[str, str, tuple[tuple[str, str], ...]], MetaDataTuple
+    ] = {}
     need_source_download = True
 
     # don't bother distributing python if it's a noarch package, and figure out
@@ -906,7 +908,7 @@ def distribute_variants(
                 mv.config.variant.get("target_platform", mv.config.subdir),
                 tuple((var, mv.config.variant.get(var)) for var in mv.get_used_vars()),
             )
-        ] = MetaDataTuple(mv, need_source_download, None)
+        ] = MetaDataTuple(mv, need_source_download, False)
     # list of tuples.
     # each tuple item is a tuple of 3 items:
     #    metadata, need_download, need_reparse

@@ -2955,5 +2955,5 @@ class MetaData:
 
 class MetaDataTuple(NamedTuple):
     metadata: MetaData
-    need_download: bool | None
-    need_reparse: bool | None
+    need_download: bool
+    need_reparse: bool

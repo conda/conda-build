@@ -53,7 +53,6 @@ def render(
        templates evaluated.
 
     Returns a list of (metadata, need_download, need_reparse in env) tuples"""
-    from collections import OrderedDict
 
     from conda.exceptions import NoPackagesFoundError
 
@@ -70,7 +69,7 @@ def render(
         variants=variants,
         permit_unsatisfiable_variants=permit_unsatisfiable_variants,
     )
-    output_metas = OrderedDict()
+    output_metas: dict[tuple[str, str, tuple[tuple[str, str], ...]], MetaDataTuple] = {}
     for meta, download, render_in_env in metadata_tuples:
         if not meta.skip() or not config.trim_skip:
             for od, om in meta.get_output_metadata_set(
@@ -102,7 +101,7 @@ def render(
                                 (var, om.config.variant[var])
                                 for var in om.get_used_vars()
                             ),
-                        ] = (om, download, render_in_env)
+                        ] = MetaDataTuple(om, download, render_in_env)
                     else:
                         output_metas[
                             f"{om.type}: {om.name()}",
@@ -111,7 +110,7 @@ def render(
                                 (var, om.config.variant[var])
                                 for var in om.get_used_vars()
                             ),
-                        ] = (om, download, render_in_env)
+                        ] = MetaDataTuple(om, download, render_in_env)
 
     return list(output_metas.values())
 
@@ -149,7 +148,7 @@ def get_output_file_paths(
 
     if isinstance(recipe_path_or_metadata, (str, Path)):
         # first, render the parent recipe (potentially multiple outputs, depending on variants).
-        metadata = render(
+        metadata_tuples = render(
             recipe_path_or_metadata,
             no_download_source=no_download_source,
             variants=variants,
@@ -159,7 +158,7 @@ def get_output_file_paths(
         )
 
     elif isinstance(recipe_path_or_metadata, MetaData):
-        metadata = [MetaDataTuple(recipe_path_or_metadata, None, None)]
+        metadata_tuples = [MetaDataTuple(recipe_path_or_metadata, False, False)]
 
     elif isinstance(recipe_path_or_metadata, Iterable) and all(
         isinstance(recipe, MetaDataTuple)
@@ -168,7 +167,7 @@ def get_output_file_paths(
         and isinstance(recipe.need_reparse, bool)
         for recipe in recipe_path_or_metadata
     ):
-        metadata = recipe_path_or_metadata
+        metadata_tuples = recipe_path_or_metadata
 
     else:
         raise ValueError(
@@ -179,11 +178,11 @@ def get_output_file_paths(
 
     # Next, loop over outputs that each metadata defines
     outs = []
-    for m, _, _ in metadata:
-        if m.skip():
-            outs.append(get_skip_message(m))
+    for metadata, _, _ in metadata_tuples:
+        if metadata.skip():
+            outs.append(get_skip_message(metadata))
         else:
-            outs.append(bldpkg_path(m))
+            outs.append(bldpkg_path(metadata))
     return sorted(set(outs))
 
 

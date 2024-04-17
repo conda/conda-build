@@ -237,8 +237,8 @@ def test_offline(
 
 def test_git_describe_info_on_branch(testing_config):
     recipe_path = os.path.join(metadata_dir, "_git_describe_number_branch")
-    m = api.render(recipe_path, config=testing_config)[0][0]
-    output = api.get_output_file_paths(m)[0]
+    metadata = api.render(recipe_path, config=testing_config)[0][0]
+    output = api.get_output_file_paths(metadata)[0]
     # missing hash because we set custom build string in meta.yaml
     test_path = os.path.join(
         testing_config.croot,
@@ -613,13 +613,13 @@ def test_numpy_setup_py_data(testing_config):
     #    - cython
     subprocess.call("conda remove -y cython".split())
     with pytest.raises(CondaBuildException) as exc_info:
-        api.render(recipe_path, config=testing_config, numpy="1.16")[0][0]
+        api.render(recipe_path, config=testing_config, numpy="1.16")
     assert exc_info.match("Cython")
     subprocess.check_call(["conda", "install", "-y", "cython"])
-    m = api.render(recipe_path, config=testing_config, numpy="1.16")[0][0]
-    _hash = m.hash_dependencies()
+    metadata = api.render(recipe_path, config=testing_config, numpy="1.16")[0][0]
+    _hash = metadata.hash_dependencies()
     assert (
-        os.path.basename(api.get_output_file_paths(m)[0])
+        os.path.basename(api.get_output_file_paths(metadata)[0])
         == f"load_setup_py_test-0.1.0-np116py{sys.version_info.major}{sys.version_info.minor}{_hash}_0.tar.bz2"
     )
 
@@ -1178,9 +1178,9 @@ def test_run_exports(testing_metadata, testing_config, testing_workdir):
     #       will be merged when build subdir == host_subdir, the weak run_exports should be present.
     testing_metadata.meta["requirements"]["build"] = ["test_has_run_exports"]
     api.output_yaml(testing_metadata, "meta.yaml")
-    m = api.render(testing_workdir, config=testing_config)[0][0]
-    assert "strong_pinned_package 1.0.*" in m.meta["requirements"]["run"]
-    assert "weak_pinned_package 1.0.*" in m.meta["requirements"]["run"]
+    metadata = api.render(testing_workdir, config=testing_config)[0][0]
+    assert "strong_pinned_package 1.0.*" in metadata.meta["requirements"]["run"]
+    assert "weak_pinned_package 1.0.*" in metadata.meta["requirements"]["run"]
 
     #    2. host present.  Use run_exports from host, ignore 'weak' ones from build.  All are
     #           weak by default.
@@ -1190,10 +1190,12 @@ def test_run_exports(testing_metadata, testing_config, testing_workdir):
     ]
     testing_metadata.meta["requirements"]["host"] = ["python"]
     api.output_yaml(testing_metadata, "host_present_weak/meta.yaml")
-    m = api.render(
+    metadata = api.render(
         os.path.join(testing_workdir, "host_present_weak"), config=testing_config
     )[0][0]
-    assert "weak_pinned_package 2.0.*" not in m.meta["requirements"].get("run", [])
+    assert "weak_pinned_package 2.0.*" not in metadata.meta["requirements"].get(
+        "run", []
+    )
 
     #    3. host present, and deps in build have "strong" run_exports section.  use host, add
     #           in "strong" from build.
@@ -1205,15 +1207,15 @@ def test_run_exports(testing_metadata, testing_config, testing_workdir):
         "test_has_run_exports_implicit_weak"
     ]
     api.output_yaml(testing_metadata, "host_present_strong/meta.yaml")
-    m = api.render(
+    metadata = api.render(
         os.path.join(testing_workdir, "host_present_strong"), config=testing_config
     )[0][0]
-    assert "strong_pinned_package 1.0 0" in m.meta["requirements"]["host"]
-    assert "strong_pinned_package 1.0.*" in m.meta["requirements"]["run"]
+    assert "strong_pinned_package 1.0 0" in metadata.meta["requirements"]["host"]
+    assert "strong_pinned_package 1.0.*" in metadata.meta["requirements"]["run"]
     # weak one from test_has_run_exports should be excluded, since it is a build dep
-    assert "weak_pinned_package 1.0.*" not in m.meta["requirements"]["run"]
+    assert "weak_pinned_package 1.0.*" not in metadata.meta["requirements"]["run"]
     # weak one from test_has_run_exports_implicit_weak should be present, since it is a host dep
-    assert "weak_pinned_package 2.0.*" in m.meta["requirements"]["run"]
+    assert "weak_pinned_package 2.0.*" in metadata.meta["requirements"]["run"]
 
 
 @pytest.mark.sanity
@@ -1279,20 +1281,20 @@ def test_run_exports_constrains(testing_metadata, testing_config, testing_workdi
     testing_metadata.meta["requirements"]["build"] = ["run_exports_constrains"]
     testing_metadata.meta["requirements"]["host"] = []
     api.output_yaml(testing_metadata, "in_build/meta.yaml")
-    m = api.render(os.path.join(testing_workdir, "in_build"), config=testing_config)[0][
-        0
-    ]
-    reqs_set = lambda section: set(m.meta["requirements"].get(section, []))
+    metadata = api.render(
+        os.path.join(testing_workdir, "in_build"), config=testing_config
+    )[0][0]
+    reqs_set = lambda section: set(metadata.meta["requirements"].get(section, []))
     assert {"strong_run_export"} == reqs_set("run")
     assert {"strong_constrains_export"} == reqs_set("run_constrained")
 
     testing_metadata.meta["requirements"]["build"] = []
     testing_metadata.meta["requirements"]["host"] = ["run_exports_constrains"]
     api.output_yaml(testing_metadata, "in_host/meta.yaml")
-    m = api.render(os.path.join(testing_workdir, "in_host"), config=testing_config)[0][
-        0
-    ]
-    reqs_set = lambda section: set(m.meta["requirements"].get(section, []))
+    metadata = api.render(
+        os.path.join(testing_workdir, "in_host"), config=testing_config
+    )[0][0]
+    reqs_set = lambda section: set(metadata.meta["requirements"].get(section, []))
     assert {"strong_run_export", "weak_run_export"} == reqs_set("run")
     assert {"strong_constrains_export", "weak_constrains_export"} == reqs_set(
         "run_constrained"
@@ -1303,32 +1305,32 @@ def test_run_exports_constrains(testing_metadata, testing_config, testing_workdi
     ]
     testing_metadata.meta["requirements"]["host"] = []
     api.output_yaml(testing_metadata, "only_weak_in_build/meta.yaml")
-    m = api.render(
+    metadata = api.render(
         os.path.join(testing_workdir, "only_weak_in_build"), config=testing_config
     )[0][0]
-    reqs_set = lambda section: set(m.meta["requirements"].get(section, []))
+    reqs_set = lambda section: set(metadata.meta["requirements"].get(section, []))
     assert set() == reqs_set("run")
     assert set() == reqs_set("run_constrained")
 
     testing_metadata.meta["requirements"]["build"] = []
     testing_metadata.meta["requirements"]["host"] = ["run_exports_constrains_only_weak"]
     api.output_yaml(testing_metadata, "only_weak_in_host/meta.yaml")
-    m = api.render(
+    metadata = api.render(
         os.path.join(testing_workdir, "only_weak_in_host"), config=testing_config
     )[0][0]
-    reqs_set = lambda section: set(m.meta["requirements"].get(section, []))
+    reqs_set = lambda section: set(metadata.meta["requirements"].get(section, []))
     assert {"weak_run_export"} == reqs_set("run")
     assert {"weak_constrains_export"} == reqs_set("run_constrained")
 
 
 def test_pin_subpackage_exact(testing_config):
     recipe = os.path.join(metadata_dir, "_pin_subpackage_exact")
-    ms = api.render(recipe, config=testing_config)
-    assert len(ms) == 2
+    metadata_tuples = api.render(recipe, config=testing_config)
+    assert len(metadata_tuples) == 2
     assert any(
         re.match(r"run_exports_subpkg\ 1\.0\ 0", req)
-        for (m, _, _) in ms
-        for req in m.meta.get("requirements", {}).get("run", [])
+        for metadata, _, _ in metadata_tuples
+        for req in metadata.meta.get("requirements", {}).get("run", [])
     )
 
 
@@ -1420,12 +1422,12 @@ def test_unknown_selectors(testing_config):
 @pytest.mark.flaky(reruns=5, reruns_delay=2)
 def test_failed_recipe_leaves_folders(testing_config):
     recipe = os.path.join(fail_dir, "recursive-build")
-    m = api.render(recipe, config=testing_config)[0][0]
-    locks = get_conda_operation_locks(m.config)
+    metadata = api.render(recipe, config=testing_config)[0][0]
+    locks = get_conda_operation_locks(metadata.config)
     with pytest.raises((RuntimeError, exceptions.DependencyNeedsBuildingError)):
-        api.build(m)
-    assert os.path.isdir(m.config.build_folder), "build folder was removed"
-    assert os.listdir(m.config.build_folder), "build folder has no files"
+        api.build(metadata)
+    assert os.path.isdir(metadata.config.build_folder), "build folder was removed"
+    assert os.listdir(metadata.config.build_folder), "build folder has no files"
 
     # make sure that it does not leave lock files, though, as these cause permission errors on
     #    centralized installations
@@ -1646,13 +1648,14 @@ def test_pin_depends(testing_config):
     dependencies
     """
     recipe = os.path.join(metadata_dir, "_pin_depends_record")
-    m = api.render(recipe, config=testing_config)[0][0]
+    metadata = api.render(recipe, config=testing_config)[0][0]
     # the recipe python is not pinned, and having pin_depends set to record
     # will not show it in record
     assert not any(
-        re.search(r"python\s+[23]\.", dep) for dep in m.meta["requirements"]["run"]
+        re.search(r"python\s+[23]\.", dep)
+        for dep in metadata.meta["requirements"]["run"]
     )
-    output = api.build(m, config=testing_config)[0]
+    output = api.build(metadata, config=testing_config)[0]
     requires = package_has_file(output, "info/requires")
     assert requires
     if hasattr(requires, "decode"):
