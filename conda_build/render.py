@@ -32,6 +32,7 @@ from conda.exceptions import UnsatisfiableError
 
 from . import environ, exceptions, source, utils
 from .conda_interface import PackageRecord, TemporaryDirectory, specs_from_url
+from .deprecations import deprecated
 from .exceptions import DependencyNeedsBuildingError
 from .index import get_build_index
 from .metadata import MetaData, combine_top_level_metadata_with_output
@@ -1026,6 +1027,7 @@ FIELDS = [
 
 # Next bit of stuff is to support YAML output in the order we expect.
 # http://stackoverflow.com/a/17310199/1170370
+@deprecated("24.5", "24.7")
 class _MetaYaml(dict):
     fields = FIELDS
 
@@ -1033,15 +1035,18 @@ class _MetaYaml(dict):
         return [(field, self[field]) for field in _MetaYaml.fields if field in self]
 
 
+@deprecated("24.5", "24.7")
 def _represent_omap(dumper, data):
     return dumper.represent_mapping("tag:yaml.org,2002:map", data.to_omap())
 
 
+@deprecated("24.5", "24.7")
 def _unicode_representer(dumper, uni):
     node = yaml.ScalarNode(tag="tag:yaml.org,2002:str", value=uni)
     return node
 
 
+@deprecated("24.5", "24.7")
 class _IndentDumper(yaml.Dumper):
     def increase_indent(self, flow=False, indentless=False):
         return super().increase_indent(flow, False)
@@ -1050,24 +1055,17 @@ class _IndentDumper(yaml.Dumper):
         return True
 
 
-yaml.add_representer(_MetaYaml, _represent_omap)
-yaml.add_representer(str, _unicode_representer)
-unicode = None  # silence pyflakes about unicode not existing in py3
-
-
 def output_yaml(metadata, filename=None, suppress_outputs=False):
-    local_metadata = metadata.copy()
-    if (
-        suppress_outputs
-        and local_metadata.is_output
-        and "outputs" in local_metadata.meta
-    ):
-        del local_metadata.meta["outputs"]
+    meta = metadata.meta
+    # create a manually ordered copy of the meta dict
+    meta = {field: meta[field] for field in FIELDS if field in meta}
+    if suppress_outputs and metadata.is_output and "outputs" in meta:
+        del meta["outputs"]
     output = yaml.dump(
-        _MetaYaml(local_metadata.meta),
-        Dumper=_IndentDumper,
-        default_flow_style=False,
+        meta,
+        default_flow_style=False,  # always serialize in the block style
         indent=2,
+        sort_keys=False,  # preserve manual order
     )
     if filename:
         if any(sep in filename for sep in ("\\", "/")):
