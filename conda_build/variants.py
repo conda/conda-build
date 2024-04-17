@@ -3,6 +3,8 @@
 """This file handles the parsing of feature specifications from files,
 ending up with a configuration matrix"""
 
+from __future__ import annotations
+
 import os.path
 import re
 import sys
@@ -10,6 +12,7 @@ from collections import OrderedDict
 from copy import copy
 from functools import lru_cache
 from itertools import product
+from typing import TYPE_CHECKING
 
 import yaml
 from conda.base.context import context
@@ -17,6 +20,9 @@ from conda.base.context import context
 from .conda_interface import cc_conda_build
 from .utils import ensure_list, get_logger, islist, on_win, trim_empty_keys
 from .version import _parse as parse_version
+
+if TYPE_CHECKING:
+    from typing import Any, Iterable
 
 DEFAULT_VARIANTS = {
     "python": f"{sys.version_info.major}.{sys.version_info.minor}",
@@ -694,7 +700,7 @@ def get_package_variants(recipedir_or_metadata, config=None, variants=None):
     return filter_combined_spec_to_used_keys(combined_spec, specs=specs)
 
 
-def get_vars(variants, loop_only=False):
+def get_vars(variants: Iterable[dict[str, Any]], loop_only: bool = False) -> set[str]:
     """For purposes of naming/identifying, provide a way of identifying which variables contribute
     to the matrix dimensionality"""
     first_variant, *other_variants = variants
@@ -704,12 +710,16 @@ def get_vars(variants, loop_only=False):
         "ignore_version",
         *ensure_list(first_variant.get("extend_keys")),
     }
-    loop_vars = [
-        k
-        for k, v in first_variant.items()
-        if k not in special_keys
-        and (not loop_only or any(variant[k] != v for variant in other_variants))
-    ]
+    loop_vars = set(first_variant) - special_keys
+    if loop_only:
+        loop_vars = {
+            var
+            for var in loop_vars
+            if any(
+                first_variant[var] != other_variant[var]
+                for other_variant in other_variants
+            )
+        }
     return loop_vars
 
 
