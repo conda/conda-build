@@ -2,8 +2,8 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from __future__ import annotations
 
+import logging
 import sys
-from logging import getLogger
 from os.path import expanduser
 from pprint import pprint
 from typing import TYPE_CHECKING
@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from argparse import ArgumentParser, Namespace
     from typing import Sequence
 
-log = getLogger(__name__)
+log = logging.getLogger(__name__)
 
 
 def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:

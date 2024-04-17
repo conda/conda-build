@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+import logging
 import multiprocessing
 import os
 import platform
@@ -13,7 +14,6 @@ import warnings
 from collections import defaultdict
 from functools import lru_cache
 from glob import glob
-from logging import DEBUG, WARNING, getLogger
 from os.path import join, normpath
 from typing import TYPE_CHECKING
 
@@ -68,7 +68,7 @@ if TYPE_CHECKING:
         LINK: list[PackageRecord]
 
 
-log = getLogger(__name__)
+log = logging.getLogger(__name__)
 
 # these are things that we provide env vars for more explicitly.  This list disables the
 #    pass-through of variant values to env vars for these keys.
@@ -838,14 +838,14 @@ def get_install_actions(
     global cached_precs
     global last_index_ts
 
-    conda_log_level = WARNING
+    conda_log_level = logging.WARNING
     specs = list(specs)
     if specs:
         specs.extend(context.create_default_packages)
     if verbose or debug:
         capture = contextlib.nullcontext
         if debug:
-            conda_log_level = DEBUG
+            conda_log_level = logging.DEBUG
     else:
         capture = utils.capture
     for feature, value in feature_list:
@@ -988,7 +988,7 @@ def create_env(
         for entry in glob(os.path.join(prefix, "*")):
             utils.rm_rf(entry)
 
-    with utils.LoggingContext(DEBUG if config.debug else WARNING):
+    with utils.LoggingContext(logging.DEBUG if config.debug else logging.WARNING):
         # if os.path.isdir(prefix):
         #     utils.rm_rf(prefix)
 
@@ -1184,7 +1184,7 @@ def get_pkg_dirs_locks(dirs, config):
 
 
 def clean_pkg_cache(dist: str, config: Config) -> None:
-    with utils.LoggingContext(DEBUG if config.debug else WARNING):
+    with utils.LoggingContext(logging.DEBUG if config.debug else logging.WARNING):
         locks = get_pkg_dirs_locks((config.bldpkgs_dir, *context.pkgs_dirs), config)
         with utils.try_acquire_locks(locks, timeout=config.timeout):
             for pkgs_dir in context.pkgs_dirs:

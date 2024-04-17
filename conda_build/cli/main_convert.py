@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from __future__ import annotations
 
-from logging import getLogger
+import logging
 from os.path import abspath, expanduser
 from typing import TYPE_CHECKING
 
@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from argparse import ArgumentParser, Namespace
     from typing import Sequence
 
-log = getLogger(__name__)
+log = logging.getLogger(__name__)
 
 epilog = """
 

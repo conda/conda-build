@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import locale
+import logging
 import os
 import re
 import shutil
 import sys
 import tempfile
 import time
-from logging import getLogger
 from os.path import abspath, basename, exists, expanduser, isdir, isfile, join, normpath
 from pathlib import Path
 from subprocess import CalledProcessError
@@ -42,7 +42,7 @@ from .utils import (
 if TYPE_CHECKING:
     from typing import Iterable
 
-log = getLogger(__name__)
+log = logging.getLogger(__name__)
 
 git_submod_re = re.compile(r"(?:.+)\.(.+)\.(?:.+)\s(.+)")
 ext_re = re.compile(r"(.*?)(\.(?:tar\.)?[^.]+)$")

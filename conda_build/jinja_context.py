@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import datetime
 import json
+import logging
 import os
 import pathlib
 import re
 import time
 from functools import partial
 from io import StringIO, TextIOBase
-from logging import getLogger
 from subprocess import CalledProcessError
 from typing import TYPE_CHECKING
 from warnings import warn
@@ -41,7 +41,7 @@ except:
 if TYPE_CHECKING:
     from typing import IO, Any
 
-log = getLogger(__name__)
+log = logging.getLogger(__name__)
 
 
 class UndefinedNeverFail(jinja2.Undefined):

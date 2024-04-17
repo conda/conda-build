@@ -5,6 +5,7 @@ ending up with a configuration matrix"""
 
 from __future__ import annotations
 
+import logging
 import os.path
 import re
 import sys
@@ -14,7 +15,6 @@ from functools import lru_cache
 from itertools import product
 from pathlib import Path
 from typing import TYPE_CHECKING
-from logging import getLogger
 
 import yaml
 from conda.base.context import context
@@ -25,7 +25,7 @@ from .version import _parse as parse_version
 if TYPE_CHECKING:
     from typing import Any, Iterable
 
-log = getLogger(__name__)
+log = logging.getLogger(__name__)
 
 DEFAULT_VARIANTS = {
     "python": f"{sys.version_info.major}.{sys.version_info.minor}",

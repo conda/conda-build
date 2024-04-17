@@ -1,9 +1,9 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+import logging
 import os
 import subprocess
 import sys
-from logging import DEBUG, StreamHandler, getLogger
 from pathlib import Path
 from typing import NamedTuple
 
@@ -160,9 +160,9 @@ def test_filter_files():
 
 @pytest.mark.serial
 def test_logger_filtering(caplog: LogCaptureFixture, capsys: CaptureFixture) -> None:
-    log = getLogger("conda_build.tests")
+    log = logging.getLogger("conda_build.tests")
     init_logging()
-    caplog.set_level(DEBUG)
+    caplog.set_level(logging.DEBUG)
 
     log.debug("test debug message")
     log.info("test info message")
@@ -187,8 +187,8 @@ def test_logger_filtering(caplog: LogCaptureFixture, capsys: CaptureFixture) -> 
     assert out.count("test duplicate message") == 1
 
     # cleanup
-    log.removeHandler(StreamHandler(sys.stdout))
-    log.removeHandler(StreamHandler(sys.stderr))
+    log.removeHandler(logging.StreamHandler(sys.stdout))
+    log.removeHandler(logging.StreamHandler(sys.stderr))
 
 
 def test_logger_config_from_file(
@@ -233,7 +233,7 @@ def test_logger_config_from_file(
         return_value={"log_config_file": test_file},
     )
 
-    log = getLogger("conda_build.tests")
+    log = logging.getLogger("conda_build.tests")
     init_logging()
 
     # default log level is INFO, but our config file should set level to DEBUG

@@ -2,11 +2,11 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from __future__ import annotations
 
+import logging
+import logging.config
 import os
 import os.path
 import sys
-from logging import INFO, WARNING, Filter, Formatter, StreamHandler, getLogger
-from logging.config import dictConfig
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 
 # https://stackoverflow.com/a/31459386/1170370
-class LessThanFilter(Filter):
+class LessThanFilter(logging.Filter):
     def __init__(self, exclusive_maximum: int, name: str = "") -> None:
         super().__init__(name)
         self.max_level = exclusive_maximum
@@ -27,7 +27,7 @@ class LessThanFilter(Filter):
         return record.levelno < self.max_level
 
 
-class GreaterThanFilter(Filter):
+class GreaterThanFilter(logging.Filter):
     def __init__(self, exclusive_minimum: int, name: str = "") -> None:
         super().__init__(name)
         self.min_level = exclusive_minimum
@@ -36,7 +36,7 @@ class GreaterThanFilter(Filter):
         return record.levelno > self.min_level
 
 
-class DuplicateFilter(Filter):
+class DuplicateFilter(logging.Filter):
     msgs: set[str] = set()
 
     def filter(self, record: LogRecord) -> bool:
@@ -55,22 +55,22 @@ def init_logging() -> None:
     """
     config_file = context.conda_build.get("log_config_file")
     if config_file:
-        config_file = os.path.expandvars(config_file)
-        dictConfig(safe_load(Path(config_file).expanduser().resolve().read_text()))
+        config_file = Path(os.path.expandvars(config_file)).expanduser().resolve()
+        logging.config.dictConfig(safe_load(config_file.read_text()))
 
-    log = getLogger("conda_build")
+    log = logging.getLogger("conda_build")
 
     # we don't want propagation in CLI, but we do want it in tests
     # this is a pytest limitation: https://github.com/pytest-dev/pytest/issues/3697
     log.propagate = "PYTEST_CURRENT_TEST" in os.environ
 
     if not log.handlers:
-        log.addHandler(stdout := StreamHandler(sys.stdout))
-        stdout.addFilter(LessThanFilter(WARNING))
+        log.addHandler(stdout := logging.StreamHandler(sys.stdout))
+        stdout.addFilter(LessThanFilter(logging.WARNING))
         stdout.addFilter(DuplicateFilter())
-        stdout.setFormatter(Formatter("%(levelname)s: %(message)s"))
+        stdout.setFormatter(logging.Formatter("%(levelname)s: %(message)s"))
 
-        log.addHandler(stderr := StreamHandler(sys.stderr))
-        stderr.addFilter(GreaterThanFilter(INFO))
+        log.addHandler(stderr := logging.StreamHandler(sys.stderr))
+        stderr.addFilter(GreaterThanFilter(logging.INFO))
         stderr.addFilter(DuplicateFilter())
-        stderr.setFormatter(Formatter("%(levelname)s: %(message)s"))
+        stderr.setFormatter(logging.Formatter("%(levelname)s: %(message)s"))

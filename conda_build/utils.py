@@ -6,6 +6,8 @@ import contextlib
 import fnmatch
 import hashlib
 import json
+import logging
+import logging.config
 import mmap
 import os
 import re
@@ -25,8 +27,6 @@ from io import StringIO
 from itertools import filterfalse
 from json.decoder import JSONDecodeError
 from locale import getpreferredencoding
-from logging import INFO, WARNING, Formatter, StreamHandler, getLogger
-from logging.config import dictConfig
 from os import walk
 from os.path import (
     abspath,
@@ -92,7 +92,7 @@ if TYPE_CHECKING:
     K = TypeVar("K")
     V = TypeVar("V")
 
-log = getLogger(__name__)
+log = logging.getLogger(__name__)
 
 on_win = sys.platform == "win32"
 on_mac = sys.platform == "darwin"
@@ -1368,7 +1368,7 @@ class LoggingContext:
         "conda_index.index.convert_cache",
     ]
 
-    def __init__(self, level=WARNING, handler=None, close=True, loggers=None):
+    def __init__(self, level=logging.WARNING, handler=None, close=True, loggers=None):
         self.level = level
         self.old_levels = {}
         self.handler = handler
@@ -1382,11 +1382,11 @@ class LoggingContext:
     def __enter__(self):
         for logger in self.loggers:
             if isinstance(logger, str):
-                log = getLogger(logger)
+                log = logging.getLogger(logger)
             self.old_levels[logger] = log.level
             log.setLevel(
                 self.level
-                if ("install" not in logger or self.level < INFO)
+                if ("install" not in logger or self.level < logging.INFO)
                 else self.level + 10
             )
         if self.handler:
@@ -1396,7 +1396,7 @@ class LoggingContext:
 
     def __exit__(self, et, ev, tb):
         for logger, level in self.old_levels.items():
-            getLogger(logger).setLevel(level)
+            logging.getLogger(logger).setLevel(level)
         if self.handler:
             self.logger.removeHandler(self.handler)
         if self.handler and self.close:
@@ -1633,30 +1633,30 @@ deprecated.constant(
     "24.5",
     "24.7",
     "info_debug_stdout_filter",
-    _info_debug_stdout_filter := _LessThanFilter(WARNING),
+    _info_debug_stdout_filter := _LessThanFilter(logging.WARNING),
     addendum="Use `conda_build.cli.logging.LessThanFilter(logging.WARNING)` instead.",
 )
 deprecated.constant(
     "24.5",
     "24.7",
     "warning_error_stderr_filter",
-    _warning_error_stderr_filter := _GreaterThanFilter(INFO),
+    _warning_error_stderr_filter := _GreaterThanFilter(logging.INFO),
     addendum="Use `conda_build.cli.logging.GreaterThanFilter(logging.INFO)` instead.",
 )
 deprecated.constant(
     "24.5",
     "24.7",
     "level_formatter",
-    _level_formatter := Formatter("%(levelname)s: %(message)s"),
+    _level_formatter := logging.Formatter("%(levelname)s: %(message)s"),
 )
 
 # set filelock's logger to only show warnings by default
-getLogger("filelock").setLevel(WARNING)
+logging.getLogger("filelock").setLevel(logging.WARNING)
 
 # quiet some of conda's less useful output
-getLogger("conda.core.linked_data").setLevel(WARNING)
-getLogger("conda.gateways.disk.delete").setLevel(WARNING)
-getLogger("conda.gateways.disk.test").setLevel(WARNING)
+logging.getLogger("conda.core.linked_data").setLevel(logging.WARNING)
+logging.getLogger("conda.gateways.disk.delete").setLevel(logging.WARNING)
+logging.getLogger("conda.gateways.disk.test").setLevel(logging.WARNING)
 
 
 @deprecated(
@@ -1671,7 +1671,7 @@ def reset_deduplicator():
 
 
 @deprecated("24.5", "24.7", addendum="Use `conda.cli.logging.init_logging` instead.")
-def get_logger(name, level=INFO, dedupe=True, add_stdout_stderr_handlers=True):
+def get_logger(name, level=logging.INFO, dedupe=True, add_stdout_stderr_handlers=True):
     config_file = None
     if log_config_file := context.conda_build.get("log_config_file"):
         config_file = abspath(expanduser(expandvars(log_config_file)))
@@ -1680,9 +1680,9 @@ def get_logger(name, level=INFO, dedupe=True, add_stdout_stderr_handlers=True):
     if config_file:
         with open(config_file) as f:
             config_dict = yaml.safe_load(f)
-        dictConfig(config_dict)
+        logging.config.dictConfig(config_dict)
         level = config_dict.get("loggers", {}).get(name, {}).get("level", level)
-    log = getLogger(name)
+    log = logging.getLogger(name)
     log.setLevel(level)
     if dedupe:
         log.addFilter(_dedupe_filter)
@@ -1692,10 +1692,10 @@ def get_logger(name, level=INFO, dedupe=True, add_stdout_stderr_handlers=True):
     if top_pkg == "conda_build":
         # we don't want propagation in CLI, but we do want it in tests
         # this is a pytest limitation: https://github.com/pytest-dev/pytest/issues/3697
-        getLogger(top_pkg).propagate = "PYTEST_CURRENT_TEST" in os.environ
+        logging.getLogger(top_pkg).propagate = "PYTEST_CURRENT_TEST" in os.environ
     if add_stdout_stderr_handlers and not log.handlers:
-        stdout_handler = StreamHandler(sys.stdout)
-        stderr_handler = StreamHandler(sys.stderr)
+        stdout_handler = logging.StreamHandler(sys.stdout)
+        stderr_handler = logging.StreamHandler(sys.stderr)
         stdout_handler.addFilter(_info_debug_stdout_filter)
         stderr_handler.addFilter(_warning_error_stderr_filter)
         stderr_handler.setFormatter(_level_formatter)

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import argparse
-from logging import CRITICAL, INFO, basicConfig, getLogger
+import logging
 from pprint import pprint
 from typing import TYPE_CHECKING
 
@@ -26,7 +26,7 @@ if TYPE_CHECKING:
     from argparse import ArgumentParser, Namespace
     from typing import Sequence
 
-log = getLogger(__name__)
+log = logging.getLogger(__name__)
 
 
 # see: https://stackoverflow.com/questions/29986185/python-argparse-dict-arg
@@ -236,14 +236,14 @@ def execute(args: Sequence[str] | None = None) -> int:
         )
 
     if parsed.output:
-        with LoggingContext(CRITICAL + 1):
+        with LoggingContext(logging.CRITICAL + 1):
             paths = api.get_output_file_paths(metadata_tuples, config=config)
             print("\n".join(sorted(paths)))
         if parsed.file:
             m = metadata_tuples[-1][0]
             api.output_yaml(m, parsed.file, suppress_outputs=True)
     else:
-        basicConfig(level=INFO)
+        logging.basicConfig(level=logging.INFO)
         for m, _, _ in metadata_tuples:
             print("--------------")
             print("Hash contents:")

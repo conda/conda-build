@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import locale
+import logging
 import os
 import re
 import shutil
@@ -16,7 +17,6 @@ from fnmatch import filter as fnmatch_filter
 from fnmatch import fnmatch
 from fnmatch import translate as fnmatch_translate
 from functools import partial
-from logging import getLogger
 from os.path import (
     basename,
     dirname,
@@ -69,7 +69,7 @@ if TYPE_CHECKING:
 
     from .metadata import MetaData
 
-log = getLogger(__name__)
+log = logging.getLogger(__name__)
 
 filetypes_for_platform = {
     "win": (DLLfile, EXEfile),

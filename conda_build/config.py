@@ -7,6 +7,7 @@ Module to store conda build settings.
 from __future__ import annotations
 
 import copy
+import logging
 import math
 import os
 import pickle
@@ -14,7 +15,6 @@ import re
 import shutil
 import time
 from collections import namedtuple
-from logging import getLogger
 from os.path import abspath, expanduser, expandvars, join
 from typing import TYPE_CHECKING
 
@@ -33,7 +33,7 @@ if TYPE_CHECKING:
     from pathlib import Path
     from typing import Any
 
-log = getLogger(__name__)
+log = logging.getLogger(__name__)
 
 invocation_time = ""
 

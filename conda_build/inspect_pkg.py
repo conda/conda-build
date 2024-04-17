@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import sys
 from collections import defaultdict
 from itertools import groupby
-from logging import getLogger
 from operator import itemgetter
 from os.path import abspath, basename, dirname, exists, join, normcase
 from pathlib import Path
@@ -41,7 +41,7 @@ from .utils import (
 if TYPE_CHECKING:
     from typing import Iterable, Literal
 
-log = getLogger(__name__)
+log = logging.getLogger(__name__)
 
 
 def which_package(

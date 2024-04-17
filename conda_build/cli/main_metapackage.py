@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import argparse
-from logging import getLogger
+import logging
 from typing import TYPE_CHECKING
 
 from conda.base.context import context
@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from argparse import ArgumentParser, Namespace
     from typing import Sequence
 
-log = getLogger(__name__)
+log = logging.getLogger(__name__)
 
 
 def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:

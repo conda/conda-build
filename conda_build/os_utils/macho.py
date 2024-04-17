@@ -1,18 +1,18 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+import logging
 import os
 import re
 import stat
 import sys
 from itertools import islice
-from logging import getLogger
 from subprocess import PIPE, STDOUT, CalledProcessError, Popen, check_output
 
 from .. import utils
 from ..utils import on_mac
 from .external import find_preferably_prefixed_executable
 
-log = getLogger(__name__)
+log = logging.getLogger(__name__)
 
 NO_EXT = (
     ".py",
