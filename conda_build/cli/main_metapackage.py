@@ -10,6 +10,7 @@ from conda.base.context import context
 
 from .. import api
 from ..conda_interface import ArgumentParser, add_parser_channels
+from .logging import init_logging
 
 if TYPE_CHECKING:
     from argparse import Namespace
@@ -114,8 +115,6 @@ command line with the conda metapackage command.
 
 
 def execute(args: Sequence[str] | None = None) -> int:
-    from .logging import init_logging
-
     init_logging()
 
     _, args = parse_args(args)

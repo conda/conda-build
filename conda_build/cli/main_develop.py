@@ -9,6 +9,7 @@ from conda.base.context import context, determine_target_prefix
 
 from .. import api
 from ..conda_interface import ArgumentParser, add_parser_prefix
+from .logging import init_logging
 
 if TYPE_CHECKING:
     from argparse import Namespace
@@ -80,8 +81,6 @@ This works by creating a conda.pth file in site-packages.""",
 
 
 def execute(args: Sequence[str] | None = None) -> int:
-    from .logging import init_logging
-
     init_logging()
 
     _, parsed = parse_args(args)

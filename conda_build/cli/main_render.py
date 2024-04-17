@@ -15,6 +15,7 @@ from ..conda_interface import ArgumentParser, add_parser_channels, cc_conda_buil
 from ..config import get_channel_urls, get_or_merge_config
 from ..utils import LoggingContext
 from ..variants import get_package_variants, set_language_env_vars
+from .logging import init_logging
 
 if TYPE_CHECKING:
     from argparse import Namespace
@@ -193,8 +194,6 @@ def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
 
 
 def execute(args: Sequence[str] | None = None) -> int:
-    from .logging import init_logging
-
     init_logging()
 
     _, parsed = parse_args(args)

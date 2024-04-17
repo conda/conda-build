@@ -25,6 +25,7 @@ from ..config import (
 )
 from ..utils import LoggingContext
 from .actions import KeyValueAction
+from .logging import init_logging
 from .main_render import get_render_parser
 
 if TYPE_CHECKING:
@@ -526,8 +527,6 @@ def check_action(recipe, config):
 
 
 def execute(args: Sequence[str] | None = None) -> int:
-    from .logging import init_logging
-
     init_logging()
 
     _, parsed = parse_args(args)
