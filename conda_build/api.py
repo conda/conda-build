@@ -23,7 +23,7 @@ from typing import TYPE_CHECKING, Iterable
 from .config import DEFAULT_PREFIX_LENGTH as _prefix_length
 from .config import Config, get_channel_urls, get_or_merge_config
 from .deprecations import deprecated
-from .metadata import MetaData
+from .metadata import MetaData, MetaDataTuple
 from .utils import (
     CONDA_PACKAGE_EXTENSIONS,
     LoggingContext,
@@ -46,11 +46,11 @@ def render(
     finalize: bool = True,
     bypass_env_check: bool = False,
     **kwargs,
-) -> list[tuple[MetaData, bool, bool]]:
+) -> list[MetaDataTuple]:
     """Given path to a recipe, return the MetaData object(s) representing that recipe, with jinja2
        templates evaluated.
 
-    Returns a list of (metadata, needs_download, needs_reparse in env) tuples"""
+    Returns a list of (metadata, need_download, need_reparse in env) tuples"""
     from collections import OrderedDict
 
     from conda.exceptions import NoPackagesFoundError
@@ -130,7 +130,7 @@ def get_output_file_paths(
     | os.PathLike
     | Path
     | MetaData
-    | Iterable[tuple[MetaData, bool, bool]],
+    | Iterable[MetaDataTuple],
     no_download_source: bool = False,
     config: Config | None = None,
     variants: dict[str, Any] | None = None,
@@ -156,13 +156,14 @@ def get_output_file_paths(
             **kwargs,
         )
 
-    elif hasattr(recipe_path_or_metadata, "config"):
-        metadata = [(recipe_path_or_metadata, None, None)]
+    elif isinstance(recipe_path_or_metadata, MetaData):
+        metadata = [MetaDataTuple(recipe_path_or_metadata, None, None)]
 
     elif isinstance(recipe_path_or_metadata, Iterable) and all(
-        isinstance(recipe, tuple)
-        and len(recipe) == 3
-        and isinstance(recipe[0], MetaData)
+        isinstance(recipe, MetaDataTuple)
+        and isinstance(recipe.metadata, MetaData)
+        and isinstance(recipe.need_download, bool)
+        and isinstance(recipe.need_reparse, bool)
         for recipe in recipe_path_or_metadata
     ):
         metadata = recipe_path_or_metadata
@@ -190,7 +191,7 @@ def get_output_file_path(
     | os.PathLike
     | Path
     | MetaData
-    | Iterable[tuple[MetaData, bool, bool]],
+    | Iterable[MetaDataTuple],
     no_download_source: bool = False,
     config: Config | None = None,
     variants: dict[str, Any] | None = None,
@@ -602,7 +603,7 @@ def debug(
 
     config.channel_urls = get_channel_urls(kwargs)
 
-    metadata_tuples: list[tuple[MetaData, bool, bool]] = []
+    metadata_tuples: list[MetaDataTuple] = []
 
     best_link_source_method = "skip"
     if isinstance(recipe_or_package_path_or_metadata_tuples, str):
@@ -610,7 +611,7 @@ def debug(
             for metadata_conda_debug in metadatas_conda_debug:
                 best_link_source_method = "symlink"
                 metadata = MetaData(metadata_conda_debug, config, {})
-                metadata_tuples.append((metadata, False, True))
+                metadata_tuples.append(MetaDataTuple(metadata, False, True))
         else:
             ext = os.path.splitext(recipe_or_package_path_or_metadata_tuples)[1]
             if not ext or not any(ext in _ for _ in CONDA_PACKAGE_EXTENSIONS):

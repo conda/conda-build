@@ -33,7 +33,7 @@ from . import environ, exceptions, source, utils
 from .conda_interface import PackageRecord, TemporaryDirectory, specs_from_url
 from .exceptions import DependencyNeedsBuildingError
 from .index import get_build_index
-from .metadata import MetaData, combine_top_level_metadata_with_output
+from .metadata import MetaData, MetaDataTuple, combine_top_level_metadata_with_output
 from .utils import (
     CONDA_PACKAGE_EXTENSION_V1,
     CONDA_PACKAGE_EXTENSION_V2,
@@ -47,7 +47,7 @@ from .variants import (
 
 if TYPE_CHECKING:
     import os
-    from typing import Any, Iterator
+    from typing import Any, Iterable, Iterator
 
     from .config import Config
 
@@ -798,8 +798,8 @@ def distribute_variants(
     permit_unsatisfiable_variants=False,
     allow_no_other_outputs=False,
     bypass_env_check=False,
-):
-    rendered_metadata = {}
+) -> list[MetaDataTuple]:
+    rendered_metadata: dict[tuple[str, str, tuple[tuple[str, str]]], MetaDataTuple] = {}
     need_source_download = True
 
     # don't bother distributing python if it's a noarch package, and figure out
@@ -906,23 +906,25 @@ def distribute_variants(
                 mv.config.variant.get("target_platform", mv.config.subdir),
                 tuple((var, mv.config.variant.get(var)) for var in mv.get_used_vars()),
             )
-        ] = (mv, need_source_download, None)
+        ] = MetaDataTuple(mv, need_source_download, None)
     # list of tuples.
     # each tuple item is a tuple of 3 items:
-    #    metadata, need_download, need_reparse_in_env
+    #    metadata, need_download, need_reparse
     return list(rendered_metadata.values())
 
 
-def expand_outputs(metadata_tuples):
+def expand_outputs(
+    metadata_tuples: Iterable[MetaDataTuple],
+) -> list[tuple[dict, MetaData]]:
     """Obtain all metadata objects for all outputs from recipe.  Useful for outputting paths."""
-    expanded_outputs = OrderedDict()
+    from copy import deepcopy
+
+    from .build import get_all_replacements
+
+    expanded_outputs: dict[str, tuple[dict, MetaData]] = {}
 
     for _m, download, reparse in metadata_tuples:
-        from .build import get_all_replacements
-
         get_all_replacements(_m.config)
-        from copy import deepcopy
-
         for output_dict, m in deepcopy(_m).get_output_metadata_set(
             permit_unsatisfiable_variants=False
         ):
@@ -961,7 +963,7 @@ def render_recipe(
     permit_unsatisfiable_variants: bool = True,
     reset_build_id: bool = True,
     bypass_env_check: bool = False,
-) -> list[tuple[MetaData, bool, bool]]:
+) -> list[MetaDataTuple]:
     """Returns a list of tuples, each consisting of
 
     (metadata-object, needs_download, needs_render_in_env)
@@ -994,7 +996,7 @@ def render_recipe(
                     m.config.variant_config_files = [cbc_yaml]
                 m.config.variants = get_package_variants(m, variants=variants)
                 m.config.variant = m.config.variants[0]
-            return [(m, False, False)]
+            return [MetaDataTuple(m, False, False)]
         else:
             # merge any passed-in variants with any files found
             variants = get_package_variants(m, variants=variants)

@@ -13,7 +13,7 @@ import warnings
 from collections import OrderedDict
 from functools import lru_cache
 from os.path import isfile, join
-from typing import TYPE_CHECKING, overload
+from typing import TYPE_CHECKING, NamedTuple, overload
 
 from bs4 import UnicodeDammit
 from conda.base.context import context
@@ -2951,3 +2951,9 @@ class MetaData:
 
         specs.extend(utils.ensure_list(self.config.extra_deps))
         return specs
+
+
+class MetaDataTuple(NamedTuple):
+    metadata: MetaData
+    need_download: bool | None
+    need_reparse: bool | None
