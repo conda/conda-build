@@ -7,7 +7,6 @@ This module tests the build API.  These are high-level integration tests.
 from __future__ import annotations
 
 import json
-import logging
 import os
 import re
 import subprocess
@@ -17,6 +16,7 @@ import uuid
 from collections import OrderedDict
 from contextlib import nullcontext
 from glob import glob
+from logging import INFO
 from pathlib import Path
 from shutil import which
 from typing import TYPE_CHECKING
@@ -91,9 +91,7 @@ yaml.add_representer(OrderedDict, represent_ordereddict)
 
 
 class AnacondaClientArgs:
-    def __init__(
-        self, specs, token=None, site=None, log_level=logging.INFO, force=False
-    ):
+    def __init__(self, specs, token=None, site=None, log_level=INFO, force=False):
         from binstar_client.utils import parse_specs
 
         self.specs = [parse_specs(specs)]
@@ -1880,6 +1878,7 @@ def test_extra_meta(testing_config, caplog):
     recipe_dir = os.path.join(metadata_dir, "_extra_meta")
     extra_meta_data = {"foo": "bar"}
     testing_config.extra_meta = extra_meta_data
+    caplog.set_level(INFO)
     outputs = api.build(recipe_dir, config=testing_config)
     about = json.loads(package_has_file(outputs[0], "info/about.json"))
     assert "foo" in about["extra"] and about["extra"]["foo"] == "bar"
