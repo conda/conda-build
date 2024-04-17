@@ -11,6 +11,7 @@ from conda.base.context import context
 from .. import api
 from ..utils import on_win
 from . import validators as valid
+from .logging import init_logging
 from .main_render import get_render_parser
 
 if TYPE_CHECKING:
@@ -94,8 +95,6 @@ Set up environments and activation scripts to debug your build or test phase.
 
 
 def execute(args: Sequence[str] | None = None) -> int:
-    from .logging import init_logging
-
     init_logging()
 
     parser = get_parser()

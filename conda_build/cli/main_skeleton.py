@@ -13,6 +13,7 @@ from conda.base.context import context
 
 from .. import api
 from ..config import Config
+from .logging import init_logging
 
 if TYPE_CHECKING:
     from argparse import ArgumentParser, Namespace
@@ -53,8 +54,6 @@ options available.
 
 
 def execute(args: Sequence[str] | None = None) -> int:
-    from .logging import init_logging
-
     init_logging()
 
     parser, parsed = parse_args(args)

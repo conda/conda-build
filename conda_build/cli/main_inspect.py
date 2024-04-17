@@ -11,6 +11,8 @@ from typing import TYPE_CHECKING
 from conda.base.context import context
 
 from .. import api
+from ..conda_interface import ArgumentParser
+from .logging import init_logging
 
 try:
     from conda.cli.helpers import add_parser_prefix
@@ -195,8 +197,6 @@ Tools for investigating conda channels.
 
 
 def execute(args: Sequence[str] | None = None) -> int:
-    from .logging import init_logging
-
     init_logging()
 
     parser, parsed = parse_args(args)

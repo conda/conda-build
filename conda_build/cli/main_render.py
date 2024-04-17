@@ -15,6 +15,7 @@ from .. import __version__, api
 from ..config import get_channel_urls, get_or_merge_config
 from ..utils import LoggingContext
 from ..variants import get_package_variants, set_language_env_vars
+from .logging import init_logging
 
 try:
     from conda.cli.helpers import add_parser_channels
@@ -201,8 +202,6 @@ def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
 
 
 def execute(args: Sequence[str] | None = None) -> int:
-    from .logging import init_logging
-
     init_logging()
 
     _, parsed = parse_args(args)
