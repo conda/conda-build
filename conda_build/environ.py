@@ -42,7 +42,6 @@ from conda.models.match_spec import MatchSpec
 
 from . import utils
 from .conda_interface import Channel, PackageRecord, TemporaryDirectory
-from .deprecations import deprecated
 from .exceptions import BuildLockError, DependencyNeedsBuildingError
 from .features import feature_list
 from .index import get_build_index
@@ -817,7 +816,6 @@ def os_vars(m, prefix):
 cached_precs: dict[
     tuple[tuple[str | MatchSpec, ...], Any, Any, Any, bool], list[PackageRecord]
 ] = {}
-deprecated.constant("24.3", "24.5", "cached_actions", cached_precs)
 last_index_ts = 0
 
 
@@ -1312,7 +1310,6 @@ _install_actions = install_actions
 del install_actions
 
 
-@deprecated.argument("24.3", "24.5", "actions", rename="precs")
 def _execute_actions(prefix, precs):
     # This is copied over from https://github.com/conda/conda/blob/23.11.0/conda/plan.py#L575
     # but reduced to only the functionality actually used within conda-build.
@@ -1337,7 +1334,6 @@ def _execute_actions(prefix, precs):
     unlink_link_transaction.execute()
 
 
-@deprecated.argument("24.3", "24.5", "actions", rename="precs")
 def _display_actions(prefix, precs):
     # This is copied over from https://github.com/conda/conda/blob/23.11.0/conda/plan.py#L58
     # but reduced to only the functionality actually used within conda-build.
