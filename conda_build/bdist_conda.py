@@ -4,14 +4,15 @@ import configparser
 import sys
 import time
 from collections import defaultdict
+from io import StringIO
 
+from conda.cli.common import spec_from_line
 from setuptools.command.install import install
 from setuptools.dist import Distribution
 from setuptools.errors import BaseError, OptionError
 
 from . import api
 from .build import handle_anaconda_upload
-from .conda_interface import StringIO, spec_from_line
 from .config import Config
 from .deprecations import deprecated
 from .metadata import MetaData

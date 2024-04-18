@@ -17,8 +17,8 @@ from os.path import abspath, expanduser, expandvars, join
 from typing import TYPE_CHECKING
 
 from conda.base.context import context
+from conda.utils import url_path
 
-from .conda_interface import cc_conda_build, url_path
 from .deprecations import deprecated
 from .utils import (
     get_build_folders,
@@ -110,14 +110,16 @@ def _get_default_settings():
         Setting("test_run_post", False),
         Setting(
             "filename_hashing",
-            cc_conda_build.get("filename_hashing", filename_hashing_default).lower()
+            context.conda_build.get(
+                "filename_hashing", filename_hashing_default
+            ).lower()
             == "true",
         ),
         Setting("keep_old_work", False),
         Setting(
             "_src_cache_root",
-            abspath(expanduser(expandvars(cc_conda_build.get("cache_dir"))))
-            if cc_conda_build.get("cache_dir")
+            abspath(expanduser(expandvars(cache_dir)))
+            if (cache_dir := context.conda_build.get("cache_dir"))
             else _src_cache_root_default,
         ),
         Setting("copy_test_source_files", True),
@@ -142,30 +144,32 @@ def _get_default_settings():
         #    cli/main_build.py that this default will switch in conda-build 4.0.
         Setting(
             "error_overlinking",
-            cc_conda_build.get("error_overlinking", error_overlinking_default).lower()
+            context.conda_build.get(
+                "error_overlinking", error_overlinking_default
+            ).lower()
             == "true",
         ),
         Setting(
             "error_overdepending",
-            cc_conda_build.get(
+            context.conda_build.get(
                 "error_overdepending", error_overdepending_default
             ).lower()
             == "true",
         ),
         Setting(
             "noarch_python_build_age",
-            cc_conda_build.get(
+            context.conda_build.get(
                 "noarch_python_build_age", noarch_python_build_age_default
             ),
         ),
         Setting(
             "enable_static",
-            cc_conda_build.get("enable_static", enable_static_default).lower()
+            context.conda_build.get("enable_static", enable_static_default).lower()
             == "true",
         ),
         Setting(
             "no_rewrite_stdout_env",
-            cc_conda_build.get(
+            context.conda_build.get(
                 "no_rewrite_stdout_env", no_rewrite_stdout_env_default
             ).lower()
             == "true",
@@ -204,11 +208,13 @@ def _get_default_settings():
         Setting("verify", True),
         Setting(
             "ignore_verify_codes",
-            cc_conda_build.get("ignore_verify_codes", ignore_verify_codes_default),
+            context.conda_build.get("ignore_verify_codes", ignore_verify_codes_default),
         ),
         Setting(
             "exit_on_verify_error",
-            cc_conda_build.get("exit_on_verify_error", exit_on_verify_error_default),
+            context.conda_build.get(
+                "exit_on_verify_error", exit_on_verify_error_default
+            ),
         ),
         # Recipes that have no host section, only build, should bypass the build/host line.
         # This is to make older recipes still work with cross-compiling.  True cross-compiling
@@ -226,17 +232,17 @@ def _get_default_settings():
         Setting("_pip_cache_dir", None),
         Setting(
             "zstd_compression_level",
-            cc_conda_build.get(
+            context.conda_build.get(
                 "zstd_compression_level", zstd_compression_level_default
             ),
         ),
         # this can be set to different values (currently only 2 means anything) to use package formats
         Setting(
             "conda_pkg_format",
-            cc_conda_build.get("pkg_format", conda_pkg_format_default),
+            context.conda_build.get("pkg_format", conda_pkg_format_default),
         ),
         Setting("suppress_variables", False),
-        Setting("build_id_pat", cc_conda_build.get("build_id_pat", "{n}_{t}")),
+        Setting("build_id_pat", context.conda_build.get("build_id_pat", "{n}_{t}")),
     ]
 
 
@@ -453,7 +459,7 @@ class Config:
         """This is where source caches and work folders live"""
         if not self._croot:
             _bld_root_env = os.getenv("CONDA_BLD_PATH")
-            _bld_root_rc = cc_conda_build.get("root-dir")
+            _bld_root_rc = context.conda_build.get("root-dir")
             if _bld_root_env:
                 self._croot = abspath(expanduser(_bld_root_env))
             elif _bld_root_rc:

@@ -1,6 +1,5 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
-
 from __future__ import annotations
 
 import os
@@ -13,7 +12,6 @@ from conda.exceptions import PackagesNotFoundError
 
 from conda_build import api
 from conda_build.cli import main_render
-from conda_build.conda_interface import TemporaryDirectory
 
 from ..utils import metadata_dir
 
@@ -21,35 +19,34 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-def test_render_add_channel():
+def test_render_add_channel(tmp_path: Path) -> None:
     """This recipe requires the conda_build_test_requirement package, which is
     only on the conda_build_test channel. This verifies that the -c argument
     works for rendering."""
-    with TemporaryDirectory() as tmpdir:
-        rendered_filename = os.path.join(tmpdir, "out.yaml")
-        args = [
-            "-c",
-            "conda_build_test",
-            os.path.join(metadata_dir, "_recipe_requiring_external_channel"),
-            "--file",
-            rendered_filename,
-        ]
-        main_render.execute(args)
-        with open(rendered_filename) as rendered_file:
-            rendered_meta = yaml.safe_load(rendered_file)
-        required_package_string = [
-            pkg
-            for pkg in rendered_meta["requirements"]["build"]
-            if "conda_build_test_requirement" in pkg
-        ][0]
-        required_package_details = required_package_string.split(" ")
-        assert len(required_package_details) > 1, (
-            "Expected version number on successful "
-            f"rendering, but got only {required_package_details}"
-        )
-        assert (
-            required_package_details[1] == "1.0"
-        ), f"Expected version number 1.0 on successful rendering, but got {required_package_details[1]}"
+    rendered_filename = os.path.join(tmp_path, "out.yaml")
+    args = [
+        "-c",
+        "conda_build_test",
+        os.path.join(metadata_dir, "_recipe_requiring_external_channel"),
+        "--file",
+        rendered_filename,
+    ]
+    main_render.execute(args)
+    with open(rendered_filename) as rendered_file:
+        rendered_meta = yaml.safe_load(rendered_file)
+    required_package_string = [
+        pkg
+        for pkg in rendered_meta["requirements"]["build"]
+        if "conda_build_test_requirement" in pkg
+    ][0]
+    required_package_details = required_package_string.split(" ")
+    assert len(required_package_details) > 1, (
+        "Expected version number on successful "
+        f"rendering, but got only {required_package_details}"
+    )
+    assert (
+        required_package_details[1] == "1.0"
+    ), f"Expected version number 1.0 on successful rendering, but got {required_package_details[1]}"
 
 
 def test_render_with_empty_channel_fails(tmp_path: Path, empty_channel: Path) -> None:

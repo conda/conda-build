@@ -12,11 +12,10 @@ from typing import TYPE_CHECKING
 from conda.base.context import context
 
 from .. import api
-from ..conda_interface import ArgumentParser
 from ..config import Config
 
 if TYPE_CHECKING:
-    from argparse import Namespace
+    from argparse import ArgumentParser, Namespace
     from typing import Sequence
 
 thisdir = os.path.dirname(os.path.abspath(__file__))
@@ -24,6 +23,8 @@ logging.basicConfig(level=logging.INFO)
 
 
 def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
+    from conda.cli.conda_argparse import ArgumentParser
+
     parser = ArgumentParser(
         prog="conda skeleton",
         description="""

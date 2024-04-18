@@ -12,6 +12,7 @@ import re
 import subprocess
 import sys
 from collections import OrderedDict, defaultdict
+from io import StringIO
 from os import chdir, getcwd, listdir, makedirs
 from os.path import abspath, exists, isdir, isfile, join
 from shutil import copy2
@@ -22,17 +23,13 @@ import pkginfo
 import requests
 import yaml
 from conda.base.context import context
+from conda.cli.common import spec_from_line
+from conda.gateways.connection.download import download
 from conda.gateways.disk.read import compute_sum
+from conda.models.version import normalized_version
+from conda.utils import human_bytes
 from requests.packages.urllib3.util.url import parse_url
 
-from ..conda_interface import (
-    StringIO,
-    download,
-    human_bytes,
-    input,
-    normalized_version,
-    spec_from_line,
-)
 from ..config import Config
 from ..environ import create_env
 from ..license_family import allowed_license_families, guess_license_family

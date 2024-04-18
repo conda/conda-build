@@ -15,13 +15,11 @@ from typing import TYPE_CHECKING
 
 from conda.api import Solver
 from conda.base.context import context
+from conda.cli.common import specs_from_args
 from conda.core.index import get_index
 from conda.core.prefix_data import PrefixData
 from conda.models.records import PrefixRecord
 
-from .conda_interface import (
-    specs_from_args,
-)
 from .os_utils.ldd import (
     get_linkages,
     get_package_obj_files,
