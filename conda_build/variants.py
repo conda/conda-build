@@ -12,6 +12,7 @@ from collections import OrderedDict
 from copy import copy
 from functools import lru_cache
 from itertools import product
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import yaml
@@ -765,23 +766,39 @@ def find_used_variables_in_text(variant, recipe_text, selectors_only=False):
     return used_variables
 
 
-def find_used_variables_in_shell_script(variant, file_path):
-    with open(file_path) as f:
-        text = f.read()
-    used_variables = set()
-    for v in variant:
-        variant_regex = rf"(^[^$]*?\$\{{?\s*{re.escape(v)}\s*[\s|\}}])"
-        if re.search(variant_regex, text, flags=re.MULTILINE | re.DOTALL):
-            used_variables.add(v)
-    return used_variables
+def find_used_variables_in_shell_script(
+    variants: Iterable[str],
+    file_path: str | os.PathLike | Path,
+) -> set[str]:
+    text = Path(file_path).read_text()
+    return {
+        variant
+        for variant in variants
+        if (
+            variant in text  # str in str is faster than re.search
+            and re.search(
+                rf"(^[^$]*?\$\{{?\s*{re.escape(variant)}\s*[\s|\}}])",
+                text,
+                flags=re.MULTILINE | re.DOTALL,
+            )
+        )
+    }
 
 
-def find_used_variables_in_batch_script(variant, file_path):
-    with open(file_path) as f:
-        text = f.read()
-    used_variables = set()
-    for v in variant:
-        variant_regex = rf"\%{re.escape(v)}\%"
-        if re.search(variant_regex, text, flags=re.MULTILINE | re.DOTALL):
-            used_variables.add(v)
-    return used_variables
+def find_used_variables_in_batch_script(
+    variants: Iterable[str],
+    file_path: str | os.PathLike | Path,
+) -> set[str]:
+    text = Path(file_path).read_text()
+    return {
+        variant
+        for variant in variants
+        if (
+            variant in text  # str in str is faster than re.search
+            and re.search(
+                rf"\%{re.escape(variant)}\%",
+                text,
+                flags=re.MULTILINE | re.DOTALL,
+            )
+        )
+    }
