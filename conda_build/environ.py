@@ -37,11 +37,12 @@ from conda.exceptions import (
     PaddingError,
     UnsatisfiableError,
 )
-from conda.models.channel import prioritize_channels
+from conda.gateways.disk.create import TemporaryDirectory
+from conda.models.channel import Channel, prioritize_channels
 from conda.models.match_spec import MatchSpec
+from conda.models.records import PackageRecord
 
 from . import utils
-from .conda_interface import Channel, PackageRecord, TemporaryDirectory
 from .exceptions import BuildLockError, DependencyNeedsBuildingError
 from .features import feature_list
 from .index import get_build_index

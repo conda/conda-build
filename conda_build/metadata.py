@@ -18,10 +18,10 @@ from typing import TYPE_CHECKING, overload
 from bs4 import UnicodeDammit
 from conda.base.context import context
 from conda.gateways.disk.read import compute_sum
+from conda.models.match_spec import MatchSpec
 from frozendict import deepfreeze
 
 from . import exceptions, utils
-from .conda_interface import MatchSpec
 from .config import Config, get_or_merge_config
 from .features import feature_list
 from .license_family import ensure_valid_license_family
@@ -45,7 +45,7 @@ from .variants import (
 )
 
 if TYPE_CHECKING:
-    from typing import Literal
+    from typing import Any, Literal
 
 try:
     import yaml
@@ -277,38 +277,68 @@ def eval_selector(selector_string, namespace, variants_in_place):
         return eval_selector(next_string, namespace, variants_in_place)
 
 
-def select_lines(data, namespace, variants_in_place):
-    lines = []
-
-    for i, line in enumerate(data.splitlines()):
+@lru_cache(maxsize=None)
+def _split_line_selector(text: str) -> tuple[tuple[str | None, str], ...]:
+    lines: list[tuple[str | None, str]] = []
+    for line in text.splitlines():
         line = line.rstrip()
 
+        # skip comment lines, include a blank line as a placeholder
+        if line.lstrip().startswith("#"):
+            lines.append((None, ""))
+            continue
+
+        # include blank lines
+        if not line:
+            lines.append((None, ""))
+            continue
+
+        # user may have quoted entire line to make YAML happy
         trailing_quote = ""
         if line and line[-1] in ("'", '"'):
             trailing_quote = line[-1]
 
-        if line.lstrip().startswith("#"):
-            # Don't bother with comment only lines
-            continue
-        m = sel_pat.match(line)
-        if m:
-            cond = m.group(3)
-            try:
-                if eval_selector(cond, namespace, variants_in_place):
-                    lines.append(m.group(1) + trailing_quote)
-            except Exception as e:
-                sys.exit(
-                    """\
-Error: Invalid selector in meta.yaml line %d:
-offending line:
-%s
-exception:
-%s
-"""
-                    % (i + 1, line, str(e))
-                )
+        # Checking for "[" and "]" before regex matching every line is a bit faster.
+        if (
+            ("[" in line and "]" in line)
+            and (match := sel_pat.match(line))
+            and (selector := match.group(3))
+        ):
+            # found a selector
+            lines.append((selector, (match.group(1) + trailing_quote).rstrip()))
         else:
+            # no selector found
+            lines.append((None, line))
+    return tuple(lines)
+
+
+def select_lines(text: str, namespace: dict[str, Any], variants_in_place: bool) -> str:
+    lines = []
+    selector_cache: dict[str, bool] = {}
+    for i, (selector, line) in enumerate(_split_line_selector(text)):
+        if not selector:
+            # no selector? include line as is
             lines.append(line)
+        else:
+            # include lines with a selector that evaluates to True
+            try:
+                if selector_cache[selector]:
+                    lines.append(line)
+            except KeyError:
+                # KeyError: cache miss
+                try:
+                    value = bool(eval_selector(selector, namespace, variants_in_place))
+                    selector_cache[selector] = value
+                    if value:
+                        lines.append(line)
+                except Exception as e:
+                    sys.exit(
+                        f"Error: Invalid selector in meta.yaml line {i + 1}:\n"
+                        f"offending line:\n"
+                        f"{line}\n"
+                        f"exception:\n"
+                        f"{e.__class__.__name__}: {e}\n"
+                    )
     return "\n".join(lines) + "\n"
 
 
@@ -824,7 +854,7 @@ def toposort(output_metadata_map):
     will naturally lead to non-overlapping files in each package and also
     the correct files being present during the install and test procedures,
     provided they are run in this order."""
-    from .conda_interface import _toposort
+    from conda.common.toposort import _toposort
 
     # We only care about the conda packages built by this recipe. Non-conda
     # packages get sorted to the end.
@@ -2083,8 +2113,11 @@ class MetaData:
         return None
 
     def get_recipe_text(
-        self, extract_pattern=None, force_top_level=False, apply_selectors=True
-    ):
+        self,
+        extract_pattern: str | None = None,
+        force_top_level: bool = False,
+        apply_selectors: bool = True,
+    ) -> str:
         meta_path = self.meta_path
         if meta_path:
             recipe_text = read_meta_file(meta_path)

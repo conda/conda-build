@@ -17,6 +17,8 @@ from conda_build.variants import (
     combine_specs,
     dict_of_lists_to_list_of_dicts,
     filter_combined_spec_to_used_keys,
+    find_used_variables_in_batch_script,
+    find_used_variables_in_shell_script,
     get_package_variants,
     get_vars,
     validate_spec,
@@ -715,3 +717,25 @@ def test_get_vars():
     ]
 
     assert get_vars(variants) == {"nodejs"}
+
+
+def test_find_used_variables_in_shell_script(tmp_path: Path) -> None:
+    variants = ("FOO", "BAR", "BAZ", "QUX")
+    (script := tmp_path / "script.sh").write_text(
+        f"${variants[0]}\n"
+        f"${{{variants[1]}}}\n"
+        f"${{{{{variants[2]}}}}}\n"
+        f"$${variants[3]}\n"
+    )
+    assert find_used_variables_in_shell_script(variants, script) == {"FOO", "BAR"}
+
+
+def test_find_used_variables_in_batch_script(tmp_path: Path) -> None:
+    variants = ("FOO", "BAR", "BAZ", "QUX")
+    (script := tmp_path / "script.sh").write_text(
+        f"%{variants[0]}%\n"
+        f"%%{variants[1]}%%\n"
+        f"${variants[2]}\n"
+        f"${{{variants[3]}}}\n"
+    )
+    assert find_used_variables_in_batch_script(variants, script) == {"FOO", "BAR"}

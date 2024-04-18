@@ -21,15 +21,12 @@ from os.path import basename, dirname, exists, join
 import requests
 from conda.core.index import get_index
 from conda.exceptions import CondaError, CondaHTTPError
+from conda.gateways.connection.download import TmpDownload, download
+from conda.gateways.disk.create import TemporaryDirectory
+from conda.models.match_spec import MatchSpec
+from conda.resolve import Resolve
 
 from .. import environ
-from ..conda_interface import (
-    MatchSpec,
-    Resolve,
-    TemporaryDirectory,
-    TmpDownload,
-    download,
-)
 from ..config import Config, get_or_merge_config
 from ..utils import check_call_env, on_linux, on_win
 from ..variants import get_default_variant

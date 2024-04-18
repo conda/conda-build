@@ -57,14 +57,14 @@ def test_uses_vcs_in_metadata(testing_workdir, testing_metadata):
 def test_select_lines():
     lines = "\n".join(
         (
-            "",
+            "",  # preserve leading newline
             "test",
             "test [abc] no",
             "test [abc] # no",
             " ' test ' ",
             ' " test " ',
-            "",
-            "# comment line",
+            "",  # preserve newline
+            "# comment line",  # preserve comment line (but not the comment)
             "test [abc]",
             " 'quoted # [abc] '",
             ' "quoted # [abc] yes "',
@@ -74,19 +74,20 @@ def test_select_lines():
             "test {{ JINJA_VAR[:2] }} # stuff yes [abc]",
             "test {{ JINJA_VAR[:2] }} # [abc] stuff yes",
             '{{ environ["test"] }}  # [abc]',
-            "",  # trailing newline
+            "",  # preserve trailing newline
         )
     )
 
     assert select_lines(lines, {"abc": True}, variants_in_place=True) == "\n".join(
         (
-            "",
+            "",  # preserve leading newline
             "test",
             "test [abc] no",
             "test [abc] # no",
             " ' test '",
             ' " test "',
-            "",
+            "",  # preserve newline
+            "",  # preserve comment line (but not the comment)
             "test",
             " 'quoted'",
             ' "quoted"',
@@ -96,20 +97,21 @@ def test_select_lines():
             "test {{ JINJA_VAR[:2] }}",
             "test {{ JINJA_VAR[:2] }}",
             '{{ environ["test"] }}',
-            "",  # trailing newline
+            "",  # preserve trailing newline
         )
     )
     assert select_lines(lines, {"abc": False}, variants_in_place=True) == "\n".join(
         (
-            "",
+            "",  # preserve leading newline
             "test",
             "test [abc] no",
             "test [abc] # no",
             " ' test '",
             ' " test "',
-            "",
+            "",  # preserve newline
+            "",  # preserve comment line (but not the comment)
             "test {{ JINJA_VAR[:2] }}",
-            "",  # trailing newline
+            "",  # preserve trailing newline
         )
     )
 

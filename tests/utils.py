@@ -8,10 +8,9 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from conda.base.context import context, reset_context
+from conda.base.context import reset_context
 from conda.common.compat import on_mac
 
-from conda_build.conda_interface import cc_conda_build
 from conda_build.metadata import MetaData
 
 if TYPE_CHECKING:
@@ -153,7 +152,3 @@ def get_noarch_python_meta(meta):
 
 def reset_config(search_path=None):
     reset_context(search_path)
-    cc_conda_build.clear()
-    cc_conda_build.update(
-        context.conda_build if hasattr(context, "conda_build") else {}
-    )
