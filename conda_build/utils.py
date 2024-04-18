@@ -1784,22 +1784,24 @@ def merge_dicts_of_lists(
     return {k: dol1.get(k, no) + dol2.get(k, no) for k in keys}
 
 
-def prefix_files(prefix):
+def prefix_files(prefix: str | os.PathLike | Path) -> set[str]:
     """
     Returns a set of all files in prefix.
     """
-    res = set()
-    prefix_rep = prefix + os.path.sep
-    for root, dirs, files in walk(prefix):
-        for fn in files:
-            # this is relpath, just hacked to be faster
-            res.add(join(root, fn).replace(prefix_rep, "", 1))
-        for dn in dirs:
-            path = join(root, dn)
-            if islink(path):
-                res.add(path.replace(prefix_rep, "", 1))
-                res.update(expand_globs((path,), prefix))
-    return res
+    prefix = f"{os.path.abspath(prefix)}{os.path.sep}"
+    prefix_files: set[str] = set()
+    for root, directories, files in walk(prefix):
+        # this is effectively os.path.relpath, just hacked to be faster
+        relroot = root[len(prefix) :].lstrip(os.path.sep)
+        # add all files
+        prefix_files.update(join(relroot, file) for file in files)
+        # add all symlink directories (they are "files")
+        prefix_files.update(
+            join(relroot, directory)
+            for directory in directories
+            if islink(join(root, directory))
+        )
+    return prefix_files
 
 
 def mmap_mmap(
