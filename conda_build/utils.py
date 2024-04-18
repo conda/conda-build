@@ -23,6 +23,7 @@ import urllib.request as urllib
 from collections import OrderedDict, defaultdict
 from functools import lru_cache
 from glob import glob
+from io import StringIO
 from itertools import filterfalse
 from json.decoder import JSONDecodeError
 from locale import getpreferredencoding
@@ -54,22 +55,17 @@ from conda.base.constants import (
     KNOWN_SUBDIRS,
 )
 from conda.base.context import context
+from conda.common.path import win_path_to_unix
 from conda.exceptions import CondaHTTPError
+from conda.gateways.connection.download import download
+from conda.gateways.disk.create import TemporaryDirectory
 from conda.gateways.disk.read import compute_sum
 from conda.models.channel import Channel
 from conda.models.match_spec import MatchSpec
+from conda.models.records import PackageRecord
+from conda.models.version import VersionOrder
+from conda.utils import unix_path_to_win
 
-from .conda_interface import (
-    PackageRecord,
-    StringIO,
-    TemporaryDirectory,
-    VersionOrder,
-    cc_conda_build,
-    download,
-    unix_path_to_win,
-    win_path_to_unix,
-)
-from .conda_interface import rm_rf as _rm_rf
 from .deprecations import deprecated
 from .exceptions import BuildLockError
 
@@ -1621,8 +1617,13 @@ def filter_info_files(files_list, prefix):
     )
 
 
-def rm_rf(path, config=None):
-    return _rm_rf(path)
+@deprecated.argument("24.5", "24.7", "config")
+def rm_rf(path):
+    from conda.core.prefix_data import delete_prefix_from_linked_data
+    from conda.gateways.disk.delete import rm_rf as rm_rf
+
+    rm_rf(path)
+    delete_prefix_from_linked_data(path)
 
 
 # https://stackoverflow.com/a/31459386/1170370
@@ -1680,10 +1681,8 @@ def reset_deduplicator():
 
 def get_logger(name, level=logging.INFO, dedupe=True, add_stdout_stderr_handlers=True):
     config_file = None
-    if cc_conda_build.get("log_config_file"):
-        config_file = abspath(
-            expanduser(expandvars(cc_conda_build.get("log_config_file")))
-        )
+    if log_config_file := context.conda_build.get("log_config_file"):
+        config_file = abspath(expanduser(expandvars(log_config_file)))
     # by loading config file here, and then only adding handlers later, people
     # should be able to override conda-build's logger settings here.
     if config_file:

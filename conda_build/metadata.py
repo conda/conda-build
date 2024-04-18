@@ -18,10 +18,10 @@ from typing import TYPE_CHECKING, overload
 from bs4 import UnicodeDammit
 from conda.base.context import context
 from conda.gateways.disk.read import compute_sum
+from conda.models.match_spec import MatchSpec
 from frozendict import deepfreeze
 
 from . import exceptions, utils
-from .conda_interface import MatchSpec
 from .config import Config, get_or_merge_config
 from .features import feature_list
 from .license_family import ensure_valid_license_family
@@ -854,7 +854,7 @@ def toposort(output_metadata_map):
     will naturally lead to non-overlapping files in each package and also
     the correct files being present during the install and test procedures,
     provided they are run in this order."""
-    from .conda_interface import _toposort
+    from conda.common.toposort import _toposort
 
     # We only care about the conda packages built by this recipe. Non-conda
     # packages get sorted to the end.

@@ -8,16 +8,22 @@ from pprint import pprint
 from typing import TYPE_CHECKING
 
 import yaml
+from conda.base.context import context
 from yaml.parser import ParserError
 
 from .. import __version__, api
-from ..conda_interface import ArgumentParser, add_parser_channels, cc_conda_build
 from ..config import get_channel_urls, get_or_merge_config
 from ..utils import LoggingContext
 from ..variants import get_package_variants, set_language_env_vars
 
+try:
+    from conda.cli.helpers import add_parser_channels
+except ImportError:
+    # conda<23.11
+    from conda.cli.conda_argparse import add_parser_channels
+
 if TYPE_CHECKING:
-    from argparse import Namespace
+    from argparse import ArgumentParser, Namespace
     from typing import Sequence
 
 log = logging.getLogger(__name__)
@@ -43,7 +49,9 @@ class ParseYAMLArgument(argparse.Action):
             )
 
 
-def get_render_parser():
+def get_render_parser() -> ArgumentParser:
+    from conda.cli.conda_argparse import ArgumentParser
+
     p = ArgumentParser(
         prog="conda render",
         description="""
@@ -138,7 +146,7 @@ source to try fill in related template variables.",
         "--old-build-string",
         dest="filename_hashing",
         action="store_false",
-        default=cc_conda_build.get("filename_hashing", "true").lower() == "true",
+        default=context.conda_build.get("filename_hashing", "true").lower() == "true",
         help=(
             "Disable hash additions to filenames to distinguish package "
             "variants from one another. NOTE: any filename collisions are "

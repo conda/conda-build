@@ -26,23 +26,19 @@ import conda_package_handling.api
 import yaml
 from bs4 import UnicodeDammit
 from conda import __version__ as conda_version
+from conda.auxlib.entity import EntityEncoder
+from conda.base.constants import PREFIX_PLACEHOLDER
 from conda.base.context import context, reset_context
 from conda.core.prefix_data import PrefixData
 from conda.exceptions import CondaError, NoPackagesFoundError, UnsatisfiableError
+from conda.gateways.disk.create import TemporaryDirectory
 from conda.models.channel import Channel
+from conda.models.enums import FileMode, PathType
+from conda.models.match_spec import MatchSpec
+from conda.utils import url_path
 
 from . import __version__ as conda_build_version
 from . import environ, noarch_python, source, tarcheck, utils
-from .conda_interface import (
-    EntityEncoder,
-    FileMode,
-    MatchSpec,
-    PathType,
-    TemporaryDirectory,
-    env_path_backup_var_exists,
-    prefix_placeholder,
-    url_path,
-)
 from .config import Config
 from .create_test import create_all_test_files
 from .deprecations import deprecated
@@ -195,7 +191,7 @@ def have_prefix_files(files, prefix):
     """
 
     prefix_bytes = prefix.encode(utils.codec)
-    prefix_placeholder_bytes = prefix_placeholder.encode(utils.codec)
+    prefix_placeholder_bytes = PREFIX_PLACEHOLDER.encode(utils.codec)
     searches = {prefix: prefix_bytes}
     if utils.on_win:
         # some windows libraries use unix-style path separators
@@ -206,7 +202,7 @@ def have_prefix_files(files, prefix):
         double_backslash_prefix = prefix.replace("\\", "\\\\")
         double_backslash_prefix_bytes = double_backslash_prefix.encode(utils.codec)
         searches[double_backslash_prefix] = double_backslash_prefix_bytes
-    searches[prefix_placeholder] = prefix_placeholder_bytes
+    searches[PREFIX_PLACEHOLDER] = prefix_placeholder_bytes
     min_prefix = min(len(k) for k, _ in searches.items())
 
     # mm.find is incredibly slow, so ripgrep is used to pre-filter the list.
@@ -1149,13 +1145,13 @@ def get_files_with_prefix(m, replacements, files_in, prefix):
             prefix[0].upper() + prefix[1:],
             prefix[0].lower() + prefix[1:],
             prefix_u,
-            prefix_placeholder.replace("\\", "'"),
-            prefix_placeholder.replace("/", "\\"),
+            PREFIX_PLACEHOLDER.replace("\\", "'"),
+            PREFIX_PLACEHOLDER.replace("/", "\\"),
         ]
         # some python/json files store an escaped version of prefix
         pfx_variants.extend([pfx.replace("\\", "\\\\") for pfx in pfx_variants])
     else:
-        pfx_variants = (prefix, prefix_placeholder)
+        pfx_variants = (prefix, PREFIX_PLACEHOLDER)
     # replacing \ with \\ here is for regex escaping
     re_test = (
         b"("
@@ -2351,8 +2347,6 @@ def create_build_envs(m: MetaData, notest):
             )
     except DependencyNeedsBuildingError as e:
         # subpackages are not actually missing.  We just haven't built them yet.
-        from .conda_interface import MatchSpec
-
         other_outputs = (
             m.other_outputs.values()
             if hasattr(m, "other_outputs")
@@ -2416,8 +2410,6 @@ def build(
     with utils.path_prepended(m.config.build_prefix):
         env = environ.get_dict(m=m)
     env["CONDA_BUILD_STATE"] = "BUILD"
-    if env_path_backup_var_exists:
-        env["CONDA_PATH_BACKUP"] = os.environ["CONDA_PATH_BACKUP"]
 
     # this should be a no-op if source is already here
     if m.needs_source_for_render:
@@ -3447,8 +3439,6 @@ def test(
         env.update(environ.get_dict(m=metadata, prefix=config.test_prefix))
         env["CONDA_BUILD_STATE"] = "TEST"
         env["CONDA_BUILD"] = "1"
-        if env_path_backup_var_exists:
-            env["CONDA_PATH_BACKUP"] = os.environ["CONDA_PATH_BACKUP"]
 
     if not metadata.config.activate or metadata.name() == "conda":
         # prepend bin (or Scripts) directory
@@ -3531,8 +3521,6 @@ def test(
         env = dict(os.environ.copy())
         env.update(environ.get_dict(m=metadata, prefix=metadata.config.test_prefix))
         env["CONDA_BUILD_STATE"] = "TEST"
-        if env_path_backup_var_exists:
-            env["CONDA_PATH_BACKUP"] = os.environ["CONDA_PATH_BACKUP"]
 
     if config.test_run_post:
         from .utils import get_installed_packages
