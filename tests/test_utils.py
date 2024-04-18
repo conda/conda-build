@@ -5,12 +5,14 @@ import subprocess
 import sys
 from pathlib import Path
 from typing import NamedTuple
+from uuid import uuid4
 
 import filelock
 import pytest
 from pytest import MonkeyPatch
+from pytest_mock import MockerFixture
 
-import conda_build.utils as utils
+from conda_build import utils
 from conda_build.exceptions import BuildLockError
 
 
@@ -433,3 +435,43 @@ def test_is_conda_pkg(tmpdir, value: str, expected: bool, is_dir: bool, create: 
                 fp.write("test")
 
     assert utils.is_conda_pkg(value) == expected
+
+
+def test_directory_size(tmp_path: Path, mocker: MockerFixture):
+    # mock the slow function so we can catch that it is not called
+    mock = mocker.patch("conda_build.utils.directory_size_slow")
+
+    assert utils.directory_size("fake") == 0
+
+    assert utils.directory_size(tmp_path) == 0
+
+    count = 1000
+    size = 1000
+    for i in range(count):
+        (tmp_path / f"file{i}").write_text(uuid4().hex * size)
+
+    if utils.on_win:
+        expected = 32 * size * count
+    elif utils.on_mac:
+        expected = 64 * count
+    else:
+        expected = 32 * count
+
+    assert utils.directory_size(tmp_path) == expected
+
+    assert not mock.called
+
+
+def test_directory_size_slow(tmp_path: Path):
+    assert utils.directory_size_slow("fake") == 0
+
+    assert utils.directory_size_slow(tmp_path) == 0
+
+    count = 1000
+    size = 1000
+    for i in range(count):
+        (tmp_path / f"file{i}").write_text(uuid4().hex * size)
+
+    expected = 32 * size * count
+
+    assert utils.directory_size_slow(tmp_path) == expected
