@@ -52,7 +52,7 @@ def ldd(path):
 def get_linkages(
     obj_files: Iterable[str],
     prefix: str | os.PathLike | Path,
-    sysroot,
+    sysroot: str,
 ) -> dict[str, list[tuple[str, str]]]:
     return _get_linkages(tuple(obj_files), Path(prefix), sysroot)
 
@@ -61,7 +61,7 @@ def get_linkages(
 def _get_linkages(
     obj_files: tuple[str],
     prefix: Path,
-    sysroot,
+    sysroot: str,
 ) -> dict[str, list[tuple[str, str]]]:
     linkages = {}
     for file in obj_files:

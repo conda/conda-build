@@ -21,6 +21,7 @@ import warnings
 from collections import OrderedDict, deque
 from os.path import dirname, isdir, isfile, islink, join
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import conda_package_handling.api
 import yaml
@@ -83,6 +84,9 @@ from .variants import (
 
 if on_win:
     from . import windows
+
+if TYPE_CHECKING:
+    from typing import Any, Iterable
 
 if "bsd" in sys.platform:
     shell_path = "/bin/sh"
@@ -3206,12 +3210,12 @@ def write_test_scripts(
 
 
 def test(
-    recipedir_or_package_or_metadata,
-    config,
-    stats,
-    move_broken=True,
-    provision_only=False,
-):
+    recipedir_or_package_or_metadata: str | os.PathLike | Path | MetaData,
+    config: Config,
+    stats: dict,
+    move_broken: bool = True,
+    provision_only: bool = False,
+) -> bool:
     """
     Execute any test scripts for the given package.
 
@@ -3525,8 +3529,14 @@ def check_external():
 
 
 def build_tree(
-    recipe_list, config, stats, build_only=False, post=None, notest=False, variants=None
-):
+    recipe_list: Iterable[str | MetaData],
+    config: Config,
+    stats: dict,
+    build_only: bool = False,
+    post: bool | None = None,
+    notest: bool = False,
+    variants: dict[str, Any] | None = None,
+) -> list[str]:
     to_build_recursive = []
     recipe_list = deque(recipe_list)
 

@@ -202,6 +202,7 @@ def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
 
 def execute(args: Sequence[str] | None = None) -> int:
     _, parsed = parse_args(args)
+    context.__init__(argparse_args=parsed)
 
     config = get_or_merge_config(None, **parsed.__dict__)
 
@@ -212,8 +213,6 @@ def execute(args: Sequence[str] | None = None) -> int:
     set_language_env_vars(variants)
 
     config.channel_urls = get_channel_urls(parsed.__dict__)
-
-    config.override_channels = parsed.override_channels
 
     if parsed.output:
         config.verbose = False

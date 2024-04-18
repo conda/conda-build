@@ -9,6 +9,8 @@ import sys
 from importlib import import_module
 from typing import TYPE_CHECKING
 
+from conda.base.context import context
+
 from .. import api
 from ..config import Config
 
@@ -52,6 +54,8 @@ options available.
 
 def execute(args: Sequence[str] | None = None) -> int:
     parser, parsed = parse_args(args)
+    context.__init__(argparse_args=parsed)
+
     config = Config(**parsed.__dict__)
 
     if not parsed.repo:

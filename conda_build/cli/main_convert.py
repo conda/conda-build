@@ -6,6 +6,8 @@ import logging
 from os.path import abspath, expanduser
 from typing import TYPE_CHECKING
 
+from conda.base.context import context
+
 from .. import api
 
 if TYPE_CHECKING:
@@ -126,6 +128,8 @@ all.""",
 
 def execute(args: Sequence[str] | None = None) -> int:
     _, parsed = parse_args(args)
+    context.__init__(argparse_args=parsed)
+
     files = parsed.files
     del parsed.__dict__["files"]
 
