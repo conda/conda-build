@@ -532,13 +532,14 @@ def check_action(recipe, config):
 
 def execute(args: Sequence[str] | None = None) -> int:
     _, parsed = parse_args(args)
+    context.__init__(argparse_args=parsed)
+
     config = get_or_merge_config(None, **parsed.__dict__)
     build.check_external()
 
     # change globals in build module, see comment there as well
     config.channel_urls = get_channel_urls(parsed.__dict__)
 
-    config.override_channels = parsed.override_channels
     config.verbose = not parsed.quiet or parsed.debug
 
     if "purge" in parsed.recipe:
