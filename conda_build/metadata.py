@@ -18,21 +18,30 @@ from typing import TYPE_CHECKING, overload
 from bs4 import UnicodeDammit
 from conda.base.context import context
 from conda.gateways.disk.read import compute_sum
+from frozendict import deepfreeze
 
-from . import exceptions, utils, variants
+from . import exceptions, utils
 from .conda_interface import MatchSpec
 from .config import Config, get_or_merge_config
 from .features import feature_list
 from .license_family import ensure_valid_license_family
 from .utils import (
     DEFAULT_SUBDIRS,
-    HashableDict,
     ensure_list,
     expand_globs,
     find_recipe,
     get_installed_packages,
     insert_variant_versions,
     on_win,
+)
+from .variants import (
+    dict_of_lists_to_list_of_dicts,
+    find_used_variables_in_batch_script,
+    find_used_variables_in_shell_script,
+    find_used_variables_in_text,
+    get_default_variant,
+    get_vars,
+    list_of_dicts_to_dict_of_lists,
 )
 
 if TYPE_CHECKING:
@@ -156,7 +165,7 @@ def get_selectors(config: Config) -> dict[str, bool]:
         if arch == "32":
             d["x86"] = plat.endswith(("-32", "-64"))
 
-    defaults = variants.get_default_variant(config)
+    defaults = get_default_variant(config)
     py = config.variant.get("python", defaults["python"])
     # there are times when python comes in as a tuple
     if not hasattr(py, "split"):
@@ -919,8 +928,8 @@ def get_output_dicts_from_metadata(metadata, outputs=None):
             outputs.append(OrderedDict(name=metadata.name()))
     for out in outputs:
         if (
-            "package:" in metadata.get_recipe_text()
-            and out.get("name") == metadata.name()
+            out.get("name") == metadata.name()
+            and "package:" in metadata.get_recipe_text()
         ):
             combine_top_level_metadata_with_output(metadata, out)
     return outputs
@@ -986,15 +995,8 @@ def finalize_outputs_pass(
                 fm = om
             if not output_d.get("type") or output_d.get("type").startswith("conda"):
                 outputs[
-                    (
-                        fm.name(),
-                        HashableDict(
-                            {
-                                k: copy.deepcopy(fm.config.variant[k])
-                                for k in fm.get_used_vars()
-                            }
-                        ),
-                    )
+                    fm.name(),
+                    deepfreeze({k: fm.config.variant[k] for k in fm.get_used_vars()}),
                 ] = (output_d, fm)
         except exceptions.DependencyNeedsBuildingError as e:
             if not permit_unsatisfiable_variants:
@@ -1006,15 +1008,13 @@ def finalize_outputs_pass(
                     f"{e.packages}"
                 )
                 outputs[
-                    (
-                        metadata.name(),
-                        HashableDict(
-                            {
-                                k: copy.deepcopy(metadata.config.variant[k])
-                                for k in metadata.get_used_vars()
-                            }
-                        ),
-                    )
+                    metadata.name(),
+                    deepfreeze(
+                        {
+                            k: metadata.config.variant[k]
+                            for k in metadata.get_used_vars()
+                        }
+                    ),
                 ] = (output_d, metadata)
     # in-place modification
     base_metadata.other_outputs = outputs
@@ -1022,12 +1022,8 @@ def finalize_outputs_pass(
     final_outputs = OrderedDict()
     for k, (out_d, m) in outputs.items():
         final_outputs[
-            (
-                m.name(),
-                HashableDict(
-                    {k: copy.deepcopy(m.config.variant[k]) for k in m.get_used_vars()}
-                ),
-            )
+            m.name(),
+            deepfreeze({k: m.config.variant[k] for k in m.get_used_vars()}),
         ] = (out_d, m)
     return final_outputs
 
@@ -1045,6 +1041,7 @@ def get_updated_output_dict_from_reparsed_metadata(original_dict, new_outputs):
     return output_d
 
 
+@lru_cache(maxsize=200)
 def _filter_recipe_text(text, extract_pattern=None):
     if extract_pattern:
         match = re.search(extract_pattern, text, flags=re.MULTILINE | re.DOTALL)
@@ -1695,7 +1692,6 @@ class MetaData:
             raise RuntimeError(
                 f"Couldn't extract raw recipe text for {self.name()} output"
             )
-        raw_recipe_text = self.extract_package_and_build_text()
         raw_manual_build_string = re.search(r"\s*string:", raw_recipe_text)
         # user setting their own build string.  Don't modify it.
         if manual_build_string and not (
@@ -2481,9 +2477,7 @@ class MetaData:
 
     def get_reduced_variant_set(self, used_variables):
         # reduce variable space to limit work we need to do
-        full_collapsed_variants = variants.list_of_dicts_to_dict_of_lists(
-            self.config.variants
-        )
+        full_collapsed_variants = list_of_dicts_to_dict_of_lists(self.config.variants)
         reduced_collapsed_variants = full_collapsed_variants.copy()
         reduce_keys = set(self.config.variants[0].keys()) - set(used_variables)
 
@@ -2515,7 +2509,7 @@ class MetaData:
                 # save only one element from this key
                 reduced_collapsed_variants[key] = utils.ensure_list(next(iter(values)))
 
-        out = variants.dict_of_lists_to_list_of_dicts(reduced_collapsed_variants)
+        out = dict_of_lists_to_list_of_dicts(reduced_collapsed_variants)
         return out
 
     def get_output_metadata_set(
@@ -2574,17 +2568,15 @@ class MetaData:
                         #    also refine this collection as each output metadata object is
                         #    finalized - see the finalize_outputs_pass function
                         all_output_metadata[
-                            (
-                                out_metadata.name(),
-                                HashableDict(
-                                    {
-                                        k: copy.deepcopy(out_metadata.config.variant[k])
-                                        for k in out_metadata.get_used_vars()
-                                    }
-                                ),
-                            )
+                            out_metadata.name(),
+                            deepfreeze(
+                                {
+                                    k: out_metadata.config.variant[k]
+                                    for k in out_metadata.get_used_vars()
+                                }
+                            ),
                         ] = (out, out_metadata)
-                        out_metadata_map[HashableDict(out)] = out_metadata
+                        out_metadata_map[deepfreeze(out)] = out_metadata
                         ref_metadata.other_outputs = out_metadata.other_outputs = (
                             all_output_metadata
                         )
@@ -2611,12 +2603,7 @@ class MetaData:
                 ):
                     conda_packages[
                         m.name(),
-                        HashableDict(
-                            {
-                                k: copy.deepcopy(m.config.variant[k])
-                                for k in m.get_used_vars()
-                            }
-                        ),
+                        deepfreeze({k: m.config.variant[k] for k in m.get_used_vars()}),
                     ] = (output_d, m)
                 elif output_d.get("type") == "wheel":
                     if not output_d.get("requirements", {}).get("build") or not any(
@@ -2666,21 +2653,14 @@ class MetaData:
         return output_tuples
 
     def get_loop_vars(self):
-        _variants = (
-            self.config.input_variants
-            if hasattr(self.config, "input_variants")
-            else self.config.variants
-        )
-        return variants.get_vars(_variants, loop_only=True)
+        return get_vars(getattr(self.config, "input_variants", self.config.variants))
 
     def get_used_loop_vars(self, force_top_level=False, force_global=False):
-        return {
-            var
-            for var in self.get_used_vars(
-                force_top_level=force_top_level, force_global=force_global
-            )
-            if var in self.get_loop_vars()
-        }
+        loop_vars = self.get_loop_vars()
+        used_vars = self.get_used_vars(
+            force_top_level=force_top_level, force_global=force_global
+        )
+        return set(loop_vars).intersection(used_vars)
 
     def get_rendered_recipe_text(
         self, permit_undefined_jinja=False, extract_pattern=None
@@ -2753,11 +2733,7 @@ class MetaData:
         global used_vars_cache
         recipe_dir = self.path
 
-        # `HashableDict` does not handle lists of other dictionaries correctly. Also it
-        # is constructed inplace, taking references to sub-elements of the input dict
-        # and thus corrupting it. Also, this was being called in 3 places in this function
-        # so caching it is probably a good thing.
-        hashed_variants = HashableDict(copy.deepcopy(self.config.variant))
+        hashed_variants = deepfreeze(self.config.variant)
         if hasattr(self.config, "used_vars"):
             used_vars = self.config.used_vars
         elif (
@@ -2860,7 +2836,7 @@ class MetaData:
             apply_selectors=False,
         )
 
-        all_used_selectors = variants.find_used_variables_in_text(
+        all_used_selectors = find_used_variables_in_text(
             variant_keys, recipe_text, selectors_only=True
         )
 
@@ -2869,7 +2845,7 @@ class MetaData:
             force_global=force_global,
             apply_selectors=True,
         )
-        all_used_reqs = variants.find_used_variables_in_text(
+        all_used_reqs = find_used_variables_in_text(
             variant_keys, recipe_text, selectors_only=False
         )
 
@@ -2880,9 +2856,7 @@ class MetaData:
         if force_global:
             used = all_used
         else:
-            requirements_used = variants.find_used_variables_in_text(
-                variant_keys, reqs_text
-            )
+            requirements_used = find_used_variables_in_text(variant_keys, reqs_text)
             outside_reqs_used = all_used - requirements_used
 
             requirements_used = trim_build_only_deps(self, requirements_used)
@@ -2895,16 +2869,12 @@ class MetaData:
         buildsh = os.path.join(self.path, "build.sh")
         if os.path.isfile(buildsh):
             used_vars.update(
-                variants.find_used_variables_in_shell_script(
-                    self.config.variant, buildsh
-                )
+                find_used_variables_in_shell_script(self.config.variant, buildsh)
             )
         bldbat = os.path.join(self.path, "bld.bat")
         if self.config.platform == "win" and os.path.isfile(bldbat):
             used_vars.update(
-                variants.find_used_variables_in_batch_script(
-                    self.config.variant, bldbat
-                )
+                find_used_variables_in_batch_script(self.config.variant, bldbat)
             )
         return used_vars
 
@@ -2917,15 +2887,11 @@ class MetaData:
             script = os.path.join(self.path, this_output["script"])
             if os.path.splitext(script)[1] == ".sh":
                 used_vars.update(
-                    variants.find_used_variables_in_shell_script(
-                        self.config.variant, script
-                    )
+                    find_used_variables_in_shell_script(self.config.variant, script)
                 )
             elif os.path.splitext(script)[1] == ".bat":
                 used_vars.update(
-                    variants.find_used_variables_in_batch_script(
-                        self.config.variant, script
-                    )
+                    find_used_variables_in_batch_script(self.config.variant, script)
                 )
             else:
                 log = utils.get_logger(__name__)
@@ -2936,7 +2902,7 @@ class MetaData:
         return used_vars
 
     def get_variants_as_dict_of_lists(self):
-        return variants.list_of_dicts_to_dict_of_lists(self.config.variants)
+        return list_of_dicts_to_dict_of_lists(self.config.variants)
 
     def clean(self):
         """This ensures that clean is called with the correct build id"""

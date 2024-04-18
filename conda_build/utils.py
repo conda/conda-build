@@ -54,12 +54,12 @@ from conda.base.constants import (
     KNOWN_SUBDIRS,
 )
 from conda.base.context import context
+from conda.exceptions import CondaHTTPError
 from conda.gateways.disk.read import compute_sum
 from conda.models.channel import Channel
 from conda.models.match_spec import MatchSpec
 
 from .conda_interface import (
-    CondaHTTPError,
     PackageRecord,
     StringIO,
     TemporaryDirectory,
@@ -70,6 +70,7 @@ from .conda_interface import (
     win_path_to_unix,
 )
 from .conda_interface import rm_rf as _rm_rf
+from .deprecations import deprecated
 from .exceptions import BuildLockError
 
 if TYPE_CHECKING:
@@ -84,7 +85,7 @@ on_mac = sys.platform == "darwin"
 on_linux = sys.platform == "linux"
 
 codec = getpreferredencoding() or "utf-8"
-root_script_dir = os.path.join(context.root_dir, "Scripts" if on_win else "bin")
+root_script_dir = os.path.join(context.root_prefix, "Scripts" if on_win else "bin")
 mmap_MAP_PRIVATE = 0 if on_win else mmap.MAP_PRIVATE
 mmap_PROT_READ = 0 if on_win else mmap.PROT_READ
 mmap_PROT_WRITE = 0 if on_win else mmap.PROT_WRITE
@@ -708,7 +709,7 @@ def merge_tree(
 #    at any time, but the lock within this process should all be tied to the same tracking
 #    mechanism.
 _lock_folders = (
-    os.path.join(context.root_dir, "locks"),
+    os.path.join(context.root_prefix, "locks"),
     os.path.expanduser(os.path.join("~", ".conda_build_locks")),
 )
 
@@ -1343,7 +1344,7 @@ class LoggingContext:
         "dotupdate",
         "stdoutlog",
         "requests",
-        "conda.core.package_cache",
+        "conda.core.package_cache_data",
         "conda.plan",
         "conda.gateways.disk.delete",
         "conda_build",
@@ -1407,6 +1408,7 @@ def get_installed_packages(path):
     return installed
 
 
+@deprecated("24.5", "24.7", addendum="Use `frozendict.deepfreeze` instead.")
 def _convert_lists_to_sets(_dict):
     for k, v in _dict.items():
         if hasattr(v, "keys"):
@@ -1419,6 +1421,7 @@ def _convert_lists_to_sets(_dict):
     return _dict
 
 
+@deprecated("24.5", "24.7", addendum="Use `frozendict.deepfreeze` instead.")
 class HashableDict(dict):
     """use hashable frozen dictionaries for resources and resource types so that they can be in sets"""
 
@@ -1430,6 +1433,7 @@ class HashableDict(dict):
         return hash(json.dumps(self, sort_keys=True))
 
 
+@deprecated("24.5", "24.7", addendum="Use `frozendict.deepfreeze` instead.")
 def represent_hashabledict(dumper, data):
     value = []
 

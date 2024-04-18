@@ -1,5 +1,6 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+import configparser
 import sys
 import time
 from collections import defaultdict
@@ -10,7 +11,7 @@ from setuptools.errors import BaseError, OptionError
 
 from . import api
 from .build import handle_anaconda_upload
-from .conda_interface import StringIO, configparser, spec_from_line
+from .conda_interface import StringIO, spec_from_line
 from .config import Config
 from .deprecations import deprecated
 from .metadata import MetaData
