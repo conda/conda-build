@@ -4,7 +4,6 @@ import json
 import logging
 import os
 import time
-from concurrent.futures import Executor
 from functools import partial
 from os.path import dirname
 
@@ -25,14 +24,6 @@ from .utils import (
 )
 
 log = get_logger(__name__)
-
-
-@deprecated("24.3", "24.5")
-class DummyExecutor(Executor):
-    def map(self, func, *iterables):
-        for iterable in iterables:
-            for thing in iterable:
-                yield func(thing)
 
 
 local_index_timestamp = 0
