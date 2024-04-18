@@ -3620,8 +3620,7 @@ def build_tree(
                     reset_build_id=not cfg.dirty,
                     bypass_env_check=True,
                 )
-            # restrict to building only one variant for bdist_conda.  The way it splits the build
-            #    job breaks variants horribly.
+
             if post in (True, False):
                 metadata_tuples = metadata_tuples[:1]
 

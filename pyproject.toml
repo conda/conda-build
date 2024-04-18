@@ -53,9 +53,6 @@ requires-python = ">=3.8"
 [project.entry-points.conda]
 conda-build = "conda_build.plugin"
 
-[project.entry-points."distutils.commands"]
-bdist_conda = "conda_build.bdist_conda:bdist_conda"
-
 [project.scripts]
 conda-build = "conda_build.cli.main_build:execute"
 conda-convert = "conda_build.cli.main_convert:execute"

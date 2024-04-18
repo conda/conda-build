@@ -64,8 +64,6 @@ test:
   requires:
     - setuptools
     - pip
-  files:
-    - test_bdist_conda_setup.py
   commands:
     - python -m pip check
     # subcommands
@@ -91,8 +89,6 @@ test:
     - conda-render --help
     - conda-skeleton --help
     - conda-debug --help
-    # bdist_conda
-    - python test_bdist_conda_setup.py bdist_conda --help
 
 about:
   home: https://conda.org
