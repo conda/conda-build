@@ -13,7 +13,7 @@ import warnings
 from collections import OrderedDict
 from functools import lru_cache
 from os.path import isfile, join
-from typing import TYPE_CHECKING, overload
+from typing import TYPE_CHECKING, NamedTuple, overload
 
 from bs4 import UnicodeDammit
 from conda.base.context import context
@@ -907,7 +907,10 @@ def toposort(output_metadata_map):
     return result
 
 
-def get_output_dicts_from_metadata(metadata, outputs=None):
+def get_output_dicts_from_metadata(
+    metadata: MetaData,
+    outputs: list[dict[str, Any]] | None = None,
+) -> list[dict[str, Any]]:
     outputs = outputs or metadata.get_section("outputs")
 
     if not outputs:
@@ -2514,16 +2517,16 @@ class MetaData:
 
     def get_output_metadata_set(
         self,
-        permit_undefined_jinja=False,
-        permit_unsatisfiable_variants=False,
-        bypass_env_check=False,
-    ):
+        permit_undefined_jinja: bool = False,
+        permit_unsatisfiable_variants: bool = False,
+        bypass_env_check: bool = False,
+    ) -> list[tuple[dict[str, Any], MetaData]]:
         from .source import provide
 
         out_metadata_map = {}
         if self.final:
-            outputs = get_output_dicts_from_metadata(self)[0]
-            output_tuples = [(outputs, self)]
+            outputs = get_output_dicts_from_metadata(self)
+            output_tuples = [(outputs[0], self)]
         else:
             all_output_metadata = OrderedDict()
 
@@ -2972,3 +2975,9 @@ class MetaData:
 
         specs.extend(utils.ensure_list(self.config.extra_deps))
         return specs
+
+
+class MetaDataTuple(NamedTuple):
+    metadata: MetaData
+    need_download: bool
+    need_reparse: bool

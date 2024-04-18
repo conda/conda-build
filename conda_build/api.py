@@ -17,11 +17,13 @@ import os
 import sys
 from os.path import dirname, expanduser, join
 from pathlib import Path
+from typing import TYPE_CHECKING, Iterable
 
 # make the Config class available in the api namespace
 from .config import DEFAULT_PREFIX_LENGTH as _prefix_length
 from .config import Config, get_channel_urls, get_or_merge_config
 from .deprecations import deprecated
+from .metadata import MetaData, MetaDataTuple
 from .utils import (
     CONDA_PACKAGE_EXTENSIONS,
     LoggingContext,
@@ -32,21 +34,25 @@ from .utils import (
     on_win,
 )
 
+if TYPE_CHECKING:
+    from typing import Any, Literal
+
+    StatsDict = dict[str, Any]
+
 
 def render(
-    recipe_path,
-    config=None,
-    variants=None,
-    permit_unsatisfiable_variants=True,
-    finalize=True,
-    bypass_env_check=False,
+    recipe_path: str | os.PathLike | Path,
+    config: Config | None = None,
+    variants: dict[str, Any] | None = None,
+    permit_unsatisfiable_variants: bool = True,
+    finalize: bool = True,
+    bypass_env_check: bool = False,
     **kwargs,
-):
+) -> list[MetaDataTuple]:
     """Given path to a recipe, return the MetaData object(s) representing that recipe, with jinja2
        templates evaluated.
 
-    Returns a list of (metadata, needs_download, needs_reparse in env) tuples"""
-    from collections import OrderedDict
+    Returns a list of (metadata, need_download, need_reparse in env) tuples"""
 
     from conda.exceptions import NoPackagesFoundError
 
@@ -63,7 +69,7 @@ def render(
         variants=variants,
         permit_unsatisfiable_variants=permit_unsatisfiable_variants,
     )
-    output_metas = OrderedDict()
+    output_metas: dict[tuple[str, str, tuple[tuple[str, str], ...]], MetaDataTuple] = {}
     for meta, download, render_in_env in metadata_tuples:
         if not meta.skip() or not config.trim_skip:
             for od, om in meta.get_output_metadata_set(
@@ -95,7 +101,7 @@ def render(
                                 (var, om.config.variant[var])
                                 for var in om.get_used_vars()
                             ),
-                        ] = (om, download, render_in_env)
+                        ] = MetaDataTuple(om, download, render_in_env)
                     else:
                         output_metas[
                             f"{om.type}: {om.name()}",
@@ -104,12 +110,16 @@ def render(
                                 (var, om.config.variant[var])
                                 for var in om.get_used_vars()
                             ),
-                        ] = (om, download, render_in_env)
+                        ] = MetaDataTuple(om, download, render_in_env)
 
     return list(output_metas.values())
 
 
-def output_yaml(metadata, file_path=None, suppress_outputs=False):
+def output_yaml(
+    metadata: MetaData,
+    file_path: str | os.PathLike | Path | None = None,
+    suppress_outputs: bool = False,
+) -> str:
     """Save a rendered recipe in its final form to the path given by file_path"""
     from .render import output_yaml
 
@@ -117,12 +127,16 @@ def output_yaml(metadata, file_path=None, suppress_outputs=False):
 
 
 def get_output_file_paths(
-    recipe_path_or_metadata,
-    no_download_source=False,
-    config=None,
-    variants=None,
+    recipe_path_or_metadata: str
+    | os.PathLike
+    | Path
+    | MetaData
+    | Iterable[MetaDataTuple],
+    no_download_source: bool = False,
+    config: Config | None = None,
+    variants: dict[str, Any] | None = None,
     **kwargs,
-):
+) -> list[str]:
     """Get output file paths for any packages that would be created by a recipe
 
     Both split packages (recipes with more than one output) and build matrices,
@@ -132,22 +146,9 @@ def get_output_file_paths(
 
     config = get_or_merge_config(config, **kwargs)
 
-    if hasattr(recipe_path_or_metadata, "__iter__") and not isinstance(
-        recipe_path_or_metadata, str
-    ):
-        list_of_metas = [
-            hasattr(item[0], "config")
-            for item in recipe_path_or_metadata
-            if len(item) == 3
-        ]
-
-        if list_of_metas and all(list_of_metas):
-            metadata = recipe_path_or_metadata
-        else:
-            raise ValueError(f"received mixed list of metas: {recipe_path_or_metadata}")
-    elif isinstance(recipe_path_or_metadata, (str, Path)):
+    if isinstance(recipe_path_or_metadata, (str, Path)):
         # first, render the parent recipe (potentially multiple outputs, depending on variants).
-        metadata = render(
+        metadata_tuples = render(
             recipe_path_or_metadata,
             no_download_source=no_download_source,
             variants=variants,
@@ -155,29 +156,48 @@ def get_output_file_paths(
             finalize=True,
             **kwargs,
         )
+
+    elif isinstance(recipe_path_or_metadata, MetaData):
+        metadata_tuples = [MetaDataTuple(recipe_path_or_metadata, False, False)]
+
+    elif isinstance(recipe_path_or_metadata, Iterable) and all(
+        isinstance(recipe, MetaDataTuple)
+        and isinstance(recipe.metadata, MetaData)
+        and isinstance(recipe.need_download, bool)
+        and isinstance(recipe.need_reparse, bool)
+        for recipe in recipe_path_or_metadata
+    ):
+        metadata_tuples = recipe_path_or_metadata
+
     else:
-        assert hasattr(
-            recipe_path_or_metadata, "config"
-        ), f"Expecting metadata object - got {recipe_path_or_metadata}"
-        metadata = [(recipe_path_or_metadata, None, None)]
-    #    Next, loop over outputs that each metadata defines
+        raise ValueError(
+            f"Unknown input type: {type(recipe_path_or_metadata)}; expecting "
+            "PathLike object, MetaData object, or a list of tuples containing "
+            "(MetaData, bool, bool)."
+        )
+
+    # Next, loop over outputs that each metadata defines
     outs = []
-    for m, _, _ in metadata:
-        if m.skip():
-            outs.append(get_skip_message(m))
+    for metadata, _, _ in metadata_tuples:
+        if metadata.skip():
+            outs.append(get_skip_message(metadata))
         else:
-            outs.append(bldpkg_path(m))
-    return sorted(list(set(outs)))
+            outs.append(bldpkg_path(metadata))
+    return sorted(set(outs))
 
 
 @deprecated("24.3.0", "24.5.0", addendum="Use `get_output_file_paths` instead.")
 def get_output_file_path(
-    recipe_path_or_metadata,
-    no_download_source=False,
-    config=None,
-    variants=None,
+    recipe_path_or_metadata: str
+    | os.PathLike
+    | Path
+    | MetaData
+    | Iterable[MetaDataTuple],
+    no_download_source: bool = False,
+    config: Config | None = None,
+    variants: dict[str, Any] | None = None,
     **kwargs,
-):
+) -> list[str]:
     """Get output file paths for any packages that would be created by a recipe
 
     Both split packages (recipes with more than one output) and build matrices,
@@ -192,7 +212,13 @@ def get_output_file_path(
     )
 
 
-def check(recipe_path, no_download_source=False, config=None, variants=None, **kwargs):
+def check(
+    recipe_path: str | os.PathLike | Path,
+    no_download_source: bool = False,
+    config: Config | None = None,
+    variants: dict[str, Any] | None = None,
+    **kwargs,
+) -> bool:
     """Check validity of input recipe path
 
     Verifies that recipe can be completely rendered, and that fields of the rendered recipe are
@@ -209,16 +235,16 @@ def check(recipe_path, no_download_source=False, config=None, variants=None, **k
 
 
 def build(
-    recipe_paths_or_metadata,
-    post=None,
-    need_source_download=True,
-    build_only=False,
-    notest=False,
-    config=None,
-    variants=None,
-    stats=None,
+    recipe_paths_or_metadata: str | os.PathLike | Path | MetaData,
+    post: bool | None = None,
+    need_source_download: bool = True,
+    build_only: bool = False,
+    notest: bool = False,
+    config: Config | None = None,
+    variants: dict[str, Any] | None = None,
+    stats: StatsDict | None = None,
     **kwargs,
-):
+) -> list[str]:
     """Run the build step.
 
     If recipe paths are provided, renders recipe before building.
@@ -230,16 +256,15 @@ def build(
         "other arguments (config) by keyword."
     )
 
-    recipes = []
+    recipes: list[str | MetaData] = []
     for recipe in ensure_list(recipe_paths_or_metadata):
-        if isinstance(recipe, str):
+        if isinstance(recipe, (str, os.PathLike, Path)):
             for recipe in expand_globs(recipe, os.getcwd()):
                 try:
-                    recipe = find_recipe(recipe)
+                    recipes.append(find_recipe(recipe))
                 except OSError:
                     continue
-                recipes.append(recipe)
-        elif hasattr(recipe, "config"):
+        elif isinstance(recipe, MetaData):
             recipes.append(recipe)
         else:
             raise ValueError(f"Recipe passed was unrecognized object: {recipe}")
@@ -263,12 +288,12 @@ def build(
 
 
 def test(
-    recipedir_or_package_or_metadata,
-    move_broken=True,
-    config=None,
-    stats=None,
+    recipedir_or_package_or_metadata: str | os.PathLike | Path | MetaData,
+    move_broken: bool = True,
+    config: Config | None = None,
+    stats: StatsDict | None = None,
     **kwargs,
-):
+) -> bool:
     """Run tests on either packages (.tar.bz2 or extracted) or recipe folders
 
     For a recipe folder, it renders the recipe enough to know what package to download, and obtains
@@ -282,24 +307,22 @@ def test(
 
     # if people don't pass in an object to capture stats in, they won't get them returned.
     #     We'll still track them, though.
-    if not stats:
-        stats = {}
+    stats = stats or {}
 
     with config:
         # This will create a new local build folder if and only if config
         #   doesn't already have one. What this means is that if we're
         #   running a test immediately after build, we use the one that the
         #   build already provided
-        test_result = test(
+        return test(
             recipedir_or_package_or_metadata,
             config=config,
             move_broken=move_broken,
             stats=stats,
         )
-    return test_result
 
 
-def list_skeletons():
+def list_skeletons() -> list[str]:
     """List available skeletons for generating conda recipes from external sources.
 
     The returned list is generally the names of supported repositories (pypi, cran, etc.)
@@ -315,8 +338,14 @@ def list_skeletons():
 
 
 def skeletonize(
-    packages, repo, output_dir=".", version=None, recursive=False, config=None, **kwargs
-):
+    packages: str | Iterable[str],
+    repo: Literal["cpan", "cran", "luarocks", "pypi", "rpm"],
+    output_dir: str = ".",
+    version: str | None = None,
+    recursive: bool = False,
+    config: Config | None = None,
+    **kwargs,
+) -> None:
     """Generate a conda recipe from an external repo.  Translates metadata from external
     sources into expected conda recipe format."""
 
@@ -355,7 +384,7 @@ def skeletonize(
         if arg in kwargs:
             del kwargs[arg]
     with config:
-        skeleton_return = module.skeletonize(
+        module.skeletonize(
             packages,
             output_dir=output_dir,
             version=version,
@@ -363,42 +392,42 @@ def skeletonize(
             config=config,
             **kwargs,
         )
-    return skeleton_return
 
 
 def develop(
-    recipe_dir,
-    prefix=sys.prefix,
-    no_pth_file=False,
-    build_ext=False,
-    clean=False,
-    uninstall=False,
-):
+    recipe_dir: str | Iterable[str],
+    prefix: str = sys.prefix,
+    no_pth_file: bool = False,
+    build_ext: bool = False,
+    clean: bool = False,
+    uninstall: bool = False,
+) -> None:
     """Install a Python package in 'development mode'.
 
     This works by creating a conda.pth file in site-packages."""
     from .develop import execute
 
     recipe_dir = ensure_list(recipe_dir)
-    return execute(recipe_dir, prefix, no_pth_file, build_ext, clean, uninstall)
+    execute(recipe_dir, prefix, no_pth_file, build_ext, clean, uninstall)
 
 
 def convert(
-    package_file,
-    output_dir=".",
-    show_imports=False,
-    platforms=None,
-    force=False,
-    dependencies=None,
-    verbose=False,
-    quiet=True,
-    dry_run=False,
-):
+    package_file: str,
+    output_dir: str = ".",
+    show_imports: bool = False,
+    platforms: str | Iterable[str] | None = None,
+    force: bool = False,
+    dependencies: str | Iterable[str] | None = None,
+    verbose: bool = False,
+    quiet: bool = True,
+    dry_run: bool = False,
+) -> None:
     """Convert changes a package from one platform to another.  It applies only to things that are
     portable, such as pure python, or header-only C/C++ libraries."""
     from .convert import conda_convert
 
     platforms = ensure_list(platforms)
+    dependencies = ensure_list(dependencies)
     if package_file.endswith("tar.bz2"):
         return conda_convert(
             package_file,
@@ -419,7 +448,7 @@ def convert(
         raise RuntimeError("cannot convert: %s" % package_file)
 
 
-def test_installable(channel="defaults"):
+def test_installable(channel: str = "defaults") -> bool:
     """Check to make sure that packages in channel are installable.
     This is a consistency check for the channel."""
     from .inspect_pkg import test_installable
@@ -428,14 +457,14 @@ def test_installable(channel="defaults"):
 
 
 def inspect_linkages(
-    packages,
-    prefix=sys.prefix,
-    untracked=False,
-    all_packages=False,
-    show_files=False,
-    groupby="package",
-    sysroot="",
-):
+    packages: str | Iterable[str],
+    prefix: str | os.PathLike | Path = sys.prefix,
+    untracked: bool = False,
+    all_packages: bool = False,
+    show_files: bool = False,
+    groupby: Literal["package", "dependency"] = "package",
+    sysroot: str = "",
+) -> str:
     from .inspect_pkg import inspect_linkages
 
     packages = ensure_list(packages)
@@ -575,7 +604,7 @@ def debug(
 
     config.channel_urls = get_channel_urls(kwargs)
 
-    metadata_tuples: list[tuple[MetaData, bool, bool]] = []
+    metadata_tuples: list[MetaDataTuple] = []
 
     best_link_source_method = "skip"
     if isinstance(recipe_or_package_path_or_metadata_tuples, str):
@@ -583,7 +612,7 @@ def debug(
             for metadata_conda_debug in metadatas_conda_debug:
                 best_link_source_method = "symlink"
                 metadata = MetaData(metadata_conda_debug, config, {})
-                metadata_tuples.append((metadata, False, True))
+                metadata_tuples.append(MetaDataTuple(metadata, False, True))
         else:
             ext = os.path.splitext(recipe_or_package_path_or_metadata_tuples)[1]
             if not ext or not any(ext in _ for _ in CONDA_PACKAGE_EXTENSIONS):

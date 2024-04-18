@@ -30,6 +30,7 @@ from .variants import get_default_variant
 
 if TYPE_CHECKING:
     from pathlib import Path
+    from typing import Any
 
 invocation_time = ""
 
@@ -821,7 +822,7 @@ class Config:
         for folder in self.bldpkgs_dirs:
             rm_rf(folder)
 
-    def copy(self):
+    def copy(self) -> Config:
         new = copy.copy(self)
         new.variant = copy.deepcopy(self.variant)
         if hasattr(self, "variants"):
@@ -847,7 +848,11 @@ class Config:
             self.clean(remove_folders=False)
 
 
-def _get_or_merge_config(config, variant=None, **kwargs):
+def _get_or_merge_config(
+    config: Config | None,
+    variant: dict[str, Any] | None = None,
+    **kwargs,
+) -> Config:
     # This function should only ever be called via get_or_merge_config.
     # It only exists for us to monkeypatch a default config when running tests.
     if not config:
@@ -863,7 +868,11 @@ def _get_or_merge_config(config, variant=None, **kwargs):
     return config
 
 
-def get_or_merge_config(config, variant=None, **kwargs):
+def get_or_merge_config(
+    config: Config | None,
+    variant: dict[str, Any] | None = None,
+    **kwargs,
+) -> Config:
     """Always returns a new object - never changes the config that might be passed in."""
     return _get_or_merge_config(config, variant=variant, **kwargs)
 
