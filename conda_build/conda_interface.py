@@ -60,8 +60,6 @@ from conda.exports import (  # noqa: F401
     walk_prefix,
     win_path_to_unix,
 )
-from conda.exports import get_index as _get_index
-from conda.gateways.disk.read import compute_sum as _compute_sum
 from conda.models.channel import get_conda_build_local_url as _get_conda_build_local_url
 
 from .deprecations import deprecated
@@ -173,13 +171,6 @@ deprecated.constant(
     addendum="Use `conda.models.channel.get_conda_build_local_url` instead.",
 )
 deprecated.constant(
-    "24.1.0",
-    "24.5.0",
-    "get_index",
-    _get_index,
-    addendum="Use `conda.core.index.get_index` instead.",
-)
-deprecated.constant(
     "24.5",
     "24.7",
     "reset_context",
@@ -279,33 +270,6 @@ deprecated.constant(
 env_path_backup_var_exists = _os.getenv("CONDA_PATH_BACKUP")
 
 
-@deprecated(
-    "24.3",
-    "24.5",
-    addendum="Handled by `conda.gateways.connection.session.CondaSession`.",
-)
-def handle_proxy_407(x, y):
-    pass
-
-
-deprecated.constant(
-    "24.3",
-    "24.5",
-    "hashsum_file",
-    _compute_sum,
-    addendum="Use `conda.gateways.disk.read.compute_sum` instead.",
-)
-
-
-@deprecated(
-    "24.3",
-    "24.5",
-    addendum="Use `conda.gateways.disk.read.compute_sum(path, 'md5')` instead.",
-)
-def md5_file(path: str | _os.PathLike) -> str:
-    return _compute_sum(path, "md5")
-
-
 deprecated.constant(
     "24.5",
     "24.7",
@@ -313,14 +277,3 @@ deprecated.constant(
     __version__,
     addendum="Use `conda.__version__` instead.",
 )
-
-
-@deprecated(
-    "24.3",
-    "24.5",
-    addendum="Use `conda_build.environ.get_version_from_git_tag` instead.",
-)
-def get_version_from_git_tag(tag):
-    from .environ import get_version_from_git_tag
-
-    return get_version_from_git_tag(tag)
