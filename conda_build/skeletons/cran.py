@@ -41,10 +41,11 @@ except ImportError:
 
 from typing import TYPE_CHECKING
 
+from conda.base.context import context
 from conda.common.io import dashlist
+from conda.gateways.disk.create import TemporaryDirectory
 
 from .. import source
-from ..conda_interface import TemporaryDirectory, cc_conda_build
 from ..config import get_or_merge_config
 from ..license_family import allowed_license_families, guess_license_family
 from ..metadata import MetaData
@@ -456,7 +457,7 @@ def add_parser(repos):
     cran.add_argument(
         "-m",
         "--variant-config-files",
-        default=cc_conda_build.get("skeleton_config_yaml", None),
+        default=context.conda_build.get("skeleton_config_yaml", None),
         help="""Variant config file to add.  These yaml files can contain
         keys such as `cran_mirror`.  Only one can be provided here.""",
     )

@@ -9,7 +9,8 @@ from os.path import basename
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from ..conda_interface import untracked
+from conda.misc import untracked
+
 from ..utils import on_linux, on_mac
 from .macho import otool
 from .pyldd import codefile_class, inspect_linkages, machofile

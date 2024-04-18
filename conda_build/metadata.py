@@ -18,10 +18,10 @@ from typing import TYPE_CHECKING, NamedTuple, overload
 from bs4 import UnicodeDammit
 from conda.base.context import context
 from conda.gateways.disk.read import compute_sum
+from conda.models.match_spec import MatchSpec
 from frozendict import deepfreeze
 
-from . import exceptions, utils, variants
-from .conda_interface import MatchSpec
+from . import exceptions, utils
 from .config import Config, get_or_merge_config
 from .features import feature_list
 from .license_family import ensure_valid_license_family
@@ -33,6 +33,15 @@ from .utils import (
     get_installed_packages,
     insert_variant_versions,
     on_win,
+)
+from .variants import (
+    dict_of_lists_to_list_of_dicts,
+    find_used_variables_in_batch_script,
+    find_used_variables_in_shell_script,
+    find_used_variables_in_text,
+    get_default_variant,
+    get_vars,
+    list_of_dicts_to_dict_of_lists,
 )
 
 if TYPE_CHECKING:
@@ -156,7 +165,7 @@ def get_selectors(config: Config) -> dict[str, bool]:
         if arch == "32":
             d["x86"] = plat.endswith(("-32", "-64"))
 
-    defaults = variants.get_default_variant(config)
+    defaults = get_default_variant(config)
     py = config.variant.get("python", defaults["python"])
     # there are times when python comes in as a tuple
     if not hasattr(py, "split"):
@@ -268,38 +277,68 @@ def eval_selector(selector_string, namespace, variants_in_place):
         return eval_selector(next_string, namespace, variants_in_place)
 
 
-def select_lines(data, namespace, variants_in_place):
-    lines = []
-
-    for i, line in enumerate(data.splitlines()):
+@lru_cache(maxsize=None)
+def _split_line_selector(text: str) -> tuple[tuple[str | None, str], ...]:
+    lines: list[tuple[str | None, str]] = []
+    for line in text.splitlines():
         line = line.rstrip()
 
+        # skip comment lines, include a blank line as a placeholder
+        if line.lstrip().startswith("#"):
+            lines.append((None, ""))
+            continue
+
+        # include blank lines
+        if not line:
+            lines.append((None, ""))
+            continue
+
+        # user may have quoted entire line to make YAML happy
         trailing_quote = ""
         if line and line[-1] in ("'", '"'):
             trailing_quote = line[-1]
 
-        if line.lstrip().startswith("#"):
-            # Don't bother with comment only lines
-            continue
-        m = sel_pat.match(line)
-        if m:
-            cond = m.group(3)
-            try:
-                if eval_selector(cond, namespace, variants_in_place):
-                    lines.append(m.group(1) + trailing_quote)
-            except Exception as e:
-                sys.exit(
-                    """\
-Error: Invalid selector in meta.yaml line %d:
-offending line:
-%s
-exception:
-%s
-"""
-                    % (i + 1, line, str(e))
-                )
+        # Checking for "[" and "]" before regex matching every line is a bit faster.
+        if (
+            ("[" in line and "]" in line)
+            and (match := sel_pat.match(line))
+            and (selector := match.group(3))
+        ):
+            # found a selector
+            lines.append((selector, (match.group(1) + trailing_quote).rstrip()))
         else:
+            # no selector found
+            lines.append((None, line))
+    return tuple(lines)
+
+
+def select_lines(text: str, namespace: dict[str, Any], variants_in_place: bool) -> str:
+    lines = []
+    selector_cache: dict[str, bool] = {}
+    for i, (selector, line) in enumerate(_split_line_selector(text)):
+        if not selector:
+            # no selector? include line as is
             lines.append(line)
+        else:
+            # include lines with a selector that evaluates to True
+            try:
+                if selector_cache[selector]:
+                    lines.append(line)
+            except KeyError:
+                # KeyError: cache miss
+                try:
+                    value = bool(eval_selector(selector, namespace, variants_in_place))
+                    selector_cache[selector] = value
+                    if value:
+                        lines.append(line)
+                except Exception as e:
+                    sys.exit(
+                        f"Error: Invalid selector in meta.yaml line {i + 1}:\n"
+                        f"offending line:\n"
+                        f"{line}\n"
+                        f"exception:\n"
+                        f"{e.__class__.__name__}: {e}\n"
+                    )
     return "\n".join(lines) + "\n"
 
 
@@ -815,7 +854,7 @@ def toposort(output_metadata_map):
     will naturally lead to non-overlapping files in each package and also
     the correct files being present during the install and test procedures,
     provided they are run in this order."""
-    from .conda_interface import _toposort
+    from conda.common.toposort import _toposort
 
     # We only care about the conda packages built by this recipe. Non-conda
     # packages get sorted to the end.
@@ -892,8 +931,8 @@ def get_output_dicts_from_metadata(
             outputs.append(OrderedDict(name=metadata.name()))
     for out in outputs:
         if (
-            "package:" in metadata.get_recipe_text()
-            and out.get("name") == metadata.name()
+            out.get("name") == metadata.name()
+            and "package:" in metadata.get_recipe_text()
         ):
             combine_top_level_metadata_with_output(metadata, out)
     return outputs
@@ -1005,6 +1044,7 @@ def get_updated_output_dict_from_reparsed_metadata(original_dict, new_outputs):
     return output_d
 
 
+@lru_cache(maxsize=200)
 def _filter_recipe_text(text, extract_pattern=None):
     if extract_pattern:
         match = re.search(extract_pattern, text, flags=re.MULTILINE | re.DOTALL)
@@ -2076,8 +2116,11 @@ class MetaData:
         return None
 
     def get_recipe_text(
-        self, extract_pattern=None, force_top_level=False, apply_selectors=True
-    ):
+        self,
+        extract_pattern: str | None = None,
+        force_top_level: bool = False,
+        apply_selectors: bool = True,
+    ) -> str:
         meta_path = self.meta_path
         if meta_path:
             recipe_text = read_meta_file(meta_path)
@@ -2437,9 +2480,7 @@ class MetaData:
 
     def get_reduced_variant_set(self, used_variables):
         # reduce variable space to limit work we need to do
-        full_collapsed_variants = variants.list_of_dicts_to_dict_of_lists(
-            self.config.variants
-        )
+        full_collapsed_variants = list_of_dicts_to_dict_of_lists(self.config.variants)
         reduced_collapsed_variants = full_collapsed_variants.copy()
         reduce_keys = set(self.config.variants[0].keys()) - set(used_variables)
 
@@ -2471,7 +2512,7 @@ class MetaData:
                 # save only one element from this key
                 reduced_collapsed_variants[key] = utils.ensure_list(next(iter(values)))
 
-        out = variants.dict_of_lists_to_list_of_dicts(reduced_collapsed_variants)
+        out = dict_of_lists_to_list_of_dicts(reduced_collapsed_variants)
         return out
 
     def get_output_metadata_set(
@@ -2615,21 +2656,14 @@ class MetaData:
         return output_tuples
 
     def get_loop_vars(self):
-        _variants = (
-            self.config.input_variants
-            if hasattr(self.config, "input_variants")
-            else self.config.variants
-        )
-        return variants.get_vars(_variants, loop_only=True)
+        return get_vars(getattr(self.config, "input_variants", self.config.variants))
 
     def get_used_loop_vars(self, force_top_level=False, force_global=False):
-        return {
-            var
-            for var in self.get_used_vars(
-                force_top_level=force_top_level, force_global=force_global
-            )
-            if var in self.get_loop_vars()
-        }
+        loop_vars = self.get_loop_vars()
+        used_vars = self.get_used_vars(
+            force_top_level=force_top_level, force_global=force_global
+        )
+        return set(loop_vars).intersection(used_vars)
 
     def get_rendered_recipe_text(
         self, permit_undefined_jinja=False, extract_pattern=None
@@ -2805,7 +2839,7 @@ class MetaData:
             apply_selectors=False,
         )
 
-        all_used_selectors = variants.find_used_variables_in_text(
+        all_used_selectors = find_used_variables_in_text(
             variant_keys, recipe_text, selectors_only=True
         )
 
@@ -2814,7 +2848,7 @@ class MetaData:
             force_global=force_global,
             apply_selectors=True,
         )
-        all_used_reqs = variants.find_used_variables_in_text(
+        all_used_reqs = find_used_variables_in_text(
             variant_keys, recipe_text, selectors_only=False
         )
 
@@ -2825,9 +2859,7 @@ class MetaData:
         if force_global:
             used = all_used
         else:
-            requirements_used = variants.find_used_variables_in_text(
-                variant_keys, reqs_text
-            )
+            requirements_used = find_used_variables_in_text(variant_keys, reqs_text)
             outside_reqs_used = all_used - requirements_used
 
             requirements_used = trim_build_only_deps(self, requirements_used)
@@ -2840,16 +2872,12 @@ class MetaData:
         buildsh = os.path.join(self.path, "build.sh")
         if os.path.isfile(buildsh):
             used_vars.update(
-                variants.find_used_variables_in_shell_script(
-                    self.config.variant, buildsh
-                )
+                find_used_variables_in_shell_script(self.config.variant, buildsh)
             )
         bldbat = os.path.join(self.path, "bld.bat")
         if self.config.platform == "win" and os.path.isfile(bldbat):
             used_vars.update(
-                variants.find_used_variables_in_batch_script(
-                    self.config.variant, bldbat
-                )
+                find_used_variables_in_batch_script(self.config.variant, bldbat)
             )
         return used_vars
 
@@ -2862,15 +2890,11 @@ class MetaData:
             script = os.path.join(self.path, this_output["script"])
             if os.path.splitext(script)[1] == ".sh":
                 used_vars.update(
-                    variants.find_used_variables_in_shell_script(
-                        self.config.variant, script
-                    )
+                    find_used_variables_in_shell_script(self.config.variant, script)
                 )
             elif os.path.splitext(script)[1] == ".bat":
                 used_vars.update(
-                    variants.find_used_variables_in_batch_script(
-                        self.config.variant, script
-                    )
+                    find_used_variables_in_batch_script(self.config.variant, script)
                 )
             else:
                 log = utils.get_logger(__name__)
@@ -2881,7 +2905,7 @@ class MetaData:
         return used_vars
 
     def get_variants_as_dict_of_lists(self):
-        return variants.list_of_dicts_to_dict_of_lists(self.config.variants)
+        return list_of_dicts_to_dict_of_lists(self.config.variants)
 
     def clean(self):
         """This ensures that clean is called with the correct build id"""
