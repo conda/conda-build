@@ -11,6 +11,7 @@ import pytest
 from conda.base.context import context
 
 from conda_build import api, utils
+from conda_build.metadata import MetaDataTuple
 from conda_build.render import finalize_metadata
 
 from .utils import get_valid_recipes, subpackage_dir
@@ -56,7 +57,10 @@ def test_output_pkg_path_shows_all_subpackages(testing_metadata):
     testing_metadata.meta["outputs"] = [{"name": "a"}, {"name": "b"}]
     out_dicts_and_metadata = testing_metadata.get_output_metadata_set()
     outputs = api.get_output_file_paths(
-        [(m, None, None) for (_, m) in out_dicts_and_metadata]
+        [
+            MetaDataTuple(metadata, False, False)
+            for _, metadata in out_dicts_and_metadata
+        ]
     )
     assert len(outputs) == 2
 
@@ -65,7 +69,10 @@ def test_subpackage_version_provided(testing_metadata):
     testing_metadata.meta["outputs"] = [{"name": "a", "version": "2.0"}]
     out_dicts_and_metadata = testing_metadata.get_output_metadata_set()
     outputs = api.get_output_file_paths(
-        [(m, None, None) for (_, m) in out_dicts_and_metadata]
+        [
+            MetaDataTuple(metadata, False, False)
+            for _, metadata in out_dicts_and_metadata
+        ]
     )
     assert len(outputs) == 1
     assert "a-2.0-1" in outputs[0]
@@ -79,7 +86,10 @@ def test_subpackage_independent_hash(testing_metadata):
     out_dicts_and_metadata = testing_metadata.get_output_metadata_set()
     assert len(out_dicts_and_metadata) == 2
     outputs = api.get_output_file_paths(
-        [(m, None, None) for (_, m) in out_dicts_and_metadata]
+        [
+            MetaDataTuple(metadata, False, False)
+            for _, metadata in out_dicts_and_metadata
+        ]
     )
     assert len(outputs) == 2
     assert outputs[0][-15:] != outputs[1][-15:]
