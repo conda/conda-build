@@ -1,11 +1,14 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
+
 import json
 import logging
 import os
 import shutil
 import sys
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -19,6 +22,11 @@ from conda_build.utils import (
 )
 
 from .utils import add_mangling, metadata_dir
+
+if TYPE_CHECKING:
+    from pytest import LogCaptureFixture
+
+    from conda_build.config import Config
 
 
 @pytest.mark.skipif(
@@ -102,7 +110,11 @@ def test_pypi_installer_metadata(testing_config):
     assert "conda" == (package_has_file(pkg, expected_installer, refresh_mode="forced"))
 
 
-def test_menuinst_validation_ok(testing_config, caplog, tmp_path):
+def test_menuinst_validation_ok(
+    testing_config: Config,
+    caplog: LogCaptureFixture,
+    tmp_path: Path,
+):
     "1st check - validation passes with recipe as is"
     recipe = Path(metadata_dir, "_menu_json_validation")
     recipe_tmp = tmp_path / "_menu_json_validation"
@@ -118,7 +130,11 @@ def test_menuinst_validation_ok(testing_config, caplog, tmp_path):
     assert package_has_file(pkg, "Menu/menu_json_validation.json")
 
 
-def test_menuinst_validation_fails_bad_schema(testing_config, caplog, tmp_path):
+def test_menuinst_validation_fails_bad_schema(
+    testing_config: Config,
+    caplog: LogCaptureFixture,
+    tmp_path: Path,
+):
     "2nd check - valid JSON but invalid content fails validation"
     recipe = Path(metadata_dir, "_menu_json_validation")
     recipe_tmp = tmp_path / "_menu_json_validation"
@@ -138,7 +154,11 @@ def test_menuinst_validation_fails_bad_schema(testing_config, caplog, tmp_path):
     assert "ValidationError" in captured_text
 
 
-def test_menuinst_validation_fails_bad_json(testing_config, caplog, tmp_path):
+def test_menuinst_validation_fails_bad_json(
+    testing_config: Config,
+    caplog: LogCaptureFixture,
+    tmp_path: Path,
+):
     "3rd check - non-parsable JSON fails validation"
     recipe = Path(metadata_dir, "_menu_json_validation")
     recipe_tmp = tmp_path / "_menu_json_validation"

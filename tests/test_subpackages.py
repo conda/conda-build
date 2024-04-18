@@ -1,11 +1,14 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
+
 import json
+import logging
 import os
 import re
 import sys
 from glob import glob
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 from conda.base.context import context
@@ -14,6 +17,13 @@ from conda_build import api, utils
 from conda_build.render import finalize_metadata
 
 from .utils import get_valid_recipes, subpackage_dir
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from pytest import LogCaptureFixture
+
+    from conda_build.config import Config
 
 
 @pytest.mark.slow
@@ -260,12 +270,13 @@ def test_subpackage_hash_inputs(testing_config):
             assert utils.package_has_file(out, "info/recipe/meta.yaml")
 
 
-def test_overlapping_files(testing_config, caplog):
+def test_overlapping_files(testing_config: Config, caplog: LogCaptureFixture):
     recipe_dir = os.path.join(subpackage_dir, "_overlapping_files")
     utils.reset_deduplicator()
-    outputs = api.build(recipe_dir, config=testing_config)
+    with caplog.at_level(logging.WARNING):
+        outputs = api.build(recipe_dir, config=testing_config)
     assert len(outputs) == 3
-    assert sum(int("Exact overlap" in rec.message) for rec in caplog.records) == 1
+    assert sum("Exact overlap" in rec.message for rec in caplog.records) == 1
 
 
 @pytest.mark.sanity

@@ -1,17 +1,22 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
+
+import logging
 import os
 import subprocess
 import sys
 from pathlib import Path
-from typing import NamedTuple
+from typing import TYPE_CHECKING, NamedTuple
 
 import filelock
 import pytest
-from pytest import MonkeyPatch
 
 import conda_build.utils as utils
 from conda_build.exceptions import BuildLockError
+
+if TYPE_CHECKING:
+    from pytest import CaptureFixture, LogCaptureFixture, MonkeyPatch
 
 
 @pytest.mark.skipif(
@@ -155,9 +160,7 @@ def test_filter_files():
 
 
 @pytest.mark.serial
-def test_logger_filtering(caplog, capfd):
-    import logging
-
+def test_logger_filtering(caplog: LogCaptureFixture, capfd: CaptureFixture):
     log = utils.get_logger(__name__, level=logging.DEBUG)
     log.debug("test debug message")
     log.info("test info message")
