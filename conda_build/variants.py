@@ -771,8 +771,6 @@ def find_used_variables_in_shell_script(variant, file_path):
         text = f.read()
     used_variables = set()
     for v in variant:
-        if v not in text:
-            continue
         variant_regex = rf"(^[^$]*?\$\{{?\s*{re.escape(v)}\s*[\s|\}}])"
         if re.search(variant_regex, text, flags=re.MULTILINE | re.DOTALL):
             used_variables.add(v)
@@ -784,8 +782,6 @@ def find_used_variables_in_batch_script(variant, file_path):
         text = f.read()
     used_variables = set()
     for v in variant:
-        if v not in text:
-            continue
         variant_regex = rf"\%{re.escape(v)}\%"
         if re.search(variant_regex, text, flags=re.MULTILINE | re.DOTALL):
             used_variables.add(v)
