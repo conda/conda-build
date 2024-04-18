@@ -20,7 +20,6 @@ from .utils import (
     CONDA_PACKAGE_EXTENSION_V2,
     JSONDecodeError,
     get_logger,
-    on_win,
 )
 
 log = get_logger(__name__)
@@ -33,17 +32,6 @@ local_output_folder = ""
 cached_channels = []
 _channel_data = {}
 deprecated.constant("24.1", "24.5", "channel_data", _channel_data)
-
-
-# TODO: support for libarchive seems to have broken ability to use multiple threads here.
-#    The new conda format is so much faster that it more than makes up for it.  However, it
-#    would be nice to fix this at some point.
-_MAX_THREADS_DEFAULT = os.cpu_count() or 1
-if on_win:  # see https://github.com/python/cpython/commit/8ea0fd85bc67438f679491fae29dfe0a3961900a
-    _MAX_THREADS_DEFAULT = min(48, _MAX_THREADS_DEFAULT)
-deprecated.constant("24.3", "24.5", "MAX_THREADS_DEFAULT", _MAX_THREADS_DEFAULT)
-deprecated.constant("24.3", "24.5", "LOCK_TIMEOUT_SECS", 3 * 3600)
-deprecated.constant("24.3", "24.5", "LOCKFILE_NAME", ".lock")
 
 # TODO: this is to make sure that the index doesn't leak tokens.  It breaks use of private channels, though.
 # os.environ['CONDA_ADD_ANACONDA_TOKEN'] = "false"
