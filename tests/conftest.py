@@ -26,7 +26,6 @@ from conda_build.config import (
     filename_hashing_default,
     ignore_verify_codes_default,
     no_rewrite_stdout_env_default,
-    noarch_python_build_age_default,
 )
 from conda_build.metadata import MetaData
 from conda_build.utils import check_call_env, copy_into, prepend_bin_path
@@ -99,7 +98,6 @@ def testing_config(testing_workdir):
         _src_cache_root=_src_cache_root_default,
         error_overlinking=boolify(error_overlinking_default),
         error_overdepending=boolify(error_overdepending_default),
-        noarch_python_build_age=noarch_python_build_age_default,
         enable_static=boolify(enable_static_default),
         no_rewrite_stdout_env=boolify(no_rewrite_stdout_env_default),
         ignore_verify_codes=ignore_verify_codes_default,
@@ -111,7 +109,6 @@ def testing_config(testing_workdir):
     assert result.no_rewrite_stdout_env is False
     assert result._src_cache_root is None
     assert result.src_cache_root == testing_workdir
-    assert result.noarch_python_build_age == 0
     return result
 
 

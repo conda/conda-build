@@ -793,11 +793,11 @@ def reparse(metadata):
 
 
 def distribute_variants(
-    metadata,
+    metadata: MetaData,
     variants,
-    permit_unsatisfiable_variants=False,
-    allow_no_other_outputs=False,
-    bypass_env_check=False,
+    permit_unsatisfiable_variants: bool = False,
+    allow_no_other_outputs: bool = False,
+    bypass_env_check: bool = False,
 ):
     rendered_metadata = {}
     need_source_download = True
@@ -808,27 +808,13 @@ def distribute_variants(
     if metadata.noarch or metadata.noarch_python:
         from .conda_interface import VersionOrder
 
-        age = int(
-            metadata.get_value(
-                "build/noarch_python_build_age", metadata.config.noarch_python_build_age
-            )
-        )
-        versions = []
-        for variant in variants:
-            if "python" in variant:
-                vo = variant["python"]
-                if vo not in versions:
-                    versions.append(vo)
-        version_indices = sorted(
-            range(len(versions)), key=lambda k: VersionOrder(versions[k].split(" ")[0])
-        )
-        if age < 0:
-            age = 0
-        elif age > len(versions) - 1:
-            age = len(versions) - 1
-        build_ver = versions[version_indices[len(versions) - 1 - age]]
+        # filter variants by the newest Python version
+        version = sorted(
+            {version for variant in variants if (version := variant.get("python"))},
+            key=lambda key: VersionOrder(key.split(" ")[0]),
+        )[-1]
         variants = filter_by_key_value(
-            variants, "python", build_ver, "noarch_python_reduction"
+            variants, "python", version, "noarch_python_reduction"
         )
 
     # store these for reference later

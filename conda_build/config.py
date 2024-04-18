@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING
 from conda.base.context import context
 
 from .conda_interface import cc_conda_build, url_path
+from .deprecations import deprecated
 from .utils import (
     get_build_folders,
     get_conda_operation_locks,
@@ -52,7 +53,7 @@ filename_hashing_default = "true"
 _src_cache_root_default = None
 error_overlinking_default = "false"
 error_overdepending_default = "false"
-noarch_python_build_age_default = 0
+deprecated.constant("24.5", "24.7", "noarch_python_build_age_default", 0)
 enable_static_default = "false"
 no_rewrite_stdout_env_default = "false"
 ignore_verify_codes_default = []
@@ -151,12 +152,6 @@ def _get_default_settings():
                 "error_overdepending", error_overdepending_default
             ).lower()
             == "true",
-        ),
-        Setting(
-            "noarch_python_build_age",
-            cc_conda_build.get(
-                "noarch_python_build_age", noarch_python_build_age_default
-            ),
         ),
         Setting(
             "enable_static",
