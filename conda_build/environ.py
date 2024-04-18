@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import contextlib
-import json
 import logging
 import multiprocessing
 import os
@@ -813,67 +812,6 @@ def os_vars(m, prefix):
         linux_vars(m, get_default, prefix)
 
     return d
-
-
-@deprecated("24.3", "24.5")
-class InvalidEnvironment(Exception):
-    pass
-
-
-# Stripped-down Environment class from conda-tools ( https://github.com/groutr/conda-tools )
-# Vendored here to avoid the whole dependency for just this bit.
-@deprecated("24.3", "24.5")
-def _load_json(path):
-    with open(path) as fin:
-        x = json.load(fin)
-    return x
-
-
-@deprecated("24.3", "24.5")
-def _load_all_json(path):
-    """
-    Load all json files in a directory.  Return dictionary with filenames mapped to json
-    dictionaries.
-    """
-    root, _, files = next(utils.walk(path))
-    result = {}
-    for f in files:
-        if f.endswith(".json"):
-            result[f] = _load_json(join(root, f))
-    return result
-
-
-@deprecated("24.3", "24.5", addendum="Use `conda.core.prefix_data.PrefixData` instead.")
-class Environment:
-    def __init__(self, path):
-        """
-        Initialize an Environment object.
-
-        To reflect changes in the underlying environment, a new Environment object should be
-        created.
-        """
-        self.path = path
-        self._meta = join(path, "conda-meta")
-        if os.path.isdir(path) and os.path.isdir(self._meta):
-            self._packages = {}
-        else:
-            raise InvalidEnvironment(f"Unable to load environment {path}")
-
-    def _read_package_json(self):
-        if not self._packages:
-            self._packages = _load_all_json(self._meta)
-
-    def package_specs(self):
-        """
-        List all package specs in the environment.
-        """
-        self._read_package_json()
-        json_objs = self._packages.values()
-        specs = []
-        for i in json_objs:
-            p, v, b = i["name"], i["version"], i["build"]
-            specs.append(f"{p} {v} {b}")
-        return specs
 
 
 cached_precs: dict[
