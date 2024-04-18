@@ -45,7 +45,6 @@ from .conda_interface import (
 )
 from .config import Config
 from .create_test import create_all_test_files
-from .deprecations import deprecated
 from .exceptions import CondaBuildException, DependencyNeedsBuildingError
 from .index import _delegated_update_index, get_build_index
 from .metadata import FIELDS, MetaData
@@ -182,121 +181,6 @@ def prefix_replacement_excluded(path):
         # skip symbolic links (as we can on Linux)
         return True
     return False
-
-
-@deprecated("24.3", "24.5")
-def have_prefix_files(files, prefix):
-    """
-    Yields files that contain the current prefix in them, and modifies them
-    to replace the prefix with a placeholder.
-
-    :param files: Filenames to check for instances of prefix
-    :type files: list of tuples containing strings (prefix, mode, filename)
-    """
-
-    prefix_bytes = prefix.encode(utils.codec)
-    prefix_placeholder_bytes = prefix_placeholder.encode(utils.codec)
-    searches = {prefix: prefix_bytes}
-    if utils.on_win:
-        # some windows libraries use unix-style path separators
-        forward_slash_prefix = prefix.replace("\\", "/")
-        forward_slash_prefix_bytes = forward_slash_prefix.encode(utils.codec)
-        searches[forward_slash_prefix] = forward_slash_prefix_bytes
-        # some windows libraries have double backslashes as escaping
-        double_backslash_prefix = prefix.replace("\\", "\\\\")
-        double_backslash_prefix_bytes = double_backslash_prefix.encode(utils.codec)
-        searches[double_backslash_prefix] = double_backslash_prefix_bytes
-    searches[prefix_placeholder] = prefix_placeholder_bytes
-    min_prefix = min(len(k) for k, _ in searches.items())
-
-    # mm.find is incredibly slow, so ripgrep is used to pre-filter the list.
-    # Really, ripgrep could be used on its own with a bit more work though.
-    rg_matches = []
-    prefix_len = len(prefix) + 1
-    rg = external.find_executable("rg")
-    if rg:
-        for rep_prefix, _ in searches.items():
-            try:
-                args = [
-                    rg,
-                    "--unrestricted",
-                    "--no-heading",
-                    "--with-filename",
-                    "--files-with-matches",
-                    "--fixed-strings",
-                    "--text",
-                    rep_prefix,
-                    prefix,
-                ]
-                matches = subprocess.check_output(args)
-                rg_matches.extend(
-                    matches.decode("utf-8").replace("\r\n", "\n").splitlines()
-                )
-            except subprocess.CalledProcessError:
-                continue
-        # HACK: this is basically os.path.relpath, just simpler and faster
-        # NOTE: path normalization needs to be in sync with create_info_files
-        if utils.on_win:
-            rg_matches = [
-                rg_match.replace("\\", "/")[prefix_len:] for rg_match in rg_matches
-            ]
-        else:
-            rg_matches = [rg_match[prefix_len:] for rg_match in rg_matches]
-    else:
-        print(
-            "WARNING: Detecting which files contain PREFIX is slow, installing ripgrep makes it faster."
-            " 'conda install ripgrep'"
-        )
-
-    for f in files:
-        if os.path.isabs(f):
-            f = f[prefix_len:]
-        if rg_matches and f not in rg_matches:
-            continue
-        path = os.path.join(prefix, f)
-        if prefix_replacement_excluded(path):
-            continue
-
-        # dont try to mmap an empty file, and no point checking files that are smaller
-        # than the smallest prefix.
-        if os.stat(path).st_size < min_prefix:
-            continue
-
-        try:
-            fi = open(path, "rb+")
-        except OSError:
-            log = utils.get_logger(__name__)
-            log.warn("failed to open %s for detecting prefix.  Skipping it." % f)
-            continue
-        try:
-            mm = utils.mmap_mmap(
-                fi.fileno(), 0, tagname=None, flags=utils.mmap_MAP_PRIVATE
-            )
-        except OSError:
-            mm = fi.read()
-
-        mode = "binary" if mm.find(b"\x00") != -1 else "text"
-        if mode == "text":
-            # TODO :: Ask why we do not do this on Windows too?!
-            if not utils.on_win and mm.find(prefix_bytes) != -1:
-                # Use the placeholder for maximal backwards compatibility, and
-                # to minimize the occurrences of usernames appearing in built
-                # packages.
-                data = mm[:]
-                mm.close()
-                fi.close()
-                rewrite_file_with_new_prefix(
-                    path, data, prefix_bytes, prefix_placeholder_bytes
-                )
-                fi = open(path, "rb+")
-                mm = utils.mmap_mmap(
-                    fi.fileno(), 0, tagname=None, flags=utils.mmap_MAP_PRIVATE
-                )
-        for rep_prefix, rep_prefix_bytes in searches.items():
-            if mm.find(rep_prefix_bytes) != -1:
-                yield (rep_prefix, mode, f)
-        mm.close()
-        fi.close()
 
 
 # It may be that when using the list form of passing args to subprocess

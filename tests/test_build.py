@@ -14,30 +14,10 @@ from contextlib import nullcontext
 from pathlib import Path
 
 import pytest
-from conda.common.compat import on_win
 
 from conda_build import api, build
 
 from .utils import get_noarch_python_meta, metadata_dir
-
-PREFIX_TESTS = {"normal": os.path.sep}
-if on_win:
-    PREFIX_TESTS.update({"double_backslash": "\\\\", "forward_slash": "/"})
-
-
-def test_find_prefix_files(testing_workdir):
-    """
-    Write test output that has the prefix to be found, then verify that the prefix finding
-    identified the correct number of files.
-    """
-    # create text files to be replaced
-    files = []
-    for style, replacement in PREFIX_TESTS.items():
-        filename = Path(testing_workdir, f"{style}.txt")
-        filename.write_text(testing_workdir.replace(os.path.sep, replacement))
-        files.append(str(filename))
-
-    assert len(list(build.have_prefix_files(files, testing_workdir))) == len(files)
 
 
 def test_build_preserves_PATH(testing_config):
