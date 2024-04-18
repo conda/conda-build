@@ -10,6 +10,7 @@ from typing import Iterator
 
 import pytest
 from conda.common.compat import on_mac, on_win
+from conda_index.api import update_index
 from pytest import MonkeyPatch
 
 import conda_build
@@ -248,3 +249,11 @@ def conda_build_test_recipe_envvar(
     name = "CONDA_BUILD_TEST_RECIPE_PATH"
     monkeypatch.setenv(name, str(conda_build_test_recipe_path))
     return name
+
+
+@pytest.fixture(scope="session")
+def empty_channel(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """Create a temporary, empty conda channel."""
+    channel = tmp_path_factory.mktemp("empty_channel", numbered=False)
+    update_index(channel)
+    return channel

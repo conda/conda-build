@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from conda.base.context import context, determine_target_prefix
+from conda.base.context import context
 
 from .. import api
 
@@ -88,10 +88,11 @@ This works by creating a conda.pth file in site-packages.""",
 
 def execute(args: Sequence[str] | None = None) -> int:
     _, parsed = parse_args(args)
-    prefix = determine_target_prefix(context, parsed)
+    context.__init__(argparse_args=parsed)
+
     api.develop(
         parsed.source,
-        prefix=prefix,
+        prefix=context.target_prefix,
         no_pth_file=parsed.no_pth_file,
         build_ext=parsed.build_ext,
         clean=parsed.clean,

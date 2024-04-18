@@ -121,8 +121,12 @@ command line with the conda metapackage command.
 
 
 def execute(args: Sequence[str] | None = None) -> int:
-    _, args = parse_args(args)
-    channel_urls = args.__dict__.get("channel") or args.__dict__.get("channels") or ()
-    api.create_metapackage(channel_urls=channel_urls, **args.__dict__)
+    _, parsed = parse_args(args)
+    context.__init__(argparse_args=parsed)
+
+    api.create_metapackage(
+        channel_urls=context.channels,
+        **parsed.__dict__,
+    )
 
     return 0

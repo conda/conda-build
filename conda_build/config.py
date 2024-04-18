@@ -31,6 +31,7 @@ from .variants import get_default_variant
 
 if TYPE_CHECKING:
     from pathlib import Path
+    from typing import Any
 
 invocation_time = ""
 
@@ -89,7 +90,6 @@ def _get_default_settings():
         Setting("dirty", False),
         Setting("include_recipe", True),
         Setting("no_download_source", False),
-        Setting("override_channels", False),
         Setting("skip_existing", False),
         Setting("token", None),
         Setting("user", None),
@@ -290,6 +290,10 @@ class Config:
         #     or CLI params
         for lang in ("perl", "lua", "python", "numpy", "r_base"):
             set_lang(self.variant, lang)
+
+        # --override-channels is a valid CLI argument but we no longer wish to set it here
+        # use conda.base.context.context.override_channels instead
+        kwargs.pop("override_channels", None)
 
         self._build_id = kwargs.pop("build_id", getattr(self, "_build_id", ""))
         source_cache = kwargs.pop("cache_dir", None)
@@ -773,6 +777,15 @@ class Config:
     def subdirs_same(self):
         return self.host_subdir == self.build_subdir
 
+    @property
+    @deprecated(
+        "24.5",
+        "24.7",
+        addendum="Use `conda.base.context.context.override_channels` instead.",
+    )
+    def override_channels(self):
+        return context.override_channels
+
     def clean(self, remove_folders=True):
         # build folder is the whole burrito containing envs and source folders
         #   It will only exist if we download source, or create a build or test environment
@@ -816,7 +829,7 @@ class Config:
         for folder in self.bldpkgs_dirs:
             rm_rf(folder)
 
-    def copy(self):
+    def copy(self) -> Config:
         new = copy.copy(self)
         new.variant = copy.deepcopy(self.variant)
         if hasattr(self, "variants"):
@@ -842,7 +855,11 @@ class Config:
             self.clean(remove_folders=False)
 
 
-def _get_or_merge_config(config, variant=None, **kwargs):
+def _get_or_merge_config(
+    config: Config | None,
+    variant: dict[str, Any] | None = None,
+    **kwargs,
+) -> Config:
     # This function should only ever be called via get_or_merge_config.
     # It only exists for us to monkeypatch a default config when running tests.
     if not config:
@@ -858,7 +875,11 @@ def _get_or_merge_config(config, variant=None, **kwargs):
     return config
 
 
-def get_or_merge_config(config, variant=None, **kwargs):
+def get_or_merge_config(
+    config: Config | None,
+    variant: dict[str, Any] | None = None,
+    **kwargs,
+) -> Config:
     """Always returns a new object - never changes the config that might be passed in."""
     return _get_or_merge_config(config, variant=variant, **kwargs)
 

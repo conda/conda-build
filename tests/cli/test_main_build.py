@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
+from conda.exceptions import PackagesNotFoundError
 
 from conda_build import api
 from conda_build.cli import main_build, main_render
@@ -549,3 +550,14 @@ def test_user_warning(tmpdir, recwarn):
 
     main_build.parse_args([str(dir_recipe_path)])
     assert not recwarn.list
+
+
+def test_build_with_empty_channel_fails(empty_channel: Path) -> None:
+    with pytest.raises(PackagesNotFoundError):
+        main_build.execute(
+            [
+                "--override-channels",
+                f"--channel={empty_channel}",
+                os.path.join(metadata_dir, "_recipe_requiring_external_channel"),
+            ]
+        )

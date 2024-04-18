@@ -72,6 +72,8 @@ from .exceptions import BuildLockError
 if TYPE_CHECKING:
     from typing import Mapping, TypeVar
 
+    from .metadata import MetaData
+
     T = TypeVar("T")
     K = TypeVar("K")
     V = TypeVar("V")
@@ -1124,7 +1126,7 @@ def convert_path_for_cygwin_or_msys2(exe, path):
     return path
 
 
-def get_skip_message(m):
+def get_skip_message(m: MetaData) -> str:
     return (
         f"Skipped: {m.name()} from {m.path} defines build/skip for this configuration "
         f"({({k: m.config.variant[k] for k in m.get_used_vars()})})."
@@ -1250,9 +1252,13 @@ def tmp_chdir(dest):
         os.chdir(curdir)
 
 
-def expand_globs(path_list, root_dir):
+def expand_globs(
+    path_list: str | os.PathLike | Path | Iterable[str | os.PathLike | Path],
+    root_dir: str | os.PathLike | Path,
+) -> list[str]:
     files = []
     for path in ensure_list(path_list):
+        path = str(path)
         if not os.path.isabs(path):
             path = os.path.join(root_dir, path)
         if os.path.isfile(path):
@@ -1276,11 +1282,10 @@ def expand_globs(path_list, root_dir):
             # Avoid this potential ambiguity by sorting. (see #4185)
             files.extend(sorted(glob_files))
     prefix_path_re = re.compile("^" + re.escape(f"{root_dir}{os.path.sep}"))
-    files = [prefix_path_re.sub("", f, 1) for f in files]
-    return files
+    return [prefix_path_re.sub("", f, 1) for f in files]
 
 
-def find_recipe(path):
+def find_recipe(path: str) -> str:
     """recurse through a folder, locating valid meta files (see VALID_METAS).  Raises error if more than one is found.
 
     Returns full path to meta file to be built.

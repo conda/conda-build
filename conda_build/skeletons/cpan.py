@@ -4,6 +4,8 @@
 Tools for converting CPAN packages to conda recipes.
 """
 
+from __future__ import annotations
+
 import codecs
 import gzip
 import hashlib
@@ -384,15 +386,15 @@ def get_core_modules_for_this_perl_version(version, cache_dir):
 
 # meta_cpan_url="http://api.metacpan.org",
 def skeletonize(
-    packages,
-    output_dir=".",
-    version=None,
-    meta_cpan_url="https://fastapi.metacpan.org/v1",
-    recursive=False,
-    force=False,
-    config=None,
-    write_core=False,
-):
+    packages: list[str],
+    output_dir: str = ".",
+    version: str | None = None,
+    meta_cpan_url: str = "https://fastapi.metacpan.org/v1",
+    recursive: bool = False,
+    force: bool = False,
+    config: Config | None = None,
+    write_core: bool = False,
+) -> None:
     """
     Loops over packages, outputting conda recipes converted from CPAN metata.
     """
