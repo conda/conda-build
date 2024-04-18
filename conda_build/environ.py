@@ -72,9 +72,6 @@ if TYPE_CHECKING:
 
 log = getLogger(__name__)
 
-deprecated.constant("24.3", "24.5", "PREFIX_ACTION", _PREFIX_ACTION := "PREFIX")
-deprecated.constant("24.3", "24.5", "LINK_ACTION", _LINK_ACTION := "LINK")
-
 # these are things that we provide env vars for more explicitly.  This list disables the
 #    pass-through of variant values to env vars for these keys.
 LANGUAGES = ("PERL", "LUA", "R", "NUMPY", "PYTHON")
