@@ -352,19 +352,22 @@ def install_perl_get_core_modules(version):
                 "my @modules = grep {Module::CoreList::is_core($_)} Module::CoreList->find_modules(qr/.*/); "
                 'print join "\n", @modules;',
             ]
-            all_core_modules = (
-                subprocess.check_output(args, shell=False)
-                .decode("utf-8")
-                .replace("\r\n", "\n")
-                .split("\n")
-            )
+            try:
+                all_core_modules = (
+                    subprocess.check_output(args, shell=False)
+                    .decode("utf-8")
+                    .replace("\r\n", "\n")
+                    .split("\n")
+                )
+            except Exception as e:
+                print(
+                    f"Failed to query perl={version} for core modules list, ran:\n"
+                    f"{' '.join(args)}"
+                )
+                print(e.message)
             return all_core_modules
     except Exception as e:
-        print(
-            "Failed to query perl={} for core modules list, attempted command was:\n{}".format(
-                version, " ".join(args)
-            )
-        )
+        print(f"Failed to query perl={version} for core modules list.")
         print(e.message)
 
     return []

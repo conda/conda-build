@@ -3,6 +3,8 @@
 """This file handles the parsing of feature specifications from files,
 ending up with a configuration matrix"""
 
+from __future__ import annotations
+
 import os.path
 import re
 import sys
@@ -10,12 +12,17 @@ from collections import OrderedDict
 from copy import copy
 from functools import lru_cache
 from itertools import product
+from typing import TYPE_CHECKING
 
 import yaml
 from conda.base.context import context
 
+from .deprecations import deprecated
 from .utils import ensure_list, get_logger, islist, on_win, trim_empty_keys
 from .version import _parse as parse_version
+
+if TYPE_CHECKING:
+    from typing import Any, Iterable
 
 DEFAULT_VARIANTS = {
     "python": f"{sys.version_info.major}.{sys.version_info.minor}",
@@ -693,21 +700,22 @@ def get_package_variants(recipedir_or_metadata, config=None, variants=None):
     return filter_combined_spec_to_used_keys(combined_spec, specs=specs)
 
 
-def get_vars(variants, loop_only=False):
+@deprecated.argument("24.5", "24.7", "loop_only")
+def get_vars(variants: Iterable[dict[str, Any]]) -> set[str]:
     """For purposes of naming/identifying, provide a way of identifying which variables contribute
     to the matrix dimensionality"""
-    special_keys = {"pin_run_as_build", "zip_keys", "ignore_version"}
-    special_keys.update(set(ensure_list(variants[0].get("extend_keys"))))
-    loop_vars = [
-        k
-        for k in variants[0]
-        if k not in special_keys
-        and (
-            not loop_only
-            or any(variant[k] != variants[0][k] for variant in variants[1:])
-        )
-    ]
-    return loop_vars
+    first, *others = variants
+    special_keys = {
+        "pin_run_as_build",
+        "zip_keys",
+        "ignore_version",
+        *ensure_list(first.get("extend_keys")),
+    }
+    return {
+        var
+        for var in set(first) - special_keys
+        if any(first[var] != other[var] for other in others)
+    }
 
 
 @lru_cache(maxsize=None)
@@ -762,7 +770,7 @@ def find_used_variables_in_shell_script(variant, file_path):
         text = f.read()
     used_variables = set()
     for v in variant:
-        variant_regex = r"(^[^$]*?\$\{?\s*%s\s*[\s|\}])" % v
+        variant_regex = rf"(^[^$]*?\$\{{?\s*{re.escape(v)}\s*[\s|\}}])"
         if re.search(variant_regex, text, flags=re.MULTILINE | re.DOTALL):
             used_variables.add(v)
     return used_variables
@@ -773,7 +781,7 @@ def find_used_variables_in_batch_script(variant, file_path):
         text = f.read()
     used_variables = set()
     for v in variant:
-        variant_regex = r"\%" + v + r"\%"
+        variant_regex = rf"\%{re.escape(v)}\%"
         if re.search(variant_regex, text, flags=re.MULTILINE | re.DOTALL):
             used_variables.add(v)
     return used_variables
