@@ -35,14 +35,12 @@ from conda.exceptions import ResolvePackageNotFound as _ResolvePackageNotFound
 from conda.exceptions import UnsatisfiableError as _UnsatisfiableError
 from conda.exports import Completer as _Completer
 from conda.exports import InstalledPackages as _InstalledPackages
-from conda.exports import get_index as _get_index
 from conda.exports import symlink_conda as _symlink_conda
 from conda.gateways.connection.download import TmpDownload as _TmpDownload
 from conda.gateways.connection.download import download as _download
 from conda.gateways.connection.session import CondaSession as _CondaSession
 from conda.gateways.disk.create import TemporaryDirectory as _TemporaryDirectory
 from conda.gateways.disk.link import lchmod as _lchmod
-from conda.gateways.disk.read import compute_sum as _compute_sum
 from conda.misc import untracked as _untracked
 from conda.misc import walk_prefix as _walk_prefix
 from conda.models.channel import Channel as _Channel
@@ -434,13 +432,6 @@ deprecated.constant(
     addendum="Use `conda.models.channel.get_conda_build_local_url` instead.",
 )
 deprecated.constant(
-    "24.1.0",
-    "24.5.0",
-    "get_index",
-    _get_index,
-    addendum="Use `conda.core.index.get_index` instead.",
-)
-deprecated.constant(
     "24.5",
     "24.7",
     "reset_context",
@@ -550,33 +541,6 @@ deprecated.constant(
 )
 
 
-@deprecated(
-    "24.3",
-    "24.5",
-    addendum="Handled by `conda.gateways.connection.session.CondaSession`.",
-)
-def handle_proxy_407(x, y):
-    pass
-
-
-deprecated.constant(
-    "24.3",
-    "24.5",
-    "hashsum_file",
-    _compute_sum,
-    addendum="Use `conda.gateways.disk.read.compute_sum` instead.",
-)
-
-
-@deprecated(
-    "24.3",
-    "24.5",
-    addendum="Use `conda.gateways.disk.read.compute_sum(path, 'md5')` instead.",
-)
-def md5_file(path: str | _os.PathLike) -> str:
-    return _compute_sum(path, "md5")
-
-
 deprecated.constant(
     "24.5",
     "24.7",
@@ -584,14 +548,3 @@ deprecated.constant(
     __version__,
     addendum="Use `conda.__version__` instead.",
 )
-
-
-@deprecated(
-    "24.3",
-    "24.5",
-    addendum="Use `conda_build.environ.get_version_from_git_tag` instead.",
-)
-def get_version_from_git_tag(tag):
-    from .environ import get_version_from_git_tag
-
-    return get_version_from_git_tag(tag)

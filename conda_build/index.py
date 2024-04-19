@@ -4,7 +4,6 @@ import json
 import logging
 import os
 import time
-from concurrent.futures import Executor
 from functools import partial
 from os.path import dirname
 
@@ -17,22 +16,11 @@ from conda_index.index import update_index as _update_index
 from . import utils
 from .deprecations import deprecated
 from .utils import (
-    CONDA_PACKAGE_EXTENSION_V1,
-    CONDA_PACKAGE_EXTENSION_V2,
     JSONDecodeError,
     get_logger,
-    on_win,
 )
 
 log = get_logger(__name__)
-
-
-@deprecated("24.3", "24.5")
-class DummyExecutor(Executor):
-    def map(self, func, *iterables):
-        for iterable in iterables:
-            for thing in iterable:
-                yield func(thing)
 
 
 local_index_timestamp = 0
@@ -41,18 +29,7 @@ local_subdir = ""
 local_output_folder = ""
 cached_channels = []
 _channel_data = {}
-deprecated.constant("24.1", "24.5", "channel_data", _channel_data)
-
-
-# TODO: support for libarchive seems to have broken ability to use multiple threads here.
-#    The new conda format is so much faster that it more than makes up for it.  However, it
-#    would be nice to fix this at some point.
-_MAX_THREADS_DEFAULT = os.cpu_count() or 1
-if on_win:  # see https://github.com/python/cpython/commit/8ea0fd85bc67438f679491fae29dfe0a3961900a
-    _MAX_THREADS_DEFAULT = min(48, _MAX_THREADS_DEFAULT)
-deprecated.constant("24.3", "24.5", "MAX_THREADS_DEFAULT", _MAX_THREADS_DEFAULT)
-deprecated.constant("24.3", "24.5", "LOCK_TIMEOUT_SECS", 3 * 3600)
-deprecated.constant("24.3", "24.5", "LOCKFILE_NAME", ".lock")
+deprecated.constant("24.1", "24.7", "channel_data", _channel_data)
 
 # TODO: this is to make sure that the index doesn't leak tokens.  It breaks use of private channels, though.
 # os.environ['CONDA_ADD_ANACONDA_TOKEN'] = "false"
@@ -251,54 +228,3 @@ def _delegated_update_index(
             current_index_versions=current_index_versions,
             debug=debug,
         )
-
-
-@deprecated(
-    "24.1.0", "24.5.0", addendum="Use `conda_index._apply_instructions` instead."
-)
-def _apply_instructions(subdir, repodata, instructions):
-    repodata.setdefault("removed", [])
-    utils.merge_or_update_dict(
-        repodata.get("packages", {}),
-        instructions.get("packages", {}),
-        merge=False,
-        add_missing_keys=False,
-    )
-    # we could have totally separate instructions for .conda than .tar.bz2, but it's easier if we assume
-    #    that a similarly-named .tar.bz2 file is the same content as .conda, and shares fixes
-    new_pkg_fixes = {
-        k.replace(CONDA_PACKAGE_EXTENSION_V1, CONDA_PACKAGE_EXTENSION_V2): v
-        for k, v in instructions.get("packages", {}).items()
-    }
-
-    utils.merge_or_update_dict(
-        repodata.get("packages.conda", {}),
-        new_pkg_fixes,
-        merge=False,
-        add_missing_keys=False,
-    )
-    utils.merge_or_update_dict(
-        repodata.get("packages.conda", {}),
-        instructions.get("packages.conda", {}),
-        merge=False,
-        add_missing_keys=False,
-    )
-
-    for fn in instructions.get("revoke", ()):
-        for key in ("packages", "packages.conda"):
-            if fn.endswith(CONDA_PACKAGE_EXTENSION_V1) and key == "packages.conda":
-                fn = fn.replace(CONDA_PACKAGE_EXTENSION_V1, CONDA_PACKAGE_EXTENSION_V2)
-            if fn in repodata[key]:
-                repodata[key][fn]["revoked"] = True
-                repodata[key][fn]["depends"].append("package_has_been_revoked")
-
-    for fn in instructions.get("remove", ()):
-        for key in ("packages", "packages.conda"):
-            if fn.endswith(CONDA_PACKAGE_EXTENSION_V1) and key == "packages.conda":
-                fn = fn.replace(CONDA_PACKAGE_EXTENSION_V1, CONDA_PACKAGE_EXTENSION_V2)
-            popped = repodata[key].pop(fn, None)
-            if popped:
-                repodata["removed"].append(fn)
-    repodata["removed"].sort()
-
-    return repodata

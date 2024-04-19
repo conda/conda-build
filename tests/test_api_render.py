@@ -56,7 +56,7 @@ def test_render_yaml_output(testing_workdir, testing_config):
     assert "package:" in open(os.path.join(testing_workdir, "output.yaml")).read()
 
 
-def test_get_output_file_path(testing_workdir, testing_metadata):
+def test_get_output_file_paths(testing_workdir, testing_metadata):
     testing_metadata = render.finalize_metadata(testing_metadata)
     api.output_yaml(testing_metadata, "recipe/meta.yaml")
 
@@ -68,21 +68,21 @@ def test_get_output_file_path(testing_workdir, testing_metadata):
     assert build_path == os.path.join(
         testing_metadata.config.croot,
         testing_metadata.config.host_subdir,
-        "test_get_output_file_path-1.0-1.tar.bz2",
+        "test_get_output_file_paths-1.0-1.tar.bz2",
     )
 
 
-def test_get_output_file_path_metadata_object(testing_metadata):
+def test_get_output_file_paths_metadata_object(testing_metadata):
     testing_metadata.final = True
     build_path = api.get_output_file_paths(testing_metadata)[0]
     assert build_path == os.path.join(
         testing_metadata.config.croot,
         testing_metadata.config.host_subdir,
-        "test_get_output_file_path_metadata_object-1.0-1.tar.bz2",
+        "test_get_output_file_paths_metadata_object-1.0-1.tar.bz2",
     )
 
 
-def test_get_output_file_path_jinja2(testing_config):
+def test_get_output_file_paths_jinja2(testing_config):
     # If this test does not raise, it's an indicator that the workdir is not
     #    being cleaned as it should.
     recipe = os.path.join(metadata_dir, "source_git_jinja2")
