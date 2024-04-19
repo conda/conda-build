@@ -907,7 +907,7 @@ Use this sparingly, as the overlinking checks generally do prevent you from maki
      - "bin/*"
 
 
-Whitelisting shared libraries
+Allowlisting shared libraries
 -----------------------------
 
 The ``missing_dso_whitelist`` build key is a list of globs for
