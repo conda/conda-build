@@ -122,13 +122,12 @@ def download_to_cache(cache_folder, recipe_path, source_dict, verbose=False):
     for hash_type in set(source_dict).intersection(ACCEPTED_HASH_TYPES):
         if hash_type in source_dict:
             expected_hash = source_dict[hash_type]
-            hashed = hashsum_file(path, hash_type)
+            hashed = compute_sum(path, hash_type)
             if expected_hash != hashed:
                 rm_rf(path)
                 raise RuntimeError(
                     f"{hash_type.upper()} mismatch: '{hashed}' != '{expected_hash}'"
                 )
-
 
     # this is really a fallback.  If people don't provide the hash, we still need to prevent
     #    collisions in our source cache, but the end user will get no benefit from the cache.
