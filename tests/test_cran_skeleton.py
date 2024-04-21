@@ -3,6 +3,7 @@
 """
 Unit tests of the CRAN skeleton utility functions
 """
+
 import os
 
 import pytest

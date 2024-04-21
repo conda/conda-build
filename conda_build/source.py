@@ -15,13 +15,12 @@ from subprocess import CalledProcessError
 from typing import TYPE_CHECKING
 from urllib.parse import urljoin
 
-from .conda_interface import (
-    CondaHTTPError,
-    TemporaryDirectory,
-    download,
-    hashsum_file,
-    url_path,
-)
+from conda.exceptions import CondaHTTPError
+from conda.gateways.connection.download import download
+from conda.gateways.disk.create import TemporaryDirectory
+from conda.gateways.disk.read import compute_sum
+from conda.utils import url_path
+
 from .exceptions import MissingDependency
 from .os_utils import external
 from .utils import (
@@ -121,19 +120,21 @@ def download_to_cache(cache_folder, recipe_path, source_dict, verbose=False):
     hashed = None
 
     for hash_type in set(source_dict).intersection(ACCEPTED_HASH_TYPES):
-        expected_hash = source_dict[hash_type]
-        hashed = hashsum_file(path, hash_type)
-        if expected_hash != hashed:
-            rm_rf(path)
-            raise RuntimeError(
-                f"{hash_type.upper()} mismatch: '{hashed}' != '{expected_hash}'"
-            )
+        if hash_type in source_dict:
+            expected_hash = source_dict[hash_type]
+            hashed = hashsum_file(path, hash_type)
+            if expected_hash != hashed:
+                rm_rf(path)
+                raise RuntimeError(
+                    f"{hash_type.upper()} mismatch: '{hashed}' != '{expected_hash}'"
+                )
+
 
     # this is really a fallback.  If people don't provide the hash, we still need to prevent
     #    collisions in our source cache, but the end user will get no benefit from the cache.
     if not hash_added:
         if not hashed:
-            hashed = hashsum_file(path, "sha256")
+            hashed = compute_sum(path, "sha256")
         dest_path = append_hash_to_fn(path, hashed)
         if not os.path.isfile(dest_path):
             shutil.move(path, dest_path)
@@ -202,19 +203,19 @@ def unpack(
             shutil.move(os.path.join(tmpdir, f), os.path.join(src_dir, f))
 
 
-def check_git_lfs(git, cwd):
+def check_git_lfs(git, cwd, git_ref):
     try:
-        lfs_list_output = check_output_env([git, "lfs", "ls-files", "--all"], cwd=cwd)
+        lfs_list_output = check_output_env([git, "lfs", "ls-files", git_ref], cwd=cwd)
         return lfs_list_output and lfs_list_output.strip()
     except CalledProcessError:
         return False
 
 
-def git_lfs_fetch(git, cwd, stdout, stderr):
+def git_lfs_fetch(git, cwd, git_ref, stdout, stderr):
     lfs_version = check_output_env([git, "lfs", "version"], cwd=cwd)
     log.info(lfs_version)
     check_call_env(
-        [git, "lfs", "fetch", "origin", "--all"], cwd=cwd, stdout=stdout, stderr=stderr
+        [git, "lfs", "fetch", "origin", git_ref], cwd=cwd, stdout=stdout, stderr=stderr
     )
 
 
@@ -273,8 +274,8 @@ def git_mirror_checkout_recursive(
                 check_call_env(
                     [git, "fetch"], cwd=mirror_dir, stdout=stdout, stderr=stderr
                 )
-                if check_git_lfs(git, mirror_dir):
-                    git_lfs_fetch(git, mirror_dir, stdout, stderr)
+                if check_git_lfs(git, mirror_dir, git_ref):
+                    git_lfs_fetch(git, mirror_dir, git_ref, stdout, stderr)
             else:
                 # Unlike 'git clone', fetch doesn't automatically update the cache's HEAD,
                 # So here we explicitly store the remote HEAD in the cache's local refs/heads,
@@ -318,8 +319,8 @@ def git_mirror_checkout_recursive(
             check_call_env(
                 args + [git_url, git_mirror_dir], stdout=stdout, stderr=stderr
             )
-            if check_git_lfs(git, mirror_dir):
-                git_lfs_fetch(git, mirror_dir, stdout, stderr)
+            if check_git_lfs(git, mirror_dir, git_ref):
+                git_lfs_fetch(git, mirror_dir, git_ref, stdout, stderr)
         except CalledProcessError:
             # on windows, remote URL comes back to us as cygwin or msys format.  Python doesn't
             # know how to normalize it.  Need to convert it to a windows path.
@@ -379,9 +380,8 @@ def git_mirror_checkout_recursive(
             )
             if verbose:
                 print(
-                    "Relative submodule {} found: url is {}, submod_mirror_dir is {}".format(
-                        submod_name, submod_url, submod_mirror_dir
-                    )
+                    f"Relative submodule {submod_name} found: url is {submod_url}, "
+                    f"submod_mirror_dir is {submod_mirror_dir}"
                 )
             with TemporaryDirectory() as temp_checkout_dir:
                 git_mirror_checkout_recursive(

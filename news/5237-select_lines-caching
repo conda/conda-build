@@ -1,6 +1,6 @@
 ### Enhancements
 
-* <news item>
+* Add `conda_build.metadata._split_line_selector` to cache line-selector parsed text. (#5237)
 
 ### Bug fixes
 
@@ -8,7 +8,7 @@
 
 ### Deprecations
 
-* Mark `conda_build.bdist_conda` module as pending deprecation. (#5196)
+* <news item>
 
 ### Docs
 

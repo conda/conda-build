@@ -9,7 +9,8 @@ from os.path import basename
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from ..conda_interface import untracked
+from conda.misc import untracked
+
 from ..utils import on_linux, on_mac
 from .macho import otool
 from .pyldd import codefile_class, inspect_linkages, machofile
@@ -51,7 +52,7 @@ def ldd(path):
 def get_linkages(
     obj_files: Iterable[str],
     prefix: str | os.PathLike | Path,
-    sysroot,
+    sysroot: str,
 ) -> dict[str, list[tuple[str, str]]]:
     return _get_linkages(tuple(obj_files), Path(prefix), sysroot)
 
@@ -60,7 +61,7 @@ def get_linkages(
 def _get_linkages(
     obj_files: tuple[str],
     prefix: Path,
-    sysroot,
+    sysroot: str,
 ) -> dict[str, list[tuple[str, str]]]:
     linkages = {}
     for file in obj_files:

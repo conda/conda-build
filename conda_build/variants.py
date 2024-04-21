@@ -2,6 +2,9 @@
 # SPDX-License-Identifier: BSD-3-Clause
 """This file handles the parsing of feature specifications from files,
 ending up with a configuration matrix"""
+
+from __future__ import annotations
+
 import os.path
 import re
 import sys
@@ -9,12 +12,18 @@ from collections import OrderedDict
 from copy import copy
 from functools import lru_cache
 from itertools import product
+from pathlib import Path
+from typing import TYPE_CHECKING
 
 import yaml
+from conda.base.context import context
 
-from .conda_interface import cc_conda_build, subdir
+from .deprecations import deprecated
 from .utils import ensure_list, get_logger, islist, on_win, trim_empty_keys
 from .version import _parse as parse_version
+
+if TYPE_CHECKING:
+    from typing import Any, Iterable
 
 DEFAULT_VARIANTS = {
     "python": f"{sys.version_info.major}.{sys.version_info.minor}",
@@ -84,7 +93,7 @@ DEFAULT_COMPILERS = {
     },
 }
 
-arch_name = subdir.rsplit("-", 1)[-1]
+arch_name = context.subdir.rsplit("-", 1)[-1]
 
 SUFFIX_MAP = {
     "PY": "python",
@@ -222,8 +231,8 @@ def find_config_files(metadata_or_path, config):
 
     if not files and not config.ignore_system_variants:
         # user config
-        if cc_conda_build.get("config_file"):
-            cfg = resolve(cc_conda_build["config_file"])
+        if config_file := context.conda_build.get("config_file"):
+            cfg = resolve(config_file)
         else:
             cfg = resolve(os.path.join("~", "conda_build_config.yaml"))
         if os.path.isfile(cfg):
@@ -303,15 +312,10 @@ def _combine_spec_dictionaries(
                                         ensure_list(v)
                                     ):
                                         raise ValueError(
-                                            "All entries associated by a zip_key "
-                                            "field must be the same length.  In {}, {} and {} are "
-                                            "different ({} and {})".format(
-                                                spec_source,
-                                                k,
-                                                group_item,
-                                                len(ensure_list(v)),
-                                                len(ensure_list(spec[group_item])),
-                                            )
+                                            f"All entries associated by a zip_key "
+                                            f"field must be the same length.  In {spec_source}, {k} and {group_item} "
+                                            f"are different ({len(ensure_list(v))} and "
+                                            f"{len(ensure_list(spec[group_item]))})"
                                         )
                                     values[group_item] = ensure_list(spec[group_item])
                             elif k in values:
@@ -338,17 +342,10 @@ def _combine_spec_dictionaries(
                                 ]
                                 if len(missing_subvalues):
                                     raise ValueError(
-                                        "variant config in {} is ambiguous because it\n"
-                                        "does not fully implement all zipped keys (To be clear: missing {})\n"
-                                        "or specifies a subspace that is not fully implemented (To be clear:\n"
-                                        ".. we did not find {} from {} in {}:{}).".format(
-                                            spec_source,
-                                            missing_group_items,
-                                            missing_subvalues,
-                                            spec,
-                                            k,
-                                            values[k],
-                                        )
+                                        f"variant config in {spec_source} is ambiguous because it does not fully "
+                                        f"implement all zipped keys (missing {missing_group_items}) or specifies a "
+                                        f"subspace that is not fully implemented (we did not find {missing_subvalues} "
+                                        f"from {spec} in {k}:{values[k]})."
                                     )
 
     return values
@@ -704,21 +701,22 @@ def get_package_variants(recipedir_or_metadata, config=None, variants=None):
     return filter_combined_spec_to_used_keys(combined_spec, specs=specs)
 
 
-def get_vars(variants, loop_only=False):
+@deprecated.argument("24.5", "24.7", "loop_only")
+def get_vars(variants: Iterable[dict[str, Any]]) -> set[str]:
     """For purposes of naming/identifying, provide a way of identifying which variables contribute
     to the matrix dimensionality"""
-    special_keys = {"pin_run_as_build", "zip_keys", "ignore_version"}
-    special_keys.update(set(ensure_list(variants[0].get("extend_keys"))))
-    loop_vars = [
-        k
-        for k in variants[0]
-        if k not in special_keys
-        and (
-            not loop_only
-            or any(variant[k] != variants[0][k] for variant in variants[1:])
-        )
-    ]
-    return loop_vars
+    first, *others = variants
+    special_keys = {
+        "pin_run_as_build",
+        "zip_keys",
+        "ignore_version",
+        *ensure_list(first.get("extend_keys")),
+    }
+    return {
+        var
+        for var in set(first) - special_keys
+        if any(first[var] != other[var] for other in others)
+    }
 
 
 @lru_cache(maxsize=None)
@@ -727,15 +725,17 @@ def find_used_variables_in_text(variant, recipe_text, selectors_only=False):
     recipe_lines = recipe_text.splitlines()
     for v in variant:
         all_res = []
-        compiler_match = re.match(r"(.*?)_compiler(_version)?$", v)
-        if compiler_match and not selectors_only:
-            compiler_lang = compiler_match.group(1)
-            compiler_regex = r"\{\s*compiler\([\'\"]%s[\"\'][^\{]*?\}" % re.escape(
-                compiler_lang
+        target_match = re.match(r"(.*?)_(compiler|stdlib)(_version)?$", v)
+        if target_match and not selectors_only:
+            target_lang = target_match.group(1)
+            target_kind = target_match.group(2)
+            target_lang_regex = re.escape(target_lang)
+            target_regex = (
+                rf"\{{\s*{target_kind}\([\'\"]{target_lang_regex}[\"\'][^\{{]*?\}}"
             )
-            all_res.append(compiler_regex)
+            all_res.append(target_regex)
             variant_lines = [
-                line for line in recipe_lines if v in line or compiler_lang in line
+                line for line in recipe_lines if v in line or target_lang in line
             ]
         else:
             variant_lines = [
@@ -760,29 +760,45 @@ def find_used_variables_in_text(variant, recipe_text, selectors_only=False):
         all_res = r"|".join(all_res)
         if any(re.search(all_res, line) for line in variant_lines):
             used_variables.add(v)
-            if v in ("c_compiler", "cxx_compiler"):
+            if v in ("c_stdlib", "c_compiler", "cxx_compiler"):
                 if "CONDA_BUILD_SYSROOT" in variant:
                     used_variables.add("CONDA_BUILD_SYSROOT")
     return used_variables
 
 
-def find_used_variables_in_shell_script(variant, file_path):
-    with open(file_path) as f:
-        text = f.read()
-    used_variables = set()
-    for v in variant:
-        variant_regex = r"(^[^$]*?\$\{?\s*%s\s*[\s|\}])" % v
-        if re.search(variant_regex, text, flags=re.MULTILINE | re.DOTALL):
-            used_variables.add(v)
-    return used_variables
+def find_used_variables_in_shell_script(
+    variants: Iterable[str],
+    file_path: str | os.PathLike | Path,
+) -> set[str]:
+    text = Path(file_path).read_text()
+    return {
+        variant
+        for variant in variants
+        if (
+            variant in text  # str in str is faster than re.search
+            and re.search(
+                rf"(^[^$]*?\$\{{?\s*{re.escape(variant)}\s*[\s|\}}])",
+                text,
+                flags=re.MULTILINE | re.DOTALL,
+            )
+        )
+    }
 
 
-def find_used_variables_in_batch_script(variant, file_path):
-    with open(file_path) as f:
-        text = f.read()
-    used_variables = set()
-    for v in variant:
-        variant_regex = r"\%" + v + r"\%"
-        if re.search(variant_regex, text, flags=re.MULTILINE | re.DOTALL):
-            used_variables.add(v)
-    return used_variables
+def find_used_variables_in_batch_script(
+    variants: Iterable[str],
+    file_path: str | os.PathLike | Path,
+) -> set[str]:
+    text = Path(file_path).read_text()
+    return {
+        variant
+        for variant in variants
+        if (
+            variant in text  # str in str is faster than re.search
+            and re.search(
+                rf"\%{re.escape(variant)}\%",
+                text,
+                flags=re.MULTILINE | re.DOTALL,
+            )
+        )
+    }

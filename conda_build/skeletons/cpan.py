@@ -3,6 +3,9 @@
 """
 Tools for converting CPAN packages to conda recipes.
 """
+
+from __future__ import annotations
+
 import codecs
 import gzip
 import hashlib
@@ -18,18 +21,14 @@ from os import makedirs
 from os.path import basename, dirname, exists, join
 
 import requests
+from conda.core.index import get_index
+from conda.exceptions import CondaError, CondaHTTPError
+from conda.gateways.connection.download import TmpDownload, download
+from conda.gateways.disk.create import TemporaryDirectory
+from conda.models.match_spec import MatchSpec
+from conda.resolve import Resolve
 
 from .. import environ
-from ..conda_interface import (
-    CondaError,
-    CondaHTTPError,
-    MatchSpec,
-    Resolve,
-    TemporaryDirectory,
-    TmpDownload,
-    download,
-    get_index,
-)
 from ..config import Config, get_or_merge_config
 from ..utils import check_call_env, on_linux, on_win
 from ..variants import get_default_variant
@@ -149,7 +148,6 @@ perl_core = []
 
 
 class InvalidReleaseError(RuntimeError):
-
     """
     An exception that is raised when a release is not available on MetaCPAN.
     """
@@ -158,7 +156,6 @@ class InvalidReleaseError(RuntimeError):
 
 
 class PerlTmpDownload(TmpDownload):
-
     """
     Subclass Conda's TmpDownload to replace : in download filenames.
     Critical on win.
@@ -357,19 +354,22 @@ def install_perl_get_core_modules(version):
                 "my @modules = grep {Module::CoreList::is_core($_)} Module::CoreList->find_modules(qr/.*/); "
                 'print join "\n", @modules;',
             ]
-            all_core_modules = (
-                subprocess.check_output(args, shell=False)
-                .decode("utf-8")
-                .replace("\r\n", "\n")
-                .split("\n")
-            )
+            try:
+                all_core_modules = (
+                    subprocess.check_output(args, shell=False)
+                    .decode("utf-8")
+                    .replace("\r\n", "\n")
+                    .split("\n")
+                )
+            except Exception as e:
+                print(
+                    f"Failed to query perl={version} for core modules list, ran:\n"
+                    f"{' '.join(args)}"
+                )
+                print(e.message)
             return all_core_modules
     except Exception as e:
-        print(
-            "Failed to query perl={} for core modules list, attempted command was:\n{}".format(
-                version, " ".join(args)
-            )
-        )
+        print(f"Failed to query perl={version} for core modules list.")
         print(e.message)
 
     return []
@@ -386,15 +386,15 @@ def get_core_modules_for_this_perl_version(version, cache_dir):
 
 # meta_cpan_url="http://api.metacpan.org",
 def skeletonize(
-    packages,
-    output_dir=".",
-    version=None,
-    meta_cpan_url="https://fastapi.metacpan.org/v1",
-    recursive=False,
-    force=False,
-    config=None,
-    write_core=False,
-):
+    packages: list[str],
+    output_dir: str = ".",
+    version: str | None = None,
+    meta_cpan_url: str = "https://fastapi.metacpan.org/v1",
+    recursive: bool = False,
+    force: bool = False,
+    config: Config | None = None,
+    write_core: bool = False,
+) -> None:
     """
     Loops over packages, outputting conda recipes converted from CPAN metata.
     """

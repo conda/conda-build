@@ -4,6 +4,7 @@
 This is code that is added to noarch Python packages. See
 conda_build/noarch_python.py.
 """
+
 from __future__ import annotations
 
 import os

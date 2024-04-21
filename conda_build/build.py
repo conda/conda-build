@@ -3,6 +3,9 @@
 """
 Module that does most of the heavy lifting for the ``conda build`` command.
 """
+
+from __future__ import annotations
+
 import fnmatch
 import json
 import os
@@ -17,33 +20,26 @@ import time
 import warnings
 from collections import OrderedDict, deque
 from os.path import dirname, isdir, isfile, islink, join
+from pathlib import Path
+from typing import TYPE_CHECKING
 
 import conda_package_handling.api
 import yaml
 from bs4 import UnicodeDammit
 from conda import __version__ as conda_version
+from conda.auxlib.entity import EntityEncoder
+from conda.base.constants import PREFIX_PLACEHOLDER
+from conda.base.context import context, reset_context
+from conda.core.prefix_data import PrefixData
+from conda.exceptions import CondaError, NoPackagesFoundError, UnsatisfiableError
+from conda.gateways.disk.create import TemporaryDirectory
+from conda.models.channel import Channel
+from conda.models.enums import FileMode, PathType
+from conda.models.match_spec import MatchSpec
+from conda.utils import url_path
 
 from . import __version__ as conda_build_version
 from . import environ, noarch_python, source, tarcheck, utils
-from .conda_interface import (
-    CondaError,
-    EntityEncoder,
-    FileMode,
-    MatchSpec,
-    NoPackagesFoundError,
-    PathType,
-    TemporaryDirectory,
-    UnsatisfiableError,
-    context,
-    env_path_backup_var_exists,
-    get_conda_channel,
-    get_rc_urls,
-    pkgs_dirs,
-    prefix_placeholder,
-    reset_context,
-    root_dir,
-    url_path,
-)
 from .config import Config
 from .create_test import create_all_test_files
 from .exceptions import CondaBuildException, DependencyNeedsBuildingError
@@ -88,6 +84,9 @@ from .variants import (
 
 if on_win:
     from . import windows
+
+if TYPE_CHECKING:
+    from typing import Any, Iterable
 
 if "bsd" in sys.platform:
     shell_path = "/bin/sh"
@@ -182,120 +181,6 @@ def prefix_replacement_excluded(path):
         # skip symbolic links (as we can on Linux)
         return True
     return False
-
-
-def have_prefix_files(files, prefix):
-    """
-    Yields files that contain the current prefix in them, and modifies them
-    to replace the prefix with a placeholder.
-
-    :param files: Filenames to check for instances of prefix
-    :type files: list of tuples containing strings (prefix, mode, filename)
-    """
-
-    prefix_bytes = prefix.encode(utils.codec)
-    prefix_placeholder_bytes = prefix_placeholder.encode(utils.codec)
-    searches = {prefix: prefix_bytes}
-    if utils.on_win:
-        # some windows libraries use unix-style path separators
-        forward_slash_prefix = prefix.replace("\\", "/")
-        forward_slash_prefix_bytes = forward_slash_prefix.encode(utils.codec)
-        searches[forward_slash_prefix] = forward_slash_prefix_bytes
-        # some windows libraries have double backslashes as escaping
-        double_backslash_prefix = prefix.replace("\\", "\\\\")
-        double_backslash_prefix_bytes = double_backslash_prefix.encode(utils.codec)
-        searches[double_backslash_prefix] = double_backslash_prefix_bytes
-    searches[prefix_placeholder] = prefix_placeholder_bytes
-    min_prefix = min(len(k) for k, _ in searches.items())
-
-    # mm.find is incredibly slow, so ripgrep is used to pre-filter the list.
-    # Really, ripgrep could be used on its own with a bit more work though.
-    rg_matches = []
-    prefix_len = len(prefix) + 1
-    rg = external.find_executable("rg")
-    if rg:
-        for rep_prefix, _ in searches.items():
-            try:
-                args = [
-                    rg,
-                    "--unrestricted",
-                    "--no-heading",
-                    "--with-filename",
-                    "--files-with-matches",
-                    "--fixed-strings",
-                    "--text",
-                    rep_prefix,
-                    prefix,
-                ]
-                matches = subprocess.check_output(args)
-                rg_matches.extend(
-                    matches.decode("utf-8").replace("\r\n", "\n").splitlines()
-                )
-            except subprocess.CalledProcessError:
-                continue
-        # HACK: this is basically os.path.relpath, just simpler and faster
-        # NOTE: path normalization needs to be in sync with create_info_files
-        if utils.on_win:
-            rg_matches = [
-                rg_match.replace("\\", "/")[prefix_len:] for rg_match in rg_matches
-            ]
-        else:
-            rg_matches = [rg_match[prefix_len:] for rg_match in rg_matches]
-    else:
-        print(
-            "WARNING: Detecting which files contain PREFIX is slow, installing ripgrep makes it faster."
-            " 'conda install ripgrep'"
-        )
-
-    for f in files:
-        if os.path.isabs(f):
-            f = f[prefix_len:]
-        if rg_matches and f not in rg_matches:
-            continue
-        path = os.path.join(prefix, f)
-        if prefix_replacement_excluded(path):
-            continue
-
-        # dont try to mmap an empty file, and no point checking files that are smaller
-        # than the smallest prefix.
-        if os.stat(path).st_size < min_prefix:
-            continue
-
-        try:
-            fi = open(path, "rb+")
-        except OSError:
-            log = utils.get_logger(__name__)
-            log.warn("failed to open %s for detecting prefix.  Skipping it." % f)
-            continue
-        try:
-            mm = utils.mmap_mmap(
-                fi.fileno(), 0, tagname=None, flags=utils.mmap_MAP_PRIVATE
-            )
-        except OSError:
-            mm = fi.read()
-
-        mode = "binary" if mm.find(b"\x00") != -1 else "text"
-        if mode == "text":
-            # TODO :: Ask why we do not do this on Windows too?!
-            if not utils.on_win and mm.find(prefix_bytes) != -1:
-                # Use the placeholder for maximal backwards compatibility, and
-                # to minimize the occurrences of usernames appearing in built
-                # packages.
-                data = mm[:]
-                mm.close()
-                fi.close()
-                rewrite_file_with_new_prefix(
-                    path, data, prefix_bytes, prefix_placeholder_bytes
-                )
-                fi = open(path, "rb+")
-                mm = utils.mmap_mmap(
-                    fi.fileno(), 0, tagname=None, flags=utils.mmap_MAP_PRIVATE
-                )
-        for rep_prefix, rep_prefix_bytes in searches.items():
-            if mm.find(rep_prefix_bytes) != -1:
-                yield (rep_prefix, mode, f)
-        mm.close()
-        fi.close()
 
 
 # It may be that when using the list form of passing args to subprocess
@@ -1148,13 +1033,13 @@ def get_files_with_prefix(m, replacements, files_in, prefix):
             prefix[0].upper() + prefix[1:],
             prefix[0].lower() + prefix[1:],
             prefix_u,
-            prefix_placeholder.replace("\\", "'"),
-            prefix_placeholder.replace("/", "\\"),
+            PREFIX_PLACEHOLDER.replace("\\", "'"),
+            PREFIX_PLACEHOLDER.replace("/", "\\"),
         ]
         # some python/json files store an escaped version of prefix
         pfx_variants.extend([pfx.replace("\\", "\\\\") for pfx in pfx_variants])
     else:
-        pfx_variants = (prefix, prefix_placeholder)
+        pfx_variants = (prefix, PREFIX_PLACEHOLDER)
     # replacing \ with \\ here is for regex escaping
     re_test = (
         b"("
@@ -1231,31 +1116,6 @@ def get_files_with_prefix(m, replacements, files_in, prefix):
             end - start,
         )
     )
-    """
-    # Keeping this around just for a while.
-    files_with_prefix2 = sorted(have_prefix_files(files_in, prefix))
-    end = time.time()
-    print("INFO :: Time taken to do replacements (prefix only) was: {}".format(end - start))
-
-    ignore_files = m.ignore_prefix_files()
-    ignore_types = set()
-    if not hasattr(ignore_files, "__iter__"):
-        if ignore_files is True:
-            ignore_types.update((FileMode.text.name, FileMode.binary.name))
-        ignore_files = []
-    if (not m.get_value('build/detect_binary_files_with_prefix', True) and
-        not m.get_value('build/binary_has_prefix_files', None)):
-        ignore_types.update((FileMode.binary.name,))
-    # files_with_prefix is a list of tuples containing (prefix_placeholder, file_type, file_path)
-    ignore_files.extend(
-        f[2] for f in files_with_prefix2 if f[1] in ignore_types and f[2] not in ignore_files)
-    files_with_prefix2 = [f for f in files_with_prefix2 if f[2] not in ignore_files]
-    end2 = time.time()
-    print("INFO :: Time taken to do replacements (prefix only) was: {}".format(end2 - start2))
-    files1 = set([f for _, _, f in files_with_prefix])
-    files2 = set([f for _, _, f in files_with_prefix2])
-    assert not (files2 - files1), "New ripgrep prefix search missed the following files:\n{}\n".format(files2 - files1)
-    """
     return sorted(files_with_prefix)
 
 
@@ -1356,7 +1216,7 @@ def record_prefix_files(m, files_with_prefix):
 
 
 def sanitize_channel(channel):
-    return get_conda_channel(channel).urls(with_credentials=False, subdirs=[""])[0]
+    return Channel.from_value(channel).urls(with_credentials=False, subdirs=[""])[0]
 
 
 def write_info_files_file(m, files):
@@ -1428,7 +1288,7 @@ def write_about_json(m):
         # conda env will be in most, but not necessarily all installations.
         #    Don't die if we don't see it.
         stripped_channels = []
-        for channel in get_rc_urls() + list(m.config.channel_urls):
+        for channel in (*context.channels, *m.config.channel_urls):
             stripped_channels.append(sanitize_channel(channel))
         d["channels"] = stripped_channels
         evars = ["CIO_TEST"]
@@ -1444,8 +1304,10 @@ def write_about_json(m):
                 m.config.extra_meta,
             )
             extra.update(m.config.extra_meta)
-        env = environ.Environment(root_dir)
-        d["root_pkgs"] = env.package_specs()
+        d["root_pkgs"] = [
+            f"{prec.name} {prec.version} {prec.build}"
+            for prec in PrefixData(context.root_prefix).iter_records()
+        ]
         # Include the extra section of the metadata in the about.json
         d["extra"] = extra
         json.dump(d, fo, indent=2, sort_keys=True)
@@ -1869,20 +1731,15 @@ def bundle_conda(output, metadata: MetaData, env, stats, **kw):
 
         interpreter = output.get("script_interpreter")
         if not interpreter:
-            interpreter_and_args = guess_interpreter(output["script"])
-            interpreter_and_args[0] = external.find_executable(
-                interpreter_and_args[0], metadata.config.build_prefix
-            )
-            if not interpreter_and_args[0]:
+            args = list(guess_interpreter(output["script"]))
+            args[0] = external.find_executable(args[0], metadata.config.build_prefix)
+            if not args[0]:
                 log.error(
-                    "Did not find an interpreter to run {}, looked for {}".format(
-                        output["script"], interpreter_and_args[0]
-                    )
+                    "Did not find an interpreter to run %s, looked for %s",
+                    output["script"],
+                    args[0],
                 )
-            if (
-                "system32" in interpreter_and_args[0]
-                and "bash" in interpreter_and_args[0]
-            ):
+            if "system32" in args[0] and "bash" in args[0]:
                 print(
                     "ERROR :: WSL bash.exe detected, this will not work (PRs welcome!). Please\n"
                     "         use MSYS2 packages. Add `m2-base` and more (depending on what your"
@@ -1890,7 +1747,7 @@ def bundle_conda(output, metadata: MetaData, env, stats, **kw):
                 )
                 sys.exit(1)
         else:
-            interpreter_and_args = interpreter.split(" ")
+            args = interpreter.split(" ")
 
         initial_files = utils.prefix_files(metadata.config.host_prefix)
         env_output = env.copy()
@@ -1926,7 +1783,7 @@ def bundle_conda(output, metadata: MetaData, env, stats, **kw):
 
         bundle_stats = {}
         utils.check_call_env(
-            interpreter_and_args + [dest_file],
+            [*args, dest_file],
             cwd=metadata.config.work_dir,
             env=env_output,
             stats=bundle_stats,
@@ -2133,11 +1990,11 @@ def bundle_wheel(output, metadata: MetaData, env, stats):
         env["TOP_PKG_VERSION"] = env["PKG_VERSION"]
         env["PKG_VERSION"] = metadata.version()
         env["PKG_NAME"] = metadata.name()
-        interpreter_and_args = guess_interpreter(dest_file)
+        args = guess_interpreter(dest_file)
 
         bundle_stats = {}
         utils.check_call_env(
-            interpreter_and_args + [dest_file],
+            [*args, dest_file],
             cwd=metadata.config.work_dir,
             env=env,
             stats=bundle_stats,
@@ -2378,8 +2235,6 @@ def create_build_envs(m: MetaData, notest):
             )
     except DependencyNeedsBuildingError as e:
         # subpackages are not actually missing.  We just haven't built them yet.
-        from .conda_interface import MatchSpec
-
         other_outputs = (
             m.other_outputs.values()
             if hasattr(m, "other_outputs")
@@ -2443,8 +2298,6 @@ def build(
     with utils.path_prepended(m.config.build_prefix):
         env = environ.get_dict(m=m)
     env["CONDA_BUILD_STATE"] = "BUILD"
-    if env_path_backup_var_exists:
-        env["CONDA_PATH_BACKUP"] = os.environ["CONDA_PATH_BACKUP"]
 
     # this should be a no-op if source is already here
     if m.needs_source_for_render:
@@ -2917,28 +2770,31 @@ def build(
     return new_pkgs
 
 
-def guess_interpreter(script_filename):
-    # -l is needed for MSYS2 as the login scripts set some env. vars (TMP, TEMP)
-    # Since the MSYS2 installation is probably a set of conda packages we do not
-    # need to worry about system environmental pollution here. For that reason I
-    # do not pass -l on other OSes.
-    extensions_to_run_commands = {
-        ".sh": ["bash.exe", "-el"] if utils.on_win else ["bash", "-e"],
-        ".bat": [os.environ.get("COMSPEC", "cmd.exe"), "/d", "/c"],
-        ".ps1": ["powershell", "-executionpolicy", "bypass", "-File"],
-        ".py": ["python"],
-    }
-    file_ext = os.path.splitext(script_filename)[1]
-    for ext, command in extensions_to_run_commands.items():
-        if file_ext.lower().startswith(ext):
-            interpreter_command = command
-            break
-    else:
+# -l is needed for MSYS2 as the login scripts set some env. vars (TMP, TEMP)
+# Since the MSYS2 installation is probably a set of conda packages we do not
+# need to worry about system environmental pollution here. For that reason I
+# do not pass -l on other OSes.
+INTERPRETER_BASH = ("bash.exe", "-el") if on_win else ("bash", "-e")
+INTERPRETER_BAT = (os.getenv("COMSPEC", "cmd.exe"), "/d", "/c")
+INTERPRETER_POWERSHELL = ("powershell", "-ExecutionPolicy", "ByPass", "-File")
+INTERPRETER_PYTHON = ("python",)
+
+
+def guess_interpreter(script_filename: str | os.PathLike | Path) -> tuple[str, ...]:
+    suffix = Path(script_filename).suffix
+    try:
+        return {
+            ".sh": INTERPRETER_BASH,
+            ".bat": INTERPRETER_BAT,
+            ".ps1": INTERPRETER_POWERSHELL,
+            ".py": INTERPRETER_PYTHON,
+        }[suffix]
+    except KeyError:
+        # KeyError: unknown suffix
         raise NotImplementedError(
-            f"Don't know how to run {file_ext} file.   Please specify "
+            f"Don't know how to run {suffix} file. Please specify "
             f"script_interpreter for {script_filename} output"
         )
-    return interpreter_command
 
 
 def warn_on_use_of_SRC_DIR(metadata):
@@ -3354,12 +3210,12 @@ def write_test_scripts(
 
 
 def test(
-    recipedir_or_package_or_metadata,
-    config,
-    stats,
-    move_broken=True,
-    provision_only=False,
-):
+    recipedir_or_package_or_metadata: str | os.PathLike | Path | MetaData,
+    config: Config,
+    stats: dict,
+    move_broken: bool = True,
+    provision_only: bool = False,
+) -> bool:
     """
     Execute any test scripts for the given package.
 
@@ -3408,7 +3264,7 @@ def test(
         and recipedir_or_package_or_metadata.endswith(CONDA_PACKAGE_EXTENSIONS)
         and any(
             os.path.dirname(recipedir_or_package_or_metadata) in pkgs_dir
-            for pkgs_dir in pkgs_dirs
+            for pkgs_dir in context.pkgs_dirs
         )
     )
     if not in_pkg_cache:
@@ -3471,8 +3327,6 @@ def test(
         env.update(environ.get_dict(m=metadata, prefix=config.test_prefix))
         env["CONDA_BUILD_STATE"] = "TEST"
         env["CONDA_BUILD"] = "1"
-        if env_path_backup_var_exists:
-            env["CONDA_PATH_BACKUP"] = os.environ["CONDA_PATH_BACKUP"]
 
     if not metadata.config.activate or metadata.name() == "conda":
         # prepend bin (or Scripts) directory
@@ -3524,7 +3378,7 @@ def test(
         AssertionError,
     ) as exc:
         log.warn(
-            "failed to get install actions, retrying.  exception was: %s", str(exc)
+            "failed to get package records, retrying.  exception was: %s", str(exc)
         )
         tests_failed(
             metadata,
@@ -3555,8 +3409,6 @@ def test(
         env = dict(os.environ.copy())
         env.update(environ.get_dict(m=metadata, prefix=metadata.config.test_prefix))
         env["CONDA_BUILD_STATE"] = "TEST"
-        if env_path_backup_var_exists:
-            env["CONDA_PATH_BACKUP"] = os.environ["CONDA_PATH_BACKUP"]
 
     if config.test_run_post:
         from .utils import get_installed_packages
@@ -3677,8 +3529,14 @@ def check_external():
 
 
 def build_tree(
-    recipe_list, config, stats, build_only=False, post=None, notest=False, variants=None
-):
+    recipe_list: Iterable[str | MetaData],
+    config: Config,
+    stats: dict,
+    build_only: bool = False,
+    post: bool | None = None,
+    notest: bool = False,
+    variants: dict[str, Any] | None = None,
+) -> list[str]:
     to_build_recursive = []
     recipe_list = deque(recipe_list)
 
@@ -3760,8 +3618,7 @@ def build_tree(
                     reset_build_id=not cfg.dirty,
                     bypass_env_check=True,
                 )
-            # restrict to building only one variant for bdist_conda.  The way it splits the build
-            #    job breaks variants horribly.
+
             if post in (True, False):
                 metadata_tuples = metadata_tuples[:1]
 
@@ -4180,8 +4037,10 @@ def is_package_built(metadata, env, include_local=True):
         _delegated_update_index(d, verbose=metadata.config.debug, warn=False, threads=1)
     subdir = getattr(metadata.config, f"{env}_subdir")
 
-    urls = [url_path(metadata.config.output_folder), "local"] if include_local else []
-    urls += get_rc_urls()
+    urls = [
+        *([url_path(metadata.config.output_folder), "local"] if include_local else []),
+        *context.channels,
+    ]
     if metadata.config.channel_urls:
         urls.extend(metadata.config.channel_urls)
 
