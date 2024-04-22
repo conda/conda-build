@@ -23,6 +23,7 @@ import urllib.request as urllib
 from collections import OrderedDict, defaultdict
 from functools import lru_cache
 from glob import glob
+from io import StringIO
 from itertools import filterfalse
 from json.decoder import JSONDecodeError
 from locale import getpreferredencoding
@@ -54,26 +55,24 @@ from conda.base.constants import (
     KNOWN_SUBDIRS,
 )
 from conda.base.context import context
+from conda.common.path import win_path_to_unix
 from conda.exceptions import CondaHTTPError
+from conda.gateways.connection.download import download
+from conda.gateways.disk.create import TemporaryDirectory
 from conda.gateways.disk.read import compute_sum
 from conda.models.channel import Channel
 from conda.models.match_spec import MatchSpec
+from conda.models.records import PackageRecord
+from conda.models.version import VersionOrder
+from conda.utils import unix_path_to_win
 
-from .conda_interface import (
-    PackageRecord,
-    StringIO,
-    TemporaryDirectory,
-    VersionOrder,
-    cc_conda_build,
-    download,
-    unix_path_to_win,
-    win_path_to_unix,
-)
-from .conda_interface import rm_rf as _rm_rf
+from .deprecations import deprecated
 from .exceptions import BuildLockError
 
 if TYPE_CHECKING:
     from typing import Mapping, TypeVar
+
+    from .metadata import MetaData
 
     T = TypeVar("T")
     K = TypeVar("K")
@@ -1127,7 +1126,7 @@ def convert_path_for_cygwin_or_msys2(exe, path):
     return path
 
 
-def get_skip_message(m):
+def get_skip_message(m: MetaData) -> str:
     return (
         f"Skipped: {m.name()} from {m.path} defines build/skip for this configuration "
         f"({({k: m.config.variant[k] for k in m.get_used_vars()})})."
@@ -1253,9 +1252,13 @@ def tmp_chdir(dest):
         os.chdir(curdir)
 
 
-def expand_globs(path_list, root_dir):
+def expand_globs(
+    path_list: str | os.PathLike | Path | Iterable[str | os.PathLike | Path],
+    root_dir: str | os.PathLike | Path,
+) -> list[str]:
     files = []
     for path in ensure_list(path_list):
+        path = str(path)
         if not os.path.isabs(path):
             path = os.path.join(root_dir, path)
         if os.path.isfile(path):
@@ -1279,11 +1282,10 @@ def expand_globs(path_list, root_dir):
             # Avoid this potential ambiguity by sorting. (see #4185)
             files.extend(sorted(glob_files))
     prefix_path_re = re.compile("^" + re.escape(f"{root_dir}{os.path.sep}"))
-    files = [prefix_path_re.sub("", f, 1) for f in files]
-    return files
+    return [prefix_path_re.sub("", f, 1) for f in files]
 
 
-def find_recipe(path):
+def find_recipe(path: str) -> str:
     """recurse through a folder, locating valid meta files (see VALID_METAS).  Raises error if more than one is found.
 
     Returns full path to meta file to be built.
@@ -1407,6 +1409,7 @@ def get_installed_packages(path):
     return installed
 
 
+@deprecated("24.5", "24.7", addendum="Use `frozendict.deepfreeze` instead.")
 def _convert_lists_to_sets(_dict):
     for k, v in _dict.items():
         if hasattr(v, "keys"):
@@ -1419,6 +1422,7 @@ def _convert_lists_to_sets(_dict):
     return _dict
 
 
+@deprecated("24.5", "24.7", addendum="Use `frozendict.deepfreeze` instead.")
 class HashableDict(dict):
     """use hashable frozen dictionaries for resources and resource types so that they can be in sets"""
 
@@ -1430,6 +1434,7 @@ class HashableDict(dict):
         return hash(json.dumps(self, sort_keys=True))
 
 
+@deprecated("24.5", "24.7", addendum="Use `frozendict.deepfreeze` instead.")
 def represent_hashabledict(dumper, data):
     value = []
 
@@ -1617,8 +1622,13 @@ def filter_info_files(files_list, prefix):
     )
 
 
-def rm_rf(path, config=None):
-    return _rm_rf(path)
+@deprecated.argument("24.5", "24.7", "config")
+def rm_rf(path):
+    from conda.core.prefix_data import delete_prefix_from_linked_data
+    from conda.gateways.disk.delete import rm_rf as rm_rf
+
+    rm_rf(path)
+    delete_prefix_from_linked_data(path)
 
 
 # https://stackoverflow.com/a/31459386/1170370
@@ -1676,10 +1686,8 @@ def reset_deduplicator():
 
 def get_logger(name, level=logging.INFO, dedupe=True, add_stdout_stderr_handlers=True):
     config_file = None
-    if cc_conda_build.get("log_config_file"):
-        config_file = abspath(
-            expanduser(expandvars(cc_conda_build.get("log_config_file")))
-        )
+    if log_config_file := context.conda_build.get("log_config_file"):
+        config_file = abspath(expanduser(expandvars(log_config_file)))
     # by loading config file here, and then only adding handlers later, people
     # should be able to override conda-build's logger settings here.
     if config_file:
@@ -1780,22 +1788,24 @@ def merge_dicts_of_lists(
     return {k: dol1.get(k, no) + dol2.get(k, no) for k in keys}
 
 
-def prefix_files(prefix):
+def prefix_files(prefix: str | os.PathLike | Path) -> set[str]:
     """
     Returns a set of all files in prefix.
     """
-    res = set()
-    prefix_rep = prefix + os.path.sep
-    for root, dirs, files in walk(prefix):
-        for fn in files:
-            # this is relpath, just hacked to be faster
-            res.add(join(root, fn).replace(prefix_rep, "", 1))
-        for dn in dirs:
-            path = join(root, dn)
-            if islink(path):
-                res.add(path.replace(prefix_rep, "", 1))
-                res.update(expand_globs((path,), prefix))
-    return res
+    prefix = f"{os.path.abspath(prefix)}{os.path.sep}"
+    prefix_files: set[str] = set()
+    for root, directories, files in walk(prefix):
+        # this is effectively os.path.relpath, just hacked to be faster
+        relroot = root[len(prefix) :].lstrip(os.path.sep)
+        # add all files
+        prefix_files.update(join(relroot, file) for file in files)
+        # add all symlink directories (they are "files")
+        prefix_files.update(
+            join(relroot, directory)
+            for directory in directories
+            if islink(join(root, directory))
+        )
+    return prefix_files
 
 
 def mmap_mmap(

@@ -41,10 +41,11 @@ except ImportError:
 
 from typing import TYPE_CHECKING
 
+from conda.base.context import context
 from conda.common.io import dashlist
+from conda.gateways.disk.create import TemporaryDirectory
 
 from .. import source
-from ..conda_interface import TemporaryDirectory, cc_conda_build
 from ..config import get_or_merge_config
 from ..license_family import allowed_license_families, guess_license_family
 from ..metadata import MetaData
@@ -53,6 +54,8 @@ from ..variants import DEFAULT_VARIANTS, get_package_variants
 
 if TYPE_CHECKING:
     from typing import Literal
+
+    from ..config import Config
 
 SOURCE_META = """\
   {archive_keys}
@@ -454,7 +457,7 @@ def add_parser(repos):
     cran.add_argument(
         "-m",
         "--variant-config-files",
-        default=cc_conda_build.get("skeleton_config_yaml", None),
+        default=context.conda_build.get("skeleton_config_yaml", None),
         help="""Variant config file to add.  These yaml files can contain
         keys such as `cran_mirror`.  Only one can be provided here.""",
     )
@@ -862,28 +865,36 @@ def remove_comments(template):
 
 
 def skeletonize(
-    in_packages,
-    output_dir=".",
-    output_suffix="",
-    add_maintainer=None,
-    version=None,
-    git_tag=None,
-    cran_url=None,
-    recursive=False,
-    archive=True,
-    version_compare=False,
-    update_policy="",
-    r_interp="r-base",
-    use_binaries_ver=None,
-    use_noarch_generic=False,
-    use_when_no_binary: Literal["error" | "src" | "old" | "old-src"] = "src",
-    use_rtools_win=False,
-    config=None,
-    variant_config_files=None,
-    allow_archived=False,
-    add_cross_r_base=False,
-    no_comments=False,
-):
+    in_packages: list[str],
+    output_dir: str = ".",
+    output_suffix: str = "",
+    add_maintainer: str | None = None,
+    version: str | None = None,
+    git_tag: str | None = None,
+    cran_url: str | None = None,
+    recursive: bool = False,
+    archive: bool = True,
+    version_compare: bool = False,
+    update_policy: Literal[
+        "error",
+        "skip-up-to-date",
+        "skip-existing",
+        "overwrite",
+        "merge-keep-build-num",
+        "merge-incr-build-num",
+    ]
+    | None = None,
+    r_interp: str = "r-base",
+    use_binaries_ver: str | None = None,
+    use_noarch_generic: bool = False,
+    use_when_no_binary: Literal["error", "src", "old", "old-src"] = "src",
+    use_rtools_win: bool = False,
+    config: Config | None = None,
+    variant_config_files: list[str] | None = None,
+    allow_archived: bool = False,
+    add_cross_r_base: bool = False,
+    no_comments: bool = False,
+) -> None:
     if (
         use_when_no_binary != "error"
         and use_when_no_binary != "src"
@@ -1088,7 +1099,11 @@ def skeletonize(
         script_env = []
         extra_recipe_maintainers = []
         build_number = 0
-        if update_policy.startswith("merge") and inputs["old-metadata"]:
+        if (
+            update_policy
+            and update_policy.startswith("merge")
+            and inputs["old-metadata"]
+        ):
             m = inputs["old-metadata"]
             patches = make_array(m, "source/patches")
             script_env = make_array(m, "build/script_env")

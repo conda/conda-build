@@ -15,13 +15,11 @@ from typing import TYPE_CHECKING
 
 from conda.api import Solver
 from conda.base.context import context
+from conda.cli.common import specs_from_args
 from conda.core.index import get_index
 from conda.core.prefix_data import PrefixData
 from conda.models.records import PrefixRecord
 
-from .conda_interface import (
-    specs_from_args,
-)
 from .os_utils.ldd import (
     get_linkages,
     get_package_obj_files,
@@ -218,8 +216,8 @@ def inspect_linkages(
     all_packages: bool = False,
     show_files: bool = False,
     groupby: Literal["package", "dependency"] = "package",
-    sysroot="",
-):
+    sysroot: str = "",
+) -> str:
     if not packages and not untracked and not all_packages:
         sys.exit("At least one package or --untracked or --all must be provided")
     elif on_win:
