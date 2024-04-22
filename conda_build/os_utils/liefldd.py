@@ -861,7 +861,7 @@ def get_static_lib_exports(file):
                 # 'This file is not a PE binary' (yeah, fair enough, it's a COFF file).
                 # Reported at https://github.com/lief-project/LIEF/issues/233#issuecomment-452580391
                 try:
-                    obj = lief.PE.parse(raw=content[obj_start : obj_end - 1])
+                    obj = lief.PE.parse(raw=list(content[obj_start : obj_end - 1]))
                 except:
                     if debug_static_archives > 0:
                         print(
@@ -879,7 +879,7 @@ def get_static_lib_exports(file):
                 # syms_b = get_symbols(obj, defined=True, undefined=False)
                 # print(syms_b)
             else:
-                obj = lief.ELF.parse(raw=content[obj_start:obj_end])
+                obj = lief.ELF.parse(raw=list(content[obj_start:obj_end]))
             if not obj:
                 # Cannot do much here except return the index.
                 return syms, [[0, 0] for sym in syms], syms, [[0, 0] for sym in syms]
@@ -1106,8 +1106,10 @@ def get_symbols(file, defined=True, undefined=True, notexported=False, arch="nat
         except:
             pass
     res = []
+    imported_function_names = set()
     if len(binary.exported_functions):
         syms = binary.exported_functions
+        imported_function_names = {s.name for s in binary.imported_functions}
     elif len(binary.symbols):
         syms = binary.symbols
     elif len(binary.static_symbols):
@@ -1128,12 +1130,18 @@ def get_symbols(file, defined=True, undefined=True, notexported=False, arch="nat
                 s_name = "%s" % s
             else:
                 s_name = "%s" % s.name
-                if s.exported and s.imported:
-                    print(f"Weird, symbol {s.name} is both imported and exported")
-                if s.exported:
+                if isinstance(s, lief.Function):
+                    s_exported = True
+                    s_imported = s.name in imported_function_names
+                else:
+                    s_exported = s.exported
+                    s_imported = s.imported
+                if s_exported and s_imported:
+                    print(f"Weird, symbol {s_name} is both imported and exported")
+                if s_exported:
                     is_undefined = True
                     is_notexported = False
-                elif s.imported:
+                elif s_imported:
                     is_undefined = False
         else:
             s_name = "%s" % s.name
