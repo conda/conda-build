@@ -4,9 +4,10 @@ import json
 from pathlib import Path
 
 import pytest
+from conda.auxlib.entity import EntityEncoder
+from conda.models.enums import PathType
 
 from conda_build._link import pyc_f
-from conda_build.conda_interface import EntityEncoder, PathType
 
 
 @pytest.mark.parametrize(

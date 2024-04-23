@@ -4,6 +4,8 @@
 Tools for converting PyPI packages to conda recipes.
 """
 
+from __future__ import annotations
+
 import configparser
 import keyword
 import logging
@@ -12,27 +14,25 @@ import re
 import subprocess
 import sys
 from collections import OrderedDict, defaultdict
+from io import StringIO
 from os import chdir, getcwd, listdir, makedirs
 from os.path import abspath, exists, isdir, isfile, join
 from shutil import copy2
 from tempfile import mkdtemp
+from typing import TYPE_CHECKING
 from urllib.parse import urljoin, urlsplit
 
 import pkginfo
 import requests
 import yaml
 from conda.base.context import context
+from conda.cli.common import spec_from_line
+from conda.gateways.connection.download import download
 from conda.gateways.disk.read import compute_sum
+from conda.models.version import normalized_version
+from conda.utils import human_bytes
 from requests.packages.urllib3.util.url import parse_url
 
-from ..conda_interface import (
-    StringIO,
-    download,
-    human_bytes,
-    input,
-    normalized_version,
-    spec_from_line,
-)
 from ..config import Config
 from ..environ import create_env
 from ..license_family import allowed_license_families, guess_license_family
@@ -48,6 +48,9 @@ from ..utils import (
     tar_xf,
 )
 from ..version import _parse as parse_version
+
+if TYPE_CHECKING:
+    from typing import Iterable
 
 pypi_example = """
 Examples:
@@ -254,30 +257,27 @@ def _formating_value(attribute_name, attribute_value):
 
 
 def skeletonize(
-    packages,
-    output_dir=".",
-    version=None,
-    recursive=False,
-    all_urls=False,
-    pypi_url="https://pypi.io/pypi/",
-    noprompt=True,
-    version_compare=False,
-    python_version=None,
-    manual_url=False,
-    all_extras=False,
-    noarch_python=False,
-    config=None,
-    setup_options=None,
-    extra_specs=[],
-    pin_numpy=False,
-):
+    packages: list[str],
+    output_dir: str = ".",
+    version: str | None = None,
+    recursive: bool = False,
+    all_urls: bool = False,
+    pypi_url: str = "https://pypi.io/pypi/",
+    noprompt: bool = True,
+    version_compare: bool = False,
+    python_version: str | None = None,
+    manual_url: bool = False,
+    all_extras: bool = False,
+    noarch_python: bool = False,
+    config: Config | None = None,
+    setup_options: str | Iterable[str] | None = None,
+    extra_specs: str | Iterable[str] | None = None,
+    pin_numpy: bool = False,
+) -> None:
     package_dicts = {}
 
-    if not setup_options:
-        setup_options = []
-
-    if isinstance(setup_options, str):
-        setup_options = [setup_options]
+    setup_options = ensure_list(setup_options)
+    extra_specs = ensure_list(extra_specs)
 
     if not config:
         config = Config()
