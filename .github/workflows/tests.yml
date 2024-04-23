@@ -337,7 +337,7 @@ jobs:
     needs: changes
     if: github.event_name == 'schedule' || needs.changes.outputs.code == 'true'
 
-    runs-on: macos-13
+    runs-on: macos-11
     defaults:
       run:
         # https://github.com/conda-incubator/setup-miniconda#use-a-default-shell
@@ -383,7 +383,7 @@ jobs:
           miniconda-version: 'latest'
 
       - name: Xcode Install
-        run: sudo xcode-select --switch /Applications/Xcode_11.7.app
+        run: sudo xcode-select --switch /Applications/Xcode_14.1.app
 
       - name: Conda Install
         run: >
