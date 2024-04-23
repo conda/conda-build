@@ -1072,7 +1072,7 @@ def _lookup_in_sysroots_and_allowlist(
     if not in_allowlist and not in_sysroots:
         _print_msg(
             errors,
-            f"{msg_prelude}: {needed_dso} not found in packages, sysroot(s) nor the missing_dso_whitelist.\n"
+            f"{msg_prelude}: {needed_dso} not found in packages, sysroot(s) nor the missing_dso_allowlist.\n"
             ".. is this binary repackaging?",
             verbose=verbose,
         )
@@ -1157,6 +1157,7 @@ def _show_linking_messages(
     pkg_name,
     error_overlinking,
     runpath_whitelist,
+    rpath_allowlist,  # preferred keyword for inclusive language
     verbose,
     requirements_run,
     lib_packages,
@@ -1193,7 +1194,9 @@ def _show_linking_messages(
             )
             continue
         if runpaths and not (
-            runpath_whitelist or any(fnmatch(f, w) for w in runpath_whitelist)
+            runpath_whitelist
+            or rpath_allowlist
+            or any(fnmatch(f, w) for w in runpath_whitelist or rpath_allowlist)
         ):
             _print_msg(
                 errors,
@@ -1256,7 +1259,9 @@ def check_overlinking_impl(
     run_prefix,
     build_prefix,
     missing_dso_whitelist,
+    missing_dso_allowlist,  # preferred keyword for inclusive language
     runpath_whitelist,
+    rpath_allowlist,  # preferred keyword for inclusive language
     error_overlinking,
     error_overdepending,
     verbose,
@@ -1360,7 +1365,7 @@ def check_overlinking_impl(
             allowlist = DEFAULT_WIN_ALLOWLIST
             build_is_host = True if on_win else False
 
-    allowlist += missing_dso_whitelist or []
+    allowlist += missing_dso_whitelist or missing_dso_allowlist or []
 
     # Sort the sysroots by the number of files in them so things can assume that
     # the first sysroot is more important than others.
@@ -1473,6 +1478,7 @@ def check_overlinking_impl(
         pkg_name,
         error_overlinking,
         runpath_whitelist,
+        rpath_allowlist,  # preferred keyword for inclusive language
         verbose,
         requirements_run,
         lib_packages,
@@ -1563,8 +1569,10 @@ def check_overlinking(m: MetaData, files, host_prefix=None):
         [req.split(" ")[0] for req in m.get_value("requirements/host", [])],
         host_prefix or m.config.host_prefix,
         m.config.build_prefix,
-        m.get_value("build/missing_dso_whitelist", []),
-        m.get_value("build/runpath_whitelist", []),
+        m.get_value(
+            ("build/missing_dso_whitelist" or "build/missing_dso_allowlist"), []
+        ),
+        m.get_value(("build/runpath_whitelist" or "build/rpath_allowlist"), []),
         m.config.error_overlinking,
         m.config.error_overdepending,
         m.config.verbose,

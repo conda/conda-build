@@ -596,6 +596,7 @@ FIELDS = {
         "post-link": str,
         "pre-unlink": str,
         "missing_dso_whitelist": None,
+        "missing_dso_allowlist": None,  # preferred keyword for inclusive language
         "error_overdepending": None,
         "error_overlinking": None,
         "overlinking_ignore_patterns": [],
