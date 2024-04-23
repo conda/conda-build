@@ -380,7 +380,7 @@ jobs:
         with:
           condarc-file: .github/condarc
           run-post: false  # skip post cleanup
-          miniconda-version: 'latest'
+          miniconda-version: latest
 
       - name: Xcode Install
         run: sudo xcode-select --switch /Applications/Xcode_14.1.app
