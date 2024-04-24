@@ -338,7 +338,7 @@ jobs:
     if: github.event_name == 'schedule' || needs.changes.outputs.code == 'true'
 
     # Old macOS needed for old SDK (see xcode step below)
-    # This is needed for some MACOSX_DEPLOYMENT_TARGET tests 
+    # This is needed for some MACOSX_DEPLOYMENT_TARGET tests
     # We could also install SDKs from a external provider in the future
     # if we want to update this runner to a non-deprecated version
     runs-on: macos-11
