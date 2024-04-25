@@ -13,9 +13,11 @@ echo "weee" > $PREFIX/subpackage_file3.ext
 # test copying filename
 echo "weee" > $PREFIX/subpackage_include_exclude1
 # test copying by folder name
-mkdir $PREFIX/somedir
-echo "weee" > $PREFIX/somedir/subpackage_include_exclude1
+mkdir $PREFIX/anotherdir
+echo "weee" > $PREFIX/anotherdir/subpackage_include_exclude1
 # test glob patterns
-echo "weee" > $PREFIX/subpackage_include_exclude1.ext
-echo "weee" > $PREFIX/subpackage_include_exclude2.ext
-echo "weee" > $PREFIX/subpackage_include_exclude3.ext
+echo "weee" > $PREFIX/subpackage_include_exclude1.wav
+echo "weee" > $PREFIX/subpackage_include_exclude2.wav
+echo "weee" > $PREFIX/subpackage_include_exclude3.wav
+mkdir $PREFIX/lib
+echo "weee" > $PREFIX/lib/libdav1d.fake

@@ -35,13 +35,13 @@ outputs:
     files:
       include:
         - subpackage_include_exclude1
-        - somedir
-        - "*.ext"
+        - anotherdir
+        - "*.wav"
         # Libs should not match because they come from a different package
         - "lib/libdav1d*"       # [unix]
         - "Library/bin/dav1d*"  # [win]
       exclude:
-        - "*3.ext"
+        - "*3.wav"
     test:
       script: subpackage_test.py
       script_interpreter: python
