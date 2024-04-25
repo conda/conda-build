@@ -7,3 +7,15 @@ echo "weee" > $PREFIX/somedir/subpackage_file1
 echo "weee" > $PREFIX/subpackage_file1.ext
 echo "weee" > $PREFIX/subpackage_file2.ext
 echo "weee" > $PREFIX/subpackage_file3.ext
+
+# The files used to test the two subpackages must be disjoint because they are
+# coinstalled
+# test copying filename
+echo "weee" > $PREFIX/subpackage_include_exclude1
+# test copying by folder name
+mkdir $PREFIX/somedir
+echo "weee" > $PREFIX/somedir/subpackage_include_exclude1
+# test glob patterns
+echo "weee" > $PREFIX/subpackage_include_exclude1.ext
+echo "weee" > $PREFIX/subpackage_include_exclude2.ext
+echo "weee" > $PREFIX/subpackage_include_exclude3.ext

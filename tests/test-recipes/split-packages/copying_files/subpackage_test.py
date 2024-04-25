@@ -1,45 +1,16 @@
 import os
 
-print(os.getenv('PREFIX'))
-filename = os.path.join(os.environ['PREFIX'], 'subpackage_file1')
-assert os.path.isfile(filename)
-contents = open(filename).read().rstrip()
-if hasattr(contents, 'decode'):
-    contents = contents.decode()
-assert 'weee' in contents, 'incorrect file contents: %s' % contents
-print('plain file OK')
-
-filename = os.path.join(os.environ['PREFIX'], 'somedir', 'subpackage_file1')
-assert os.path.isfile(filename), filename + ' is missing'
-contents = open(filename).read().rstrip()
-if hasattr(contents, 'decode'):
-    contents = contents.decode()
-assert 'weee' in contents, 'incorrect file contents: %s' % contents
-print('subfolder file OK')
-
-filename = os.path.join(os.environ['PREFIX'], 'subpackage_file1.ext')
-assert os.path.isfile(filename)
-contents = open(filename).read().rstrip()
-if hasattr(contents, 'decode'):
-    contents = contents.decode()
-assert 'weee' in contents, 'incorrect file contents: %s' % contents
-
-filename = os.path.join(os.environ['PREFIX'], 'subpackage_file2.ext')
-assert os.path.isfile(filename)
-contents = open(filename).read().rstrip()
-if hasattr(contents, 'decode'):
-    contents = contents.decode()
-assert 'weee' in contents, 'incorrect file contents: %s' % contents
-print('glob OK')
-
-external_host_file = 'lib/libdav1d.so.6'
-if 'osx' in os.getenv('target_platform', ''):
-    external_host_file = 'lib/libdav1d.6.dylib'
-if 'win' in os.getenv('target_platform', ''):
-    external_host_file = 'Library/bin/dav1d.dll'
-
 if os.getenv('PKG_NAME') == 'my_script_subpackage_files':
-    filename = os.path.join(os.environ['PREFIX'], 'subpackage_file3.ext')
+
+    file_basename = 'subpackage_file1'
+
+    external_host_file = 'lib/libpng16.so'
+    if 'osx' in os.getenv('target_platform', ''):
+        external_host_file = 'lib/libpng16.dylib'
+    if 'win' in os.getenv('target_platform', ''):
+        external_host_file = 'Library/bin/libpng16.dll'
+
+    filename = os.path.join(os.environ['PREFIX'], f'{file_basename}3.ext')
     assert os.path.isfile(filename)
     print('glob files OK')
 
@@ -48,10 +19,51 @@ if os.getenv('PKG_NAME') == 'my_script_subpackage_files':
     print('glob files prefix OK')
 
 if os.getenv('PKG_NAME') == 'my_script_subpackage_include_exclude':
-    filename = os.path.join(os.environ['PREFIX'], 'subpackage_file3.ext')
+
+    file_basename = 'subpackage_include_exclude1'
+
+    external_host_file = 'lib/libdav1d.so.6'
+    if 'osx' in os.getenv('target_platform', ''):
+        external_host_file = 'lib/libdav1d.6.dylib'
+    if 'win' in os.getenv('target_platform', ''):
+        external_host_file = 'Library/bin/dav1d.dll'
+
+    filename = os.path.join(os.environ['PREFIX'], f'{file_basename}3.ext')
     assert not os.path.isfile(filename)
     print('glob exclude OK')
 
     filename = os.path.join(os.environ['PREFIX'], external_host_file)
     assert not os.path.isfile(filename)
     print('glob exclude prefix OK')
+
+print(os.getenv('PREFIX'))
+filename = os.path.join(os.environ['PREFIX'], f'{file_basename}1')
+assert os.path.isfile(filename)
+contents = open(filename).read().rstrip()
+if hasattr(contents, 'decode'):
+    contents = contents.decode()
+assert 'weee' in contents, 'incorrect file contents: %s' % contents
+print('plain file OK')
+
+filename = os.path.join(os.environ['PREFIX'], 'somedir', f'{file_basename}1')
+assert os.path.isfile(filename), filename + ' is missing'
+contents = open(filename).read().rstrip()
+if hasattr(contents, 'decode'):
+    contents = contents.decode()
+assert 'weee' in contents, 'incorrect file contents: %s' % contents
+print('subfolder file OK')
+
+filename = os.path.join(os.environ['PREFIX'], f'{file_basename}1.ext')
+assert os.path.isfile(filename)
+contents = open(filename).read().rstrip()
+if hasattr(contents, 'decode'):
+    contents = contents.decode()
+assert 'weee' in contents, 'incorrect file contents: %s' % contents
+
+filename = os.path.join(os.environ['PREFIX'], f'{file_basename}2.ext')
+assert os.path.isfile(filename)
+contents = open(filename).read().rstrip()
+if hasattr(contents, 'decode'):
+    contents = contents.decode()
+assert 'weee' in contents, 'incorrect file contents: %s' % contents
+print('glob OK')
