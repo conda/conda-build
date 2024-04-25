@@ -337,6 +337,10 @@ jobs:
     needs: changes
     if: github.event_name == 'schedule' || needs.changes.outputs.code == 'true'
 
+    # Old macOS needed for old SDK (see xcode step below)
+    # This is needed for some MACOSX_DEPLOYMENT_TARGET tests
+    # We could also install SDKs from a external provider in the future
+    # if we want to update this runner to a non-deprecated version
     runs-on: macos-11
     defaults:
       run:
@@ -489,9 +493,9 @@ jobs:
         include:
           - runner: ubuntu-latest
             subdir: linux-64
-          - runner: macos-latest
+          - runner: macos-13
             subdir: osx-64
-          - runner: macos-14
+          - runner: macos-14  # FUTURE: Use -latest
             subdir: osx-arm64
           - runner: windows-latest
             subdir: win-64
