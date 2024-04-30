@@ -8,7 +8,7 @@ outputs:
       script_env:
         - TEST_FN_DOESNT_EXIST
       script:
-        - python -c 'import os; print("val... " + os.environ["TEST_FN_DOESNT_EXIST"])'
+        - python -c "import os; print('val...' + os.environ['TEST_FN_DOESNT_EXIST'])"
       requirements:
         host:
           - python
