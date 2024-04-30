@@ -56,16 +56,13 @@ def fix_staged_scripts(scripts_dir, config):
             # If it's a #!python script
             if not (line.startswith(b"#!") and b"python" in line.lower()):
                 continue
-            print(
-                "Adjusting unix-style #! script %s, "
-                "and adding a .bat file for it" % fn
-            )
+            print(f"Adjusting unix-style #! script {fn}, and adding a .bat file for it")
             # copy it with a .py extension (skipping that first #! line)
             with open(join(scripts_dir, fn + "-script.py"), "wb") as fo:
                 fo.write(f.read())
             # now create the .exe file
             copy_into(
-                join(dirname(__file__), "cli-%s.exe" % config.host_arch),
+                join(dirname(__file__), f"cli-{config.host_arch}.exe"),
                 join(scripts_dir, fn + ".exe"),
             )
 
@@ -338,7 +335,7 @@ def build(m, bld_bat, stats, provision_only=False):
             rewrite_env = {
                 k: env[k] for k in ["PREFIX", "BUILD_PREFIX", "SRC_DIR"] if k in env
             }
-            print("Rewriting env in output: %s" % pprint.pformat(rewrite_env))
+            print(f"Rewriting env in output: {pprint.pformat(rewrite_env)}")
         check_call_env(
             cmd, cwd=m.config.work_dir, stats=stats, rewrite_stdout_env=rewrite_env
         )

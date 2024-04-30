@@ -66,7 +66,7 @@ environment information to generate the rendered meta.yml files.""",
         "--version",
         action="version",
         help="Show the conda-build version number and exit.",
-        version="conda-build %s" % __version__,
+        version=f"conda-build {__version__}",
     )
     p.add_argument(
         "-n",
