@@ -132,7 +132,7 @@ def print_linkages(
             else sort_order.get(key[0], (4, key[0]))
         ),
     ):
-        output_string += "%s:\n" % prec
+        output_string += f"{prec}:\n"
         if show_files:
             for lib, path, binary in sorted(links):
                 output_string += f"    {lib} ({path}) from {binary}\n"
@@ -296,7 +296,7 @@ def inspect_linkages(
             output_string += print_linkages(inverted_map[dep], show_files=show_files)
 
     else:
-        raise ValueError("Unrecognized groupby: %s" % groupby)
+        raise ValueError(f"Unrecognized groupby: {groupby}")
     if hasattr(output_string, "decode"):
         output_string = output_string.decode("utf-8")
     return output_string
