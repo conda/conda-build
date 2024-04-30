@@ -511,9 +511,7 @@ def skeletonize(
         # packages, unless we're newer than what's in core
         if metacpan_api_is_core_version(meta_cpan_url, package):
             if not write_core:
-                print(
-                    "We found core module %s. Skipping recipe creation." % packagename
-                )
+                print(f"We found core module {packagename}. Skipping recipe creation.")
                 continue
 
             d["useurl"] = "#"
@@ -577,12 +575,11 @@ def skeletonize(
         version = None
         if exists(dir_path) and not force:
             print(
-                "Directory %s already exists and you have not specified --force "
-                % dir_path
+                f"Directory {dir_path} already exists and you have not specified --force "
             )
             continue
         elif exists(dir_path) and force:
-            print("Directory %s already exists, but forcing recipe creation" % dir_path)
+            print(f"Directory {dir_path} already exists, but forcing recipe creation")
 
         try:
             d["homeurl"] = release_data["resources"]["homepage"]
@@ -756,7 +753,7 @@ def deps_for_package(
     }
     packages_to_append = set()
 
-    print("Processing dependencies for %s..." % package, end="")
+    print(f"Processing dependencies for {package}...", end="")
     sys.stdout.flush()
 
     if not release_data.get("dependency"):
@@ -1052,11 +1049,8 @@ def metacpan_api_is_core_version(cpan_url, module):
             return True
         else:
             sys.exit(
-                (
-                    "Error: Could not find module or distribution named"
-                    " %s on MetaCPAN."
-                )
-                % (module)
+                "Error: Could not find module or distribution named"
+                f" {module} on MetaCPAN."
             )
 
 

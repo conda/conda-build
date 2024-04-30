@@ -397,7 +397,7 @@ def ensure_valid_noarch_value(meta):
     build_noarch = meta.get("build", {}).get("noarch")
     if build_noarch and build_noarch not in NOARCH_TYPES:
         raise exceptions.CondaBuildException(
-            "Invalid value for noarch: %s" % build_noarch
+            f"Invalid value for noarch: {build_noarch}"
         )
 
 
@@ -828,7 +828,7 @@ def _get_env_path(env_name_or_path):
                 break
     bootstrap_metadir = os.path.join(env_name_or_path, "conda-meta")
     if not os.path.isdir(bootstrap_metadir):
-        print("Bootstrap environment '%s' not found" % env_name_or_path)
+        print(f"Bootstrap environment '{env_name_or_path}' not found")
         sys.exit(1)
     return env_name_or_path
 
@@ -1478,7 +1478,7 @@ class MetaData:
             if section == "extra":
                 continue
             if section not in FIELDS:
-                raise ValueError("unknown section: %s" % section)
+                raise ValueError(f"unknown section: {section}")
             for key_or_dict in submeta:
                 if section in OPTIONALLY_ITERABLE_FIELDS and isinstance(
                     key_or_dict, dict
@@ -1492,17 +1492,17 @@ class MetaData:
     def name(self) -> str:
         name = self.get_value("package/name", "")
         if not name and self.final:
-            sys.exit("Error: package/name missing in: %r" % self.meta_path)
+            sys.exit(f"Error: package/name missing in: {self.meta_path!r}")
         name = str(name)
         if name != name.lower():
-            sys.exit("Error: package/name must be lowercase, got: %r" % name)
+            sys.exit(f"Error: package/name must be lowercase, got: {name!r}")
         check_bad_chrs(name, "package/name")
         return name
 
     def version(self) -> str:
         version = self.get_value("package/version", "")
         if not version and not self.get_section("outputs") and self.final:
-            sys.exit("Error: package/version missing in: %r" % self.meta_path)
+            sys.exit(f"Error: package/version missing in: {self.meta_path!r}")
         version = str(version)
         check_bad_chrs(version, "package/version")
         if self.final and version.startswith("."):
@@ -1571,7 +1571,7 @@ class MetaData:
             try:
                 ms = MatchSpec(spec)
             except AssertionError:
-                raise RuntimeError("Invalid package specification: %r" % spec)
+                raise RuntimeError(f"Invalid package specification: {spec!r}")
             except (AttributeError, ValueError) as e:
                 raise RuntimeError(
                     "Received dictionary as spec.  Note that pip requirements are "
@@ -1580,7 +1580,7 @@ class MetaData:
             if ms.name == self.name() and not (
                 typ == "build" and self.config.host_subdir != self.config.build_subdir
             ):
-                raise RuntimeError("%s cannot depend on itself" % self.name())
+                raise RuntimeError(f"{self.name()} cannot depend on itself")
             for name, ver in name_ver_list:
                 if ms.name == name:
                     if self.noarch:
@@ -1708,7 +1708,7 @@ class MetaData:
             out = build_string_from_metadata(self)
             if self.config.filename_hashing and self.final:
                 hash_ = self.hash_dependencies()
-                if not re.findall("h[0-9a-f]{%s}" % self.config.hash_length, out):
+                if not re.findall(f"h[0-9a-f]{{{self.config.hash_length}}}", out):
                     ret = out.rsplit("_", 1)
                     try:
                         int(ret[0])
@@ -1718,14 +1718,14 @@ class MetaData:
                     if len(ret) > 1:
                         out = "_".join([out] + ret[1:])
                 else:
-                    out = re.sub("h[0-9a-f]{%s}" % self.config.hash_length, hash_, out)
+                    out = re.sub(f"h[0-9a-f]{{{self.config.hash_length}}}", hash_, out)
         return out
 
     def dist(self):
         return f"{self.name()}-{self.version()}-{self.build_id()}"
 
     def pkg_fn(self):
-        return "%s.tar.bz2" % self.dist()
+        return f"{self.dist()}.tar.bz2"
 
     def is_app(self):
         return bool(self.get_value("app/entry"))
@@ -1733,8 +1733,8 @@ class MetaData:
     def app_meta(self):
         d = {"type": "app"}
         if self.get_value("app/icon"):
-            d["icon"] = "%s.png" % compute_sum(
-                join(self.path, self.get_value("app/icon")), "md5"
+            d["icon"] = "{}.png".format(
+                compute_sum(join(self.path, self.get_value("app/icon")), "md5")
             )
 
         for field, key in [
@@ -2319,7 +2319,7 @@ class MetaData:
             # constrain the stored variants to only this version in the output
             #     variant mapping
             if re.search(
-                r"\s*\{\{\s*%s\s*(?:.*?)?\}\}" % key, self.extract_source_text()
+                rf"\s*\{{\{{\s*{key}\s*(?:.*?)?\}}\}}", self.extract_source_text()
             ):
                 return True
         return False
