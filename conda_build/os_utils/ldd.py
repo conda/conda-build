@@ -44,7 +44,7 @@ def ldd(path):
             continue
         if "ld-linux" in line:
             continue
-        raise RuntimeError("Unexpected output from ldd: %s" % line)
+        raise RuntimeError(f"Unexpected output from ldd: {line}")
 
     return res
 

@@ -425,7 +425,7 @@ def bytes2human(n):
         if n >= prefix[s]:
             value = float(n) / prefix[s]
             return f"{value:.1f}{s}"
-    return "%sB" % n
+    return f"{n}B"
 
 
 def seconds2human(s):
@@ -458,7 +458,7 @@ def get_recipe_abspath(recipe):
                 tar_xf(recipe_tarfile, os.path.join(recipe_dir, "info"))
             need_cleanup = True
         else:
-            print("Ignoring non-recipe: %s" % recipe)
+            print(f"Ignoring non-recipe: {recipe}")
             return (None, None)
     else:
         recipe_dir = abspath(os.path.join(os.getcwd(), recipe))
@@ -1054,7 +1054,7 @@ def iter_entry_points(items):
     for item in items:
         m = entry_pat.match(item)
         if m is None:
-            sys.exit("Error cound not match entry point: %r" % item)
+            sys.exit(f"Error cound not match entry point: {item!r}")
         yield m.groups()
 
 
@@ -1076,7 +1076,7 @@ def create_entry_point(path, module, func, config):
             os.remove(path)
         with open(path, "w") as fo:
             if not config.noarch:
-                fo.write("#!%s\n" % config.host_python)
+                fo.write(f"#!{config.host_python}\n")
             fo.write(pyscript)
         os.chmod(path, 0o775)
 
@@ -1951,7 +1951,7 @@ def insert_variant_versions(requirements_dict, variant, env):
     )
     reqs = ensure_list(requirements_dict.get(env))
     for key, val in variant.items():
-        regex = re.compile(r"^(%s)(?:\s*$)" % key.replace("_", "[-_]"))
+        regex = re.compile(r"^({})(?:\s*$)".format(key.replace("_", "[-_]")))
         matches = [regex.match(pkg) for pkg in reqs]
         if any(matches):
             for i, x in enumerate(matches):

@@ -536,8 +536,7 @@ def meta_vars(meta: MetaData, skip_build_id=False):
             value = os.getenv(var_name)
         if value is None:
             warnings.warn(
-                "The environment variable '%s' specified in script_env is undefined."
-                % var_name,
+                f"The environment variable '{var_name}' specified in script_env is undefined.",
                 UserWarning,
             )
         else:
@@ -855,7 +854,7 @@ def get_install_actions(
         capture = utils.capture
     for feature, value in feature_list:
         if value:
-            specs.append("%s@" % feature)
+            specs.append(f"{feature}@")
 
     bldpkgs_dirs = ensure_list(bldpkgs_dirs)
 
@@ -961,7 +960,7 @@ def get_install_actions(
                 # specs are the raw specifications, not the conda-derived actual specs
                 #   We're testing that pip etc. are manually specified
                 if not any(
-                    re.match(r"^%s(?:$|[\s=].*)" % pkg, str(dep)) for dep in specs
+                    re.match(rf"^{pkg}(?:$|[\s=].*)", str(dep)) for dep in specs
                 ):
                     precs = [prec for prec in precs if prec.name != pkg]
         cached_precs[(specs, env, subdir, channel_urls, disable_pip)] = precs.copy()
@@ -1341,7 +1340,7 @@ def _display_actions(prefix, precs):
 
     builder = ["", "## Package Plan ##\n"]
     if prefix:
-        builder.append("  environment location: %s" % prefix)
+        builder.append(f"  environment location: {prefix}")
         builder.append("")
     print("\n".join(builder))
 
@@ -1385,9 +1384,9 @@ def _display_actions(prefix, precs):
             # string with new-style string formatting.
             fmt[pkg] = f"{{pkg:<{maxpkg}}} {{vers:<{maxver}}}"
             if maxchannels:
-                fmt[pkg] += " {channel:<%s}" % maxchannels
+                fmt[pkg] += f" {{channel:<{maxchannels}}}"
             if features[pkg]:
-                fmt[pkg] += " [{features:<%s}]" % maxfeatures
+                fmt[pkg] += f" [{{features:<{maxfeatures}}}]"
 
     lead = " " * 4
 
