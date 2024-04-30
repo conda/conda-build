@@ -1,0 +1,14 @@
+package:
+  name: test_build_script_relying_on_missing_var
+  version: 1.0
+
+outputs:
+  - name: test_1
+    build:
+      script_env:
+        - TEST_FN_DOESNT_EXIST
+      script:
+        - python -c 'import os; print("val... " + os.environ["TEST_FN_DOESNT_EXIST"])'
+      requirements:
+        host:
+          - python

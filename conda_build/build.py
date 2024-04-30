@@ -1768,10 +1768,8 @@ def bundle_conda(output, metadata: MetaData, env, stats, **kw):
                     % var,
                     UserWarning,
                 )
-                val = ""
             else:
-                val = os.environ[var]
-            env_output[var] = val
+                env_output[var] = os.environ[var]
         dest_file = os.path.join(metadata.config.work_dir, output["script"])
         utils.copy_into(os.path.join(metadata.path, output["script"]), dest_file)
         from os import stat
