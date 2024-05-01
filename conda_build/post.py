@@ -43,6 +43,7 @@ from conda.misc import walk_prefix
 from conda.models.records import PrefixRecord
 
 from . import utils
+from .deprecations import deprecated
 from .exceptions import (
     CondaBuildUserError,
     OverDependingError,
@@ -1285,6 +1286,7 @@ def _show_linking_messages(
                 )
 
 
+@deprecated.argument("24.5", "24.7", "exception_on_error", addendum="Default to true.")
 def check_overlinking_impl(
     pkg_name: str,
     pkg_version: str,
@@ -1302,7 +1304,6 @@ def check_overlinking_impl(
     error_overlinking,
     error_overdepending,
     verbose,
-    exception_on_error,
     files,
     bldpkgs_dirs,
     output_folder,
@@ -1570,26 +1571,22 @@ def check_overlinking_impl(
                     verbose=verbose,
                 )
     if len(errors):
-        if exception_on_error:
-            runpaths_errors = [
-                error for error in errors if re.match(r".*runpaths.*found in.*", error)
-            ]
-            if len(runpaths_errors):
-                raise RunPathError(runpaths_errors)
-            overlinking_errors = [
-                error
-                for error in errors
-                if re.match(r".*(overlinking|not found in|did not find).*", error)
-            ]
-            if len(overlinking_errors):
-                raise OverLinkingError(overlinking_errors)
-            overdepending_errors = [
-                error for error in errors if "overdepending" in error
-            ]
-            if len(overdepending_errors):
-                raise OverDependingError(overdepending_errors)
-        else:
-            sys.exit(1)
+        if runpaths_errors := [
+            error for error in errors if re.match(r".*runpaths.*found in.*", error)
+        ]:
+            raise RunPathError(runpaths_errors)
+
+        if overlinking_errors := [
+            error
+            for error in errors
+            if re.match(r".*(overlinking|not found in|did not find).*", error)
+        ]:
+            raise OverLinkingError(overlinking_errors)
+
+        if overdepending_errors := [
+            error for error in errors if "overdepending" in error
+        ]:
+            raise OverDependingError(overdepending_errors)
 
     if pkg_vendoring_key in vendoring_record:
         imports = vendoring_record[pkg_vendoring_key]
@@ -1622,7 +1619,6 @@ def check_overlinking(m: MetaData, files, host_prefix=None):
         m.config.error_overlinking,
         m.config.error_overdepending,
         m.config.verbose,
-        True,
         files,
         m.config.bldpkgs_dir,
         m.config.output_folder,
