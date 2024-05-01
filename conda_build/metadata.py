@@ -15,6 +15,7 @@ from functools import lru_cache
 from os.path import isfile, join
 from typing import TYPE_CHECKING, NamedTuple, overload
 
+import yaml
 from bs4 import UnicodeDammit
 from conda.base.context import context
 from conda.gateways.disk.read import compute_sum
@@ -46,14 +47,6 @@ from .variants import (
 
 if TYPE_CHECKING:
     from typing import Any, Literal
-
-try:
-    import yaml
-except ImportError:
-    sys.exit(
-        "Error: could not import yaml (required to read meta.yaml "
-        "files of conda recipes)"
-    )
 
 try:
     Loader = yaml.CLoader
