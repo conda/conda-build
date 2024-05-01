@@ -26,6 +26,7 @@ from conda_build.utils import (
 from .utils import add_mangling, metadata_dir, subpackage_path
 
 if TYPE_CHECKING:
+    from conda.testing import PathFactoryFixture
     from pytest import CaptureFixture
 
 
@@ -304,3 +305,21 @@ def test_find_lib(capsys: CaptureFixture, tmp_path: Path) -> None:
     stdout, stderr = capsys.readouterr()
     assert stdout == f"Don't know how to find '{link}', skipping\n"
     assert not stderr
+
+
+def test_osx_ch_link_missing(path_factory: PathFactoryFixture):
+    path = path_factory()
+    host_prefix = path_factory()
+    build_prefix = path_factory()
+
+    with pytest.raises(
+        CondaBuildUserError,
+        match="Compiler runtime library in build prefix not found in host prefix",
+    ):
+        post.osx_ch_link(
+            str(path),
+            {"name": str(build_prefix / "missing")},
+            str(host_prefix),
+            str(build_prefix),
+            [],
+        )
