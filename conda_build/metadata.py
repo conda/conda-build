@@ -62,14 +62,6 @@ if TYPE_CHECKING:
     OutputTuple = tuple[OutputDict, "MetaData"]
 
 try:
-    import yaml
-except ImportError:
-    sys.exit(
-        "Error: could not import yaml (required to read meta.yaml "
-        "files of conda recipes)"
-    )
-
-try:
     Loader = yaml.CLoader
 except AttributeError:
     Loader = yaml.Loader
