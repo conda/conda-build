@@ -10,6 +10,7 @@
 
 * Mark `conda_build.build.check_external()` for deprecation. (#5255)
 * Mark `conda_buld.os_utils.external.dir_paths` for deprecation. (#5255)
+* Mark `cond_build.post.check_overlinking_impl(exception_on_error)` for deprecation. Default to true. (#5255)
 
 ### Docs
 
