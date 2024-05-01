@@ -323,3 +323,22 @@ def test_osx_ch_link_missing(path_factory: PathFactoryFixture):
             str(build_prefix),
             [],
         )
+
+
+def test_check_symlinks_error(path_factory: PathFactoryFixture):
+    (prefix := path_factory()).mkdir()
+    (croot := path_factory()).mkdir()
+
+    (real := croot / "real").touch()
+    (prefix / (link := "link")).symlink_to(real)
+    (prefix / (link2 := "link2")).symlink_to(real)
+
+    with pytest.raises(
+        CondaBuildUserError,
+        match=(
+            r"Found symlinks to paths that may not exist after the build is completed:\n"
+            rf"  link → {real}\n"
+            rf"  link2 → {real}"
+        ),
+    ):
+        post.check_symlinks([link, link2], str(prefix), str(croot))

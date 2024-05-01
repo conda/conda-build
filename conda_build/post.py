@@ -8,7 +8,6 @@ import os
 import re
 import shutil
 import stat
-import sys
 import traceback
 from collections import OrderedDict, defaultdict
 from copy import copy
@@ -1781,7 +1780,7 @@ def post_build(m, files, build_python, host_prefix=None, is_already_linked=False
 
 
 def check_symlinks(files, prefix, croot):
-    msgs = []
+    bad_symlinks = []
     real_build_prefix = realpath(prefix)
     for f in files:
         path = join(real_build_prefix, f)
@@ -1813,15 +1812,13 @@ def check_symlinks(files, prefix, croot):
             else:
                 # Symlinks to absolute paths on the system (like /usr) are fine.
                 if real_link_path.startswith(croot):
-                    msgs.append(
-                        f"{f} is a symlink to a path that may not "
-                        f"exist after the build is completed ({link_path})"
-                    )
+                    bad_symlinks.append(f"  {f} → {link_path}")
 
-    if msgs:
-        for msg in msgs:
-            print(f"Error: {msg}", file=sys.stderr)
-        sys.exit(1)
+    if bad_symlinks:
+        raise CondaBuildUserError(
+            "Found symlinks to paths that may not exist after the build is completed:\n"
+            + "\n".join(bad_symlinks)
+        )
 
 
 def make_hardlink_copy(path, prefix):
