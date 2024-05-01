@@ -447,7 +447,7 @@ def osx_ch_link(path, link_dict, host_prefix, build_prefix, files):
         )
         if not codefile_class(link, skip_symlinks=True):
             raise CondaBuildUserError(
-                f"Error: Compiler runtime library in build prefix not found in host prefix {link}"
+                f"Compiler runtime library in build prefix not found in host prefix {link}"
             )
         else:
             print(f".. fixing linking of {link} in {path} instead")
