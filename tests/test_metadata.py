@@ -34,6 +34,8 @@ from conda_build.variants import DEFAULT_VARIANTS
 from .utils import metadata_dir, metadata_path, thisdir
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from pytest import MonkeyPatch
 
 
@@ -607,3 +609,18 @@ def test_check_bad_chrs(value: str, field: str, invalid: str) -> None:
         match=rf"Bad character\(s\) \({invalid}\) in {field}: {value}\.",
     ) if invalid else nullcontext():
         check_bad_chrs(value, field)
+
+
+def test_parse_until_resolved(testing_metadata: MetaData, tmp_path: Path) -> None:
+    (recipe := tmp_path / (name := "meta.yaml")).write_text("{{ UNDEFINED[:2] }}")
+    testing_metadata._meta_path = recipe
+    testing_metadata._meta_name = name
+
+    with pytest.raises(
+        CondaBuildUserError,
+        match=(
+            rf"Failed to render jinja template in {recipe}:\n"
+            r"'UNDEFINED' is undefined"
+        ),
+    ):
+        testing_metadata.parse_until_resolved()
