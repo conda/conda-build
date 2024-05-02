@@ -3475,10 +3475,11 @@ def test(
         env["CONDA_BUILD_STATE"] = "TEST"
 
     if config.test_run_post:
-        from .utils import get_installed_packages
-
-        installed = get_installed_packages(metadata.config.test_prefix)
-        files = installed[metadata.meta["package"]["name"]]["files"]
+        files = (
+            PrefixData(metadata.config.test_prefix)
+            .get(metadata.meta["package"]["name"])
+            .files
+        )
         replacements = get_all_replacements(metadata.config)
         try_download(metadata, False, True)
         create_info_files(metadata, replacements, files, metadata.config.test_prefix)

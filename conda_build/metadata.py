@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING, NamedTuple, overload
 import yaml
 from bs4 import UnicodeDammit
 from conda.base.context import locate_prefix_by_name
+from conda.core.prefix_data import PrefixData
 from conda.gateways.disk.read import compute_sum
 from conda.models.match_spec import MatchSpec
 from frozendict import deepfreeze
@@ -40,7 +41,6 @@ from .utils import (
     ensure_list,
     expand_globs,
     find_recipe,
-    get_installed_packages,
     insert_variant_versions,
     on_win,
 )
@@ -848,17 +848,24 @@ def _get_env_path(
     )
 
 
-def _get_dependencies_from_environment(env_name_or_path):
-    path = _get_env_path(env_name_or_path)
+def _get_dependencies_from_environment(
+    env_name_or_path: str | os.PathLike | Path,
+) -> dict[str, dict[str, list[str]]]:
     # construct build requirements that replicate the given bootstrap environment
     # and concatenate them to the build requirements from the recipe
-    bootstrap_metadata = get_installed_packages(path)
-    bootstrap_requirements = []
-    for package, data in bootstrap_metadata.items():
-        bootstrap_requirements.append(
-            "{} {} {}".format(package, data["version"], data["build"])
-        )
-    return {"requirements": {"build": bootstrap_requirements}}
+    prefix = (
+        env_name_or_path
+        if isdir(env_name_or_path)
+        else locate_prefix_by_name(env_name_or_path)
+    )
+    return {
+        "requirements": {
+            "build": [
+                f"{prec.name} {prec.version} {prec.build}"
+                for prec in PrefixData(prefix).iter_records()
+            ]
+        }
+    }
 
 
 def _toposort_outputs(output_tuples: list[OutputTuple]) -> list[OutputTuple]:
