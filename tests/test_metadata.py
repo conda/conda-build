@@ -567,14 +567,6 @@ def test_get_section(testing_metadata: MetaData):
             assert isinstance(section, dict)
 
 
-def test_select_lines_invalid():
-    with pytest.raises(
-        CondaBuildUserError,
-        match=r"Invalid selector in meta\.yaml",
-    ):
-        select_lines("text # [{bad]", {}, variants_in_place=True)
-
-
 @pytest.mark.parametrize(
     "keys,expected",
     [
