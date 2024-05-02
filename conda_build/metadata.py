@@ -12,18 +12,20 @@ import time
 import warnings
 from collections import OrderedDict
 from functools import lru_cache
-from os.path import isfile, join
+from os.path import isdir, isfile, join
 from typing import TYPE_CHECKING, NamedTuple, overload
 
 import yaml
 from bs4 import UnicodeDammit
-from conda.base.context import context
+from conda.base.context import locate_prefix_by_name
+from conda.core.prefix_data import PrefixData
 from conda.gateways.disk.read import compute_sum
 from conda.models.match_spec import MatchSpec
 from frozendict import deepfreeze
 
 from . import exceptions, utils
 from .config import Config, get_or_merge_config
+from .deprecations import deprecated
 from .exceptions import CondaBuildUserError
 from .features import feature_list
 from .license_family import ensure_valid_license_family
@@ -32,7 +34,6 @@ from .utils import (
     ensure_list,
     expand_globs,
     find_recipe,
-    get_installed_packages,
     insert_variant_versions,
     on_win,
 )
@@ -47,6 +48,7 @@ from .variants import (
 )
 
 if TYPE_CHECKING:
+    from pathlib import Path
     from typing import Any, Literal
 
 try:
@@ -800,33 +802,37 @@ def build_string_from_metadata(metadata):
     return build_str
 
 
-# This really belongs in conda, and it is int conda.cli.common,
-#   but we don't presently have an API there.
-def _get_env_path(env_name_or_path):
-    if not os.path.isdir(env_name_or_path):
-        for envs_dir in list(context.envs_dirs) + [os.getcwd()]:
-            path = os.path.join(envs_dir, env_name_or_path)
-            if os.path.isdir(path):
-                env_name_or_path = path
-                break
-    bootstrap_metadir = os.path.join(env_name_or_path, "conda-meta")
-    if not os.path.isdir(bootstrap_metadir):
-        print(f"Bootstrap environment '{env_name_or_path}' not found")
-        sys.exit(1)
-    return env_name_or_path
+@deprecated(
+    "24.5", "24.7", addendum="Use `conda.base.context.locate_prefix_by_name` instead."
+)
+def _get_env_path(
+    env_name_or_path: str | os.PathLike | Path,
+) -> str | os.PathLike | Path:
+    return (
+        env_name_or_path
+        if isdir(env_name_or_path)
+        else locate_prefix_by_name(env_name_or_path)
+    )
 
 
-def _get_dependencies_from_environment(env_name_or_path):
-    path = _get_env_path(env_name_or_path)
+def _get_dependencies_from_environment(
+    env_name_or_path: str | os.PathLike | Path,
+) -> dict[str, dict[str, list[str]]]:
     # construct build requirements that replicate the given bootstrap environment
     # and concatenate them to the build requirements from the recipe
-    bootstrap_metadata = get_installed_packages(path)
-    bootstrap_requirements = []
-    for package, data in bootstrap_metadata.items():
-        bootstrap_requirements.append(
-            "{} {} {}".format(package, data["version"], data["build"])
-        )
-    return {"requirements": {"build": bootstrap_requirements}}
+    prefix = (
+        env_name_or_path
+        if isdir(env_name_or_path)
+        else locate_prefix_by_name(env_name_or_path)
+    )
+    return {
+        "requirements": {
+            "build": [
+                f"{prec.name} {prec.version} {prec.build}"
+                for prec in PrefixData(prefix).iter_records()
+            ]
+        }
+    }
 
 
 def toposort(output_metadata_map):
