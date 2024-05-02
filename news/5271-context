@@ -8,7 +8,7 @@
 
 ### Deprecations
 
-* Deprecate `conda_build.config.Config.override_channels`. Use `conda.base.context.context.override_channels` instead. (#5271)
+* Deprecate `conda_build.config.Config.override_channels`. Defer to `conda.base.context.context.channels` instead. (#5271)
 
 ### Docs
 
