@@ -478,9 +478,9 @@ def test_cmake_generator(platform, target_compiler, testing_config):
     api.build(os.path.join(metadata_dir, "_cmake_generator"), config=testing_config)
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="No windows symlinks")
-def test_symlink_fail(testing_config):
-    with pytest.raises((SystemExit, FileNotFoundError)):
+@pytest.mark.skipif(on_win, reason="No windows symlinks")
+def test_symlink_fail(testing_config: MetaData) -> None:
+    with pytest.raises(CondaBuildUserError):
         api.build(os.path.join(fail_dir, "symlinks"), config=testing_config)
 
 
