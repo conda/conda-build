@@ -1,6 +1,6 @@
 ### Enhancements
 
-* <news item>
+* Only fetch `lfs` files for specific `git_ref`. (#5202)
 
 ### Bug fixes
 
@@ -8,7 +8,7 @@
 
 ### Deprecations
 
-* Deprecate `conda_build.variants.get_vars(loop_only)`. (#5280)
+* <news item>
 
 ### Docs
 

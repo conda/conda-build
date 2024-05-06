@@ -8,7 +8,7 @@
 
 ### Deprecations
 
-* Deprecate `conda_build.variants.get_vars(loop_only)`. (#5280)
+* Deprecate `conda_build.config.noarch_python_build_age_default`. (#5298)
 
 ### Docs
 
