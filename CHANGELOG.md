@@ -121,11 +121,11 @@
 * @beeankha
 * @conda-bot
 * @jaimergp
-* @Callek
+* @Callek made their first contribution in https://github.com/conda/conda-build/pull/5252
 * @kenodegard
 * @mbargull
-* @Tobias-Fischer
-* @ytausch
+* @Tobias-Fischer made their first contribution in https://github.com/conda/conda-build/pull/5202
+* @ytausch made their first contribution in https://github.com/conda/conda-build/pull/5214
 * @dependabot[bot]
 * @pre-commit-ci[bot]
 
