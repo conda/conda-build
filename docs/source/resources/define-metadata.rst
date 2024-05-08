@@ -4,11 +4,6 @@
 Defining metadata (meta.yaml)
 =============================
 
-.. contents::
-   :local:
-   :depth: 1
-
-
 All the metadata in the conda-build recipe is specified in the
 ``meta.yaml`` file. See the example below:
 
@@ -121,6 +116,18 @@ If an extracted archive contains only 1 folder at its top level, its contents
 will be moved 1 level up, so that the extracted package contents sit in the
 root of the work folder.
 
+You can also specify multiple URLs for the same source archive.
+They will be attempted in order, should one fail.
+
+.. code-block:: yaml
+
+   source:
+     url:
+       - https://archive.linux.duke.edu/cran/src/contrib/ggblanket_6.0.0.tar.gz
+       - https://archive.linux.duke.edu/cran/src/contrib/Archive/ggblanket/ggblanket_6.0.0.tar.gz
+     sha256: cd2181fe3d3365eaf36ff8bbbc90ea9d76c56d40e63386b4eefa0e3120ec6665
+
+
 Source from git
 ---------------
 
@@ -130,7 +137,7 @@ The git_url can also be a relative path to the recipe directory.
 
    source:
      git_url: https://github.com/ilanschnell/bsdiff4.git
-     git_rev: 1.1.4
+     git_rev: 1.1.4 # (Defaults to "HEAD")
      git_depth: 1 # (Defaults to -1/not shallow)
 
 The depth argument relates to the ability to perform a shallow clone.
@@ -162,9 +169,22 @@ Source from svn
 
    source:
      svn_url: https://github.com/ilanschnell/bsdiff
-     svn_rev: 1.1.4
+     svn_rev: 1.1.4 # (defaults to head)
      svn_ignore_externals: True # (defaults to False)
+     svn_username: username  # Optional, if set must also have svn_password
+     svn_password: password  # Optional, if set must also have svn_username
 
+To access a restricted SVN repository, specify both ``svn_username`` and ``svn_password``.
+
+.. caution::
+   Storing credentials in plaintext carries risks. Alternatively, consider
+   using environment variables:
+
+   .. code-block:: yaml
+
+      source:
+        svn_username: {{ environ["SVN_USERNAME"] }}
+        svn_password: {{ environ["SVN_PASSWORD"] }}
 
 Source from a local path
 -------------------------
@@ -313,6 +333,22 @@ dependency:
 OR
 
   * package uses {{ compiler() }} jinja2 function
+
+You can also influence which variables are considered for the hash with:
+
+.. code-block:: yaml
+
+   build:
+     force_use_keys:
+       - package_1
+     force_ignore_keys:
+       - package_2
+
+This will ensure that the value of ``package_2`` will *not* be considered for the hash,
+and ``package_1`` *will* be, regardless of what conda-build discovers is used by its inspection.
+
+This may be useful to further split complex multi-output builds, to ensure each package is built,
+or to ensure the right package hash when using more complex templating or scripting.
 
 
 Python entry points
@@ -712,7 +748,7 @@ implicitly added by host requirements (e.g. libpng exports libpng), and with
        - libpng
 
 Here, because no specific kind of ``run_exports`` is specified, libpng's ``run_exports``
-are considered "weak." This means they will only apply when libpng is in the
+are considered "weak". This means they will only apply when libpng is in the
 host section, when they will add their export to the run section. If libpng were
 listed in the build section, the ``run_exports`` would not apply to the run section.
 
@@ -723,6 +759,9 @@ listed in the build section, the ``run_exports`` would not apply to the run sect
      run_exports:
        strong:
          - libgcc
+
+There is also ``run_exports/weak`` which is equivalent to an unspecific kind of
+``run_exports`` but useful if you want to define both strong and weak run exports.
 
 Strong ``run_exports`` are used for things like runtimes, where the same runtime
 needs to be present in the host and the run environment, and exactly which
@@ -965,9 +1004,10 @@ words, a Python package would list ``python`` here and an R package would list
 
 The PREFIX environment variable points to the host prefix. With respect to
 activation during builds, both the host and build environments are activated.
-The build prefix is activated before the host prefix so that the host prefix
-has priority over the build prefix. Executables that don't exist in the host
-prefix should be found in the build prefix.
+The build prefix is activated *after* the host prefix so that the build prefix,
+which always contains native executables for the running platform, has priority
+over the host prefix, which is not guaranteed to provide native executables (e.g.
+when cross-compiling).
 
 As of conda-build 3.1.4, the build and host prefixes are always separate when
 both are defined, or when ``{{ compiler() }}`` Jinja2 functions are used. The
@@ -1097,7 +1137,8 @@ Test files
 ----------
 
 Test files that are copied from the recipe into the temporary
-test directory and are needed during testing.
+test directory and are needed during testing. If providing a path,
+forward slashes must be used.
 
 .. code-block:: yaml
 
@@ -1450,10 +1491,9 @@ explicitly in the script section:
          script: run_test.py
 
 
-Test requirements for subpackages are not supported. Instead,
-subpackage tests install their runtime requirements---but not the
-run requirements for the top-level package---and the test-time
-requirements of the top-level package.
+Test requirements for subpackages can be specified using the optional
+`test/requires` section of subpackage tests. Subpackage tests install
+their runtime requirements during the test as well.
 
 EXAMPLE: In this example, the test for ``subpackage-name``
 installs ``some-test-dep`` and ``subpackage-run-req``, but not
@@ -1465,16 +1505,15 @@ installs ``some-test-dep`` and ``subpackage-run-req``, but not
      run:
        - some-top-level-run-req
 
-   test:
-     requires:
-       - some-test-dep
-
    outputs:
      - name: subpackage-name
        requirements:
          - subpackage-run-req
        test:
          script: run_test.py
+         requires:
+           - some-test-dep
+
 
 
 Output type
@@ -1532,9 +1571,17 @@ information displays in the Anaconda.org channel.
 
   about:
     home: https://github.com/ilanschnell/bsdiff4
-    license: BSD
+    license: BSD 3-Clause
     license_file: LICENSE
-    summary: binary diff and patch using the BSDIFF4-format
+    license_family: BSD
+    license_url: https://github.com/bacchusrx/bsdiff4/blob/master/LICENSE
+    summary: binary diff and patch using the BSDIFF4 format
+    description: |
+      This module provides an interface to the BSDIFF4 format, command line interfaces
+      (bsdiff4, bspatch4) and tests.
+    dev_url: https://github.com/ilanschnell/bsdiff4
+    doc_url: https://bsdiff4.readthedocs.io
+    doc_source_url: https://github.com/ilanschnell/bsdiff4/blob/main/README.rst
 
 
 License file
@@ -1721,7 +1768,7 @@ practice means changing the conda-build source code. See the
 <https://github.com/conda/conda-build/issues>`_.
 
 For more information, see the `Jinja2 template
-documentation <http://jinja.pocoo.org/docs/dev/templates/>`_
+documentation <https://jinja.palletsprojects.com/en/latest/templates/>`_
 and :ref:`the list of available environment
 variables <env-vars>`.
 
@@ -1734,11 +1781,11 @@ retrieve a fully rendered ``meta.yaml``, use the
 Loading data from other files
 -----------------------------
 
-There are several additional functions available to Jinja2 which can be used
+There are several additional functions available to Jinja2, which can be used
 to load data from other files. These are ``load_setup_py_data``, ``load_file_regex``,
 ``load_file_data``, and ``load_str_data``.
 
-* ``load_setup_py_data``: Loads data from a ``setup.py`` file. This can be useful to
+* ``load_setup_py_data``: Load data from a ``setup.py`` file. This can be useful to
   obtain metadata such as the version from a project's ``setup.py`` file. For example::
 
     {% set data = load_setup_py_data() %}
@@ -1747,16 +1794,23 @@ to load data from other files. These are ``load_setup_py_data``, ``load_file_reg
       name: foo
       version: {{ version }}
 
-* ``load_file_regex``: Searches a file for a regular expression and returns the
-  first match as a Python ``re.Match object``. For example::
+* ``load_file_regex``: Search a file for a regular expression returning the
+  first match as a Python `re.Match
+  <https://docs.python.org/3/library/re.html#match-objects>`_ object.
 
-    {% set readme_heading = load_file_regex(load_file='README.rst', regex_pattern=r'^# (\S+)') %}
+  For example, using ``load_file_regex(load_file, regex_pattern, from_recipe_dir=False) -> re.Match | None``::
+
+    {% set version_match = load_file_regex(
+      load_file="conda_package_streaming/__init__.py",
+      regex_pattern='^__version__ = "(.+)"') %}
+    {% set version = version_match[1] %}
+
     package:
-      name: {{ readme_heading.string }}
+      version: {{ version }}
 
-* ``load_file_data``: You can also parse JSON, TOML, or YAML files and load data
-  from them. For example you can use this to load poetry configurations from
-  ``pyproject.toml``. This is especially useful as ``setup.py`` is no longer the
+* ``load_file_data``: Parse JSON, TOML, or YAML files and load data
+  from them. For example, you can use this to load poetry configurations from
+  ``pyproject.toml``. This is especially useful, as ``setup.py`` is no longer the
   only standard way to define project metadata (see
   `PEP 517 <https://peps.python.org/pep-0517>`_ and
   `PEP 518 <https://peps.python.org/pep-0518>`_)::
@@ -1767,7 +1821,7 @@ to load data from other files. These are ``load_setup_py_data``, ``load_file_reg
       name: {{ poetry.get('name') }}
       version: {{ poetry.get('version') }}
 
-* ``load_str_data``: Loads and parses data from a string. This is similar to
+* ``load_str_data``: Load and parse data from a string. This is similar to
   ``load_file_data``, but it takes a string instead of a file as an argument.
   This may seem pointless at first, but you can use this to pass more complex
   data structures by environment variables. For example::
@@ -1901,10 +1955,10 @@ variables are booleans.
    * - osx
      - True if the platform is macOS.
    * - arm64
-     - True if the platform is macOS and the Python architecture
-       is arm64.
+     - True if the platform is either macOS or Windows and the
+       Python architecture is arm64.
    * - unix
-     - True if the platform is either macOS or Linux.
+     - True if the platform is either macOS or Linux or emscripten.
    * - win
      - True if the platform is Windows.
    * - win32
@@ -1937,6 +1991,11 @@ variables are booleans.
 The use of the Python version selectors, `py27`, `py34`, etc. is discouraged in
 favor of the more general comparison operators.  Additional selectors in this
 series will not be added to conda-build.
+
+Note that for each subdir with OS and architecture that `conda` supports,
+two preprocessing selectors are created for the OS and the architecture separately
+except when the architecture is not a valid python expression (`*-32` and `*-64`
+in particular).
 
 Because the selector is any valid Python expression, complicated
 logic is possible:

@@ -1,8 +1,9 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
+
 import os
 from argparse import ArgumentError
-from typing import Union
 
 import pytest
 
@@ -10,18 +11,28 @@ from conda_build.cli import validators as valid
 
 
 @pytest.mark.parametrize(
-    'file_or_folder,expected,is_dir,create',
+    "file_or_folder,expected,is_dir,create",
     [
         # Happy path cases
-        ('aws-c-common-0.4.57-hb1e8313_1.tar.bz2', 'aws-c-common-0.4.57-hb1e8313_1.tar.bz2', False, True),
-        ('aws-c-common-0.4.57-hb1e8313_1.conda', 'aws-c-common-0.4.57-hb1e8313_1.conda', False, True),
-        ('somedir', 'somedir', True, True),
+        (
+            "aws-c-common-0.4.57-hb1e8313_1.tar.bz2",
+            "aws-c-common-0.4.57-hb1e8313_1.tar.bz2",
+            False,
+            True,
+        ),
+        (
+            "aws-c-common-0.4.57-hb1e8313_1.conda",
+            "aws-c-common-0.4.57-hb1e8313_1.conda",
+            False,
+            True,
+        ),
+        ("somedir", "somedir", True, True),
         # Error case (i.e. the file or directory does not exist
-        ('aws-c-common-0.4.57-hb1e8313_1.conda', False, False, False),
+        ("aws-c-common-0.4.57-hb1e8313_1.conda", False, False, False),
     ],
 )
 def test_validate_is_conda_pkg_or_recipe_dir(
-    file_or_folder: str, expected: Union[str, bool], is_dir: bool, create: bool, tmpdir
+    file_or_folder: str, expected: str | bool, is_dir: bool, create: bool, tmpdir
 ):
     if create:
         file_or_folder = os.path.join(tmpdir, file_or_folder)
@@ -34,7 +45,10 @@ def test_validate_is_conda_pkg_or_recipe_dir(
 
     try:
         received = valid.validate_is_conda_pkg_or_recipe_dir(file_or_folder)
-    except (ArgumentError, SystemExit):  # if we get these errors, we know it's not valid
+    except (
+        ArgumentError,
+        SystemExit,
+    ):  # if we get these errors, we know it's not valid
         received = False
 
     assert received == expected

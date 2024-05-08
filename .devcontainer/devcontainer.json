@@ -1,0 +1,38 @@
+// For format details, see https://aka.ms/devcontainer.json
+{
+    "name": "Miniconda (default-channel=defaults)",
+    "image": "continuumio/miniconda3:latest",
+
+    // Features to add to the dev container. More info: https://containers.dev/features.
+    // "features": {},
+
+    // Use 'forwardPorts' to make a list of ports inside the container available locally.
+    // "forwardPorts": [],
+    // Use 'postCreateCommand' to run commands after the container is created.
+    "postCreateCommand": "bash /workspaces/conda-build/.devcontainer/post_create.sh",
+    // Use 'postStartCommand' to run commands after the container is started.
+    "postStartCommand": "bash /workspaces/conda-build/.devcontainer/post_start.sh",
+
+    // Configure tool-specific properties.
+    "customizations": {
+        "vscode": {
+            "settings": {
+                "python.defaultInterpreterPath": "/opt/conda/bin/python",
+                "python.testing.pytestArgs": [
+                    "tests"
+                ],
+                "python.testing.unittestEnabled": false,
+                "python.testing.pytestEnabled": true
+            },
+            "extensions": [
+                "charliermarsh.ruff",
+                "eamodio.gitlens",
+                "ms-toolsai.jupyter"
+            ]
+        }
+    }
+
+    // Adjust to connect as non-root instead. More info: https://aka.ms/dev-containers-non-root.
+    // "remoteUser": "root",
+
+}

@@ -31,11 +31,13 @@ def add_parser(repos):
         "my_repo",
         help="""
     Create recipe skeleton for packages hosted on my-repo.org
-        """,)
+        """,
+    )
     my_repo.add_argument(
         "packages",
-        nargs='+',
-        help="my-repo packages to create recipe skeletons for.",)
+        nargs="+",
+        help="my-repo packages to create recipe skeletons for.",
+    )
 
     # Add any additional parser arguments here
 

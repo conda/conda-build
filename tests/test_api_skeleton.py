@@ -1,166 +1,249 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
-import fnmatch
+from __future__ import annotations
+
 import os
 import subprocess
 import sys
+from pathlib import Path
+from typing import TYPE_CHECKING
 
-from pkg_resources import parse_version
 import pytest
-
-from conda_build.skeletons.pypi import get_package_metadata, \
-    get_entry_points, is_setuptools_enabled, convert_to_flat_list, \
-    get_dependencies, get_import_tests, get_tests_require, get_home, \
-    get_summary, get_license_name, clean_license_name
-
-try:
-    import ruamel_yaml
-except ImportError:
-    try:
-        import ruamel.yaml as ruamel_yaml
-    except ImportError:
-        raise ImportError("No ruamel_yaml library available.\n"
-                          "To proceed, conda install ruamel_yaml")
+import ruamel.yaml
 
 from conda_build import api
-from conda_build.exceptions import DependencyNeedsBuildingError
-import conda_build.os_utils.external as external
+from conda_build.skeletons.pypi import (
+    clean_license_name,
+    convert_to_flat_list,
+    get_dependencies,
+    get_entry_points,
+    get_home,
+    get_import_tests,
+    get_license_name,
+    get_package_metadata,
+    get_summary,
+    get_tests_require,
+    is_setuptools_enabled,
+)
 from conda_build.utils import on_win
+from conda_build.version import _parse as parse_version
 
-thisdir = os.path.dirname(os.path.realpath(__file__))
-
-repo_packages = [('', 'pypi', 'pip', '8.1.2'),
-                 ('r', 'cran', 'acs', ''),
-                 (
-                     'r', 'cran',
-                     'https://github.com/twitter/AnomalyDetection.git',
-                     ''),
-                 ('perl', 'cpan', 'Moo', ''),
-                 ('', 'rpm', 'libX11-devel', ''),
-                 # ('lua', luarocks', 'LuaSocket', ''),
-                 ]
+if TYPE_CHECKING:
+    from conda_build.config import Config
 
 
-@pytest.mark.parametrize("prefix, repo, package, version", repo_packages)
-def test_repo(prefix, repo, package, version, testing_workdir, testing_config):
-    api.skeletonize(package, repo, version=version, output_dir=testing_workdir,
-                    config=testing_config)
-    try:
-        base_package, _ = os.path.splitext(os.path.basename(package))
-        package_name = "-".join(
-            [prefix, base_package]) if prefix else base_package
-        contents = os.listdir(testing_workdir)
-        assert len([content for content in contents
-                    if content.startswith(package_name.lower()) and
-                    os.path.isdir(os.path.join(testing_workdir, content))])
-    except:
-        print(os.listdir(testing_workdir))
-        raise
+SYMPY_URL = (
+    "https://files.pythonhosted.org/packages/7d/23/70fa970c07f0960f7543af982d2554be805e1034b9dcee9cb3082ce80f80/sympy-1.10.tar.gz"
+    "#sha256=6cf85a5cfe8fff69553e745b05128de6fc8de8f291965c63871c79701dc6efc9"
+)
 
-
-@pytest.mark.slow
-def test_name_with_version_specified(testing_workdir, testing_config):
-    api.skeletonize(packages='sympy', repo='pypi', version='0.7.5',
-                    config=testing_config)
-    m = api.render('sympy/meta.yaml')[0][0]
-    assert m.version() == "0.7.5"
-
-
-def test_pypi_url(testing_workdir, testing_config):
-    api.skeletonize('https://pypi.python.org/packages/source/s/sympy/'
-                    'sympy-0.7.5.tar.gz#md5=7de1adb49972a15a3dd975e879a2bea9',
-                    repo='pypi', config=testing_config)
-    m = api.render('sympy/meta.yaml')[0][0]
-    assert m.version() == "0.7.5"
+PYLINT_VERSION = "2.7.4"  # last version to use setup.py without setup.cfg
+PYLINT_HASH_TYPE = "sha256"
+PYLINT_SHA256 = "bd38914c7731cdc518634a8d3c5585951302b6e2b6de60fbb3f7a0220e21eeee"
+PYLINT_BLAKE2 = "2d5b491cf9e85288c29759a6535e6009938c2141b137b27a0653e435dcbad6a2"
+PYLINT_FILENAME = f"pylint-{PYLINT_VERSION}.tar.gz"
+PYLINT_URL = f"https://files.pythonhosted.org/packages/{PYLINT_BLAKE2[:2]}/{PYLINT_BLAKE2[2:4]}/{PYLINT_BLAKE2[4:]}/{PYLINT_FILENAME}"
 
 
 @pytest.fixture
-def url_pylint_package():
-    return "https://pypi.python.org/packages/source/p/pylint/pylint-2.3.1.tar.gz#" \
-           "sha256=723e3db49555abaf9bf79dc474c6b9e2935ad82230b10c1138a71ea41ac0fff1"
-
-
-@pytest.fixture
-def mock_metada_pylint(url_pylint_package):
-    import re
-
-    version, hash_type, hash_value = re.findall(
-        r"pylint-(.*).tar.gz#(.*)=(.*)$", url_pylint_package
-    )[0]
-
+def mock_metadata():
     return {
-        'run_depends': '',
-        'build_depends': '',
-        'entry_points': '',
-        'test_commands': '',
-        'tests_require': '',
-        'version': 'UNKNOWN',
-        'pypiurl': url_pylint_package,
-        'filename': f"black-{version}.tar.gz",
-        'digest': [hash_type, hash_value],
-        'import_tests': '',
-        'summary': ''
+        "run_depends": "",
+        "build_depends": "",
+        "entry_points": "",
+        "test_commands": "",
+        "tests_require": "",
+        "version": "UNKNOWN",
+        "pypiurl": PYLINT_URL,
+        "filename": PYLINT_FILENAME,
+        "digest": [PYLINT_HASH_TYPE, PYLINT_SHA256],
+        "import_tests": "",
+        "summary": "",
     }
 
 
 @pytest.fixture
-def pkginfo_pylint(url_pylint_package):
+def pylint_pkginfo():
     # Hardcoding it to avoid to use the get_pkginfo because it takes too much time
     return {
-        'classifiers': [
-            'Development Status :: 6 - Mature',
-            'Environment :: Console',
-            'Intended Audience :: Developers',
-            'License :: OSI Approved :: GNU General Public License (GPL)',
-            'Operating System :: OS Independent',
-            'Programming Language :: Python',
-            'Programming Language :: Python :: 3',
-            'Programming Language :: Python :: 3.4',
-            'Programming Language :: Python :: 3.5',
-            'Programming Language :: Python :: 3.6',
-            'Programming Language :: Python :: 3.7',
-            'Programming Language :: Python :: 3 :: Only',
-            'Programming Language :: Python :: Implementation :: CPython',
-            'Programming Language :: Python :: Implementation :: PyPy',
-            'Topic :: Software Development :: Debuggers',
-            'Topic :: Software Development :: Quality Assurance',
-            'Topic :: Software Development :: Testing'
+        "classifiers": [
+            "Development Status :: 6 - Mature",
+            "Environment :: Console",
+            "Intended Audience :: Developers",
+            "License :: OSI Approved :: GNU General Public License (GPL)",
+            "Operating System :: OS Independent",
+            "Programming Language :: Python",
+            "Programming Language :: Python :: 3",
+            "Programming Language :: Python :: 3.4",
+            "Programming Language :: Python :: 3.5",
+            "Programming Language :: Python :: 3.6",
+            "Programming Language :: Python :: 3.7",
+            "Programming Language :: Python :: 3 :: Only",
+            "Programming Language :: Python :: Implementation :: CPython",
+            "Programming Language :: Python :: Implementation :: PyPy",
+            "Topic :: Software Development :: Debuggers",
+            "Topic :: Software Development :: Quality Assurance",
+            "Topic :: Software Development :: Testing",
         ],
-        'entry_points': {
-            'console_scripts': [
-                'pylint = pylint:run_pylint',
-                'epylint = pylint:run_epylint',
-                'pyreverse = pylint:run_pyreverse',
-                'symilar = pylint:run_symilar'
+        "entry_points": {
+            "console_scripts": [
+                "pylint = pylint:run_pylint",
+                "epylint = pylint:run_epylint",
+                "pyreverse = pylint:run_pyreverse",
+                "symilar = pylint:run_symilar",
             ]
         },
-        'extras_require': {':sys_platform=="win32"': ['colorama']},
-        'home': 'https://github.com/PyCQA/pylint',
-        'install_requires': [
-            'astroid>=2.2.0,<3', 'isort>=4.2.5,<5', 'mccabe>=0.6,<0.7'
+        "extras_require": {':sys_platform=="win32"': ["colorama"]},
+        "home": "https://github.com/PyCQA/pylint",
+        "install_requires": [
+            "astroid >=2.5.2,<2.7",
+            "isort >=4.2.5,<6",
+            "mccabe >=0.6,<0.7",
+            "toml >=0.7.1",
         ],
-        'license': 'GPL',
-        'name': 'pylint',
-        'packages': [
-            'pylint', 'pylint.checkers', 'pylint.pyreverse',
-            'pylint.extensions', 'pylint.reporters', 'pylint.reporters.ureports'
+        "license": "GPL",
+        "name": "pylint",
+        "packages": [
+            "pylint",
+            "pylint.checkers",
+            "pylint.checkers.refactoring",
+            "pylint.config",
+            "pylint.extensions",
+            "pylint.lint",
+            "pylint.message",
+            "pylint.pyreverse",
+            "pylint.reporters",
+            "pylint.reporters.ureports",
+            "pylint.testutils",
+            "pylint.utils",
         ],
-        'setuptools': True,
-        'summary': 'python code static checker',
-        'tests_require': ['pytest'],
-        'version': '2.3.1'
+        "setuptools": True,
+        "summary": "python code static checker",
+        "tests_require": ["pytest", "pytest-benchmark"],
+        "version": "2.3.1",
     }
 
 
-def test_get_entry_points(testing_workdir, pkginfo_pylint,
-                          result_metadata_pylint):
-    pkginfo = pkginfo_pylint
+@pytest.fixture
+def pylint_metadata():
+    return {
+        "run_depends": [
+            "astroid >=2.5.2,<2.7",
+            "isort >=4.2.5,<6",
+            "mccabe >=0.6,<0.7",
+            "toml >=0.7.1",
+        ],
+        "build_depends": [
+            "pip",
+            "astroid >=2.5.2,<2.7",
+            "isort >=4.2.5,<6",
+            "mccabe >=0.6,<0.7",
+            "toml >=0.7.1",
+        ],
+        "entry_points": [
+            "pylint = pylint:run_pylint",
+            "epylint = pylint:run_epylint",
+            "pyreverse = pylint:run_pyreverse",
+            "symilar = pylint:run_symilar",
+        ],
+        "test_commands": [
+            "pylint --help",
+            "epylint --help",
+            "pyreverse --help",
+            "symilar --help",
+        ],
+        "tests_require": ["pytest", "pytest-benchmark"],
+        "version": PYLINT_VERSION,
+        "pypiurl": PYLINT_URL,
+        "filename": PYLINT_FILENAME,
+        "digest": [PYLINT_HASH_TYPE, PYLINT_SHA256],
+        "import_tests": [
+            "pylint",
+            "pylint.checkers",
+            "pylint.checkers.refactoring",
+            "pylint.config",
+            "pylint.extensions",
+            "pylint.lint",
+            "pylint.message",
+            "pylint.pyreverse",
+            "pylint.reporters",
+            "pylint.reporters.ureports",
+            "pylint.testutils",
+            "pylint.utils",
+        ],
+        "summary": "python code static checker",
+        "packagename": "pylint",
+        "home": "https://github.com/PyCQA/pylint",
+        "license": "GNU General Public (GPL)",
+        "license_family": "LGPL",
+    }
+
+
+@pytest.mark.skip("Use separate grayskull package instead of skeleton.")
+@pytest.mark.parametrize(
+    "prefix, repo, package, version",
+    [
+        ("", "pypi", "pip", "8.1.2"),
+        ("r-", "cran", "acs", None),
+        ("r-", "cran", "https://github.com/twitter/AnomalyDetection.git", None),
+        ("perl-", "cpan", "Moo", None),
+        ("", "rpm", "libX11-devel", None),
+        # skeleton("luarocks") appears broken and needs work
+        # https://github.com/conda/conda-build/issues/4756
+        # ("lua-", "luarocks", "LuaSocket", None),
+    ],
+)
+def test_repo(
+    prefix: str,
+    repo: str,
+    package: str,
+    version: str | None,
+    tmp_path: Path,
+    testing_config,
+):
+    api.skeletonize(
+        package,
+        repo,
+        version=version,
+        output_dir=tmp_path,
+        config=testing_config,
+    )
+
+    package_name = f"{prefix}{Path(package).stem}".lower()
+    assert len(
+        [
+            content
+            for content in tmp_path.iterdir()
+            if content.name.startswith(package_name) and content.is_dir()
+        ]
+    )
+
+
+@pytest.mark.parametrize(
+    "package,version",
+    [
+        pytest.param("sympy", "1.10", id="with version"),
+        pytest.param(SYMPY_URL, None, id="with url"),
+    ],
+)
+def test_sympy(package: str, version: str | None, tmp_path: Path, testing_config):
+    api.skeletonize(
+        packages=package,
+        repo="pypi",
+        version=version,
+        config=testing_config,
+        output_dir=tmp_path,
+    )
+    metadata = api.render(str(tmp_path / "sympy" / "meta.yaml"))[0][0]
+    assert metadata.version() == "1.10"
+
+
+def test_get_entry_points(pylint_pkginfo, pylint_metadata):
+    pkginfo = pylint_pkginfo
     entry_points = get_entry_points(pkginfo)
 
-    assert entry_points["entry_points"] == result_metadata_pylint[
-        "entry_points"]
-    assert entry_points["test_commands"] == result_metadata_pylint[
-        "test_commands"]
+    assert entry_points["entry_points"] == pylint_metadata["entry_points"]
+    assert entry_points["test_commands"] == pylint_metadata["test_commands"]
 
 
 def test_convert_to_flat_list():
@@ -170,85 +253,39 @@ def test_convert_to_flat_list():
 
 def test_is_setuptools_enabled():
     assert not is_setuptools_enabled({"entry_points": "STRING"})
-    assert not is_setuptools_enabled({
-        "entry_points": {
-            "console_scripts": ["CONSOLE"],
-            "gui_scripts": ["GUI"],
+    assert not is_setuptools_enabled(
+        {
+            "entry_points": {
+                "console_scripts": ["CONSOLE"],
+                "gui_scripts": ["GUI"],
+            }
         }
-    })
+    )
 
-    assert is_setuptools_enabled({
-        "entry_points": {
-            "console_scripts": ["CONSOLE"],
-            "gui_scripts": ["GUI"],
-            "foo_scripts": ["SCRIPTS"],
+    assert is_setuptools_enabled(
+        {
+            "entry_points": {
+                "console_scripts": ["CONSOLE"],
+                "gui_scripts": ["GUI"],
+                "foo_scripts": ["SCRIPTS"],
+            }
         }
-    })
-
-
-@pytest.fixture
-def result_metadata_pylint(url_pylint_package):
-    return {
-        'run_depends': [
-            'astroid >=2.2.0,<3', 'isort >=4.2.5,<5', 'mccabe >=0.6,<0.7'
-        ],
-        'build_depends': [
-            'pip', 'astroid >=2.2.0,<3', 'isort >=4.2.5,<5', 'mccabe >=0.6,<0.7'
-        ],
-        'entry_points': [
-            'pylint = pylint:run_pylint',
-            'epylint = pylint:run_epylint',
-            'pyreverse = pylint:run_pyreverse',
-            'symilar = pylint:run_symilar'
-        ],
-        'test_commands': [
-            'pylint --help',
-            'epylint --help',
-            'pyreverse --help',
-            'symilar --help'
-        ],
-        'tests_require': ['pytest'],
-        'version': '2.3.1',
-        'pypiurl': url_pylint_package,
-        'filename': 'black-2.3.1.tar.gz',
-        'digest': [
-            'sha256',
-            '723e3db49555abaf9bf79dc474c6b9e2935ad82230b10c1138a71ea41ac0fff1'
-        ],
-        'import_tests': [
-            'pylint',
-            'pylint.checkers',
-            'pylint.extensions',
-            'pylint.pyreverse',
-            'pylint.reporters',
-            'pylint.reporters.ureports'
-        ],
-        'summary': 'python code static checker',
-        'packagename': 'pylint',
-        'home': 'https://github.com/PyCQA/pylint',
-        'license': 'GNU General Public (GPL)',
-        'license_family': 'LGPL'
-    }
+    )
 
 
 def test_get_dependencies():
     assert get_dependencies(
-        ['astroid >=2.2.0,<3  #COMMENTS', 'isort >=4.2.5,<5',
-         'mccabe >=0.6,<0.7'],
-        False
-    ) == ['astroid >=2.2.0,<3', 'isort >=4.2.5,<5', 'mccabe >=0.6,<0.7']
+        ["astroid >=2.2.0,<3  #COMMENTS", "isort >=4.2.5,<5", "mccabe >=0.6,<0.7"],
+        False,
+    ) == ["astroid >=2.2.0,<3", "isort >=4.2.5,<5", "mccabe >=0.6,<0.7"]
 
     assert get_dependencies(
-        ['astroid >=2.2.0,<3  #COMMENTS', 'isort >=4.2.5,<5',
-         'mccabe >=0.6,<0.7'],
-        True
-    ) == ['setuptools', 'astroid >=2.2.0,<3', 'isort >=4.2.5,<5',
-          'mccabe >=0.6,<0.7']
+        ["astroid >=2.2.0,<3  #COMMENTS", "isort >=4.2.5,<5", "mccabe >=0.6,<0.7"], True
+    ) == ["setuptools", "astroid >=2.2.0,<3", "isort >=4.2.5,<5", "mccabe >=0.6,<0.7"]
 
 
-def test_get_import_tests(pkginfo_pylint, result_metadata_pylint):
-    assert get_import_tests(pkginfo_pylint) \
-           == result_metadata_pylint["import_tests"]
+def test_get_import_tests(pylint_pkginfo, pylint_metadata):
+    assert get_import_tests(pylint_pkginfo) == pylint_metadata["import_tests"]
 
 
 def test_get_home():
@@ -264,35 +301,27 @@ def test_get_summary():
     assert get_summary({"summary": 'SUMMARY "QUOTES"'}) == r"SUMMARY \"QUOTES\""
 
 
-def test_license_name(url_pylint_package, pkginfo_pylint):
+def test_license_name(pylint_pkginfo):
     license_name = "GNU General Public License (GPL)"
-    assert get_license_name(url_pylint_package, pkginfo_pylint, True, {}) \
-           == license_name
+    assert get_license_name(PYLINT_URL, pylint_pkginfo, True, {}) == license_name
     assert clean_license_name(license_name) == "GNU General Public (GPL)"
     assert clean_license_name("MIT License") == "MIT"
 
 
-def test_get_tests_require(pkginfo_pylint, result_metadata_pylint):
-    assert get_tests_require(pkginfo_pylint) == result_metadata_pylint[
-        "tests_require"]
+def test_get_tests_require(pylint_pkginfo, pylint_metadata):
+    assert get_tests_require(pylint_pkginfo) == pylint_metadata["tests_require"]
 
 
-def test_get_package_metadata(
-        testing_workdir,
-        testing_config,
-        url_pylint_package,
-        mock_metada_pylint,
-        result_metadata_pylint
-):
+def test_get_package_metadata(testing_config, mock_metadata, pylint_metadata):
     get_package_metadata(
-        url_pylint_package,
-        mock_metada_pylint,
+        PYLINT_URL,
+        mock_metadata,
         {},
         ".",
-        "3.7",
+        "3.9",
         False,
         False,
-        [url_pylint_package],
+        [PYLINT_URL],
         False,
         True,
         [],
@@ -300,163 +329,203 @@ def test_get_package_metadata(
         config=testing_config,
         setup_options=[],
     )
-    assert mock_metada_pylint == result_metadata_pylint
+    assert mock_metadata == pylint_metadata
 
 
 @pytest.mark.slow
-def test_pypi_with_setup_options(testing_workdir, testing_config):
+def test_pypi_with_setup_options(tmp_path: Path, testing_config):
     # Use photutils package below because skeleton will fail unless the setup.py is given
     # the flag --offline because of a bootstrapping a helper file that
     # occurs by default.
 
     # Test that the setup option is used in constructing the skeleton.
-    api.skeletonize(packages='photutils', repo='pypi', version='0.2.2',
-                    setup_options='--offline',
-                    config=testing_config)
+    api.skeletonize(
+        packages="photutils",
+        repo="pypi",
+        version="1.10.0",
+        setup_options="--offline",
+        config=testing_config,
+        output_dir=tmp_path,
+        extra_specs=["extension-helpers"],
+    )
 
     # Check that the setup option occurs in bld.bat and build.sh.
-    m = api.render('photutils')[0][0]
-    assert '--offline' in m.meta['build']['script']
+    metadata = api.render(str(tmp_path / "photutils"))[0][0]
+    assert "--offline" in metadata.meta["build"]["script"]
 
 
-def test_pypi_pin_numpy(testing_workdir, testing_config):
+def test_pypi_pin_numpy(tmp_path: Path, testing_config: Config):
     # The package used here must have a numpy dependence for pin-numpy to have
     # any effect.
-    api.skeletonize(packages='msumastro', repo='pypi', version='0.9.0',
-                    config=testing_config,
-                    pin_numpy=True)
-    with open(os.path.join('msumastro', 'meta.yaml')) as f:
-        assert f.read().count('numpy x.x') == 2
-    with pytest.raises(DependencyNeedsBuildingError):
-        api.build('msumastro')
+    api.skeletonize(
+        packages="fasttext",
+        repo="pypi",
+        version="0.9.2",
+        config=testing_config,
+        pin_numpy=True,
+        output_dir=tmp_path,
+    )
+    assert (tmp_path / "fasttext" / "meta.yaml").read_text().count("numpy x.x") == 2
 
 
-def test_pypi_version_sorting(testing_workdir, testing_config):
+def test_pypi_version_sorting(tmp_path: Path, testing_config: Config):
     # The package used here must have a numpy dependence for pin-numpy to have
     # any effect.
-    api.skeletonize(packages='impyla', repo='pypi', config=testing_config)
-    m = api.render('impyla')[0][0]
-    assert parse_version(m.version()) >= parse_version("0.13.8")
+    api.skeletonize(
+        packages="fasttext",
+        repo="pypi",
+        config=testing_config,
+        output_dir=tmp_path,
+    )
+    metadata = api.render(str(tmp_path / "fasttext"))[0][0]
+    assert parse_version(metadata.version()) >= parse_version("0.9.2")
 
 
 def test_list_skeletons():
     skeletons = api.list_skeletons()
-    assert set(skeletons) == {'pypi', 'cran', 'cpan', 'luarocks', 'rpm'}
+    assert set(skeletons) == {"pypi", "cran", "cpan", "luarocks", "rpm"}
 
 
-def test_pypi_with_entry_points(testing_workdir):
-    api.skeletonize('planemo', repo='pypi', python_version="3.7")
-    assert os.path.isdir('planemo')
+def test_pypi_with_entry_points(tmp_path: Path):
+    api.skeletonize("planemo", repo="pypi", python_version="3.7", output_dir=tmp_path)
+    assert (tmp_path / "planemo").is_dir()
 
 
-def test_pypi_with_version_arg(testing_workdir):
+def test_pypi_with_version_arg(tmp_path: Path):
     # regression test for https://github.com/conda/conda-build/issues/1442
-    api.skeletonize('PrettyTable', 'pypi', version='0.7.2')
-    m = api.render('prettytable')[0][0]
-    assert parse_version(m.version()) == parse_version("0.7.2")
+    api.skeletonize("PrettyTable", "pypi", version="0.7.2", output_dir=tmp_path)
+    metadata = api.render(str(tmp_path / "prettytable"))[0][0]
+    assert parse_version(metadata.version()) == parse_version("0.7.2")
 
 
 @pytest.mark.slow
-def test_pypi_with_extra_specs(testing_workdir, testing_config):
+def test_pypi_with_extra_specs(tmp_path: Path, testing_config):
     # regression test for https://github.com/conda/conda-build/issues/1697
     # For mpi4py:
-    testing_config.channel_urls.append('https://repo.anaconda.com/pkgs/free')
-    extra_specs = ['cython', 'mpi4py']
+    testing_config.channel_urls.append("https://repo.anaconda.com/pkgs/free")
+    extra_specs = ["cython", "mpi4py"]
     if not on_win:
-        extra_specs.append('nomkl')
-    api.skeletonize('bigfile', 'pypi', extra_specs=extra_specs,
-                    version='0.1.24', python="3.6", config=testing_config)
-    m = api.render('bigfile')[0][0]
-    assert parse_version(m.version()) == parse_version("0.1.24")
-    assert any('cython' in req for req in m.meta['requirements']['host'])
-    assert any('mpi4py' in req for req in m.meta['requirements']['host'])
+        extra_specs.append("nomkl")
+    api.skeletonize(
+        "bigfile",
+        "pypi",
+        extra_specs=extra_specs,
+        version="0.1.24",
+        python="3.6",
+        config=testing_config,
+        output_dir=tmp_path,
+    )
+    metadata = api.render(str(tmp_path / "bigfile"))[0][0]
+    assert parse_version(metadata.version()) == parse_version("0.1.24")
+    assert any("cython" in req for req in metadata.meta["requirements"]["host"])
+    assert any("mpi4py" in req for req in metadata.meta["requirements"]["host"])
 
 
 @pytest.mark.slow
-def test_pypi_with_version_inconsistency(testing_workdir, testing_config):
+def test_pypi_with_version_inconsistency(tmp_path: Path, testing_config):
     # regression test for https://github.com/conda/conda-build/issues/189
     # For mpi4py:
-    extra_specs = ['mpi4py']
+    extra_specs = ["mpi4py"]
     if not on_win:
-        extra_specs.append('nomkl')
-    testing_config.channel_urls.append('https://repo.anaconda.com/pkgs/free')
-    api.skeletonize('mpi4py_test', 'pypi', extra_specs=extra_specs,
-                    version='0.0.10', python="3.6", config=testing_config)
-    m = api.render('mpi4py_test')[0][0]
-    assert parse_version(m.version()) == parse_version("0.0.10")
+        extra_specs.append("nomkl")
+    testing_config.channel_urls.append("https://repo.anaconda.com/pkgs/free")
+    api.skeletonize(
+        "mpi4py_test",
+        "pypi",
+        extra_specs=extra_specs,
+        version="0.0.10",
+        python="3.6",
+        config=testing_config,
+        output_dir=tmp_path,
+    )
+    metadata = api.render(str(tmp_path / "mpi4py_test"))[0][0]
+    assert parse_version(metadata.version()) == parse_version("0.0.10")
 
 
-def test_pypi_with_basic_environment_markers(testing_workdir):
+def test_pypi_with_basic_environment_markers(tmp_path: Path):
     # regression test for https://github.com/conda/conda-build/issues/1974
-    api.skeletonize('coconut', 'pypi', version='1.2.2')
-    m = api.render('coconut')[0][0]
+    api.skeletonize("coconut", "pypi", version="1.2.2", output_dir=tmp_path)
+    metadata = api.render(tmp_path / "coconut")[0][0]
 
-    build_reqs = str(m.meta['requirements']['host'])
-    run_reqs = str(m.meta['requirements']['run'])
+    build_reqs = str(metadata.meta["requirements"]["host"])
+    run_reqs = str(metadata.meta["requirements"]["run"])
     # should include the right dependencies for the right version
     assert "futures" not in build_reqs
     assert "futures" not in run_reqs
-    if sys.version_info >= (2, 7):
-        assert "pygments" in build_reqs
-        assert "pygments" in run_reqs
-    else:
-        assert "pygments" not in build_reqs
-        assert "pygments" not in run_reqs
+    assert "pygments" in build_reqs
+    assert "pygments" in run_reqs
 
 
-def test_setuptools_test_requirements(testing_workdir):
-    api.skeletonize(packages='hdf5storage', repo='pypi')
-    m = api.render('hdf5storage')[0][0]
-    assert m.meta['test']['requires'] == ['nose >=1.0']
+def test_setuptools_test_requirements(tmp_path: Path):
+    api.skeletonize(packages="hdf5storage", repo="pypi", output_dir=tmp_path)
+    metadata = api.render(str(tmp_path / "hdf5storage"))[0][0]
+    assert metadata.meta["test"]["requires"] == ["nose >=1.0"]
 
 
 @pytest.mark.skipif(sys.version_info < (3, 8), reason="sympy is python 3.8+")
-def test_pypi_section_order_preserved(testing_workdir):
+def test_pypi_section_order_preserved(tmp_path: Path):
     """
     Test whether sections have been written in the correct order.
     """
     from conda_build.render import FIELDS
-    from conda_build.skeletons.pypi import (ABOUT_ORDER,
-                                            REQUIREMENTS_ORDER,
-                                            PYPI_META_STATIC)
+    from conda_build.skeletons.pypi import (
+        ABOUT_ORDER,
+        PYPI_META_STATIC,
+        REQUIREMENTS_ORDER,
+    )
 
-    api.skeletonize(packages='sympy', repo='pypi')
+    api.skeletonize(packages="sympy", repo="pypi", output_dir=tmp_path)
     # Since we want to check the order of items in the recipe (not whether
     # the metadata values themselves are sensible), read the file as (ordered)
     # yaml, and check the order.
-    with open('sympy/meta.yaml') as file:
-        lines = [ln for ln in file.readlines() if not ln.startswith("{%")]
+    lines = [
+        line
+        for line in (tmp_path / "sympy" / "meta.yaml").read_text().splitlines()
+        if not line.startswith("{%")
+    ]
 
     # The loader below preserves the order of entries...
-    recipe = ruamel_yaml.load('\n'.join(lines),
-                              Loader=ruamel_yaml.RoundTripLoader)
+    recipe = ruamel.yaml.load("\n".join(lines), Loader=ruamel.yaml.RoundTripLoader)
 
     major_sections = list(recipe.keys())
     # Blank fields are omitted when skeletonizing, so prune any missing ones
     # before comparing.
     pruned_fields = [f for f in FIELDS if f in major_sections]
     assert major_sections == pruned_fields
-    assert list(recipe['about']) == ABOUT_ORDER
-    assert list(recipe['requirements']) == REQUIREMENTS_ORDER
+    assert list(recipe["about"]) == ABOUT_ORDER
+    assert list(recipe["requirements"]) == REQUIREMENTS_ORDER
     for k, v in PYPI_META_STATIC.items():
         assert list(v.keys()) == list(recipe[k])
 
 
+@pytest.mark.skip("Use separate grayskull package instead of skeleton.")
 @pytest.mark.slow
 @pytest.mark.flaky(rerun=5, reruns_delay=2)
-@pytest.mark.skipif(not external.find_executable("shellcheck"), reason="requires shellcheck >=0.7.0")
+@pytest.mark.skipif(on_win, reason="shellcheck is not available on Windows")
 @pytest.mark.parametrize(
-    "package, repo", [("r-rmarkdown", "cran"), ("Perl::Lint", "cpan"), ("screen", "rpm")]
+    "package, repo",
+    [
+        ("r-rmarkdown", "cran"),
+        ("Perl::Lint", "cpan"),
+        ("screen", "rpm"),
+    ],
 )
-def test_build_sh_shellcheck_clean(package, repo, testing_workdir, testing_config):
-    api.skeletonize(packages=package, repo=repo, output_dir=testing_workdir, config=testing_config)
+def test_build_sh_shellcheck_clean(
+    package: str, repo: str, tmp_path: Path, testing_config
+):
+    api.skeletonize(
+        packages=package,
+        repo=repo,
+        output_dir=tmp_path,
+        config=testing_config,
+    )
 
-    matches = []
-    for root, dirnames, filenames in os.walk(testing_workdir):
-        for filename in fnmatch.filter(filenames, "build.sh"):
-            matches.append(os.path.join(root, filename))
-
-    build_sh = matches[0]
+    build_sh = next(
+        Path(root, filename)
+        for root, _, filenames in os.walk(tmp_path)
+        for filename in filenames
+        if filename == "build.sh"
+    )
     cmd = [
         "shellcheck",
         "--enable=all",
@@ -467,7 +536,6 @@ def test_build_sh_shellcheck_clean(package, repo, testing_workdir, testing_confi
     ]
 
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    sc_stdout, _ = p.communicate()
-    findings = sc_stdout.decode(sys.stdout.encoding).replace("\r\n", "\n").splitlines()
-    assert findings == []
+    stdout, _ = p.communicate()
+    assert not stdout
     assert p.returncode == 0

@@ -14,12 +14,19 @@ collection helpful.
 Prerequisites
 =============
 
-Before starting the tutorials, you will need to
-install `Miniconda or Anaconda <https://docs.anaconda.com/anaconda/install/>`_,
-conda-build, and Git.
+Before starting the tutorials, you need to install:
 
-After you've installed Miniconda or Anaconda, you can use conda
-to install conda-build and Git.
+- `Miniconda <https://docs.anaconda.com/free/miniconda/>`_ or `Anaconda <https://docs.anaconda.com/free/anaconda/install/>`_
+- conda-build
+- Git
+
+The most straightforward way to do this is to install Miniconda or
+Anaconda, which contain conda, and then use conda to install conda-build
+and Git. Make sure you install these packages into your base environment.::
+
+    conda install -n base conda-build git
+
+For more information on installing and updating conda-build, see :doc:`Installing and updating conda-build <../install-conda-build>`.
 
 .. _submissions:
 
