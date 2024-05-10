@@ -13,8 +13,14 @@
 * Remove `conda_build.conda_interface.InstalledPackages`. (#5333)
 * Remove `conda_build.conda_interface.symlink_conda`. (#5333)
 * Remove `conda_build.conda_interface.NoPackagesFound`. Use `conda.exceptions.ResolvePackageNotFound` instead. (#5333)
-* Deprecate `conda_build.conda_interface.Unsatisfiable`. Use `conda.exceptions.UnsatisfiableError` instead. (#5333)
-
+* Remove `conda_build.conda_interface.Unsatisfiable`. Use `conda.exceptions.UnsatisfiableError` instead. (#5333)
+* Remove `conda_build.conda_interface.ArgumentParser`. Use `conda.cli.conda_argparse.ArgumentParser` instead. (#5333)
+* Remove `conda_build.conda_interface.add_parser_channels`. Use `conda.cli.helpers.add_parser_channels` instead. (#5333)
+* Remove `conda_build.conda_interface.add_parser_prefix`. Use `conda.cli.helpers.add_parser_prefix` instead. (#5333)
+* Remove `conda_build.conda_interface.Channel`. Use `conda.models.channel.Channel` instead. (#5333)
+* Remove `conda_build.conda_interface.FileMode`. Use `conda.models.enums.FileMode instead`. (#5333)
+* Remove `conda_build.conda_interface.PathType`. Use `conda.models.enums.PathType instead`. (#5333)
+* Remove `conda_build.conda_interface.MatchSpec`. Use `conda.models.match_spec.MatchSpec` instead. (#5333)
 
 ### Docs
 

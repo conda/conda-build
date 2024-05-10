@@ -19,7 +19,6 @@ from conda.base.context import reset_context as _reset_context
 from conda.cli.common import spec_from_line as _spec_from_line
 from conda.cli.common import specs_from_args as _specs_from_args
 from conda.cli.common import specs_from_url as _specs_from_url
-from conda.cli.conda_argparse import ArgumentParser as _ArgumentParser
 from conda.common.path import win_path_to_unix as _win_path_to_unix
 from conda.common.toposort import _toposort as __toposort
 from conda.core.package_cache_data import (
@@ -40,7 +39,6 @@ from conda.misc import untracked as _untracked
 from conda.misc import walk_prefix as _walk_prefix
 from conda.models.channel import Channel as _Channel
 from conda.models.channel import get_conda_build_local_url as _get_conda_build_local_url
-from conda.models.enums import FileMode as _FileMode
 from conda.models.enums import PathType as _PathType
 from conda.models.match_spec import MatchSpec as _MatchSpec
 from conda.models.records import PackageRecord as _PackageRecord
@@ -54,50 +52,6 @@ from conda.utils import url_path as _url_path
 from .deprecations import deprecated
 from .utils import rm_rf as _rm_rf
 
-try:
-    from conda.cli.helpers import add_parser_channels as _add_parser_channels
-    from conda.cli.helpers import add_parser_prefix as _add_parser_prefix
-except ImportError:
-    # conda<23.11
-    from conda.cli.conda_argparse import add_parser_channels as _add_parser_channels
-    from conda.cli.conda_argparse import add_parser_prefix as _add_parser_prefix
-
-deprecated.constant(
-    "24.5",
-    "24.7",
-    "ArgumentParser",
-    _ArgumentParser,
-    addendum="Use `conda.cli.conda_argparse.ArgumentParser` instead.",
-)
-deprecated.constant(
-    "24.5",
-    "24.7",
-    "add_parser_channels",
-    _add_parser_channels,
-    addendum="Use `conda.cli.helpers.add_parser_channels` instead.",
-)
-deprecated.constant(
-    "24.5",
-    "24.7",
-    "add_parser_prefix",
-    _add_parser_prefix,
-    addendum="Use `conda.cli.helpers.add_parser_prefix` instead.",
-)
-
-deprecated.constant(
-    "24.5",
-    "24.7",
-    "Channel",
-    _Channel,
-    addendum="Use `conda.models.channel.Channel` instead.",
-)
-deprecated.constant(
-    "24.5",
-    "24.7",
-    "FileMode",
-    _FileMode,
-    addendum="Use `conda.models.enums.FileMode` instead.",
-)
 deprecated.constant(
     "24.5",
     "24.7",
