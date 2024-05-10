@@ -1,0 +1,25 @@
+### Enhancements
+
+* <news item>
+
+### Bug fixes
+
+* <news item>
+
+### Deprecations
+
+* Remove `conda_build.conda_interface.Completer`. (#5333)
+* Remove `conda_build.conda_interface.CondaSession`. Use `conda.gateways.connection.session.CondaSession` instead. (#5333)
+* Remove `conda_build.conda_interface.InstalledPackages`. (#5333)
+* Remove `conda_build.conda_interface.symlink_conda`. (#5333)
+* Remove `conda_build.conda_interface.NoPackagesFound`. Use `conda.exceptions.ResolvePackageNotFound` instead. (#5333)
+* Deprecate `conda_build.conda_interface.Unsatisfiable`. Use `conda.exceptions.UnsatisfiableError` instead. (#5333)
+
+
+### Docs
+
+* <news item>
+
+### Other
+
+* <news item>

@@ -31,14 +31,9 @@ from conda.exceptions import LinkError as _LinkError
 from conda.exceptions import LockError as _LockError
 from conda.exceptions import NoPackagesFoundError as _NoPackagesFoundError
 from conda.exceptions import PaddingError as _PaddingError
-from conda.exceptions import ResolvePackageNotFound as _ResolvePackageNotFound
 from conda.exceptions import UnsatisfiableError as _UnsatisfiableError
-from conda.exports import Completer as _Completer
-from conda.exports import InstalledPackages as _InstalledPackages
-from conda.exports import symlink_conda as _symlink_conda
 from conda.gateways.connection.download import TmpDownload as _TmpDownload
 from conda.gateways.connection.download import download as _download
-from conda.gateways.connection.session import CondaSession as _CondaSession
 from conda.gateways.disk.create import TemporaryDirectory as _TemporaryDirectory
 from conda.gateways.disk.link import lchmod as _lchmod
 from conda.misc import untracked as _untracked
@@ -66,50 +61,6 @@ except ImportError:
     # conda<23.11
     from conda.cli.conda_argparse import add_parser_channels as _add_parser_channels
     from conda.cli.conda_argparse import add_parser_prefix as _add_parser_prefix
-
-deprecated.constant(
-    "24.5",
-    "24.7",
-    "Completer",
-    _Completer,
-    addendum="Unused.",
-)
-deprecated.constant(
-    "24.5",
-    "24.7",
-    "CondaSession",
-    _CondaSession,
-    addendum="Use `conda.gateways.connection.session.CondaSession` instead.",
-)
-deprecated.constant(
-    "24.5",
-    "24.7",
-    "InstalledPackages",
-    _InstalledPackages,
-    addendum="Unused.",
-)
-deprecated.constant(
-    "24.5",
-    "24.7",
-    "NoPackagesFound",
-    _ResolvePackageNotFound,
-    addendum="Use `conda.exceptions.ResolvePackageNotFound` instead.",
-)
-deprecated.constant(
-    "24.5",
-    "24.7",
-    "Unsatisfiable",
-    _UnsatisfiableError,
-    addendum="Use `conda.exceptions.UnsatisfiableError` instead.",
-)
-deprecated.constant(
-    "24.5",
-    "24.7",
-    "symlink_conda",
-    _symlink_conda,
-    addendum="Unused.",
-)
-
 
 deprecated.constant(
     "24.5",
