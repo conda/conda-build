@@ -14,15 +14,15 @@ import warnings
 from collections import OrderedDict
 from functools import lru_cache
 from os.path import isfile, join
-from typing import TYPE_CHECKING, overload
+from typing import TYPE_CHECKING, NamedTuple, overload
 
 from bs4 import UnicodeDammit
 from conda.base.context import context
 from conda.gateways.disk.read import compute_sum
+from conda.models.match_spec import MatchSpec
 from frozendict import deepfreeze
 
 from . import exceptions, utils
-from .conda_interface import MatchSpec
 from .config import Config, get_or_merge_config
 from .features import feature_list
 from .license_family import ensure_valid_license_family
@@ -46,7 +46,7 @@ from .variants import (
 )
 
 if TYPE_CHECKING:
-    from typing import Literal
+    from typing import Any, Literal
 
 try:
     import yaml
@@ -279,38 +279,68 @@ def eval_selector(selector_string, namespace, variants_in_place):
         return eval_selector(next_string, namespace, variants_in_place)
 
 
-def select_lines(data, namespace, variants_in_place):
-    lines = []
-
-    for i, line in enumerate(data.splitlines()):
+@lru_cache(maxsize=None)
+def _split_line_selector(text: str) -> tuple[tuple[str | None, str], ...]:
+    lines: list[tuple[str | None, str]] = []
+    for line in text.splitlines():
         line = line.rstrip()
 
+        # skip comment lines, include a blank line as a placeholder
+        if line.lstrip().startswith("#"):
+            lines.append((None, ""))
+            continue
+
+        # include blank lines
+        if not line:
+            lines.append((None, ""))
+            continue
+
+        # user may have quoted entire line to make YAML happy
         trailing_quote = ""
         if line and line[-1] in ("'", '"'):
             trailing_quote = line[-1]
 
-        if line.lstrip().startswith("#"):
-            # Don't bother with comment only lines
-            continue
-        m = sel_pat.match(line)
-        if m:
-            cond = m.group(3)
-            try:
-                if eval_selector(cond, namespace, variants_in_place):
-                    lines.append(m.group(1) + trailing_quote)
-            except Exception as e:
-                sys.exit(
-                    """\
-Error: Invalid selector in meta.yaml line %d:
-offending line:
-%s
-exception:
-%s
-"""
-                    % (i + 1, line, str(e))
-                )
+        # Checking for "[" and "]" before regex matching every line is a bit faster.
+        if (
+            ("[" in line and "]" in line)
+            and (match := sel_pat.match(line))
+            and (selector := match.group(3))
+        ):
+            # found a selector
+            lines.append((selector, (match.group(1) + trailing_quote).rstrip()))
         else:
+            # no selector found
+            lines.append((None, line))
+    return tuple(lines)
+
+
+def select_lines(text: str, namespace: dict[str, Any], variants_in_place: bool) -> str:
+    lines = []
+    selector_cache: dict[str, bool] = {}
+    for i, (selector, line) in enumerate(_split_line_selector(text)):
+        if not selector:
+            # no selector? include line as is
             lines.append(line)
+        else:
+            # include lines with a selector that evaluates to True
+            try:
+                if selector_cache[selector]:
+                    lines.append(line)
+            except KeyError:
+                # KeyError: cache miss
+                try:
+                    value = bool(eval_selector(selector, namespace, variants_in_place))
+                    selector_cache[selector] = value
+                    if value:
+                        lines.append(line)
+                except Exception as e:
+                    sys.exit(
+                        f"Error: Invalid selector in meta.yaml line {i + 1}:\n"
+                        f"offending line:\n"
+                        f"{line}\n"
+                        f"exception:\n"
+                        f"{e.__class__.__name__}: {e}\n"
+                    )
     return "\n".join(lines) + "\n"
 
 
@@ -368,7 +398,7 @@ def ensure_valid_noarch_value(meta):
     build_noarch = meta.get("build", {}).get("noarch")
     if build_noarch and build_noarch not in NOARCH_TYPES:
         raise exceptions.CondaBuildException(
-            "Invalid value for noarch: %s" % build_noarch
+            f"Invalid value for noarch: {build_noarch}"
         )
 
 
@@ -799,7 +829,7 @@ def _get_env_path(env_name_or_path):
                 break
     bootstrap_metadir = os.path.join(env_name_or_path, "conda-meta")
     if not os.path.isdir(bootstrap_metadir):
-        print("Bootstrap environment '%s' not found" % env_name_or_path)
+        print(f"Bootstrap environment '{env_name_or_path}' not found")
         sys.exit(1)
     return env_name_or_path
 
@@ -825,7 +855,7 @@ def toposort(output_metadata_map):
     will naturally lead to non-overlapping files in each package and also
     the correct files being present during the install and test procedures,
     provided they are run in this order."""
-    from .conda_interface import _toposort
+    from conda.common.toposort import _toposort
 
     # We only care about the conda packages built by this recipe. Non-conda
     # packages get sorted to the end.
@@ -878,7 +908,10 @@ def toposort(output_metadata_map):
     return result
 
 
-def get_output_dicts_from_metadata(metadata, outputs=None):
+def get_output_dicts_from_metadata(
+    metadata: MetaData,
+    outputs: list[dict[str, Any]] | None = None,
+) -> list[dict[str, Any]]:
     outputs = outputs or metadata.get_section("outputs")
 
     if not outputs:
@@ -1442,7 +1475,7 @@ class MetaData:
             if section == "extra":
                 continue
             if section not in FIELDS:
-                raise ValueError("unknown section: %s" % section)
+                raise ValueError(f"unknown section: {section}")
             for key_or_dict in submeta:
                 if section in OPTIONALLY_ITERABLE_FIELDS and isinstance(
                     key_or_dict, dict
@@ -1456,17 +1489,17 @@ class MetaData:
     def name(self) -> str:
         name = self.get_value("package/name", "")
         if not name and self.final:
-            sys.exit("Error: package/name missing in: %r" % self.meta_path)
+            sys.exit(f"Error: package/name missing in: {self.meta_path!r}")
         name = str(name)
         if name != name.lower():
-            sys.exit("Error: package/name must be lowercase, got: %r" % name)
+            sys.exit(f"Error: package/name must be lowercase, got: {name!r}")
         check_bad_chrs(name, "package/name")
         return name
 
     def version(self) -> str:
         version = self.get_value("package/version", "")
         if not version and not self.get_section("outputs") and self.final:
-            sys.exit("Error: package/version missing in: %r" % self.meta_path)
+            sys.exit(f"Error: package/version missing in: {self.meta_path!r}")
         version = str(version)
         check_bad_chrs(version, "package/version")
         if self.final and version.startswith("."):
@@ -1535,7 +1568,7 @@ class MetaData:
             try:
                 ms = MatchSpec(spec)
             except AssertionError:
-                raise RuntimeError("Invalid package specification: %r" % spec)
+                raise RuntimeError(f"Invalid package specification: {spec!r}")
             except (AttributeError, ValueError) as e:
                 raise RuntimeError(
                     "Received dictionary as spec.  Note that pip requirements are "
@@ -1544,7 +1577,7 @@ class MetaData:
             if ms.name == self.name() and not (
                 typ == "build" and self.config.host_subdir != self.config.build_subdir
             ):
-                raise RuntimeError("%s cannot depend on itself" % self.name())
+                raise RuntimeError(f"{self.name()} cannot depend on itself")
             for name, ver in name_ver_list:
                 if ms.name == name:
                     if self.noarch:
@@ -1672,7 +1705,7 @@ class MetaData:
             out = build_string_from_metadata(self)
             if self.config.filename_hashing and self.final:
                 hash_ = self.hash_dependencies()
-                if not re.findall("h[0-9a-f]{%s}" % self.config.hash_length, out):
+                if not re.findall(f"h[0-9a-f]{{{self.config.hash_length}}}", out):
                     ret = out.rsplit("_", 1)
                     try:
                         int(ret[0])
@@ -1682,14 +1715,14 @@ class MetaData:
                     if len(ret) > 1:
                         out = "_".join([out] + ret[1:])
                 else:
-                    out = re.sub("h[0-9a-f]{%s}" % self.config.hash_length, hash_, out)
+                    out = re.sub(f"h[0-9a-f]{{{self.config.hash_length}}}", hash_, out)
         return out
 
     def dist(self):
         return f"{self.name()}-{self.version()}-{self.build_id()}"
 
     def pkg_fn(self):
-        return "%s.tar.bz2" % self.dist()
+        return f"{self.dist()}.tar.bz2"
 
     def is_app(self):
         return bool(self.get_value("app/entry"))
@@ -1697,8 +1730,8 @@ class MetaData:
     def app_meta(self):
         d = {"type": "app"}
         if self.get_value("app/icon"):
-            d["icon"] = "%s.png" % compute_sum(
-                join(self.path, self.get_value("app/icon")), "md5"
+            d["icon"] = "{}.png".format(
+                compute_sum(join(self.path, self.get_value("app/icon")), "md5")
             )
 
         for field, key in [
@@ -2080,8 +2113,11 @@ class MetaData:
         return None
 
     def get_recipe_text(
-        self, extract_pattern=None, force_top_level=False, apply_selectors=True
-    ):
+        self,
+        extract_pattern: str | None = None,
+        force_top_level: bool = False,
+        apply_selectors: bool = True,
+    ) -> str:
         meta_path = self.meta_path
         if meta_path:
             recipe_text = read_meta_file(meta_path)
@@ -2280,7 +2316,7 @@ class MetaData:
             # constrain the stored variants to only this version in the output
             #     variant mapping
             if re.search(
-                r"\s*\{\{\s*%s\s*(?:.*?)?\}\}" % key, self.extract_source_text()
+                rf"\s*\{{\{{\s*{key}\s*(?:.*?)?\}}\}}", self.extract_source_text()
             ):
                 return True
         return False
@@ -2478,16 +2514,16 @@ class MetaData:
 
     def get_output_metadata_set(
         self,
-        permit_undefined_jinja=False,
-        permit_unsatisfiable_variants=False,
-        bypass_env_check=False,
-    ):
+        permit_undefined_jinja: bool = False,
+        permit_unsatisfiable_variants: bool = False,
+        bypass_env_check: bool = False,
+    ) -> list[tuple[dict[str, Any], MetaData]]:
         from .source import provide
 
         out_metadata_map = {}
         if self.final:
-            outputs = get_output_dicts_from_metadata(self)[0]
-            output_tuples = [(outputs, self)]
+            outputs = get_output_dicts_from_metadata(self)
+            output_tuples = [(outputs[0], self)]
         else:
             all_output_metadata = OrderedDict()
 
@@ -2935,3 +2971,9 @@ class MetaData:
 
         specs.extend(utils.ensure_list(self.config.extra_deps))
         return specs
+
+
+class MetaDataTuple(NamedTuple):
+    metadata: MetaData
+    need_download: bool
+    need_reparse: bool

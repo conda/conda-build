@@ -6,6 +6,8 @@ import logging
 import sys
 from typing import TYPE_CHECKING
 
+from conda.base.context import context
+
 from .. import api
 from ..utils import on_win
 from . import validators as valid
@@ -97,6 +99,7 @@ def execute(args: Sequence[str] | None = None) -> int:
 
     parser = get_parser()
     parsed = parser.parse_args(args)
+    context.__init__(argparse_args=parsed)
 
     try:
         activation_string = api.debug(

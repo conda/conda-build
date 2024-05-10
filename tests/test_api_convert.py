@@ -7,9 +7,9 @@ import os
 import tarfile
 
 import pytest
+from conda.gateways.connection.download import download
 
 from conda_build import api
-from conda_build.conda_interface import download
 from conda_build.utils import on_win, package_has_file
 
 from .utils import assert_package_consistency, metadata_dir

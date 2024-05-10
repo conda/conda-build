@@ -40,4 +40,4 @@ def test_conda_pkg_format(
 
     # Verify that test pass ran through api
     assert "Manual entry point" in out
-    assert "TEST END: %s" % output_file in out
+    assert f"TEST END: {output_file}" in out

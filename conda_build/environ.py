@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import contextlib
-import json
 import logging
 import multiprocessing
 import os
@@ -37,12 +36,12 @@ from conda.exceptions import (
     PaddingError,
     UnsatisfiableError,
 )
-from conda.models.channel import prioritize_channels
+from conda.gateways.disk.create import TemporaryDirectory
+from conda.models.channel import Channel, prioritize_channels
 from conda.models.match_spec import MatchSpec
+from conda.models.records import PackageRecord
 
 from . import utils
-from .conda_interface import Channel, PackageRecord, TemporaryDirectory
-from .deprecations import deprecated
 from .exceptions import BuildLockError, DependencyNeedsBuildingError
 from .features import feature_list
 from .index import get_build_index
@@ -70,9 +69,6 @@ if TYPE_CHECKING:
 
 
 log = logging.getLogger(__name__)
-
-deprecated.constant("24.3", "24.5", "PREFIX_ACTION", _PREFIX_ACTION := "PREFIX")
-deprecated.constant("24.3", "24.5", "LINK_ACTION", _LINK_ACTION := "LINK")
 
 # these are things that we provide env vars for more explicitly.  This list disables the
 #    pass-through of variant values to env vars for these keys.
@@ -537,8 +533,7 @@ def meta_vars(meta: MetaData, skip_build_id=False):
             value = os.getenv(var_name)
         if value is None:
             warnings.warn(
-                "The environment variable '%s' specified in script_env is undefined."
-                % var_name,
+                f"The environment variable '{var_name}' specified in script_env is undefined.",
                 UserWarning,
             )
         else:
@@ -815,71 +810,9 @@ def os_vars(m, prefix):
     return d
 
 
-@deprecated("24.3", "24.5")
-class InvalidEnvironment(Exception):
-    pass
-
-
-# Stripped-down Environment class from conda-tools ( https://github.com/groutr/conda-tools )
-# Vendored here to avoid the whole dependency for just this bit.
-@deprecated("24.3", "24.5")
-def _load_json(path):
-    with open(path) as fin:
-        x = json.load(fin)
-    return x
-
-
-@deprecated("24.3", "24.5")
-def _load_all_json(path):
-    """
-    Load all json files in a directory.  Return dictionary with filenames mapped to json
-    dictionaries.
-    """
-    root, _, files = next(utils.walk(path))
-    result = {}
-    for f in files:
-        if f.endswith(".json"):
-            result[f] = _load_json(join(root, f))
-    return result
-
-
-@deprecated("24.3", "24.5", addendum="Use `conda.core.prefix_data.PrefixData` instead.")
-class Environment:
-    def __init__(self, path):
-        """
-        Initialize an Environment object.
-
-        To reflect changes in the underlying environment, a new Environment object should be
-        created.
-        """
-        self.path = path
-        self._meta = join(path, "conda-meta")
-        if os.path.isdir(path) and os.path.isdir(self._meta):
-            self._packages = {}
-        else:
-            raise InvalidEnvironment(f"Unable to load environment {path}")
-
-    def _read_package_json(self):
-        if not self._packages:
-            self._packages = _load_all_json(self._meta)
-
-    def package_specs(self):
-        """
-        List all package specs in the environment.
-        """
-        self._read_package_json()
-        json_objs = self._packages.values()
-        specs = []
-        for i in json_objs:
-            p, v, b = i["name"], i["version"], i["build"]
-            specs.append(f"{p} {v} {b}")
-        return specs
-
-
 cached_precs: dict[
     tuple[tuple[str | MatchSpec, ...], Any, Any, Any, bool], list[PackageRecord]
 ] = {}
-deprecated.constant("24.3", "24.5", "cached_actions", cached_precs)
 last_index_ts = 0
 
 
@@ -917,7 +850,7 @@ def get_install_actions(
         capture = utils.capture
     for feature, value in feature_list:
         if value:
-            specs.append("%s@" % feature)
+            specs.append(f"{feature}@")
 
     bldpkgs_dirs = ensure_list(bldpkgs_dirs)
 
@@ -1023,7 +956,7 @@ def get_install_actions(
                 # specs are the raw specifications, not the conda-derived actual specs
                 #   We're testing that pip etc. are manually specified
                 if not any(
-                    re.match(r"^%s(?:$|[\s=].*)" % pkg, str(dep)) for dep in specs
+                    re.match(rf"^{pkg}(?:$|[\s=].*)", str(dep)) for dep in specs
                 ):
                     precs = [prec for prec in precs if prec.name != pkg]
         cached_precs[(specs, env, subdir, channel_urls, disable_pip)] = precs.copy()
@@ -1366,7 +1299,6 @@ _install_actions = install_actions
 del install_actions
 
 
-@deprecated.argument("24.3", "24.5", "actions", rename="precs")
 def _execute_actions(prefix, precs):
     # This is copied over from https://github.com/conda/conda/blob/23.11.0/conda/plan.py#L575
     # but reduced to only the functionality actually used within conda-build.
@@ -1391,14 +1323,13 @@ def _execute_actions(prefix, precs):
     unlink_link_transaction.execute()
 
 
-@deprecated.argument("24.3", "24.5", "actions", rename="precs")
 def _display_actions(prefix, precs):
     # This is copied over from https://github.com/conda/conda/blob/23.11.0/conda/plan.py#L58
     # but reduced to only the functionality actually used within conda-build.
 
     builder = ["", "## Package Plan ##\n"]
     if prefix:
-        builder.append("  environment location: %s" % prefix)
+        builder.append(f"  environment location: {prefix}")
         builder.append("")
     print("\n".join(builder))
 
@@ -1442,9 +1373,9 @@ def _display_actions(prefix, precs):
             # string with new-style string formatting.
             fmt[pkg] = f"{{pkg:<{maxpkg}}} {{vers:<{maxver}}}"
             if maxchannels:
-                fmt[pkg] += " {channel:<%s}" % maxchannels
+                fmt[pkg] += f" {{channel:<{maxchannels}}}"
             if features[pkg]:
-                fmt[pkg] += " [{features:<%s}]" % maxfeatures
+                fmt[pkg] += f" [{{features:<{maxfeatures}}}]"
 
     lead = " " * 4
 

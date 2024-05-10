@@ -13,7 +13,7 @@ def dist_fn(fn):
     elif fn.endswith(".tar.bz2"):
         return fn[:-8]
     else:
-        raise Exception("did not expect filename: %r" % fn)
+        raise Exception(f"did not expect filename: {fn!r}")
 
 
 class TarCheck:
@@ -51,9 +51,9 @@ class TarCheck:
             return
         for p in sorted(seta | setb):
             if p not in seta:
-                print("%r not in info/files" % p)
+                print(f"{p!r} not in info/files")
             if p not in setb:
-                print("%r not in tarball" % p)
+                print(f"{p!r} not in tarball")
         raise Exception("info/files")
 
     def index_json(self):

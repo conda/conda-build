@@ -42,7 +42,7 @@ def test_api_output_yaml():
     assert argspec.defaults == (None, False)
 
 
-def test_api_get_output_file_path():
+def test_api_get_output_file_paths():
     argspec = getargspec(api.get_output_file_paths)
     assert argspec.args == [
         "recipe_path_or_metadata",

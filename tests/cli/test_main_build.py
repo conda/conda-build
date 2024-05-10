@@ -8,10 +8,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
+from conda.exceptions import PackagesNotFoundError
 
 from conda_build import api
 from conda_build.cli import main_build, main_render
-from conda_build.conda_interface import TemporaryDirectory
 from conda_build.config import (
     Config,
     zstd_compression_level_default,
@@ -264,20 +264,19 @@ def test_purge(testing_workdir, testing_metadata):
 
 
 @pytest.mark.serial
-def test_purge_all(testing_workdir, testing_metadata):
+def test_purge_all(
+    testing_workdir: str, testing_metadata: MetaData, tmp_path: Path
+) -> None:
     """
     purge-all clears out build folders as well as build packages in the osx-64 folders and such
     """
     api.output_yaml(testing_metadata, "meta.yaml")
-    with TemporaryDirectory() as tmpdir:
-        testing_metadata.config.croot = tmpdir
-        outputs = api.build(
-            testing_workdir, config=testing_metadata.config, notest=True
-        )
-        args = ["purge-all", "--croot", tmpdir]
-        main_build.execute(args)
-        assert not get_build_folders(testing_metadata.config.croot)
-        assert not any(os.path.isfile(fn) for fn in outputs)
+    testing_metadata.config.croot = str(tmp_path)
+    outputs = api.build(testing_workdir, config=testing_metadata.config, notest=True)
+    args = ["purge-all", f"--croot={tmp_path}"]
+    main_build.execute(args)
+    assert not get_build_folders(testing_metadata.config.croot)
+    assert not any(os.path.isfile(fn) for fn in outputs)
 
 
 @pytest.mark.serial
@@ -551,3 +550,14 @@ def test_user_warning(tmpdir, recwarn):
 
     main_build.parse_args([str(dir_recipe_path)])
     assert not recwarn.list
+
+
+def test_build_with_empty_channel_fails(empty_channel: Path) -> None:
+    with pytest.raises(PackagesNotFoundError):
+        main_build.execute(
+            [
+                "--override-channels",
+                f"--channel={empty_channel}",
+                os.path.join(metadata_dir, "_recipe_requiring_external_channel"),
+            ]
+        )

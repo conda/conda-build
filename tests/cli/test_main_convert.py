@@ -3,9 +3,9 @@
 import os
 
 import pytest
+from conda.gateways.connection.download import download
 
 from conda_build.cli import main_convert
-from conda_build.conda_interface import download
 from conda_build.tarcheck import TarCheck
 from conda_build.utils import on_win
 

@@ -1,5 +1,7 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
+
 import shutil
 import sys
 from os.path import abspath, exists, expanduser, isdir, join
@@ -126,21 +128,20 @@ def _uninstall(sp_dir, pkg_path):
 
 
 def execute(
-    recipe_dirs,
-    prefix=sys.prefix,
-    no_pth_file=False,
-    build_ext=False,
-    clean=False,
-    uninstall=False,
-):
+    recipe_dirs: list[str],
+    prefix: str = sys.prefix,
+    no_pth_file: bool = False,
+    build_ext: bool = False,
+    clean: bool = False,
+    uninstall: bool = False,
+) -> None:
     if not isdir(prefix):
         sys.exit(
-            """\
-Error: environment does not exist: %s
+            f"""\
+Error: environment does not exist: {prefix}
 #
 # Use 'conda create' to create the environment first.
 #"""
-            % prefix
         )
 
     assert find_executable("python", prefix=prefix)

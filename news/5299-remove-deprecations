@@ -1,0 +1,39 @@
+### Enhancements
+
+* <news item>
+
+### Bug fixes
+
+* <news item>
+
+### Deprecations
+
+* Postpone `conda_build.index.channel_data` deprecation. (#5299)
+* Remove `conda_build.api.get_output_file_path`. Use `conda_build.api.get_output_file_paths` instead. (#5299)
+* Remove `conda_build.bdist_conda`. (#5299)
+* Remove `conda_build.build.have_prefix_files`. (#5299)
+* Remove `conda_build.conda_interface.get_index`. Use `conda.core.index.get_index` instead. (#5299)
+* Remove `conda_build.conda_interface.get_version_from_git_tag`. Use `conda_build.environ.get_version_from_git_tag` instead. (#5299)
+* Remove `conda_build.conda_interface.handle_proxy_407`. Handled by `conda.gateways.connection.session.CondaSession`. (#5299)
+* Remove `conda_build.conda_interface.hashsum_file`. Use `conda.gateways.disk.read.compute_sum` instead. (#5299)
+* Remove `conda_build.conda_interface.md5_file`. Use `conda.gateways.disk.read.compute_sum(path, 'md5')` instead. (#5299)
+* Remove `conda_build.environ._load_all_json`. (#5299)
+* Remove `conda_build.environ._load_json`. (#5299)
+* Remove `conda_build.environ.cached_actions`. (#5299)
+* Remove `conda_build.environ.Environment`. Use `conda.core.prefix_data.PrefixData` instead. (#5299)
+* Remove `conda_build.environ.InvalidEnvironment`. (#5299)
+* Remove `conda_build.environ.LINK_ACTION`. (#5299)
+* Remove `conda_build.environ.PREFIX_ACTION`. (#5299)
+* Remove `conda_build.index._apply_instructions`. Use `conda_index._apply_instructions` instead. (#5299)
+* Remove `conda_build.index.DummyExecutor`. (#5299)
+* Remove `conda_build.index.LOCK_TIMEOUT_SECS`. (#5299)
+* Remove `conda_build.index.LOCKFILE_NAME`. (#5299)
+* Remove `conda_build.index.MAX_THREADS_DEFAULT`. (#5299)
+
+### Docs
+
+* <news item>
+
+### Other
+
+* <news item>

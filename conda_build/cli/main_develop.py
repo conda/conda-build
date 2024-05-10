@@ -5,20 +5,27 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from conda.base.context import context, determine_target_prefix
+from conda.base.context import context
 
 from .. import api
-from ..conda_interface import ArgumentParser, add_parser_prefix
 from .logging import init_logging
 
+try:
+    from conda.cli.helpers import add_parser_prefix
+except ImportError:
+    # conda<23.11
+    from conda.cli.conda_argparse import add_parser_prefix
+
 if TYPE_CHECKING:
-    from argparse import Namespace
+    from argparse import ArgumentParser, Namespace
     from typing import Sequence
 
 log = logging.getLogger(__name__)
 
 
 def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
+    from conda.cli.conda_argparse import ArgumentParser
+
     parser = ArgumentParser(
         prog="conda develop",
         description="""
@@ -84,10 +91,11 @@ def execute(args: Sequence[str] | None = None) -> int:
     init_logging()
 
     _, parsed = parse_args(args)
-    prefix = determine_target_prefix(context, parsed)
+    context.__init__(argparse_args=parsed)
+
     api.develop(
         parsed.source,
-        prefix=prefix,
+        prefix=context.target_prefix,
         no_pth_file=parsed.no_pth_file,
         build_ext=parsed.build_ext,
         clean=parsed.clean,

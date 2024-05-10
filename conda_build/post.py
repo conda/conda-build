@@ -36,15 +36,13 @@ from subprocess import CalledProcessError, call, check_output
 from typing import TYPE_CHECKING
 
 from conda.core.prefix_data import PrefixData
+from conda.gateways.disk.create import TemporaryDirectory
+from conda.gateways.disk.link import lchmod
 from conda.gateways.disk.read import compute_sum
+from conda.misc import walk_prefix
 from conda.models.records import PrefixRecord
 
 from . import utils
-from .conda_interface import (
-    TemporaryDirectory,
-    lchmod,
-    walk_prefix,
-)
 from .exceptions import OverDependingError, OverLinkingError, RunPathError
 from .inspect_pkg import which_package
 from .os_utils import external, macho
@@ -155,11 +153,11 @@ def write_pth(egg_path, config):
     with open(
         join(
             utils.get_site_packages(config.host_prefix, py_ver),
-            "%s.pth" % (fn.split("-")[0]),
+            "{}.pth".format(fn.split("-")[0]),
         ),
         "w",
     ) as fo:
-        fo.write("./%s\n" % fn)
+        fo.write(f"./{fn}\n")
 
 
 def remove_easy_install_pth(files, prefix, config, preserve_egg_dir=False):
@@ -373,7 +371,7 @@ def find_lib(link, prefix, files, path=None):
     if link.startswith(prefix):
         link = normpath(link[len(prefix) + 1 :])
         if not any(link == normpath(w) for w in files):
-            sys.exit("Error: Could not find %s" % link)
+            sys.exit(f"Error: Could not find {link}")
         return link
     if link.startswith("/"):  # but doesn't start with the build prefix
         return
@@ -387,7 +385,7 @@ def find_lib(link, prefix, files, path=None):
         for f in files:
             file_names[basename(f)].append(f)
         if link not in file_names:
-            sys.exit("Error: Could not find %s" % link)
+            sys.exit(f"Error: Could not find {link}")
         if len(file_names[link]) > 1:
             if path and basename(path) == link:
                 # The link is for the file itself, just use it
@@ -408,7 +406,7 @@ def find_lib(link, prefix, files, path=None):
                     "Choosing the first one."
                 )
         return file_names[link][0]
-    print("Don't know how to find %s, skipping" % link)
+    print(f"Don't know how to find {link}, skipping")
 
 
 def osx_ch_link(path, link_dict, host_prefix, build_prefix, files):
@@ -422,8 +420,7 @@ def osx_ch_link(path, link_dict, host_prefix, build_prefix, files):
         )
         if not codefile_class(link, skip_symlinks=True):
             sys.exit(
-                "Error: Compiler runtime library in build prefix not found in host prefix %s"
-                % link
+                f"Error: Compiler runtime library in build prefix not found in host prefix {link}"
             )
         else:
             print(f".. fixing linking of {link} in {path} instead")
@@ -434,7 +431,7 @@ def osx_ch_link(path, link_dict, host_prefix, build_prefix, files):
         return
 
     print(f"Fixing linking of {link} in {path}")
-    print("New link location is %s" % (link_loc))
+    print(f"New link location is {link_loc}")
 
     lib_to_link = relpath(dirname(link_loc), "lib")
     # path_to_lib = utils.relative(path[len(prefix) + 1:])
@@ -652,7 +649,7 @@ def assert_relative_osx(path, host_prefix, build_prefix):
         for prefix in (host_prefix, build_prefix):
             if prefix and name.startswith(prefix):
                 raise RuntimeError(
-                    "library at %s appears to have an absolute path embedded" % path
+                    f"library at {path} appears to have an absolute path embedded"
                 )
 
 
@@ -1771,7 +1768,7 @@ def check_symlinks(files, prefix, croot):
 
     if msgs:
         for msg in msgs:
-            print("Error: %s" % msg, file=sys.stderr)
+            print(f"Error: {msg}", file=sys.stderr)
         sys.exit(1)
 
 

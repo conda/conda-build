@@ -3,8 +3,9 @@
 import os
 import sys
 
+from conda.gateways.connection.download import download
+
 from conda_build.cli import main_develop
-from conda_build.conda_interface import download
 from conda_build.utils import get_site_packages, tar_xf
 
 

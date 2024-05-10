@@ -41,10 +41,11 @@ except ImportError:
 
 from typing import TYPE_CHECKING
 
+from conda.base.context import context
 from conda.common.io import dashlist
+from conda.gateways.disk.create import TemporaryDirectory
 
 from .. import source
-from ..conda_interface import TemporaryDirectory, cc_conda_build
 from ..config import get_or_merge_config
 from ..license_family import allowed_license_families, guess_license_family
 from ..metadata import MetaData
@@ -53,6 +54,8 @@ from ..variants import DEFAULT_VARIANTS, get_package_variants
 
 if TYPE_CHECKING:
     from typing import Literal
+
+    from ..config import Config
 
 SOURCE_META = """\
   {archive_keys}
@@ -454,7 +457,7 @@ def add_parser(repos):
     cran.add_argument(
         "-m",
         "--variant-config-files",
-        default=cc_conda_build.get("skeleton_config_yaml", None),
+        default=context.conda_build.get("skeleton_config_yaml", None),
         help="""Variant config file to add.  These yaml files can contain
         keys such as `cran_mirror`.  Only one can be provided here.""",
     )
@@ -486,7 +489,7 @@ def dict_from_cran_lines(lines):
                 #   - Suggests in corpcor
                 (k, v) = line.split(":", 1)
         except ValueError:
-            sys.exit("Error: Could not parse metadata (%s)" % line)
+            sys.exit(f"Error: Could not parse metadata ({line})")
         d[k] = v
         # if k not in CRAN_KEYS:
         #     print("Warning: Unknown key %s" % k)
@@ -594,7 +597,7 @@ def read_description_contents(fp):
 
 def get_archive_metadata(path, verbose=True):
     if verbose:
-        print("Reading package metadata from %s" % path)
+        print(f"Reading package metadata from {path}")
     if basename(path) == "DESCRIPTION":
         with open(path, "rb") as fp:
             return read_description_contents(fp)
@@ -611,8 +614,8 @@ def get_archive_metadata(path, verbose=True):
                     fp = zf.open(member, "r")
                     return read_description_contents(fp)
     else:
-        sys.exit("Cannot extract a DESCRIPTION from file %s" % path)
-    sys.exit("%s does not seem to be a CRAN package (no DESCRIPTION) file" % path)
+        sys.exit(f"Cannot extract a DESCRIPTION from file {path}")
+    sys.exit(f"{path} does not seem to be a CRAN package (no DESCRIPTION) file")
 
 
 def get_latest_git_tag(config):
@@ -635,12 +638,12 @@ def get_latest_git_tag(config):
     stdout = stdout.decode("utf-8")
     stderr = stderr.decode("utf-8")
     if stderr or p.returncode:
-        sys.exit("Error: git tag failed (%s)" % stderr)
+        sys.exit(f"Error: git tag failed ({stderr})")
     tags = stdout.strip().splitlines()
     if not tags:
         sys.exit("Error: no tags found")
 
-    print("Using tag %s" % tags[-1])
+    print(f"Using tag {tags[-1]}")
     return tags[-1]
 
 
@@ -680,7 +683,7 @@ def get_cran_archive_versions(cran_url, session, package, verbose=True):
         r.raise_for_status()
     except requests.exceptions.HTTPError as e:
         if e.response.status_code == 404:
-            print("No archive directory for package %s" % package)
+            print(f"No archive directory for package {package}")
             return []
         raise
     versions = []
@@ -695,7 +698,7 @@ def get_cran_archive_versions(cran_url, session, package, verbose=True):
 
 def get_cran_index(cran_url, session, verbose=True):
     if verbose:
-        print("Fetching main index from %s" % cran_url)
+        print(f"Fetching main index from {cran_url}")
     r = session.get(cran_url + "/src/contrib/")
     r.raise_for_status()
     records = {}
@@ -772,7 +775,7 @@ def package_to_inputs_dict(
     """
     if isfile(package):
         return None
-    print("Parsing input package %s:" % package)
+    print(f"Parsing input package {package}:")
     package = strip_end(package, "/")
     package = strip_end(package, sep)
     if "github.com" in package:
@@ -862,28 +865,36 @@ def remove_comments(template):
 
 
 def skeletonize(
-    in_packages,
-    output_dir=".",
-    output_suffix="",
-    add_maintainer=None,
-    version=None,
-    git_tag=None,
-    cran_url=None,
-    recursive=False,
-    archive=True,
-    version_compare=False,
-    update_policy="",
-    r_interp="r-base",
-    use_binaries_ver=None,
-    use_noarch_generic=False,
-    use_when_no_binary: Literal["error" | "src" | "old" | "old-src"] = "src",
-    use_rtools_win=False,
-    config=None,
-    variant_config_files=None,
-    allow_archived=False,
-    add_cross_r_base=False,
-    no_comments=False,
-):
+    in_packages: list[str],
+    output_dir: str = ".",
+    output_suffix: str = "",
+    add_maintainer: str | None = None,
+    version: str | None = None,
+    git_tag: str | None = None,
+    cran_url: str | None = None,
+    recursive: bool = False,
+    archive: bool = True,
+    version_compare: bool = False,
+    update_policy: Literal[
+        "error",
+        "skip-up-to-date",
+        "skip-existing",
+        "overwrite",
+        "merge-keep-build-num",
+        "merge-incr-build-num",
+    ]
+    | None = None,
+    r_interp: str = "r-base",
+    use_binaries_ver: str | None = None,
+    use_noarch_generic: bool = False,
+    use_when_no_binary: Literal["error", "src", "old", "old-src"] = "src",
+    use_rtools_win: bool = False,
+    config: Config | None = None,
+    variant_config_files: list[str] | None = None,
+    allow_archived: bool = False,
+    add_cross_r_base: bool = False,
+    no_comments: bool = False,
+) -> None:
     if (
         use_when_no_binary != "error"
         and use_when_no_binary != "src"
@@ -1026,7 +1037,7 @@ def skeletonize(
                 session = get_session(output_dir)
                 cran_index = get_cran_index(cran_url, session)
             if pkg_name.lower() not in cran_index:
-                sys.exit("Package %s not found" % pkg_name)
+                sys.exit(f"Package {pkg_name} not found")
             package, cran_version = cran_index[pkg_name.lower()]
             if cran_version and (not version or version == cran_version):
                 version = cran_version
@@ -1037,8 +1048,7 @@ def skeletonize(
                 sys.exit(1)
             elif not version and not cran_version and not allow_archived:
                 print(
-                    "ERROR: Package %s is archived; to build, use --allow-archived or a --version value"
-                    % pkg_name
+                    f"ERROR: Package {pkg_name} is archived; to build, use --allow-archived or a --version value"
                 )
                 sys.exit(1)
             else:
@@ -1088,7 +1098,11 @@ def skeletonize(
         script_env = []
         extra_recipe_maintainers = []
         build_number = 0
-        if update_policy.startswith("merge") and inputs["old-metadata"]:
+        if (
+            update_policy
+            and update_policy.startswith("merge")
+            and inputs["old-metadata"]
+        ):
             m = inputs["old-metadata"]
             patches = make_array(m, "source/patches")
             script_env = make_array(m, "build/script_env")
@@ -1310,7 +1324,7 @@ def skeletonize(
         if cran_package is None:
             cran_package = get_archive_metadata(description_path)
         d["cran_metadata"] = "\n".join(
-            ["# %s" % line for line in cran_package["orig_lines"] if line]
+            [f"# {line}" for line in cran_package["orig_lines"] if line]
         )
 
         # Render the source and binaryN keys
@@ -1362,7 +1376,7 @@ def skeletonize(
             d["summary"] = " " + yaml_quote_string(cran_package["Description"])
 
         if "Suggests" in cran_package and not no_comments:
-            d["suggests"] = "# Suggests: %s" % cran_package["Suggests"]
+            d["suggests"] = "# Suggests: {}".format(cran_package["Suggests"])
         else:
             d["suggests"] = ""
 
@@ -1574,7 +1588,7 @@ def skeletonize(
                                 )
                                 package_list.append(lower_name)
 
-            d["%s_depends" % dep_type] = "".join(deps)
+            d[f"{dep_type}_depends"] = "".join(deps)
 
     if no_comments:
         global CRAN_BUILD_SH_SOURCE, CRAN_META
@@ -1588,7 +1602,7 @@ def skeletonize(
             if update_policy == "error":
                 raise RuntimeError(
                     "directory already exists "
-                    "(and --update-policy is 'error'): %s" % dir_path
+                    f"(and --update-policy is 'error'): {dir_path}"
                 )
             elif update_policy == "overwrite":
                 rm_rf(dir_path)
@@ -1611,7 +1625,7 @@ def skeletonize(
             makedirs(join(dir_path))
         except:
             pass
-        print("Writing recipe for %s" % package.lower())
+        print(f"Writing recipe for {package.lower()}")
         with open(join(dir_path, "meta.yaml"), "w") as f:
             f.write(clear_whitespace(CRAN_META.format(**d)))
         if not exists(join(dir_path, "build.sh")) or update_policy == "overwrite":
@@ -1668,14 +1682,14 @@ def get_outdated(output_dir, cran_index, packages=()):
             continue
 
         if recipe_name not in cran_index:
-            print("Skipping %s, not found on CRAN" % recipe)
+            print(f"Skipping {recipe}, not found on CRAN")
             continue
 
         version_compare(
             join(output_dir, recipe), cran_index[recipe_name][1].replace("-", "_")
         )
 
-        print("Updating %s" % recipe)
+        print(f"Updating {recipe}")
         to_update.append(recipe_name)
 
     return to_update

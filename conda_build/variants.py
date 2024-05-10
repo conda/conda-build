@@ -13,12 +13,12 @@ from collections import OrderedDict
 from copy import copy
 from functools import lru_cache
 from itertools import product
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import yaml
 from conda.base.context import context
 
-from .conda_interface import cc_conda_build
 from .deprecations import deprecated
 from .utils import ensure_list, islist, on_win, trim_empty_keys
 from .version import _parse as parse_version
@@ -234,8 +234,8 @@ def find_config_files(metadata_or_path, config):
 
     if not files and not config.ignore_system_variants:
         # user config
-        if cc_conda_build.get("config_file"):
-            cfg = resolve(cc_conda_build["config_file"])
+        if config_file := context.conda_build.get("config_file"):
+            cfg = resolve(config_file)
         else:
             cfg = resolve(os.path.join("~", "conda_build_config.yaml"))
         if os.path.isfile(cfg):
@@ -746,13 +746,13 @@ def find_used_variables_in_text(variant, recipe_text, selectors_only=False):
             continue
         v_regex = re.escape(v)
         v_req_regex = "[-_]".join(map(re.escape, v.split("_")))
-        variant_regex = r"\{\s*(?:pin_[a-z]+\(\s*?['\"])?%s[^'\"]*?\}\}" % v_regex
-        selector_regex = r"^[^#\[]*?\#?\s\[[^\]]*?(?<![_\w\d])%s[=\s<>!\]]" % v_regex
+        variant_regex = rf"\{{\s*(?:pin_[a-z]+\(\s*?['\"])?{v_regex}[^'\"]*?\}}\}}"
+        selector_regex = rf"^[^#\[]*?\#?\s\[[^\]]*?(?<![_\w\d]){v_regex}[=\s<>!\]]"
         conditional_regex = (
             r"(?:^|[^\{])\{%\s*(?:el)?if\s*.*" + v_regex + r"\s*(?:[^%]*?)?%\}"
         )
         # plain req name, no version spec.  Look for end of line after name, or comment or selector
-        requirement_regex = r"^\s+\-\s+%s\s*(?:\s[\[#]|$)" % v_req_regex
+        requirement_regex = rf"^\s+\-\s+{v_req_regex}\s*(?:\s[\[#]|$)"
         if selectors_only:
             all_res.insert(0, selector_regex)
         else:
@@ -767,23 +767,39 @@ def find_used_variables_in_text(variant, recipe_text, selectors_only=False):
     return used_variables
 
 
-def find_used_variables_in_shell_script(variant, file_path):
-    with open(file_path) as f:
-        text = f.read()
-    used_variables = set()
-    for v in variant:
-        variant_regex = rf"(^[^$]*?\$\{{?\s*{re.escape(v)}\s*[\s|\}}])"
-        if re.search(variant_regex, text, flags=re.MULTILINE | re.DOTALL):
-            used_variables.add(v)
-    return used_variables
+def find_used_variables_in_shell_script(
+    variants: Iterable[str],
+    file_path: str | os.PathLike | Path,
+) -> set[str]:
+    text = Path(file_path).read_text()
+    return {
+        variant
+        for variant in variants
+        if (
+            variant in text  # str in str is faster than re.search
+            and re.search(
+                rf"(^[^$]*?\$\{{?\s*{re.escape(variant)}\s*[\s|\}}])",
+                text,
+                flags=re.MULTILINE | re.DOTALL,
+            )
+        )
+    }
 
 
-def find_used_variables_in_batch_script(variant, file_path):
-    with open(file_path) as f:
-        text = f.read()
-    used_variables = set()
-    for v in variant:
-        variant_regex = rf"\%{re.escape(v)}\%"
-        if re.search(variant_regex, text, flags=re.MULTILINE | re.DOTALL):
-            used_variables.add(v)
-    return used_variables
+def find_used_variables_in_batch_script(
+    variants: Iterable[str],
+    file_path: str | os.PathLike | Path,
+) -> set[str]:
+    text = Path(file_path).read_text()
+    return {
+        variant
+        for variant in variants
+        if (
+            variant in text  # str in str is faster than re.search
+            and re.search(
+                rf"\%{re.escape(variant)}\%",
+                text,
+                flags=re.MULTILINE | re.DOTALL,
+            )
+        )
+    }

@@ -110,19 +110,19 @@ class BuildLockError(CondaBuildException):
 class OverLinkingError(RuntimeError):
     def __init__(self, error, *args):
         self.error = error
-        self.msg = "overlinking check failed \n%s" % (error)
+        self.msg = f"overlinking check failed \n{error}"
         super().__init__(self.msg)
 
 
 class OverDependingError(RuntimeError):
     def __init__(self, error, *args):
         self.error = error
-        self.msg = "overdepending check failed \n%s" % (error)
+        self.msg = f"overdepending check failed \n{error}"
         super().__init__(self.msg)
 
 
 class RunPathError(RuntimeError):
     def __init__(self, error, *args):
         self.error = error
-        self.msg = "runpaths check failed \n%s" % (error)
+        self.msg = f"runpaths check failed \n{error}"
         super().__init__(self.msg)

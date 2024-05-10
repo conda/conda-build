@@ -13,6 +13,8 @@ from functools import partial
 from pathlib import Path
 from subprocess import PIPE, Popen
 
+from conda.models.version import VersionOrder
+
 from ..utils import on_mac, on_win, rec_glob
 from .external import find_executable
 
@@ -963,7 +965,6 @@ def get_static_lib_exports_dumpbin(filename):
                     results.append((result, version))
                 except:
                     pass
-        from ..conda_interface import VersionOrder
 
         results = sorted(results, key=lambda x: VersionOrder(x[1]))
         dumpbin_exe = results[-1][0]
@@ -1124,9 +1125,9 @@ def get_symbols(file, defined=True, undefined=True, notexported=False, arch="nat
         )
         if binary.__class__ != lief.MachO.Binary:
             if isinstance(s, str):
-                s_name = "%s" % s
+                s_name = f"{s}"
             else:
-                s_name = "%s" % s.name
+                s_name = f"{s.name}"
                 if s.exported and s.imported:
                     print(f"Weird, symbol {s.name} is both imported and exported")
                 if s.exported:
@@ -1135,16 +1136,16 @@ def get_symbols(file, defined=True, undefined=True, notexported=False, arch="nat
                 elif s.imported:
                     is_undefined = False
         else:
-            s_name = "%s" % s.name
+            s_name = f"{s.name}"
             is_notexported = False if s.type & 1 else True
 
         # print("{:32s} : s.type 0b{:020b}, s.value 0b{:020b}".format(s.name, s.type, s.value))
         # print("s.value 0b{:020b} :: s.type 0b{:020b}, {:32s}".format(s.value, s.type, s.name))
         if notexported is True or is_notexported is False:
             if is_undefined and undefined:
-                res.append("%s" % s_name)
+                res.append(f"{s_name}")
             elif not is_undefined and defined:
-                res.append("%s" % s_name)
+                res.append(f"{s_name}")
     return res
 
 
