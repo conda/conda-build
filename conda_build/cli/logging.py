@@ -53,6 +53,9 @@ def init_logging() -> None:
     When using conda-build as a CLI tool (not as a library) we wish to limit logging to
     avoid duplication and to otherwise offer some default behavior.
     """
+    # undo conda messing with the root logger
+    logging.getLogger(None).setLevel(logging.WARNING)
+
     config_file = context.conda_build.get("log_config_file")
     if config_file:
         config_file = Path(os.path.expandvars(config_file)).expanduser().resolve()
