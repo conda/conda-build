@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from __future__ import annotations
 
-import contextlib
 import logging
 import multiprocessing
 import os
@@ -12,6 +11,7 @@ import subprocess
 import sys
 import warnings
 from collections import defaultdict
+from contextlib import nullcontext
 from functools import lru_cache
 from glob import glob
 from os.path import join, normpath
@@ -838,16 +838,9 @@ def get_install_actions(
     global cached_precs
     global last_index_ts
 
-    conda_log_level = logging.WARNING
     specs = list(specs)
     if specs:
         specs.extend(context.create_default_packages)
-    if verbose or debug:
-        capture = contextlib.nullcontext
-        if debug:
-            conda_log_level = logging.DEBUG
-    else:
-        capture = utils.capture
     for feature, value in feature_list:
         if value:
             specs.append(f"{feature}@")
@@ -881,8 +874,8 @@ def get_install_actions(
         # this is hiding output like:
         #    Fetching package metadata ...........
         #    Solving package specifications: ..........
-        with utils.LoggingContext(conda_log_level):
-            with capture():
+        with utils.LoggingContext(logging.DEBUG if debug else logging.WARNING):
+            with nullcontext() if verbose or debug else utils.capture():
                 try:
                     _actions = _install_actions(prefix, index, specs, subdir=subdir)
                     precs = _actions["LINK"]
