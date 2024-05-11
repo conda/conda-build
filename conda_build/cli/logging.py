@@ -63,6 +63,12 @@ def init_logging() -> None:
 
     log = logging.getLogger("conda_build")
 
+    # historically conda_build has defaulted the logging to INFO and so all of the
+    # log.info is viewed as default output, until we convert all of the existing
+    # log.info to standard print statements we will need to continue defaulting to INFO
+    if log.level == logging.NOTSET:
+        log.setLevel(logging.INFO)
+
     # we don't want propagation in CLI, but we do want it in tests
     # this is a pytest limitation: https://github.com/pytest-dev/pytest/issues/3697
     log.propagate = "PYTEST_CURRENT_TEST" in os.environ
