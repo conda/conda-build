@@ -10,17 +10,11 @@ from importlib import import_module as _import_module
 from io import StringIO as _StringIO
 
 from conda import __version__
-from conda.auxlib.entity import EntityEncoder as _EntityEncoder
-from conda.base.constants import PREFIX_PLACEHOLDER as _PREFIX_PLACEHOLDER
 from conda.base.context import context as _context
 from conda.base.context import determine_target_prefix as _determine_target_prefix
 from conda.base.context import non_x86_machines as _non_x86_linux_machines
 from conda.base.context import reset_context as _reset_context
-from conda.cli.common import spec_from_line as _spec_from_line
-from conda.cli.common import specs_from_args as _specs_from_args
-from conda.cli.common import specs_from_url as _specs_from_url
 from conda.common.path import win_path_to_unix as _win_path_to_unix
-from conda.common.toposort import _toposort as __toposort
 from conda.core.package_cache_data import (
     ProgressiveFetchExtract as _ProgressiveFetchExtract,
 )
@@ -31,154 +25,15 @@ from conda.exceptions import LockError as _LockError
 from conda.exceptions import NoPackagesFoundError as _NoPackagesFoundError
 from conda.exceptions import PaddingError as _PaddingError
 from conda.exceptions import UnsatisfiableError as _UnsatisfiableError
-from conda.gateways.connection.download import TmpDownload as _TmpDownload
-from conda.gateways.connection.download import download as _download
-from conda.gateways.disk.create import TemporaryDirectory as _TemporaryDirectory
-from conda.gateways.disk.link import lchmod as _lchmod
 from conda.misc import untracked as _untracked
 from conda.misc import walk_prefix as _walk_prefix
 from conda.models.channel import Channel as _Channel
 from conda.models.channel import get_conda_build_local_url as _get_conda_build_local_url
-from conda.models.enums import PathType as _PathType
-from conda.models.match_spec import MatchSpec as _MatchSpec
-from conda.models.records import PackageRecord as _PackageRecord
-from conda.models.version import VersionOrder as _VersionOrder
-from conda.models.version import normalized_version as _normalized_version
-from conda.resolve import Resolve as _Resolve
-from conda.utils import human_bytes as _human_bytes
 from conda.utils import unix_path_to_win as _unix_path_to_win
 from conda.utils import url_path as _url_path
 
 from .deprecations import deprecated
-from .utils import rm_rf as _rm_rf
 
-deprecated.constant(
-    "24.5",
-    "24.7",
-    "PathType",
-    _PathType,
-    addendum="Use `conda.models.enums.PathType` instead.",
-)
-deprecated.constant(
-    "24.5",
-    "24.7",
-    "MatchSpec",
-    _MatchSpec,
-    addendum="Use `conda.models.match_spec.MatchSpec` instead.",
-)
-deprecated.constant(
-    "24.5",
-    "24.7",
-    "PackageRecord",
-    _PackageRecord,
-    addendum="Use `conda.models.records.PackageRecord` instead.",
-)
-deprecated.constant(
-    "24.5",
-    "24.7",
-    "VersionOrder",
-    _VersionOrder,
-    addendum="Use `conda.models.version.VersionOrder` instead.",
-)
-deprecated.constant(
-    "24.5",
-    "24.7",
-    "normalized_version",
-    _normalized_version,
-    addendum="Use `conda.models.version.normalized_version` instead.",
-)
-
-deprecated.constant(
-    "24.5",
-    "24.7",
-    "EntityEncoder",
-    _EntityEncoder,
-    addendum="Use `conda.auxlib.entity.EntityEncoder` instead.",
-)
-deprecated.constant(
-    "24.5",
-    "24.7",
-    "Resolve",
-    _Resolve,
-    addendum="Use `conda.resolve.Resolve` instead.",
-)
-deprecated.constant(
-    "24.5",
-    "24.7",
-    "TemporaryDirectory",
-    _TemporaryDirectory,
-    addendum="Use `conda.gateways.disk.create.TemporaryDirectory` instead.",
-)
-deprecated.constant(
-    "24.5",
-    "24.7",
-    "TmpDownload",
-    _TmpDownload,
-    addendum="Use `conda.gateways.connection.download.TmpDownload` instead.",
-)
-deprecated.constant(
-    "24.5",
-    "24.7",
-    "download",
-    _download,
-    addendum="Use `conda.gateways.connection.download.download` instead.",
-)
-deprecated.constant(
-    "24.5",
-    "24.7",
-    "_toposort",
-    __toposort,
-    addendum="Use `conda.common.toposort._toposort` instead.",
-)
-deprecated.constant(
-    "24.5",
-    "24.7",
-    "human_bytes",
-    _human_bytes,
-    addendum="Use `conda.utils.human_bytes` instead.",
-)
-deprecated.constant(
-    "24.5",
-    "24.7",
-    "lchmod",
-    _lchmod,
-    addendum="Use `conda.gateways.disk.link.lchmod` instead.",
-)
-deprecated.constant(
-    "24.5",
-    "24.7",
-    "prefix_placeholder",
-    _PREFIX_PLACEHOLDER,
-    addendum="Use `conda.base.constants.PREFIX_PLACEHOLDER` instead.",
-)
-deprecated.constant(
-    "24.5",
-    "24.7",
-    "rm_rf",
-    _rm_rf,
-    addendum="Use `conda_build.utils.rm_rf` instead.",
-)
-deprecated.constant(
-    "24.5",
-    "24.7",
-    "spec_from_line",
-    _spec_from_line,
-    addendum="Use `conda.cli.common.spec_from_line` instead.",
-)
-deprecated.constant(
-    "24.5",
-    "24.7",
-    "specs_from_args",
-    _specs_from_args,
-    addendum="Use `conda.cli.common.specs_from_args` instead.",
-)
-deprecated.constant(
-    "24.5",
-    "24.7",
-    "specs_from_url",
-    _specs_from_url,
-    addendum="Use `conda.cli.common.specs_from_url` instead.",
-)
 deprecated.constant(
     "24.5",
     "24.7",
