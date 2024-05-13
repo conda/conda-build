@@ -77,6 +77,7 @@
 * Remove `conda_build.conda_interface.get_conda_channel`. Use `conda.models.channel.Channel.from_value` instead. (#5333)
 * Remove `conda_build.conda_interface.env_path_backup_var_exists`. (#5333)
 * Remove `conda_build.conda_interface.CONDA_VERSION`. Use `conda.__version__` instead. (#5333)
+* Remove `conda_build.config.noarch_python_build_age_default`. (#5333)
 
 ### Docs
 
