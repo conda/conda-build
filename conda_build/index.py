@@ -14,7 +14,6 @@ from conda.utils import url_path
 from conda_index.index import update_index as _update_index
 
 from . import utils
-from .deprecations import deprecated
 from .utils import (
     JSONDecodeError,
     get_logger,
@@ -29,7 +28,6 @@ local_subdir = ""
 local_output_folder = ""
 cached_channels = []
 _channel_data = {}
-deprecated.constant("24.1", "24.7", "channel_data", _channel_data)
 
 # TODO: this is to make sure that the index doesn't leak tokens.  It breaks use of private channels, though.
 # os.environ['CONDA_ADD_ANACONDA_TOKEN'] = "false"
