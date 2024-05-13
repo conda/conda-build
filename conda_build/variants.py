@@ -18,7 +18,6 @@ from typing import TYPE_CHECKING
 import yaml
 from conda.base.context import context
 
-from .deprecations import deprecated
 from .utils import ensure_list, get_logger, islist, on_win, trim_empty_keys
 from .version import _parse as parse_version
 
@@ -701,7 +700,6 @@ def get_package_variants(recipedir_or_metadata, config=None, variants=None):
     return filter_combined_spec_to_used_keys(combined_spec, specs=specs)
 
 
-@deprecated.argument("24.5", "24.7", "loop_only")
 def get_vars(variants: Iterable[dict[str, Any]]) -> set[str]:
     """For purposes of naming/identifying, provide a way of identifying which variables contribute
     to the matrix dimensionality"""

@@ -83,7 +83,8 @@
 * Remove `conda_build.utils._convert_lists_to_sets`. Use `frozendict.deepfreeze` instead. (#5333)
 * Remove `conda_build.utils.HashableDict`. Use `frozendict.deepfreeze` instead. (#5333)
 * Remove `conda_build.utils.represent_hashabledict`. Use `frozendict.deepfreeze` instead. (#5333)
-* Remove `conda_build.utils.rm_rf(config)` argument. (#5333)
+* Remove `conda_build.utils.rm_rf(config)`. (#5333)
+* Remove `conda_build.variants.get_vars(loop_only)`. (#5333)
 
 ### Docs
 
