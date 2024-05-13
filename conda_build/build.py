@@ -3740,7 +3740,7 @@ def build_tree(
                         )
                         warnings.warn(
                             f"Recipe {metadata.name()} has build.script_env setting environment "
-                            f" variable(s): {env_name_list}, but tests are not run.",
+                            f" variable(s): {env_name_list}, but tests are not run."
                             " Please ensure that these are set similarly at test time.",
                             UserWarning,
                         )

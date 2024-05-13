@@ -1882,9 +1882,14 @@ def test_script_env_warnings(testing_config, recwarn):
     recipe_dir = os.path.join(metadata_dir, "_script_env_warnings")
     token = "CONDA_BUILD_PYTEST_SCRIPT_ENV_TEST_TOKEN"
 
-    def assert_keyword(keyword):
-        messages = [str(w.message) for w in recwarn.list]
-        assert any([token in m and keyword in m for m in messages])
+    def assert_keyword(keyword, present=True):
+        messages = "\n".join([str(w.message) for w in recwarn.list])
+        if present:
+            assert token in messages
+            assert keyword in messages
+        else:
+            assert token not in messages
+            assert keyword not in messages
         recwarn.clear()
 
     api.build(recipe_dir, config=testing_config)
@@ -1892,12 +1897,12 @@ def test_script_env_warnings(testing_config, recwarn):
 
     os.environ[token] = "SECRET"
     try:
+        # warn when notest
+        api.build(recipe_dir, config=testing_config, notest=True)
+        assert_keyword("tests are not run")
+        # no warning when tests are run
         api.build(recipe_dir, config=testing_config)
-        assert_keyword("SECRET")
-
-        testing_config.suppress_variables = True
-        api.build(recipe_dir, config=testing_config)
-        assert_keyword("<hidden>")
+        assert_keyword("tests are not run", present=False)
     finally:
         os.environ.pop(token)
 
