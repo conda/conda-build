@@ -1650,14 +1650,6 @@ deprecated.constant(
     _level_formatter := logging.Formatter("%(levelname)s: %(message)s"),
 )
 
-# set filelock's logger to only show warnings by default
-logging.getLogger("filelock").setLevel(logging.WARNING)
-
-# quiet some of conda's less useful output
-logging.getLogger("conda.core.linked_data").setLevel(logging.WARNING)
-logging.getLogger("conda.gateways.disk.delete").setLevel(logging.WARNING)
-logging.getLogger("conda.gateways.disk.test").setLevel(logging.WARNING)
-
 
 @deprecated(
     "24.5",
