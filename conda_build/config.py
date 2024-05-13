@@ -781,10 +781,12 @@ class Config:
     @deprecated(
         "24.5",
         "24.7",
-        addendum="Use `conda.base.context.context.override_channels` instead.",
+        addendum="Defer to `conda.base.context.context.channels` instead.",
     )
-    def override_channels(self):
-        return context.override_channels
+    def override_channels(self) -> bool:
+        return bool(
+            context._argparse_args and context._argparse_args.get("override_channels")
+        )
 
     def clean(self, remove_folders=True):
         # build folder is the whole burrito containing envs and source folders
