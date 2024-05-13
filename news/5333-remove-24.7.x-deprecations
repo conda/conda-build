@@ -79,6 +79,7 @@
 * Remove `conda_build.conda_interface.CONDA_VERSION`. Use `conda.__version__` instead. (#5333)
 * Remove `conda_build.config.noarch_python_build_age_default`. (#5333)
 * Remove `conda_build.index.channel_data`. (#5333)
+* Remove `conda_build.config.Config.override_channels`. Use `conda.base.context.context.channels` instead. (#5333)
 
 ### Docs
 
