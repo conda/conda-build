@@ -80,6 +80,10 @@
 * Remove `conda_build.config.noarch_python_build_age_default`. (#5333)
 * Remove `conda_build.index.channel_data`. (#5333)
 * Remove `conda_build.config.Config.override_channels`. Use `conda.base.context.context.channels` instead. (#5333)
+* Remove `conda_build.utils._convert_lists_to_sets`. Use `frozendict.deepfreeze` instead. (#5333)
+* Remove `conda_build.utils.HashableDict`. Use `frozendict.deepfreeze` instead. (#5333)
+* Remove `conda_build.utils.represent_hashabledict`. Use `frozendict.deepfreeze` instead. (#5333)
+* Remove `conda_build.utils.rm_rf(config)` argument. (#5333)
 
 ### Docs
 
