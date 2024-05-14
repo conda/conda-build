@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from __future__ import annotations
 
-import contextlib
 import logging
 import multiprocessing
 import os
@@ -12,9 +11,9 @@ import subprocess
 import sys
 import warnings
 from collections import defaultdict
+from contextlib import nullcontext
 from functools import lru_cache
 from glob import glob
-from logging import getLogger
 from os.path import join, normpath
 from typing import TYPE_CHECKING
 
@@ -69,7 +68,7 @@ if TYPE_CHECKING:
         LINK: list[PackageRecord]
 
 
-log = getLogger(__name__)
+log = logging.getLogger(__name__)
 
 # these are things that we provide env vars for more explicitly.  This list disables the
 #    pass-through of variant values to env vars for these keys.
@@ -125,7 +124,6 @@ def verify_git_repo(
     git_exe, git_dir, git_url, git_commits_since_tag, debug=False, expected_rev="HEAD"
 ):
     env = os.environ.copy()
-    log = utils.get_logger(__name__)
 
     stderr = None if debug else subprocess.DEVNULL
 
@@ -240,7 +238,6 @@ def get_git_info(git_exe, repo, debug):
     :return:
     """
     d = {}
-    log = utils.get_logger(__name__)
 
     stderr = None if debug else subprocess.DEVNULL
 
@@ -841,17 +838,9 @@ def get_install_actions(
     global cached_precs
     global last_index_ts
 
-    log = utils.get_logger(__name__)
-    conda_log_level = logging.WARN
     specs = list(specs)
     if specs:
         specs.extend(context.create_default_packages)
-    if verbose or debug:
-        capture = contextlib.nullcontext
-        if debug:
-            conda_log_level = logging.DEBUG
-    else:
-        capture = utils.capture
     for feature, value in feature_list:
         if value:
             specs.append(f"{feature}@")
@@ -885,8 +874,8 @@ def get_install_actions(
         # this is hiding output like:
         #    Fetching package metadata ...........
         #    Solving package specifications: ..........
-        with utils.LoggingContext(conda_log_level):
-            with capture():
+        with utils.LoggingContext(logging.DEBUG if debug else logging.WARNING):
+            with nullcontext() if verbose or debug else utils.capture():
                 try:
                     precs = _install_actions(prefix, index, specs)["LINK"]
                 except (NoPackagesFoundError, UnsatisfiableError) as exc:
@@ -901,7 +890,7 @@ def get_install_actions(
                     BuildLockError,
                 ) as exc:
                     if "lock" in str(exc):
-                        log.warn(
+                        log.warning(
                             "failed to get package records, retrying.  exception was: %s",
                             str(exc),
                         )
@@ -922,7 +911,7 @@ def get_install_actions(
                             ):
                                 pkg_dir = os.path.dirname(pkg_dir)
                                 folder += 1
-                            log.warn(
+                            log.warning(
                                 "I think conda ended up with a partial extraction for %s. "
                                 "Removing the folder and retrying",
                                 pkg_dir,
@@ -930,7 +919,7 @@ def get_install_actions(
                             if pkg_dir in context.pkgs_dirs and os.path.isdir(pkg_dir):
                                 utils.rm_rf(pkg_dir)
                     if retries < max_env_retry:
-                        log.warn(
+                        log.warning(
                             "failed to get package records, retrying.  exception was: %s",
                             str(exc),
                         )
@@ -987,18 +976,11 @@ def create_env(
     """
     Create a conda envrionment for the given prefix and specs.
     """
-    if config.debug:
-        external_logger_context = utils.LoggingContext(logging.DEBUG)
-    else:
-        external_logger_context = utils.LoggingContext(logging.WARN)
-
     if os.path.exists(prefix):
         for entry in glob(os.path.join(prefix, "*")):
             utils.rm_rf(entry)
 
-    with external_logger_context:
-        log = utils.get_logger(__name__)
-
+    with utils.LoggingContext(logging.DEBUG if config.debug else logging.WARNING):
         # if os.path.isdir(prefix):
         #     utils.rm_rf(prefix)
 
@@ -1063,20 +1045,20 @@ def create_env(
                     or isinstance(exc, PaddingError)
                 ) and config.prefix_length > 80:
                     if config.prefix_length_fallback:
-                        log.warn(
+                        log.warning(
                             "Build prefix failed with prefix length %d",
                             config.prefix_length,
                         )
-                        log.warn("Error was: ")
-                        log.warn(str(exc))
-                        log.warn(
+                        log.warning("Error was: ")
+                        log.warning(str(exc))
+                        log.warning(
                             "One or more of your package dependencies needs to be rebuilt "
                             "with a longer prefix length."
                         )
-                        log.warn(
+                        log.warning(
                             "Falling back to legacy prefix length of 80 characters."
                         )
-                        log.warn(
+                        log.warning(
                             "Your package will not install into prefixes > 80 characters."
                         )
                         config.prefix_length = 80
@@ -1098,7 +1080,7 @@ def create_env(
                         raise
                 elif "lock" in str(exc):
                     if retry < config.max_env_retry:
-                        log.warn(
+                        log.warning(
                             "failed to create env, retrying.  exception was: %s",
                             str(exc),
                         )
@@ -1124,7 +1106,7 @@ def create_env(
                         ):
                             pkg_dir = os.path.dirname(pkg_dir)
                             folder += 1
-                        log.warn(
+                        log.warning(
                             "I think conda ended up with a partial extraction for %s.  "
                             "Removing the folder and retrying",
                             pkg_dir,
@@ -1132,7 +1114,7 @@ def create_env(
                         if os.path.isdir(pkg_dir):
                             utils.rm_rf(pkg_dir)
                     if retry < config.max_env_retry:
-                        log.warn(
+                        log.warning(
                             "failed to create env, retrying.  exception was: %s",
                             str(exc),
                         )
@@ -1163,7 +1145,7 @@ def create_env(
                 if isinstance(exc, AssertionError):
                     with utils.try_acquire_locks(locks, timeout=config.timeout):
                         pkg_dir = os.path.dirname(os.path.dirname(str(exc)))
-                        log.warn(
+                        log.warning(
                             "I think conda ended up with a partial extraction for %s.  "
                             "Removing the folder and retrying",
                             pkg_dir,
@@ -1171,7 +1153,7 @@ def create_env(
                         if os.path.isdir(pkg_dir):
                             utils.rm_rf(pkg_dir)
                 if retry < config.max_env_retry:
-                    log.warn(
+                    log.warning(
                         "failed to create env, retrying.  exception was: %s", str(exc)
                     )
                     create_env(
@@ -1194,7 +1176,7 @@ def get_pkg_dirs_locks(dirs, config):
 
 
 def clean_pkg_cache(dist: str, config: Config) -> None:
-    with utils.LoggingContext(logging.DEBUG if config.debug else logging.WARN):
+    with utils.LoggingContext(logging.DEBUG if config.debug else logging.WARNING):
         locks = get_pkg_dirs_locks((config.bldpkgs_dir, *context.pkgs_dirs), config)
         with utils.try_acquire_locks(locks, timeout=config.timeout):
             for pkgs_dir in context.pkgs_dirs:

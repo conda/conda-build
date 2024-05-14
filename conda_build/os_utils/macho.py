@@ -1,5 +1,6 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+import logging
 import os
 import re
 import stat
@@ -10,6 +11,8 @@ from subprocess import PIPE, STDOUT, CalledProcessError, Popen, check_output
 from .. import utils
 from ..utils import on_mac
 from .external import find_preferably_prefixed_executable
+
+log = logging.getLogger(__name__)
 
 NO_EXT = (
     ".py",
@@ -182,7 +185,6 @@ def find_apple_cctools_executable(name, build_prefix, nofail=False):
                             .splitlines()[0]
                         )
                     except Exception as e:
-                        log = utils.get_logger(__name__)
                         log.error(
                             f"ERROR :: Found `{tool}` but is is an Apple Xcode stub executable\n"
                             f"and it returned an error:\n{e.output}"
@@ -257,8 +259,7 @@ def _chmod(filename, mode):
     try:
         os.chmod(filename, mode)
     except (OSError, utils.PermissionError) as e:
-        log = utils.get_logger(__name__)
-        log.warn(str(e))
+        log.warning(str(e))
 
 
 def install_name_tool(args, build_prefix=None, verbose=False):

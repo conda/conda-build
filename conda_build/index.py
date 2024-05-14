@@ -4,7 +4,6 @@ import json
 import logging
 import os
 import time
-from functools import partial
 from os.path import dirname
 
 from conda.base.context import context
@@ -15,12 +14,9 @@ from conda_index.index import update_index as _update_index
 
 from . import utils
 from .deprecations import deprecated
-from .utils import (
-    JSONDecodeError,
-    get_logger,
-)
+from .utils import JSONDecodeError
 
-log = get_logger(__name__)
+log = logging.getLogger(__name__)
 
 
 local_index_timestamp = 0
@@ -84,14 +80,12 @@ def get_build_index(
 
         loggers = utils.LoggingContext.default_loggers + [__name__]
         if debug:
-            log_context = partial(utils.LoggingContext, logging.DEBUG, loggers=loggers)
+            log_level = logging.DEBUG
         elif verbose:
-            log_context = partial(utils.LoggingContext, logging.WARN, loggers=loggers)
+            log_level = logging.WARNING
         else:
-            log_context = partial(
-                utils.LoggingContext, logging.CRITICAL + 1, loggers=loggers
-            )
-        with log_context():
+            log_level = logging.CRITICAL + 1
+        with utils.LoggingContext(log_level, loggers=loggers):
             # this is where we add the "local" channel.  It's a little smarter than conda, because
             #     conda does not know about our output_folder when it is not the default setting.
             if os.path.isdir(output_folder):
@@ -213,7 +207,12 @@ def _delegated_update_index(
         dir_path = parent_path
         subdirs = [dirname]
 
-    log_level = logging.DEBUG if debug else logging.INFO if verbose else logging.WARNING
+    if debug:
+        log_level = logging.DEBUG
+    elif verbose:
+        log_level = logging.INFO
+    else:
+        log_level = logging.WARNING
     with utils.LoggingContext(log_level):
         return _update_index(
             dir_path,

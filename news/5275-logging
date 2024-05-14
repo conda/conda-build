@@ -1,0 +1,27 @@
+### Enhancements
+
+* Only customize logging for conda-build's CLI. Do not mess with logging initialization when using conda-build as a library. (#5275)
+
+### Bug fixes
+
+* <news item>
+
+### Deprecations
+
+* Deprecate `conda_build.utils.reset_deduplicator`. Use `conda_build.cli.logging.DuplicateFilter.msgs.clear` instead. (#5275)
+* Deprecate `conda_build.utils.get_logger`. Use `conda.cli.logging.init_logging` instead. (#5275)
+* Deprecate `conda_build.utils.LessThanFilter`. Use `conda.cli.logging.LessThanFilter` instead. (#5275)
+* Deprecate `conda_build.utils.GreaterThanFilter`. Use `conda.cli.logging.GreaterThanFilter` instead. (#5275)
+* Deprecate `conda_build.utils.DuplicateFilter`. Use `conda.cli.logging.DuplicateFilter` instead. (#5275)
+* Deprecate `conda_build.utils.dedupe_filter`. Use `conda.cli.logging.DuplicateFilter()` instead. (#5275)
+* Deprecate `conda_build.utils.info_debug_stdout_filter`. Use `conda.cli.logging.LessThanFilter(WARNING)` instead. (#5275)
+* Deprecate `conda_build.utils.warning_error_stderr_filter`. Use `conda.cli.logging.GreaterThanFilter(INFO)` instead. (#5275)
+* Deprecate `conda_build.utils.level_formatter`. Unused. (#5275)
+
+### Docs
+
+* <news item>
+
+### Other
+
+* <news item>

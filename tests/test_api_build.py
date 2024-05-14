@@ -1859,6 +1859,7 @@ def test_extra_meta(testing_config, caplog):
     recipe_dir = os.path.join(metadata_dir, "_extra_meta")
     extra_meta_data = {"foo": "bar"}
     testing_config.extra_meta = extra_meta_data
+    caplog.set_level(logging.INFO)
     outputs = api.build(recipe_dir, config=testing_config)
     about = json.loads(package_has_file(outputs[0], "info/about.json"))
     assert "foo" in about["extra"] and about["extra"]["foo"] == "bar"

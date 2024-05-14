@@ -24,6 +24,7 @@ from ..config import (
 )
 from ..utils import LoggingContext
 from .actions import KeyValueAction
+from .logging import init_logging
 from .main_render import get_render_parser
 
 try:
@@ -35,6 +36,8 @@ except ImportError:
 if TYPE_CHECKING:
     from argparse import ArgumentParser, Namespace
     from typing import Sequence
+
+log = logging.getLogger(__name__)
 
 
 def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
@@ -531,6 +534,8 @@ def check_action(recipe, config):
 
 
 def execute(args: Sequence[str] | None = None) -> int:
+    init_logging()
+
     _, parsed = parse_args(args)
     context.__init__(argparse_args=parsed)
 

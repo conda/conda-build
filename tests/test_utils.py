@@ -1,17 +1,25 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
+
+import logging
 import os
 import subprocess
 import sys
 from pathlib import Path
-from typing import NamedTuple
+from typing import TYPE_CHECKING, NamedTuple
 
 import filelock
 import pytest
-from pytest import MonkeyPatch
+from yaml import safe_dump
 
-import conda_build.utils as utils
+from conda_build import utils
+from conda_build.cli.logging import init_logging
 from conda_build.exceptions import BuildLockError
+
+if TYPE_CHECKING:
+    from pytest import CaptureFixture, LogCaptureFixture, MonkeyPatch
+    from pytest_mock import MockerFixture
 
 
 @pytest.mark.skipif(
@@ -154,69 +162,107 @@ def test_filter_files():
     assert len(utils.filter_files(files_list, "")) == len(files_list)
 
 
-@pytest.mark.serial
-def test_logger_filtering(caplog, capfd):
-    import logging
+def test_logger_filtering(caplog: LogCaptureFixture, capsys: CaptureFixture) -> None:
+    log = logging.getLogger("conda_build.test_logger_filtering")
+    init_logging()
 
-    log = utils.get_logger(__name__, level=logging.DEBUG)
+    # temporarily override the default log levels so we can test the filtering
+    caplog.set_level(logging.DEBUG)
+    caplog.set_level(logging.DEBUG, logger="conda_build")
+
     log.debug("test debug message")
     log.info("test info message")
     log.info("test duplicate message")
     log.info("test duplicate message")
-    log.warn("test warn message")
+    log.warning("test warn message")
     log.error("test error message")
-    out, err = capfd.readouterr()
+    log.critical("test critical message")
+
+    out, err = capsys.readouterr()
     assert "test debug message" in out
-    assert "test info message" in out
-    assert "test warn message" not in out
-    assert "test error message" not in out
     assert "test debug message" not in err
+
+    assert "test info message" in out
     assert "test info message" not in err
+
+    assert "test warn message" not in out
     assert "test warn message" in err
+
+    assert "test error message" not in out
     assert "test error message" in err
-    assert caplog.text.count("duplicate") == 1
-    log.removeHandler(logging.StreamHandler(sys.stdout))
-    log.removeHandler(logging.StreamHandler(sys.stderr))
+
+    assert "test critical message" not in out
+    assert "test critical message" in err
+
+    assert out.count("test duplicate message") == 1
+
+    # the duplicate filter is on the conda_build logger, however in testing we
+    # propagate to the root logger so the root logger will still get the duplicate
+    # messages
+    assert caplog.text.count("test duplicate message") == 2
+
+    # cleanup
+    init_logging.cache_clear()
+    logging.getLogger("conda_build").handlers.clear()
 
 
-def test_logger_config_from_file(testing_workdir, capfd, mocker):
+def test_logger_config_from_file(
+    testing_workdir,
+    caplog: LogCaptureFixture,
+    capsys: CaptureFixture,
+    mocker: MockerFixture,
+) -> None:
     test_file = os.path.join(testing_workdir, "build_log_config.yaml")
-    with open(test_file, "w") as f:
-        f.write(
-            f"""
-version: 1
-formatters:
-  simple:
-    format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-handlers:
-  console:
-    class: logging.StreamHandler
-    level: WARN
-    formatter: simple
-    stream: ext://sys.stdout
-loggers:
-  {__name__}:
-    level: WARN
-    handlers: [console]
-    propagate: no
-root:
-  level: DEBUG
-  handlers: [console]
-"""
+    Path(test_file).write_text(
+        safe_dump(
+            {
+                "version": 1,
+                "formatters": {
+                    "simple": {
+                        "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+                    }
+                },
+                "handlers": {
+                    "console": {
+                        "class": "logging.StreamHandler",
+                        "level": "WARN",
+                        "formatter": "simple",
+                        "stream": "ext://sys.stdout",
+                    }
+                },
+                "loggers": {
+                    "conda_build": {
+                        "level": "WARN",
+                        "handlers": ["console"],
+                        "propagate": False,
+                    }
+                },
+                "root": {"level": "DEBUG", "handlers": ["console"]},
+            }
         )
+    )
+
     mocker.patch(
         "conda.base.context.Context.conda_build",
         new_callable=mocker.PropertyMock,
         return_value={"log_config_file": test_file},
     )
-    log = utils.get_logger(__name__)
+
+    log = logging.getLogger("conda_build.test_logger_config_from_file")
+    init_logging()
+
     # default log level is INFO, but our config file should set level to DEBUG
-    log.warn("test message")
+    log.warning("test message")
+
     # output should have gone to stdout according to config above.
-    out, err = capfd.readouterr()
+    out, err = capsys.readouterr()
     assert "test message" in out
     # make sure that it is not in stderr - this is testing override of defaults.
     assert "test message" not in err
+
+    # cleanup
+    init_logging.cache_clear()
+    logging.getLogger("conda_build").handlers.clear()
 
 
 def test_ensure_valid_spec():

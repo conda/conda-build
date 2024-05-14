@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import logging
 import os
 import re
 import sys
@@ -54,6 +55,8 @@ except ImportError:
         "Error: could not import yaml (required to read meta.yaml "
         "files of conda recipes)"
     )
+
+log = logging.getLogger(__name__)
 
 try:
     Loader = yaml.CLoader
@@ -195,7 +198,7 @@ def get_selectors(config: Config) -> dict[str, bool]:
     if not np:
         np = defaults["numpy"]
         if config.verbose:
-            utils.get_logger(__name__).warn(
+            log.warning(
                 "No numpy version specified in conda_build_config.yaml.  "
                 "Falling back to default numpy value of {}".format(defaults["numpy"])
             )
@@ -269,7 +272,6 @@ def eval_selector(selector_string, namespace, variants_in_place):
     except NameError as e:
         missing_var = parseNameNotFound(e)
         if variants_in_place:
-            log = utils.get_logger(__name__)
             log.debug(
                 "Treating unknown selector '" + missing_var + "' as if it was False."
             )
@@ -367,7 +369,6 @@ def ensure_valid_fields(meta):
 
 
 def _trim_None_strings(meta_dict):
-    log = utils.get_logger(__name__)
     for key, value in meta_dict.items():
         if hasattr(value, "keys"):
             meta_dict[key] = _trim_None_strings(value)
@@ -955,7 +956,6 @@ def finalize_outputs_pass(
         if metadata.skip():
             continue
         try:
-            log = utils.get_logger(__name__)
             # We should reparse the top-level recipe to get all of our dependencies fixed up.
             # we base things on base_metadata because it has the record of the full origin recipe
             if base_metadata.config.verbose:
@@ -1005,8 +1005,7 @@ def finalize_outputs_pass(
             if not permit_unsatisfiable_variants:
                 raise
             else:
-                log = utils.get_logger(__name__)
-                log.warn(
+                log.warning(
                     "Could not finalize metadata due to missing dependencies: "
                     f"{e.packages}"
                 )
@@ -1225,9 +1224,8 @@ class MetaData:
         """
         assert not self.final, "modifying metadata after finalization"
 
-        log = utils.get_logger(__name__)
         if kw:
-            log.warn(
+            log.warning(
                 "using unsupported internal conda-build function `parse_again`.  Please use "
                 "conda_build.api.render instead."
             )
@@ -1440,8 +1438,7 @@ class MetaData:
             # The 'source' section can be written a list, in which case the name
             # is passed in with an index, e.g. get_value('source/0/git_url')
             if index is None:
-                log = utils.get_logger(__name__)
-                log.warn(
+                log.warning(
                     f"No index specified in get_value('{name}'). Assuming index 0."
                 )
                 index = 0
@@ -2205,7 +2202,7 @@ class MetaData:
             output = output_matches[output_index] if output_matches else ""
         except ValueError:
             if not self.path and self.meta.get("extra", {}).get("parent_recipe"):
-                utils.get_logger(__name__).warn(
+                log.warning(
                     f"Didn't match any output in raw metadata.  Target value was: {output_name}"
                 )
                 output = ""
@@ -2897,8 +2894,7 @@ class MetaData:
                     find_used_variables_in_batch_script(self.config.variant, script)
                 )
             else:
-                log = utils.get_logger(__name__)
-                log.warn(
+                log.warning(
                     f"Not detecting used variables in output script {script}; conda-build only knows "
                     "how to search .sh and .bat files right now."
                 )
