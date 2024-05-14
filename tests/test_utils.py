@@ -1,21 +1,25 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
+
 import logging
 import os
 import subprocess
 import sys
 from pathlib import Path
-from typing import NamedTuple
+from typing import TYPE_CHECKING, NamedTuple
 
 import filelock
 import pytest
-from pytest import CaptureFixture, LogCaptureFixture, MonkeyPatch
-from pytest_mock import MockerFixture
 from yaml import safe_dump
 
 from conda_build import utils
 from conda_build.cli.logging import init_logging
 from conda_build.exceptions import BuildLockError
+
+if TYPE_CHECKING:
+    from pytest import CaptureFixture, LogCaptureFixture, MonkeyPatch
+    from pytest_mock import MockerFixture
 
 
 @pytest.mark.skipif(
@@ -158,11 +162,13 @@ def test_filter_files():
     assert len(utils.filter_files(files_list, "")) == len(files_list)
 
 
-@pytest.mark.serial
 def test_logger_filtering(caplog: LogCaptureFixture, capsys: CaptureFixture) -> None:
-    log = logging.getLogger("conda_build.tests")
+    log = logging.getLogger("conda_build.test_logger_filtering")
     init_logging()
+
+    # temporarily override the default log levels so we can test the filtering
     caplog.set_level(logging.DEBUG)
+    caplog.set_level(logging.DEBUG, logger="conda_build")
 
     log.debug("test debug message")
     log.info("test info message")
@@ -170,6 +176,7 @@ def test_logger_filtering(caplog: LogCaptureFixture, capsys: CaptureFixture) -> 
     log.info("test duplicate message")
     log.warning("test warn message")
     log.error("test error message")
+    log.critical("test critical message")
 
     out, err = capsys.readouterr()
     assert "test debug message" in out
@@ -184,11 +191,19 @@ def test_logger_filtering(caplog: LogCaptureFixture, capsys: CaptureFixture) -> 
     assert "test error message" not in out
     assert "test error message" in err
 
+    assert "test critical message" not in out
+    assert "test critical message" in err
+
     assert out.count("test duplicate message") == 1
 
+    # the duplicate filter is on the conda_build logger, however in testing we
+    # propagate to the root logger so the root logger will still get the duplicate
+    # messages
+    assert caplog.text.count("test duplicate message") == 2
+
     # cleanup
-    log.removeHandler(logging.StreamHandler(sys.stdout))
-    log.removeHandler(logging.StreamHandler(sys.stderr))
+    init_logging.cache_clear()
+    logging.getLogger("conda_build").handlers.clear()
 
 
 def test_logger_config_from_file(
@@ -233,7 +248,7 @@ def test_logger_config_from_file(
         return_value={"log_config_file": test_file},
     )
 
-    log = logging.getLogger("conda_build.tests")
+    log = logging.getLogger("conda_build.test_logger_config_from_file")
     init_logging()
 
     # default log level is INFO, but our config file should set level to DEBUG
@@ -244,6 +259,10 @@ def test_logger_config_from_file(
     assert "test message" in out
     # make sure that it is not in stderr - this is testing override of defaults.
     assert "test message" not in err
+
+    # cleanup
+    init_logging.cache_clear()
+    logging.getLogger("conda_build").handlers.clear()
 
 
 def test_ensure_valid_spec():
