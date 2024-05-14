@@ -174,7 +174,7 @@ def test_logger_filtering(caplog: LogCaptureFixture, capsys: CaptureFixture) -> 
     log.info("test info message")
     log.info("test duplicate message")
     log.info("test duplicate message")
-    log.warn("test warn message")
+    log.warning("test warn message")
     log.error("test error message")
     log.critical("test critical message")
 
@@ -252,7 +252,7 @@ def test_logger_config_from_file(
     init_logging()
 
     # default log level is INFO, but our config file should set level to DEBUG
-    log.warn("test message")
+    log.warning("test message")
 
     # output should have gone to stdout according to config above.
     out, err = capsys.readouterr()

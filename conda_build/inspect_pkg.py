@@ -258,7 +258,7 @@ def inspect_linkages(
                 if relative:
                     precs = list(which_package(relative, prefix))
                     if len(precs) > 1:
-                        log.warn(
+                        log.warning(
                             "Warning: %s comes from multiple packages: %s",
                             path,
                             comma_join(map(str, precs)),

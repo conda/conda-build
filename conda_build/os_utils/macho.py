@@ -259,7 +259,7 @@ def _chmod(filename, mode):
     try:
         os.chmod(filename, mode)
     except (OSError, utils.PermissionError) as e:
-        log.warn(str(e))
+        log.warning(str(e))
 
 
 def install_name_tool(args, build_prefix=None, verbose=False):

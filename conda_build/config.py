@@ -327,7 +327,7 @@ class Config:
 
     @arch.setter
     def arch(self, value):
-        log.warn(
+        log.warning(
             "Setting build arch. This is only useful when pretending to be on another "
             "arch, such as for rendering necessary dependencies on a non-native arch. "
             "I trust that you know what you're doing."
@@ -342,7 +342,7 @@ class Config:
 
     @platform.setter
     def platform(self, value):
-        log.warn(
+        log.warning(
             "Setting build platform. This is only useful when "
             "pretending to be on another platform, such as "
             "for rendering necessary dependencies on a non-native "

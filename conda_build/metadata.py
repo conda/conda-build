@@ -198,7 +198,7 @@ def get_selectors(config: Config) -> dict[str, bool]:
     if not np:
         np = defaults["numpy"]
         if config.verbose:
-            log.warn(
+            log.warning(
                 "No numpy version specified in conda_build_config.yaml.  "
                 "Falling back to default numpy value of {}".format(defaults["numpy"])
             )
@@ -1005,7 +1005,7 @@ def finalize_outputs_pass(
             if not permit_unsatisfiable_variants:
                 raise
             else:
-                log.warn(
+                log.warning(
                     "Could not finalize metadata due to missing dependencies: "
                     f"{e.packages}"
                 )
@@ -1225,7 +1225,7 @@ class MetaData:
         assert not self.final, "modifying metadata after finalization"
 
         if kw:
-            log.warn(
+            log.warning(
                 "using unsupported internal conda-build function `parse_again`.  Please use "
                 "conda_build.api.render instead."
             )
@@ -1438,7 +1438,7 @@ class MetaData:
             # The 'source' section can be written a list, in which case the name
             # is passed in with an index, e.g. get_value('source/0/git_url')
             if index is None:
-                log.warn(
+                log.warning(
                     f"No index specified in get_value('{name}'). Assuming index 0."
                 )
                 index = 0
@@ -2202,7 +2202,7 @@ class MetaData:
             output = output_matches[output_index] if output_matches else ""
         except ValueError:
             if not self.path and self.meta.get("extra", {}).get("parent_recipe"):
-                log.warn(
+                log.warning(
                     f"Didn't match any output in raw metadata.  Target value was: {output_name}"
                 )
                 output = ""
@@ -2894,7 +2894,7 @@ class MetaData:
                     find_used_variables_in_batch_script(self.config.variant, script)
                 )
             else:
-                log.warn(
+                log.warning(
                     f"Not detecting used variables in output script {script}; conda-build only knows "
                     "how to search .sh and .bat files right now."
                 )

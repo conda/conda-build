@@ -890,7 +890,7 @@ def get_install_actions(
                     BuildLockError,
                 ) as exc:
                     if "lock" in str(exc):
-                        log.warn(
+                        log.warning(
                             "failed to get package records, retrying.  exception was: %s",
                             str(exc),
                         )
@@ -911,7 +911,7 @@ def get_install_actions(
                             ):
                                 pkg_dir = os.path.dirname(pkg_dir)
                                 folder += 1
-                            log.warn(
+                            log.warning(
                                 "I think conda ended up with a partial extraction for %s. "
                                 "Removing the folder and retrying",
                                 pkg_dir,
@@ -919,7 +919,7 @@ def get_install_actions(
                             if pkg_dir in context.pkgs_dirs and os.path.isdir(pkg_dir):
                                 utils.rm_rf(pkg_dir)
                     if retries < max_env_retry:
-                        log.warn(
+                        log.warning(
                             "failed to get package records, retrying.  exception was: %s",
                             str(exc),
                         )
@@ -1045,20 +1045,20 @@ def create_env(
                     or isinstance(exc, PaddingError)
                 ) and config.prefix_length > 80:
                     if config.prefix_length_fallback:
-                        log.warn(
+                        log.warning(
                             "Build prefix failed with prefix length %d",
                             config.prefix_length,
                         )
-                        log.warn("Error was: ")
-                        log.warn(str(exc))
-                        log.warn(
+                        log.warning("Error was: ")
+                        log.warning(str(exc))
+                        log.warning(
                             "One or more of your package dependencies needs to be rebuilt "
                             "with a longer prefix length."
                         )
-                        log.warn(
+                        log.warning(
                             "Falling back to legacy prefix length of 80 characters."
                         )
-                        log.warn(
+                        log.warning(
                             "Your package will not install into prefixes > 80 characters."
                         )
                         config.prefix_length = 80
@@ -1080,7 +1080,7 @@ def create_env(
                         raise
                 elif "lock" in str(exc):
                     if retry < config.max_env_retry:
-                        log.warn(
+                        log.warning(
                             "failed to create env, retrying.  exception was: %s",
                             str(exc),
                         )
@@ -1106,7 +1106,7 @@ def create_env(
                         ):
                             pkg_dir = os.path.dirname(pkg_dir)
                             folder += 1
-                        log.warn(
+                        log.warning(
                             "I think conda ended up with a partial extraction for %s.  "
                             "Removing the folder and retrying",
                             pkg_dir,
@@ -1114,7 +1114,7 @@ def create_env(
                         if os.path.isdir(pkg_dir):
                             utils.rm_rf(pkg_dir)
                     if retry < config.max_env_retry:
-                        log.warn(
+                        log.warning(
                             "failed to create env, retrying.  exception was: %s",
                             str(exc),
                         )
@@ -1145,7 +1145,7 @@ def create_env(
                 if isinstance(exc, AssertionError):
                     with utils.try_acquire_locks(locks, timeout=config.timeout):
                         pkg_dir = os.path.dirname(os.path.dirname(str(exc)))
-                        log.warn(
+                        log.warning(
                             "I think conda ended up with a partial extraction for %s.  "
                             "Removing the folder and retrying",
                             pkg_dir,
@@ -1153,7 +1153,7 @@ def create_env(
                         if os.path.isdir(pkg_dir):
                             utils.rm_rf(pkg_dir)
                 if retry < config.max_env_retry:
-                    log.warn(
+                    log.warning(
                         "failed to create env, retrying.  exception was: %s", str(exc)
                     )
                     create_env(

@@ -262,8 +262,8 @@ class PopenWrapper:
         except ImportError as e:
             psutil = None
             psutil_exceptions = (OSError, ValueError)
-            log.warn(f"psutil import failed.  Error was {e}")
-            log.warn(
+            log.warning(f"psutil import failed.  Error was {e}")
+            log.warning(
                 "only disk usage and time statistics will be available.  Install psutil to "
                 "get CPU time and memory usage statistics."
             )
@@ -598,7 +598,7 @@ def copy_into(
                 src_folder = os.getcwd()
 
         if os.path.islink(src) and not os.path.exists(os.path.realpath(src)):
-            log.warn("path %s is a broken symlink - ignoring copy", src)
+            log.warning("path %s is a broken symlink - ignoring copy", src)
             return
 
         if not lock and locking:
@@ -1319,7 +1319,7 @@ def find_recipe(path: str) -> str:
 
     metas = [m for m in VALID_METAS if os.path.isfile(os.path.join(path, m))]
     if len(metas) == 1:
-        log.warn(
+        log.warning(
             "Multiple meta files found. "
             f"The {metas[0]} file in the base directory ({path}) "
             "will be used."
@@ -1941,7 +1941,7 @@ def ensure_valid_spec(spec: str | MatchSpec, warn: bool = False) -> str | MatchS
             else:
                 if "*" not in spec:
                     if match.group(1) not in ("python", "vc") and warn:
-                        log.warn(
+                        log.warning(
                             f"Adding .* to spec '{spec}' to ensure satisfiability.  Please "
                             "consider putting {{{{ var_name }}}}.* or some relational "
                             "operator (>/</>=/<=) on this spec in meta.yaml, or if req is "

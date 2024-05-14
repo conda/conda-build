@@ -1596,7 +1596,7 @@ def post_process_shared_lib(m, f, files, host_prefix=None):
         )
     elif codefile == machofile:
         if m.config.host_platform != "osx":
-            log.warn(
+            log.warning(
                 "Found Mach-O file but patching is only supported on macOS, skipping: %s",
                 path,
             )
@@ -1631,7 +1631,7 @@ def fix_permissions(files, prefix):
             try:
                 lchmod(path, new_mode)
             except (OSError, utils.PermissionError) as e:
-                log.warn(str(e))
+                log.warning(str(e))
 
 
 def check_menuinst_json(files, prefix) -> None:

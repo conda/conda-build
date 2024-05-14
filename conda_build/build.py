@@ -921,7 +921,7 @@ def copy_test_source_files(m, destination):
                             clobber=True,
                         )
                     except OSError as e:
-                        log.warn(
+                        log.warning(
                             f"Failed to copy {f} into test files.  Error was: {str(e)}"
                         )
                 for ext in ".pyc", ".pyo":
@@ -1807,7 +1807,7 @@ def bundle_conda(output, metadata: MetaData, env, stats, **kw):
         }
     elif not output.get("script"):
         if not metadata.always_include_files():
-            log.warn(
+            log.warning(
                 "No files or script found for output {}".format(output.get("name"))
             )
             build_deps = metadata.get_value("requirements/build")
@@ -1845,7 +1845,9 @@ def bundle_conda(output, metadata: MetaData, env, stats, **kw):
                 initial_files.remove(f)
                 has_matches = True
         if not has_matches:
-            log.warn("Glob %s from always_include_files does not match any files", pat)
+            log.warning(
+                "Glob %s from always_include_files does not match any files", pat
+            )
     files = post_process_files(metadata, initial_files)
 
     if output.get("name") and output.get("name") != "conda":
@@ -1904,7 +1906,7 @@ def bundle_conda(output, metadata: MetaData, env, stats, **kw):
                 from conda_verify.verify import Verify
             except ImportError:
                 Verify = None
-                log.warn(
+                log.warning(
                     "Importing conda-verify failed.  Please be sure to test your packages.  "
                     "conda install conda-verify to make this message go away."
                 )
@@ -1921,7 +1923,7 @@ def bundle_conda(output, metadata: MetaData, env, stats, **kw):
                         exit_on_error=metadata.config.exit_on_verify_error,
                     )
                 except KeyError as e:
-                    log.warn(
+                    log.warning(
                         "Package doesn't have necessary files.  It might be too old to inspect."
                         f"Legacy noarch packages are known to fail.  Full message was {e}"
                     )
@@ -2147,7 +2149,7 @@ def _write_activation_text(script_path, m):
         elif os.path.splitext(script_path)[1].lower() == ".sh":
             _write_sh_activation_text(fh, m)
         else:
-            log.warn(
+            log.warning(
                 f"not adding activation to {script_path} - I don't know how to do so for "
                 "this file type"
             )
@@ -2364,7 +2366,7 @@ def build(
                 ):
                     specs.append(vcs_source)
 
-                    log.warn(
+                    log.warning(
                         "Your recipe depends on %s at build time (for templates), "
                         "but you have not listed it as a build dependency.  Doing "
                         "so for this build.",
@@ -2819,7 +2821,7 @@ def _construct_metadata_for_test_from_recipe(recipe_dir, config):
     metadata = expand_outputs(
         render_recipe(recipe_dir, config=config, reset_build_id=False)
     )[0][1]
-    log.warn(
+    log.warning(
         "Testing based on recipes is deprecated as of conda-build 3.16.0.  Please adjust "
         "your code to pass your desired conda package to test instead."
     )
@@ -2867,7 +2869,7 @@ def _construct_metadata_for_test_from_package(package, config):
             is_channel = True
 
     if not is_channel:
-        log.warn(
+        log.warning(
             "Copying package to conda-build croot.  No packages otherwise alongside yours will"
             " be available unless you specify -c local.  To avoid this warning, your package "
             "must reside in a channel structure with platform-subfolders.  See more info on "
@@ -3120,7 +3122,7 @@ def _write_test_run_script(
                         tf.write(f'call "{shell_file}"\n')
                         tf.write("IF %ERRORLEVEL% NEQ 0 exit /B 1\n")
                     else:
-                        log.warn(
+                        log.warning(
                             "Found sh test file on windows.  Ignoring this for now (PRs welcome)"
                         )
                 elif os.path.splitext(shell_file)[1] == ".sh":
@@ -3304,7 +3306,7 @@ def test(
             # Needs to come after create_files in case there's test/source_files
             shutil_move_more_retrying(config.work_dir, dest, "work")
     else:
-        log.warn(
+        log.warning(
             "Not moving work directory after build.  Your package may depend on files "
             "in the work directory that are not included with your package"
         )
@@ -3368,7 +3370,7 @@ def test(
         CondaError,
         AssertionError,
     ) as exc:
-        log.warn(
+        log.warning(
             "failed to get package records, retrying.  exception was: %s", str(exc)
         )
         tests_failed(
@@ -3494,7 +3496,7 @@ def tests_failed(package_or_metadata, move_broken, broken_dir, config):
     if move_broken:
         try:
             shutil.move(pkg, dest)
-            log.warn(
+            log.warning(
                 f"Tests failed for {os.path.basename(pkg)} - moving package to {broken_dir}"
             )
         except OSError:
@@ -3658,7 +3660,7 @@ def build_tree(
                             # downstreams can be a dict, for adding capability for worker labels
                             if hasattr(downstreams, "keys"):
                                 downstreams = list(downstreams.keys())
-                                log.warn(
+                                log.warning(
                                     "Dictionary keys for downstreams are being "
                                     "ignored right now.  Coming soon..."
                                 )
@@ -3697,7 +3699,7 @@ def build_tree(
                                     UnsatisfiableError,
                                     DependencyNeedsBuildingError,
                                 ) as e:
-                                    log.warn(
+                                    log.warning(
                                         f"Skipping downstream test for spec {dep}; was "
                                         f"unsatisfiable.  Error was {e}"
                                     )
@@ -3991,11 +3993,11 @@ def handle_pypi_upload(wheels, config):
             try:
                 utils.check_call_env(args + [f])
             except:
-                log.warn(
+                log.warning(
                     "wheel upload failed - is twine installed?"
                     "  Is this package registered?"
                 )
-                log.warn(f"Wheel file left in {f}")
+                log.warning(f"Wheel file left in {f}")
 
     else:
         print(f"anaconda_upload is not set.  Not uploading wheels: {wheels}")
