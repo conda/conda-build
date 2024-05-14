@@ -9,11 +9,11 @@ import os
 import pathlib
 import re
 import time
+import warnings
 from functools import partial
 from io import StringIO, TextIOBase
 from subprocess import CalledProcessError
 from typing import TYPE_CHECKING
-from warnings import warn
 
 import jinja2
 import yaml
@@ -213,7 +213,7 @@ def load_setuptools(
     recipe_dir=None,
     permit_undefined_jinja=True,
 ):
-    warn(
+    warnings.warn(
         "conda_build.jinja_context.load_setuptools is pending deprecation in a future release. "
         "Use conda_build.jinja_context.load_setup_py_data instead.",
         PendingDeprecationWarning,
