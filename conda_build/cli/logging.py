@@ -7,6 +7,7 @@ import logging.config
 import os
 import os.path
 import sys
+from functools import lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -46,16 +47,20 @@ class DuplicateFilter(logging.Filter):
             self.msgs.add(record.msg)
 
 
+@lru_cache
 def init_logging() -> None:
     """
     Default initialization of logging for conda-build CLI.
 
     When using conda-build as a CLI tool (not as a library) we wish to limit logging to
     avoid duplication and to otherwise offer some default behavior.
+
+    This is a onetime initialization that should be called at the start of CLI execution.
     """
     # undo conda messing with the root logger
     logging.getLogger(None).setLevel(logging.WARNING)
 
+    # load the logging configuration from the config file
     config_file = context.conda_build.get("log_config_file")
     if config_file:
         config_file = Path(os.path.expandvars(config_file)).expanduser().resolve()
@@ -69,17 +74,21 @@ def init_logging() -> None:
     if log.level == logging.NOTSET:
         log.setLevel(logging.INFO)
 
-    # we don't want propagation in CLI, but we do want it in tests
+    # we don't want propagation to the root logger in CLI, but we do want it in tests
     # this is a pytest limitation: https://github.com/pytest-dev/pytest/issues/3697
     log.propagate = "PYTEST_CURRENT_TEST" in os.environ
 
     if not log.handlers:
+        # only add our handlers when none are added via logging.config
+
+        # filter DEBUG/INFO messages to stdout
         log.addHandler(stdout := logging.StreamHandler(sys.stdout))
         stdout.addFilter(LessThanFilter(logging.WARNING))
-        stdout.addFilter(DuplicateFilter())
+        stdout.addFilter(DuplicateFilter())  # avoid duplicate messages
         stdout.setFormatter(logging.Formatter("%(levelname)s: %(message)s"))
 
+        # filter WARNING/ERROR/CRITICAL messages to stderr
         log.addHandler(stderr := logging.StreamHandler(sys.stderr))
         stderr.addFilter(GreaterThanFilter(logging.INFO))
-        stderr.addFilter(DuplicateFilter())
+        stderr.addFilter(DuplicateFilter())  # avoid duplicate messages
         stderr.setFormatter(logging.Formatter("%(levelname)s: %(message)s"))
