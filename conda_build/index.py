@@ -27,7 +27,6 @@ cached_index = None
 local_subdir = ""
 local_output_folder = ""
 cached_channels = []
-_channel_data = {}
 
 # TODO: this is to make sure that the index doesn't leak tokens.  It breaks use of private channels, though.
 # os.environ['CONDA_ADD_ANACONDA_TOKEN'] = "false"
@@ -54,8 +53,9 @@ def get_build_index(
     global local_output_folder
     global cached_index
     global cached_channels
-    global _channel_data
     mtime = 0
+
+    _channel_data = {}
 
     channel_urls = list(utils.ensure_list(channel_urls))
 
