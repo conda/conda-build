@@ -59,6 +59,7 @@ from .render import (
     execute_download_actions,
     expand_outputs,
     output_yaml,
+    render_metadata_tuples,
     render_recipe,
     reparse,
     try_download,
@@ -2425,6 +2426,14 @@ def build(
         # Write out metadata for `conda debug`, making it obvious that this is what it is, must be done
         # after try_download()
         output_yaml(m, os.path.join(m.config.work_dir, "metadata_conda_debug.yaml"))
+        if m.config.verbose:
+            m_copy = m.copy()
+            for om, _, _ in render_metadata_tuples([(m_copy, False, False)], m_copy.config):
+                print("", "Rendered as:", "```yaml", output_yaml(om).rstrip(), "```", "", sep="\n")
+                # Each iteration returns the whole meta yaml, and then we are supposed to remove
+                # the outputs we don't want. Instead we just take the first and print it fully
+                break
+            del m_copy
 
         # get_dir here might be just work, or it might be one level deeper,
         #    dependening on the source.

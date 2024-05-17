@@ -52,11 +52,7 @@ def render(
        templates evaluated.
 
     Returns a list of (metadata, need_download, need_reparse in env) tuples"""
-
-    from conda.exceptions import NoPackagesFoundError
-
-    from .exceptions import DependencyNeedsBuildingError
-    from .render import finalize_metadata, render_recipe
+    from .render import render_metadata_tuples, render_recipe
 
     config = get_or_merge_config(config, **kwargs)
 
@@ -68,50 +64,14 @@ def render(
         variants=variants,
         permit_unsatisfiable_variants=permit_unsatisfiable_variants,
     )
-    output_metas: dict[tuple[str, str, tuple[tuple[str, str], ...]], MetaDataTuple] = {}
-    for meta, download, render_in_env in metadata_tuples:
-        if not meta.skip() or not config.trim_skip:
-            for od, om in meta.get_output_metadata_set(
-                permit_unsatisfiable_variants=permit_unsatisfiable_variants,
-                permit_undefined_jinja=not finalize,
-                bypass_env_check=bypass_env_check,
-            ):
-                if not om.skip() or not config.trim_skip:
-                    if "type" not in od or od["type"] == "conda":
-                        if finalize and not om.final:
-                            try:
-                                om = finalize_metadata(
-                                    om,
-                                    permit_unsatisfiable_variants=permit_unsatisfiable_variants,
-                                )
-                            except (DependencyNeedsBuildingError, NoPackagesFoundError):
-                                if not permit_unsatisfiable_variants:
-                                    raise
+    return render_metadata_tuples(
+        metadata_tuples,
+        config=config,
+        permit_unsatisfiable_variants=permit_unsatisfiable_variants,
+        finalize=finalize,
+        bypass_env_check=bypass_env_check,
+    )
 
-                        # remove outputs section from output objects for simplicity
-                        if not om.path and (outputs := om.get_section("outputs")):
-                            om.parent_outputs = outputs
-                            del om.meta["outputs"]
-
-                        output_metas[
-                            om.dist(),
-                            om.config.variant.get("target_platform"),
-                            tuple(
-                                (var, om.config.variant[var])
-                                for var in om.get_used_vars()
-                            ),
-                        ] = MetaDataTuple(om, download, render_in_env)
-                    else:
-                        output_metas[
-                            f"{om.type}: {om.name()}",
-                            om.config.variant.get("target_platform"),
-                            tuple(
-                                (var, om.config.variant[var])
-                                for var in om.get_used_vars()
-                            ),
-                        ] = MetaDataTuple(om, download, render_in_env)
-
-    return list(output_metas.values())
 
 
 def output_yaml(
