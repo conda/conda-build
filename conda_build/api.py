@@ -73,7 +73,6 @@ def render(
     )
 
 
-
 def output_yaml(
     metadata: MetaData,
     file_path: str | os.PathLike | Path | None = None,

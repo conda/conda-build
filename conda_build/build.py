@@ -2428,8 +2428,18 @@ def build(
         output_yaml(m, os.path.join(m.config.work_dir, "metadata_conda_debug.yaml"))
         if m.config.verbose:
             m_copy = m.copy()
-            for om, _, _ in render_metadata_tuples([(m_copy, False, False)], m_copy.config):
-                print("", "Rendered as:", "```yaml", output_yaml(om).rstrip(), "```", "", sep="\n")
+            for om, _, _ in render_metadata_tuples(
+                [(m_copy, False, False)], m_copy.config
+            ):
+                print(
+                    "",
+                    "Rendered as:",
+                    "```yaml",
+                    output_yaml(om).rstrip(),
+                    "```",
+                    "",
+                    sep="\n",
+                )
                 # Each iteration returns the whole meta yaml, and then we are supposed to remove
                 # the outputs we don't want. Instead we just take the first and print it fully
                 break

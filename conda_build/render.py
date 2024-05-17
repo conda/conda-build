@@ -999,12 +999,13 @@ def render_recipe(
                 bypass_env_check=bypass_env_check,
             )
 
+
 def render_metadata_tuples(
     metadata_tuples: Iterable[MetaDataTuple],
     config: Config,
     permit_unsatisfiable_variants: bool = True,
     finalize: bool = True,
-    bypass_env_check: bool = False
+    bypass_env_check: bool = False,
 ) -> list[MetaDataTuple]:
     output_metas: dict[tuple[str, str, tuple[tuple[str, str], ...]], MetaDataTuple] = {}
     for meta, download, render_in_env in metadata_tuples:
