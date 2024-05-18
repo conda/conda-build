@@ -879,14 +879,16 @@ def toposort(
         if output_d.get("type", "conda").startswith("conda")
     ]
     topodict: dict[str, set[str]] = {}
-    name_lookup: dict[str, OutputTuple] = {}
+    name_lookup: dict[str, list[OutputTuple]] = {}
     extra: list[OutputTuple] = []
 
     for idx, (output_d, output_m) in enumerate(output_metadata_map.values()):
         if output_d.get("type", "conda").startswith("conda"):
+            # the same package name may be seen multiple times (variants)
             name = output_d["name"]
 
-            topodict[name] = {
+            # dependencies for all of the variants
+            topodict.setdefault(name, set()).update(
                 dep_name
                 for dep in (
                     *output_m.get_value("requirements/run", []),
@@ -898,13 +900,15 @@ def toposort(
                     ),
                 )
                 if (dep_name := MatchSpec(dep).name) in these_packages
-            }
-            name_lookup[name] = (output_d, output_m)
+            )
+
+            # preserve all of the variants
+            name_lookup.setdefault(name, []).append((output_d, output_m))
         else:
             extra.append((output_d, output_m))
 
     return [
-        *(name_lookup[name] for name in _toposort(topodict)),
+        *(output for name in _toposort(topodict) for output in name_lookup[name]),
         *extra,
     ]
 
