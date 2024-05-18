@@ -45,7 +45,12 @@ from .variants import (
 )
 
 if TYPE_CHECKING:
-    from typing import Any, Literal
+    from typing import Any, Literal, Self
+
+    from frozendict import frozendict
+
+    OutputDict = dict[str, Any]
+    OutputTuple = tuple[OutputDict, "MetaData"]
 
 try:
     import yaml
@@ -408,24 +413,32 @@ def _get_all_dependencies(metadata, envs=("host", "build", "run")):
     return reqs
 
 
-def check_circular_dependencies(render_order, config=None):
+def check_circular_dependencies(
+    render_order: list[OutputTuple],
+    config: Config | None = None,
+) -> None:
+    envs: tuple[str, ...]
     if config and config.host_subdir != config.build_subdir:
         # When cross compiling build dependencies are already built
         # and cannot come from the recipe as subpackages
         envs = ("host", "run")
     else:
         envs = ("build", "host", "run")
-    pairs = []
-    for idx, m in enumerate(render_order.values()):
-        for other_m in list(render_order.values())[idx + 1 :]:
+
+    pairs: list[tuple[str, str]] = []
+    for idx, (_, metadata) in enumerate(render_order):
+        name = metadata.name()
+        for _, other_metadata in render_order[idx + 1 :]:
+            other_name = other_metadata.name()
             if any(
-                m.name() == dep or dep.startswith(m.name() + " ")
-                for dep in _get_all_dependencies(other_m, envs=envs)
+                name == dep or dep.startswith(name + " ")
+                for dep in _get_all_dependencies(other_metadata, envs=envs)
             ) and any(
-                other_m.name() == dep or dep.startswith(other_m.name() + " ")
-                for dep in _get_all_dependencies(m, envs=envs)
+                other_name == dep or dep.startswith(other_name + " ")
+                for dep in _get_all_dependencies(metadata, envs=envs)
             ):
-                pairs.append((m.name(), other_m.name()))
+                pairs.append((name, other_name))
+
     if pairs:
         error = "Circular dependencies in recipe: \n"
         for pair in pairs:
@@ -846,7 +859,9 @@ def _get_dependencies_from_environment(env_name_or_path):
     return {"requirements": {"build": bootstrap_requirements}}
 
 
-def toposort(output_metadata_map):
+def toposort(
+    output_metadata_map: dict[frozendict, OutputTuple],
+) -> list[OutputTuple]:
     """This function is used to work out the order to run the install scripts
     for split packages based on any interdependencies. The result is just
     a re-ordering of outputs such that we can run them in that order and
@@ -863,48 +878,35 @@ def toposort(output_metadata_map):
         for output_d in output_metadata_map
         if output_d.get("type", "conda").startswith("conda")
     ]
-    topodict = dict()
-    order = dict()
-    endorder = set()
+    topodict: dict[str, set[str]] = {}
+    name_lookup: dict[str, OutputTuple] = {}
+    extra: list[OutputTuple] = []
 
-    for idx, (output_d, output_m) in enumerate(output_metadata_map.items()):
+    for idx, (output_d, output_m) in enumerate(output_metadata_map.values()):
         if output_d.get("type", "conda").startswith("conda"):
-            deps = output_m.get_value("requirements/run", []) + output_m.get_value(
-                "requirements/host", []
-            )
-            if not output_m.is_cross:
-                deps.extend(output_m.get_value("requirements/build", []))
             name = output_d["name"]
-            order[name] = idx
-            topodict[name] = set()
-            for dep in deps:
-                dep = dep.split(" ")[0]
-                if dep in these_packages:
-                    topodict[name].update((dep,))
-        else:
-            endorder.add(idx)
 
-    topo_order = list(_toposort(topodict))
-    keys = [
-        k
-        for pkgname in topo_order
-        for k in output_metadata_map.keys()
-        if "name" in k and k["name"] == pkgname
+            topodict[name] = {
+                dep_name
+                for dep in (
+                    *output_m.get_value("requirements/run", []),
+                    *output_m.get_value("requirements/host", []),
+                    *(
+                        output_m.get_value("requirements/build", [])
+                        if output_m.is_cross
+                        else []
+                    ),
+                )
+                if (dep_name := MatchSpec(dep).name) in these_packages
+            }
+            name_lookup[name] = (output_d, output_m)
+        else:
+            extra.append((output_d, output_m))
+
+    return [
+        *(name_lookup[name] for name in _toposort(topodict)),
+        *extra,
     ]
-    # not sure that this is working...  not everything has 'name', and not sure how this pans out
-    #    may end up excluding packages without the 'name' field
-    keys.extend(
-        [
-            k
-            for pkgname in endorder
-            for k in output_metadata_map.keys()
-            if ("name" in k and k["name"] == pkgname) or "name" not in k
-        ]
-    )
-    result = OrderedDict()
-    for key in keys:
-        result[key] = output_metadata_map[key]
-    return result
 
 
 def get_output_dicts_from_metadata(
@@ -2268,7 +2270,7 @@ class MetaData:
                 "character in your recipe."
             )
 
-    def copy(self):
+    def copy(self: Self) -> MetaData:
         new = copy.copy(self)
         new.config = self.config.copy()
         new.config.variant = copy.deepcopy(self.config.variant)
@@ -2520,10 +2522,9 @@ class MetaData:
         permit_undefined_jinja: bool = False,
         permit_unsatisfiable_variants: bool = False,
         bypass_env_check: bool = False,
-    ) -> list[tuple[dict[str, Any], MetaData]]:
+    ) -> list[OutputTuple]:
         from .source import provide
 
-        out_metadata_map = {}
         if self.final:
             outputs = get_output_dicts_from_metadata(self)
             output_tuples = [(outputs[0], self)]
@@ -2535,6 +2536,7 @@ class MetaData:
                 self.get_reduced_variant_set(used_variables) or self.config.variants[:1]
             )
 
+            output_mapping: dict[frozendict, OutputTuple] = {}
             for variant in (
                 top_loop
                 if (hasattr(self.config, "variants") and self.config.variants)
@@ -2579,27 +2581,27 @@ class MetaData:
                                 }
                             ),
                         ] = (out, out_metadata)
-                        out_metadata_map[deepfreeze(out)] = out_metadata
+                        output_mapping[deepfreeze(out)] = (out, out_metadata)
                         ref_metadata.other_outputs = out_metadata.other_outputs = (
                             all_output_metadata
                         )
                 except SystemExit:
                     if not permit_undefined_jinja:
                         raise
-                    out_metadata_map = {}
+                    output_mapping = {}
 
-            assert out_metadata_map, (
+            assert output_mapping, (
                 "Error: output metadata set is empty.  Please file an issue"
                 " on the conda-build tracker at https://github.com/conda/conda-build/issues"
             )
 
             # format here is {output_dict: metadata_object}
-            render_order = toposort(out_metadata_map)
+            render_order: list[OutputTuple] = toposort(output_mapping)
             check_circular_dependencies(render_order, config=self.config)
             conda_packages = OrderedDict()
             non_conda_packages = []
 
-            for output_d, m in render_order.items():
+            for output_d, m in render_order:
                 if not output_d.get("type") or output_d["type"] in (
                     "conda",
                     "conda_v2",
