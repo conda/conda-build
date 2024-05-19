@@ -895,7 +895,7 @@ def toposort(
                     *output_m.get_value("requirements/host", []),
                     *(
                         output_m.get_value("requirements/build", [])
-                        if output_m.is_cross
+                        if not output_m.is_cross
                         else []
                     ),
                 )
