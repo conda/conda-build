@@ -431,10 +431,10 @@ def check_circular_dependencies(
         for _, other_metadata in render_order[idx + 1 :]:
             other_name = other_metadata.name()
             if any(
-                name == dep or dep.startswith(name + " ")
+                name == MatchSpec(dep).name
                 for dep in _get_all_dependencies(other_metadata, envs=envs)
             ) and any(
-                other_name == dep or dep.startswith(other_name + " ")
+                other_name == MatchSpec(dep).name
                 for dep in _get_all_dependencies(metadata, envs=envs)
             ):
                 pairs.append((name, other_name))
