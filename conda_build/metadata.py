@@ -48,8 +48,6 @@ from .variants import (
 if TYPE_CHECKING:
     from typing import Any, Literal, Self
 
-    from frozendict import frozendict
-
     OutputDict = dict[str, Any]
     OutputTuple = tuple[OutputDict, "MetaData"]
 
@@ -955,7 +953,7 @@ def toposort(output_metadata_map: dict[dict[str, Any], MetaData]):
     return result
 
 
-def _toposort_outputs(outputs: dict[frozendict, OutputTuple]) -> list[OutputTuple]:
+def _toposort_outputs(output_tuples: list[OutputTuple]) -> list[OutputTuple]:
     """This function is used to work out the order to run the install scripts
     for split packages based on any interdependencies. The result is just
     a re-ordering of outputs such that we can run them in that order and
@@ -969,10 +967,11 @@ def _toposort_outputs(outputs: dict[frozendict, OutputTuple]) -> list[OutputTupl
     # packages get sorted to the end.
     conda_outputs: dict[str, list[OutputTuple]] = {}
     non_conda_outputs: list[OutputTuple] = []
-    for frozen_d, output_tuple in outputs.items():
-        if frozen_d.get("type", "conda").startswith("conda"):
+    for output_tuple in output_tuples:
+        output_d, _ = output_tuple
+        if output_d.get("type", "conda").startswith("conda"):
             # the same package name may be seen multiple times (variants)
-            conda_outputs.setdefault(frozen_d["name"], []).append(output_tuple)
+            conda_outputs.setdefault(output_d["name"], []).append(output_tuple)
         else:
             non_conda_outputs.append(output_tuple)
 
@@ -2627,6 +2626,7 @@ class MetaData:
     ) -> list[OutputTuple]:
         from .source import provide
 
+        output_tuples: list[OutputTuple] = []
         if self.final:
             outputs = get_output_dicts_from_metadata(self)
             output_tuples = [(outputs[0], self)]
@@ -2638,7 +2638,6 @@ class MetaData:
                 self.get_reduced_variant_set(used_variables) or self.config.variants[:1]
             )
 
-            output_mapping: dict[frozendict, OutputTuple] = {}
             for variant in (
                 top_loop
                 if (hasattr(self.config, "variants") and self.config.variants)
@@ -2683,22 +2682,21 @@ class MetaData:
                                 }
                             ),
                         ] = (out, out_metadata)
-                        output_mapping[deepfreeze(out)] = (out, out_metadata)
+                        output_tuples.append((out, out_metadata))
                         ref_metadata.other_outputs = out_metadata.other_outputs = (
                             all_output_metadata
                         )
                 except SystemExit:
                     if not permit_undefined_jinja:
                         raise
-                    output_mapping = {}
+                    output_tuples = []
 
-            assert output_mapping, (
+            assert output_tuples, (
                 "Error: output metadata set is empty.  Please file an issue"
                 " on the conda-build tracker at https://github.com/conda/conda-build/issues"
             )
 
-            # format here is {output_dict: metadata_object}
-            render_order: list[OutputTuple] = _toposort_outputs(output_mapping)
+            render_order: list[OutputTuple] = _toposort_outputs(output_tuples)
             _check_circular_dependencies(render_order, config=self.config)
             conda_packages = OrderedDict()
             non_conda_packages = []
