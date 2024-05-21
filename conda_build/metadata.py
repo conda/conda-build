@@ -955,9 +955,7 @@ def toposort(output_metadata_map: dict[dict[str, Any], MetaData]):
     return result
 
 
-def _toposort_outputs(
-    output_metadata_map: dict[frozendict, OutputTuple],
-) -> list[OutputTuple]:
+def _toposort_outputs(outputs: dict[frozendict, OutputTuple]) -> list[OutputTuple]:
     """This function is used to work out the order to run the install scripts
     for split packages based on any interdependencies. The result is just
     a re-ordering of outputs such that we can run them in that order and
@@ -969,44 +967,47 @@ def _toposort_outputs(
 
     # We only care about the conda packages built by this recipe. Non-conda
     # packages get sorted to the end.
-    these_packages = [
-        output_d["name"]
-        for output_d in output_metadata_map
-        if output_d.get("type", "conda").startswith("conda")
-    ]
-    topodict: dict[str, set[str]] = {}
-    name_lookup: dict[str, list[OutputTuple]] = {}
-    extra: list[OutputTuple] = []
-
-    for idx, (output_d, output_m) in enumerate(output_metadata_map.values()):
-        if output_d.get("type", "conda").startswith("conda"):
+    conda_outputs: dict[str, list[OutputTuple]] = {}
+    non_conda_outputs: list[OutputTuple] = []
+    for frozen_d, output_tuple in outputs.items():
+        if frozen_d.get("type", "conda").startswith("conda"):
             # the same package name may be seen multiple times (variants)
-            name = output_d["name"]
+            conda_outputs.setdefault(frozen_d["name"], []).append(output_tuple)
+        else:
+            non_conda_outputs.append(output_tuple)
 
+    # Iterate over conda packages, creating a mapping of package names to their
+    # dependencies to be used in toposort
+    name_to_dependencies: dict[str, set[str]] = {}
+    name_lookup: dict[str, list[OutputTuple]] = {}
+    for name, same_name_outputs in conda_outputs.items():
+        for output_d, output_metadata in same_name_outputs:
             # dependencies for all of the variants
             dependencies = (
-                *output_m.get_value("requirements/run", []),
-                *output_m.get_value("requirements/host", []),
+                *output_metadata.get_value("requirements/run", []),
+                *output_metadata.get_value("requirements/host", []),
                 *(
-                    output_m.get_value("requirements/build", [])
-                    if not output_m.is_cross
+                    output_metadata.get_value("requirements/build", [])
+                    if not output_metadata.is_cross
                     else []
                 ),
             )
-            topodict.setdefault(name, set()).update(
+            name_to_dependencies.setdefault(name, set()).update(
                 dependency_name
                 for dependency in dependencies
-                if (dependency_name := MatchSpec(dependency).name) in these_packages
+                if (dependency_name := MatchSpec(dependency).name) in conda_outputs
             )
 
             # preserve all of the variants
-            name_lookup.setdefault(name, []).append((output_d, output_m))
-        else:
-            extra.append((output_d, output_m))
+            name_lookup.setdefault(name, []).append((output_d, output_metadata))
 
     return [
-        *(output for name in _toposort(topodict) for output in name_lookup[name]),
-        *extra,
+        *(
+            output
+            for name in _toposort(name_to_dependencies)
+            for output in name_lookup[name]
+        ),
+        *non_conda_outputs,
     ]
 
 
