@@ -596,7 +596,7 @@ def inspect_linkages_lief(
                     if recurse:
                         if os.path.exists(resolved[0]):
                             todo.append([resolved[0], lief.parse(resolved[0])])
-                already_seen.add(get_uniqueness_key(filename2, binary2))
+                already_seen.add(uniqueness_key)
     return results
 
 
