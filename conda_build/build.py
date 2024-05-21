@@ -778,7 +778,7 @@ def copy_readme(m):
     if readme:
         src = join(m.config.work_dir, readme)
         if not isfile(src):
-            sys.exit("Error: no readme file: %s" % readme)
+            sys.exit(f"Error: no readme file: {readme}")
         dst = join(m.config.info_dir, readme)
         utils.copy_into(src, dst, m.config.timeout, locking=m.config.locking)
         if os.path.split(readme)[1] not in {"README.md", "README.rst", "README"}:
@@ -1191,7 +1191,7 @@ def record_prefix_files(m, files_with_prefix):
                     if fn in text_has_prefix_files:
                         text_has_prefix_files.remove(fn)
                 else:
-                    ignored_because = " (not in build/%s_has_prefix_files)" % (mode)
+                    ignored_because = f" (not in build/{mode}_has_prefix_files)"
 
                 print(
                     "{fn} ({mode}): {action}{reason}".format(
@@ -1208,10 +1208,10 @@ def record_prefix_files(m, files_with_prefix):
     # make sure we found all of the files expected
     errstr = ""
     for f in text_has_prefix_files:
-        errstr += "Did not detect hard-coded path in %s from has_prefix_files\n" % f
+        errstr += f"Did not detect hard-coded path in {f} from has_prefix_files\n"
     for f in binary_has_prefix_files:
         errstr += (
-            "Did not detect hard-coded path in %s from binary_has_prefix_files\n" % f
+            f"Did not detect hard-coded path in {f} from binary_has_prefix_files\n"
         )
     if errstr:
         raise RuntimeError(errstr)
@@ -1280,7 +1280,7 @@ def write_about_json(m):
     with open(join(m.config.info_dir, "about.json"), "w") as fo:
         d = {}
         for key, default in FIELDS["about"].items():
-            value = m.get_value("about/%s" % key)
+            value = m.get_value(f"about/{key}")
             if value:
                 d[key] = value
             if default is list:
@@ -1336,7 +1336,7 @@ def write_info_json(m: MetaData):
                 "# $ conda create --name <env> --file <this file>"
             )
             for dist in sorted(runtime_deps + [" ".join(m.dist().rsplit("-", 2))]):
-                fo.write("%s\n" % "=".join(dist.split()))
+                fo.write("{}\n".format("=".join(dist.split())))
 
     mode_dict = {"mode": "w", "encoding": "utf-8"}
     with open(join(m.config.info_dir, "index.json"), **mode_dict) as fo:
@@ -1359,10 +1359,10 @@ def get_entry_point_script_names(entry_point_scripts):
     for entry_point in entry_point_scripts:
         cmd = entry_point[: entry_point.find("=")].strip()
         if utils.on_win:
-            scripts.append("Scripts\\%s-script.py" % cmd)
-            scripts.append("Scripts\\%s.exe" % cmd)
+            scripts.append(f"Scripts\\{cmd}-script.py")
+            scripts.append(f"Scripts\\{cmd}.exe")
         else:
-            scripts.append("bin/%s" % cmd)
+            scripts.append(f"bin/{cmd}")
     return scripts
 
 
@@ -1524,7 +1524,7 @@ def _recurse_symlink_to_size(path, seen=None):
             return _recurse_symlink_to_size(dest, seen=seen)
         elif not isfile(dest):
             # this is a symlink that points to nowhere, so is zero bytes
-            warnings.warn("file %s is a symlink with no target" % path, UserWarning)
+            warnings.warn(f"file {path} is a symlink with no target", UserWarning)
             return 0
 
     return 0
@@ -1768,8 +1768,7 @@ def bundle_conda(output, metadata: MetaData, env, stats, **kw):
                 var = var.split("=", 1)[0]
             elif var not in os.environ:
                 warnings.warn(
-                    "The environment variable '%s' specified in script_env is undefined."
-                    % var,
+                    f"The environment variable '{var}' specified in script_env is undefined.",
                     UserWarning,
                 )
                 val = ""
@@ -3308,9 +3307,9 @@ def test(
                     os.path.dirname(prefix),
                     "_".join(
                         (
-                            "%s_prefix_moved" % name,
+                            f"{name}_prefix_moved",
                             metadata.dist(),
-                            getattr(metadata.config, "%s_subdir" % name),
+                            getattr(metadata.config, f"{name}_subdir"),
                         )
                     ),
                 )

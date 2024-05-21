@@ -300,7 +300,7 @@ def skeletonize(
         if not is_url:
             dir_path = join(output_dir, package.lower())
             if exists(dir_path) and not version_compare:
-                raise RuntimeError("directory already exists: %s" % dir_path)
+                raise RuntimeError(f"directory already exists: {dir_path}")
         d = package_dicts.setdefault(
             package,
             {
@@ -343,14 +343,12 @@ def skeletonize(
             else:
                 # select the most visible version from PyPI.
                 if not versions:
-                    sys.exit(
-                        "Error: Could not find any versions of package %s" % package
-                    )
+                    sys.exit(f"Error: Could not find any versions of package {package}")
                 if len(versions) > 1:
-                    print("Warning, the following versions were found for %s" % package)
+                    print(f"Warning, the following versions were found for {package}")
                     for ver in versions:
                         print(ver)
-                    print("Using %s" % versions[-1])
+                    print(f"Using {versions[-1]}")
                     print("Use --version to specify a different version.")
                 d["version"] = versions[-1]
 
@@ -404,7 +402,7 @@ def skeletonize(
         d = package_dicts[package]
         name = d["packagename"].lower()
         makedirs(join(output_dir, name))
-        print("Writing recipe for %s" % package.lower())
+        print(f"Writing recipe for {package.lower()}")
         with open(join(output_dir, name, "meta.yaml"), "w") as f:
             rendered_recipe = PYPI_META_HEADER.format(**d)
 
@@ -642,8 +640,8 @@ def get_download_data(
             if not urls[0]["url"]:
                 # The package doesn't have a url, or maybe it only has a wheel.
                 sys.exit(
-                    "Error: Could not build recipe for %s. "
-                    "Could not find any valid urls." % package
+                    f"Error: Could not build recipe for {package}. "
+                    "Could not find any valid urls."
                 )
             U = parse_url(urls[0]["url"])
             if not U.path:
@@ -652,9 +650,9 @@ def get_download_data(
             fragment = U.fragment or ""
             digest = fragment.split("=")
         else:
-            sys.exit("Error: No source urls found for %s" % package)
+            sys.exit(f"Error: No source urls found for {package}")
     if len(urls) > 1 and not noprompt:
-        print("More than one source version is available for %s:" % package)
+        print(f"More than one source version is available for {package}:")
         if manual_url:
             for i, url in enumerate(urls):
                 print(
@@ -689,7 +687,7 @@ def get_download_data(
         filename = url["filename"] or "package"
     else:
         # User provided a URL, try to use it.
-        print("Using url %s" % package)
+        print(f"Using url {package}")
         pypiurl = package
         U = parse_url(package)
         digest = U.fragment.split("=")
@@ -711,7 +709,7 @@ def version_compare(package, versions):
 
     recipe_dir = abspath(package.lower())
     if not isdir(recipe_dir):
-        sys.exit("Error: no such directory: %s" % recipe_dir)
+        sys.exit(f"Error: no such directory: {recipe_dir}")
     m = MetaData(recipe_dir)
     local_version = nv(m.version())
     print(f"Local recipe for {package} has version {local_version}")
@@ -721,11 +719,11 @@ def version_compare(package, versions):
         # Comparing normalized versions, displaying non normalized ones
         new_versions = versions[: norm_versions.index(local_version)]
         if len(new_versions) > 0:
-            print("Following new versions of %s are avaliable" % (package))
+            print(f"Following new versions of {package} are avaliable")
             for ver in new_versions:
                 print(ver)
         else:
-            print("No new version for %s is available" % (package))
+            print(f"No new version for {package} is available")
         sys.exit()
 
 
@@ -828,7 +826,7 @@ def get_package_metadata(
     config,
     setup_options,
 ):
-    print("Downloading %s" % package)
+    print(f"Downloading {package}")
     print("PyPI URL: ", metadata["pypiurl"])
     pkginfo = get_pkginfo(
         package,
@@ -982,7 +980,7 @@ def get_dependencies(requires, setuptools_enabled=True):
                     )
                     spec = _spec_from_line(dep_orig)
                 if spec is None:
-                    sys.exit("Error: Could not parse: %s" % dep)
+                    sys.exit(f"Error: Could not parse: {dep}")
 
             if marker:
                 spec = " ".join((spec, marker))
@@ -1058,10 +1056,10 @@ def get_license_name(package, pkginfo, no_prompt=False, data=None):
         if no_prompt:
             return license_name
         elif "\n" not in license_name:
-            print('Using "%s" for the license' % license_name)
+            print(f'Using "{license_name}" for the license')
         else:
             # Some projects put the whole license text in this field
-            print("This is the license for %s" % package)
+            print(f"This is the license for {package}")
             print()
             print(license_name)
             print()
@@ -1070,8 +1068,8 @@ def get_license_name(package, pkginfo, no_prompt=False, data=None):
         license_name = "UNKNOWN"
     else:
         license_name = input(
-            "No license could be found for %s on PyPI or in the source. "
-            "What license should I use? " % package
+            f"No license could be found for {package} on PyPI or in the source. "
+            "What license should I use? "
         )
     return license_name
 
@@ -1175,7 +1173,7 @@ def unpack(src_path, tempdir):
     if src_path.lower().endswith(decompressible_exts):
         tar_xf(src_path, tempdir)
     else:
-        raise Exception("not a valid source: %s" % src_path)
+        raise Exception(f"not a valid source: {src_path}")
 
 
 def get_dir(tempdir):
@@ -1209,7 +1207,7 @@ def get_requirements(package, pkginfo, all_extras=True):
         try:
             extras_require = [pkginfo["extras_require"][x] for x in extras]
         except KeyError:
-            sys.exit("Error: Invalid extra features: [%s]" % ",".join(extras))
+            sys.exit("Error: Invalid extra features: [{}]".format(",".join(extras)))
         # match PEP 508 environment markers; currently only matches the
         #  subset of environment markers that compare to python_version
         #  using a single basic Python comparison operator
@@ -1297,10 +1295,10 @@ def get_pkginfo(
         else:
             new_hash_value = ""
 
-        print("Unpacking %s..." % package)
+        print(f"Unpacking {package}...")
         unpack(join(config.src_cache, filename), tempdir)
         print("done")
-        print("working in %s" % tempdir)
+        print(f"working in {tempdir}")
         src_dir = get_dir(tempdir)
         # TODO: find args parameters needed by run_setuppy
         run_setuppy(
@@ -1366,7 +1364,7 @@ def run_setuppy(src_dir, temp_dir, python_version, extra_specs, config, setup_op
     )
     stdlib_dir = join(
         config.host_prefix,
-        "Lib" if on_win else "lib/python%s" % python_version,
+        "Lib" if on_win else f"lib/python{python_version}",
     )
 
     patch = join(temp_dir, "pypi-distutils.patch")
@@ -1421,8 +1419,8 @@ def run_setuppy(src_dir, temp_dir, python_version, extra_specs, config, setup_op
     try:
         check_call_env(cmdargs, env=env)
     except subprocess.CalledProcessError:
-        print("$PYTHONPATH = %s" % env["PYTHONPATH"])
-        sys.exit("Error: command failed: %s" % " ".join(cmdargs))
+        print("$PYTHONPATH = {}".format(env["PYTHONPATH"]))
+        sys.exit("Error: command failed: {}".format(" ".join(cmdargs)))
     finally:
         chdir(cwd)
 
