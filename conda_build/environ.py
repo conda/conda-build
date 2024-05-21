@@ -1260,7 +1260,7 @@ def install_actions(
 ) -> InstallActionsType:
     # This is copied over from https://github.com/conda/conda/blob/23.11.0/conda/plan.py#L471
     # but reduced to only the functionality actually used within conda-build.
-    subdir_kwargs = {"CONDA_SUBDIR": subdir} if subdir else {}
+    subdir_kwargs = {"CONDA_SUBDIR": subdir} if subdir not in (None, "", "noarch") else {}
     with env_vars(
         {
             "CONDA_ALLOW_NON_CHANNEL_URLS": "true",
