@@ -23,6 +23,7 @@ from frozendict import deepfreeze
 
 from . import exceptions, utils
 from .config import Config, get_or_merge_config
+from .deprecations import deprecated
 from .features import feature_list
 from .license_family import ensure_valid_license_family
 from .utils import (
@@ -411,6 +412,41 @@ def _get_all_dependencies(metadata, envs=("host", "build", "run")):
     for _env in envs:
         reqs.extend(metadata.meta.get("requirements", {}).get(_env, []))
     return reqs
+
+
+@deprecated(
+    "24.5.1",
+    "24.7.0",
+    addendum="Use `conda_build.metadata._check_circular_dependencies` instead.",
+)
+def check_circular_dependencies(
+    render_order: dict[dict[str, Any], MetaData],
+    config: Config | None = None,
+):
+    # deprecated since the input type (render_order) changed
+    envs: tuple[str, ...]
+    if config and config.host_subdir != config.build_subdir:
+        # When cross compiling build dependencies are already built
+        # and cannot come from the recipe as subpackages
+        envs = ("host", "run")
+    else:
+        envs = ("build", "host", "run")
+    pairs = []
+    for idx, m in enumerate(render_order.values()):
+        for other_m in list(render_order.values())[idx + 1 :]:
+            if any(
+                m.name() == dep or dep.startswith(m.name() + " ")
+                for dep in _get_all_dependencies(other_m, envs=envs)
+            ) and any(
+                other_m.name() == dep or dep.startswith(other_m.name() + " ")
+                for dep in _get_all_dependencies(m, envs=envs)
+            ):
+                pairs.append((m.name(), other_m.name()))
+    if pairs:
+        error = "Circular dependencies in recipe: \n"
+        for pair in pairs:
+            error += "    {} <-> {}\n".format(*pair)
+        raise exceptions.RecipeError(error)
 
 
 def _check_circular_dependencies(
@@ -857,6 +893,66 @@ def _get_dependencies_from_environment(env_name_or_path):
             "{} {} {}".format(package, data["version"], data["build"])
         )
     return {"requirements": {"build": bootstrap_requirements}}
+
+
+@deprecated(
+    "24.5.1",
+    "24.7.0",
+    addendum="Use `conda_build.metadata.toposort_outputs` instead.",
+)
+def toposort(output_metadata_map: dict[dict[str, Any], MetaData]):
+    # deprecated since input type (output_metadata_map) and output changed
+    from conda.common.toposort import _toposort
+
+    # We only care about the conda packages built by this recipe. Non-conda
+    # packages get sorted to the end.
+    these_packages = [
+        output_d["name"]
+        for output_d in output_metadata_map
+        if output_d.get("type", "conda").startswith("conda")
+    ]
+    topodict: dict[str, set[str]] = dict()
+    order: dict[str, int] = dict()
+    endorder: set[int] = set()
+
+    for idx, (output_d, output_m) in enumerate(output_metadata_map.items()):
+        if output_d.get("type", "conda").startswith("conda"):
+            deps = output_m.get_value("requirements/run", []) + output_m.get_value(
+                "requirements/host", []
+            )
+            if not output_m.is_cross:
+                deps.extend(output_m.get_value("requirements/build", []))
+            name = output_d["name"]
+            order[name] = idx
+            topodict[name] = set()
+            for dep in deps:
+                dep = dep.split(" ")[0]
+                if dep in these_packages:
+                    topodict[name].update((dep,))
+        else:
+            endorder.add(idx)
+
+    topo_order = list(_toposort(topodict))
+    keys = [
+        k
+        for pkgname in topo_order
+        for k in output_metadata_map.keys()
+        if "name" in k and k["name"] == pkgname
+    ]
+    # not sure that this is working...  not everything has 'name', and not sure how this pans out
+    #    may end up excluding packages without the 'name' field
+    keys.extend(
+        [
+            k
+            for pkgname in endorder
+            for k in output_metadata_map.keys()
+            if ("name" in k and k["name"] == pkgname) or "name" not in k
+        ]
+    )
+    result = OrderedDict()
+    for key in keys:
+        result[key] = output_metadata_map[key]
+    return result
 
 
 def _toposort_outputs(
