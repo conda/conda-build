@@ -888,18 +888,19 @@ def toposort(
             name = output_d["name"]
 
             # dependencies for all of the variants
+            dependencies = (
+                *output_m.get_value("requirements/run", []),
+                *output_m.get_value("requirements/host", []),
+                *(
+                    output_m.get_value("requirements/build", [])
+                    if not output_m.is_cross
+                    else []
+                ),
+            )
             topodict.setdefault(name, set()).update(
-                dep_name
-                for dep in (
-                    *output_m.get_value("requirements/run", []),
-                    *output_m.get_value("requirements/host", []),
-                    *(
-                        output_m.get_value("requirements/build", [])
-                        if not output_m.is_cross
-                        else []
-                    ),
-                )
-                if (dep_name := MatchSpec(dep).name) in these_packages
+                dependency_name
+                for dependency in dependencies
+                if (dependency_name := MatchSpec(dependency).name) in these_packages
             )
 
             # preserve all of the variants
