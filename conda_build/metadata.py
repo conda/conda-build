@@ -898,7 +898,7 @@ def _get_dependencies_from_environment(env_name_or_path):
     "24.7.0",
     addendum="Use `conda_build.metadata.toposort_outputs` instead.",
 )
-def toposort(output_metadata_map: dict[dict[str, Any], MetaData]):
+def toposort(output_metadata_map: dict[OutputDict, MetaData]):
     # deprecated since input type (output_metadata_map) and output changed
     from conda.common.toposort import _toposort
 
