@@ -353,12 +353,12 @@ def _get_path_dirs(prefix):
     yield "/".join((prefix, "bin"))
 
 
-def get_uniqueness_key(file):
+def get_uniqueness_key(filename, file):
     binary = ensure_binary(file)
     if not binary:
         return EXE_FORMATS.UNKNOWN
     elif binary.format == EXE_FORMATS.MACHO:
-        return str(file)
+        return filename
     elif binary.format == EXE_FORMATS.ELF and (  # noqa
         binary.type == lief.ELF.ELF_CLASS.CLASS32
         or binary.type == lief.ELF.ELF_CLASS.CLASS64
@@ -369,8 +369,8 @@ def get_uniqueness_key(file):
         ]
         if result:
             return result[0]
-        return str(file)
-    return str(file)
+        return filename
+    return filename
 
 
 def _get_resolved_location(
@@ -508,7 +508,7 @@ def inspect_linkages_lief(
             binary = element[1]
             if not binary:
                 continue
-            uniqueness_key = get_uniqueness_key(binary)
+            uniqueness_key = get_uniqueness_key(filename2, binary)
             if uniqueness_key not in already_seen:
                 parent_exe_dirname = None
                 if binary.format == EXE_FORMATS.PE:
@@ -596,7 +596,7 @@ def inspect_linkages_lief(
                     if recurse:
                         if os.path.exists(resolved[0]):
                             todo.append([resolved[0], lief.parse(resolved[0])])
-                already_seen.add(get_uniqueness_key(binary))
+                already_seen.add(get_uniqueness_key(filename2, binary))
     return results
 
 
