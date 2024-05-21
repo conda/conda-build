@@ -413,7 +413,7 @@ def _get_all_dependencies(metadata, envs=("host", "build", "run")):
     return reqs
 
 
-def check_circular_dependencies(
+def _check_circular_dependencies(
     render_order: list[OutputTuple],
     config: Config | None = None,
 ) -> None:
@@ -859,7 +859,7 @@ def _get_dependencies_from_environment(env_name_or_path):
     return {"requirements": {"build": bootstrap_requirements}}
 
 
-def toposort(
+def _toposort_outputs(
     output_metadata_map: dict[frozendict, OutputTuple],
 ) -> list[OutputTuple]:
     """This function is used to work out the order to run the install scripts
@@ -2601,8 +2601,8 @@ class MetaData:
             )
 
             # format here is {output_dict: metadata_object}
-            render_order: list[OutputTuple] = toposort(output_mapping)
-            check_circular_dependencies(render_order, config=self.config)
+            render_order: list[OutputTuple] = _toposort_outputs(output_mapping)
+            _check_circular_dependencies(render_order, config=self.config)
             conda_packages = OrderedDict()
             non_conda_packages = []
 
