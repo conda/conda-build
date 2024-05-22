@@ -1976,7 +1976,6 @@ def test_add_pip_as_python_dependency_from_condarc_file(
 )
 @pytest.mark.parametrize("debug", (False, True))
 def test_conda_build_script_errors_without_conda_info_handlers(tmp_path, recipe, debug):
-    ""
     env = os.environ.copy()
     if debug:
         env["CONDA_VERBOSITY"] = "3"
