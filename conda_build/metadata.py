@@ -465,10 +465,10 @@ def _check_circular_dependencies(
         for _, other_metadata in render_order[idx + 1 :]:
             other_name = other_metadata.name()
             if any(
-                name == MatchSpec(dep).name
+                name == dep.split(" ")[0]
                 for dep in _get_all_dependencies(other_metadata, envs=envs)
             ) and any(
-                other_name == MatchSpec(dep).name
+                other_name == dep.split(" ")[0]
                 for dep in _get_all_dependencies(metadata, envs=envs)
             ):
                 pairs.append((name, other_name))
@@ -994,7 +994,7 @@ def _toposort_outputs(output_tuples: list[OutputTuple]) -> list[OutputTuple]:
             name_to_dependencies.setdefault(name, set()).update(
                 dependency_name
                 for dependency in dependencies
-                if (dependency_name := MatchSpec(dependency).name) in conda_outputs
+                if (dependency_name := dependency.split(" ")[0]) in conda_outputs
             )
 
             # preserve all of the variants
