@@ -970,10 +970,14 @@ def _toposort_outputs(output_tuples: list[OutputTuple]) -> list[OutputTuple]:
     for output_tuple in output_tuples:
         output_d, _ = output_tuple
         if output_d.get("type", "conda").startswith("conda"):
+            # conda packages must have a name
             # the same package name may be seen multiple times (variants)
             conda_outputs.setdefault(output_d["name"], []).append(output_tuple)
-        else:
+        elif "name" in output_d:
             non_conda_outputs.append(output_tuple)
+        else:
+            # TODO: is it even possible to get here? and if so should we silently ignore or error?
+            utils.get_logger(__name__).warn("Found an output without a name, skipping")
 
     # Iterate over conda packages, creating a mapping of package names to their
     # dependencies to be used in toposort
