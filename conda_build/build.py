@@ -42,6 +42,7 @@ from . import __version__ as conda_build_version
 from . import environ, noarch_python, source, tarcheck, utils
 from .config import Config
 from .create_test import create_all_test_files
+from .deprecations import deprecated
 from .exceptions import (
     BuildScriptException,
     CondaBuildException,
@@ -3527,6 +3528,11 @@ def tests_failed(package_or_metadata, move_broken, broken_dir, config):
     sys.exit("TESTS FAILED: " + os.path.basename(pkg))
 
 
+@deprecated(
+    "24.7",
+    "24.9",
+    addendum="`patchelf` is an explicit conda-build dependency on Linux so it will always be installed.",
+)
 def check_external():
     if on_linux:
         patchelf = external.find_executable("patchelf")
