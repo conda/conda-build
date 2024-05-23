@@ -1,0 +1,20 @@
+### Enhancements
+
+* <news item>
+
+### Bug fixes
+
+* Fix issue with modifying a `frozendict` when specifying `outputs/files` in `meta.yaml`. (#5342 via #5345)
+
+### Deprecations
+
+* Mark `conda_build.metadata.toposort` as deprecated. Use `conda_build.metadata.toposort_outputs` instead. (#5342 via #5345)
+* Mark `conda_build.metadata.check_circular_dependencies` as deprecated. Use `conda_build.metadata._check_circular_dependencies` instead. (#5342 via #5345)
+
+### Docs
+
+* <news item>
+
+### Other
+
+* <news item>

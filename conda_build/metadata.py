@@ -23,6 +23,7 @@ from frozendict import deepfreeze
 
 from . import exceptions, utils
 from .config import Config, get_or_merge_config
+from .deprecations import deprecated
 from .features import feature_list
 from .license_family import ensure_valid_license_family
 from .utils import (
@@ -45,7 +46,10 @@ from .variants import (
 )
 
 if TYPE_CHECKING:
-    from typing import Any, Literal
+    from typing import Any, Literal, Self
+
+    OutputDict = dict[str, Any]
+    OutputTuple = tuple[OutputDict, "MetaData"]
 
 try:
     import yaml
@@ -408,7 +412,17 @@ def _get_all_dependencies(metadata, envs=("host", "build", "run")):
     return reqs
 
 
-def check_circular_dependencies(render_order, config=None):
+@deprecated(
+    "24.5.1",
+    "24.7.0",
+    addendum="Use `conda_build.metadata._check_circular_dependencies` instead.",
+)
+def check_circular_dependencies(
+    render_order: dict[dict[str, Any], MetaData],
+    config: Config | None = None,
+):
+    # deprecated since the input type (render_order) changed
+    envs: tuple[str, ...]
     if config and config.host_subdir != config.build_subdir:
         # When cross compiling build dependencies are already built
         # and cannot come from the recipe as subpackages
@@ -426,6 +440,39 @@ def check_circular_dependencies(render_order, config=None):
                 for dep in _get_all_dependencies(m, envs=envs)
             ):
                 pairs.append((m.name(), other_m.name()))
+    if pairs:
+        error = "Circular dependencies in recipe: \n"
+        for pair in pairs:
+            error += "    {} <-> {}\n".format(*pair)
+        raise exceptions.RecipeError(error)
+
+
+def _check_circular_dependencies(
+    render_order: list[OutputTuple],
+    config: Config | None = None,
+) -> None:
+    envs: tuple[str, ...]
+    if config and config.host_subdir != config.build_subdir:
+        # When cross compiling build dependencies are already built
+        # and cannot come from the recipe as subpackages
+        envs = ("host", "run")
+    else:
+        envs = ("build", "host", "run")
+
+    pairs: list[tuple[str, str]] = []
+    for idx, (_, metadata) in enumerate(render_order):
+        name = metadata.name()
+        for _, other_metadata in render_order[idx + 1 :]:
+            other_name = other_metadata.name()
+            if any(
+                name == dep.split(" ")[0]
+                for dep in _get_all_dependencies(other_metadata, envs=envs)
+            ) and any(
+                other_name == dep.split(" ")[0]
+                for dep in _get_all_dependencies(metadata, envs=envs)
+            ):
+                pairs.append((name, other_name))
+
     if pairs:
         error = "Circular dependencies in recipe: \n"
         for pair in pairs:
@@ -846,14 +893,13 @@ def _get_dependencies_from_environment(env_name_or_path):
     return {"requirements": {"build": bootstrap_requirements}}
 
 
-def toposort(output_metadata_map):
-    """This function is used to work out the order to run the install scripts
-    for split packages based on any interdependencies. The result is just
-    a re-ordering of outputs such that we can run them in that order and
-    reset the initial set of files in the install prefix after each. This
-    will naturally lead to non-overlapping files in each package and also
-    the correct files being present during the install and test procedures,
-    provided they are run in this order."""
+@deprecated(
+    "24.5.1",
+    "24.7.0",
+    addendum="Use `conda_build.metadata.toposort_outputs` instead.",
+)
+def toposort(output_metadata_map: dict[OutputDict, MetaData]):
+    # deprecated since input type (output_metadata_map) and output changed
     from conda.common.toposort import _toposort
 
     # We only care about the conda packages built by this recipe. Non-conda
@@ -863,9 +909,9 @@ def toposort(output_metadata_map):
         for output_d in output_metadata_map
         if output_d.get("type", "conda").startswith("conda")
     ]
-    topodict = dict()
-    order = dict()
-    endorder = set()
+    topodict: dict[str, set[str]] = dict()
+    order: dict[str, int] = dict()
+    endorder: set[int] = set()
 
     for idx, (output_d, output_m) in enumerate(output_metadata_map.items()):
         if output_d.get("type", "conda").startswith("conda"):
@@ -905,6 +951,63 @@ def toposort(output_metadata_map):
     for key in keys:
         result[key] = output_metadata_map[key]
     return result
+
+
+def _toposort_outputs(output_tuples: list[OutputTuple]) -> list[OutputTuple]:
+    """This function is used to work out the order to run the install scripts
+    for split packages based on any interdependencies. The result is just
+    a re-ordering of outputs such that we can run them in that order and
+    reset the initial set of files in the install prefix after each. This
+    will naturally lead to non-overlapping files in each package and also
+    the correct files being present during the install and test procedures,
+    provided they are run in this order."""
+    from conda.common.toposort import _toposort
+
+    # We only care about the conda packages built by this recipe. Non-conda
+    # packages get sorted to the end.
+    conda_outputs: dict[str, list[OutputTuple]] = {}
+    non_conda_outputs: list[OutputTuple] = []
+    for output_tuple in output_tuples:
+        output_d, _ = output_tuple
+        if output_d.get("type", "conda").startswith("conda"):
+            # conda packages must have a name
+            # the same package name may be seen multiple times (variants)
+            conda_outputs.setdefault(output_d["name"], []).append(output_tuple)
+        elif "name" in output_d:
+            non_conda_outputs.append(output_tuple)
+        else:
+            # TODO: is it even possible to get here? and if so should we silently ignore or error?
+            utils.get_logger(__name__).warn("Found an output without a name, skipping")
+
+    # Iterate over conda packages, creating a mapping of package names to their
+    # dependencies to be used in toposort
+    name_to_dependencies: dict[str, set[str]] = {}
+    for name, same_name_outputs in conda_outputs.items():
+        for output_d, output_metadata in same_name_outputs:
+            # dependencies for all of the variants
+            dependencies = (
+                *output_metadata.get_value("requirements/run", []),
+                *output_metadata.get_value("requirements/host", []),
+                *(
+                    output_metadata.get_value("requirements/build", [])
+                    if not output_metadata.is_cross
+                    else []
+                ),
+            )
+            name_to_dependencies.setdefault(name, set()).update(
+                dependency_name
+                for dependency in dependencies
+                if (dependency_name := dependency.split(" ")[0]) in conda_outputs
+            )
+
+    return [
+        *(
+            output
+            for name in _toposort(name_to_dependencies)
+            for output in conda_outputs[name]
+        ),
+        *non_conda_outputs,
+    ]
 
 
 def get_output_dicts_from_metadata(
@@ -2268,7 +2371,7 @@ class MetaData:
                 "character in your recipe."
             )
 
-    def copy(self):
+    def copy(self: Self) -> MetaData:
         new = copy.copy(self)
         new.config = self.config.copy()
         new.config.variant = copy.deepcopy(self.config.variant)
@@ -2520,10 +2623,10 @@ class MetaData:
         permit_undefined_jinja: bool = False,
         permit_unsatisfiable_variants: bool = False,
         bypass_env_check: bool = False,
-    ) -> list[tuple[dict[str, Any], MetaData]]:
+    ) -> list[OutputTuple]:
         from .source import provide
 
-        out_metadata_map = {}
+        output_tuples: list[OutputTuple] = []
         if self.final:
             outputs = get_output_dicts_from_metadata(self)
             output_tuples = [(outputs[0], self)]
@@ -2579,27 +2682,26 @@ class MetaData:
                                 }
                             ),
                         ] = (out, out_metadata)
-                        out_metadata_map[deepfreeze(out)] = out_metadata
+                        output_tuples.append((out, out_metadata))
                         ref_metadata.other_outputs = out_metadata.other_outputs = (
                             all_output_metadata
                         )
                 except SystemExit:
                     if not permit_undefined_jinja:
                         raise
-                    out_metadata_map = {}
+                    output_tuples = []
 
-            assert out_metadata_map, (
+            assert output_tuples, (
                 "Error: output metadata set is empty.  Please file an issue"
                 " on the conda-build tracker at https://github.com/conda/conda-build/issues"
             )
 
-            # format here is {output_dict: metadata_object}
-            render_order = toposort(out_metadata_map)
-            check_circular_dependencies(render_order, config=self.config)
+            render_order: list[OutputTuple] = _toposort_outputs(output_tuples)
+            _check_circular_dependencies(render_order, config=self.config)
             conda_packages = OrderedDict()
             non_conda_packages = []
 
-            for output_d, m in render_order.items():
+            for output_d, m in render_order:
                 if not output_d.get("type") or output_d["type"] in (
                     "conda",
                     "conda_v2",
