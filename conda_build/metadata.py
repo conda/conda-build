@@ -978,7 +978,6 @@ def _toposort_outputs(output_tuples: list[OutputTuple]) -> list[OutputTuple]:
     # Iterate over conda packages, creating a mapping of package names to their
     # dependencies to be used in toposort
     name_to_dependencies: dict[str, set[str]] = {}
-    name_lookup: dict[str, list[OutputTuple]] = {}
     for name, same_name_outputs in conda_outputs.items():
         for output_d, output_metadata in same_name_outputs:
             # dependencies for all of the variants
@@ -997,14 +996,11 @@ def _toposort_outputs(output_tuples: list[OutputTuple]) -> list[OutputTuple]:
                 if (dependency_name := dependency.split(" ")[0]) in conda_outputs
             )
 
-            # preserve all of the variants
-            name_lookup.setdefault(name, []).append((output_d, output_metadata))
-
     return [
         *(
             output
             for name in _toposort(name_to_dependencies)
-            for output in name_lookup[name]
+            for output in conda_outputs[name]
         ),
         *non_conda_outputs,
     ]
