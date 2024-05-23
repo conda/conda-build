@@ -5,7 +5,7 @@
 ### Bug fixes
 
 * Fix issue with modifying a `frozendict` when specifying `outputs/files` in `meta.yaml`. (#5342 via #5345)
-*  Fix excessive memory use in `inspect_linkages_lief`. (#5267 via #5348)
+* Fix excessive memory use in `inspect_linkages_lief`. (#5267 via #5348)
 
 ### Deprecations
 
