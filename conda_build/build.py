@@ -2882,6 +2882,14 @@ def warn_on_use_of_SRC_DIR(metadata):
             )
 
 
+@deprecated(
+    "3.16.0",
+    "24.7.0",
+    addendum=(
+        "Test built packages instead, not recipes. E.g., "
+        "`conda build --test package.conda` instead of `conda build --test recipe/`."
+    ),
+)
 def _construct_metadata_for_test_from_recipe(recipe_dir, config):
     config.need_cleanup = False
     config.recipe_dir = None
@@ -2889,11 +2897,6 @@ def _construct_metadata_for_test_from_recipe(recipe_dir, config):
     metadata = expand_outputs(
         render_recipe(recipe_dir, config=config, reset_build_id=False)
     )[0][1]
-    log = utils.get_logger(__name__)
-    log.warning(
-        "Testing based on recipes is deprecated as of conda-build 3.16.0.  Please adjust "
-        "your code to pass your desired conda package to test instead."
-    )
 
     utils.rm_rf(metadata.config.test_dir)
 
