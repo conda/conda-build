@@ -8,7 +8,8 @@
 
 ### Deprecations
 
-* <news item>
+* Mark `conda_build.metadata.toposort` as deprecated. Use `conda_build.metadata.toposort_outputs` instead. (#5342 via #5345)
+* Mark `conda_build.metadata.check_circular_dependencies` as deprecated. Use `conda_build.metadata._check_circular_dependencies` instead. (#5342 via #5345)
 
 ### Docs
 
