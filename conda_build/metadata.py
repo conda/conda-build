@@ -12,17 +12,22 @@ import time
 import warnings
 from collections import OrderedDict
 from functools import lru_cache
-from os.path import isfile, join
+from os.path import isdir, isfile, join
 from typing import TYPE_CHECKING, NamedTuple, overload
 
+import jinja2
+import yaml
 from bs4 import UnicodeDammit
-from conda.base.context import context
+from conda.base.context import locate_prefix_by_name
+from conda.core.prefix_data import PrefixData
 from conda.gateways.disk.read import compute_sum
 from conda.models.match_spec import MatchSpec
 from frozendict import deepfreeze
 
 from . import exceptions, utils
 from .config import Config, get_or_merge_config
+from .deprecations import deprecated
+from .exceptions import CondaBuildUserError
 from .features import feature_list
 from .license_family import ensure_valid_license_family
 from .utils import (
@@ -30,7 +35,6 @@ from .utils import (
     ensure_list,
     expand_globs,
     find_recipe,
-    get_installed_packages,
     insert_variant_versions,
     on_win,
 )
@@ -45,15 +49,8 @@ from .variants import (
 )
 
 if TYPE_CHECKING:
+    from pathlib import Path
     from typing import Any, Literal
-
-try:
-    import yaml
-except ImportError:
-    sys.exit(
-        "Error: could not import yaml (required to read meta.yaml "
-        "files of conda recipes)"
-    )
 
 try:
     Loader = yaml.CLoader
@@ -332,12 +329,12 @@ def select_lines(text: str, namespace: dict[str, Any], variants_in_place: bool) 
                     if value:
                         lines.append(line)
                 except Exception as e:
-                    sys.exit(
-                        f"Error: Invalid selector in meta.yaml line {i + 1}:\n"
-                        f"offending line:\n"
-                        f"{line}\n"
+                    raise CondaBuildUserError(
+                        f"Invalid selector in meta.yaml line {i + 1}:\n"
+                        f"offending selector:\n"
+                        f"  [{selector}]\n"
                         f"exception:\n"
-                        f"{e.__class__.__name__}: {e}\n"
+                        f"  {e.__class__.__name__}: {e}\n"
                     )
     return "\n".join(lines) + "\n"
 
@@ -346,13 +343,6 @@ def yamlize(data):
     try:
         return yaml.load(data, Loader=StringifyNumbersLoader)
     except yaml.error.YAMLError as e:
-        if "{{" in data:
-            try:
-                import jinja2
-
-                jinja2  # Avoid pyflakes failure: 'jinja2' imported but unused
-            except ImportError:
-                raise exceptions.UnableToParseMissingJinja2(original=e)
         print("Problematic recipe:", file=sys.stderr)
         print(data, file=sys.stderr)
         raise exceptions.UnableToParse(original=e)
@@ -701,30 +691,17 @@ def _git_clean(source_meta):
     If more than one field is used to specified, exit
     and complain.
     """
-
-    git_rev_tags_old = ("git_branch", "git_tag")
     git_rev = "git_rev"
-
-    git_rev_tags = (git_rev,) + git_rev_tags_old
-
-    has_rev_tags = tuple(bool(source_meta.get(tag, "")) for tag in git_rev_tags)
-    if sum(has_rev_tags) > 1:
-        msg = "Error: multiple git_revs:"
-        msg += ", ".join(
-            f"{key}" for key, has in zip(git_rev_tags, has_rev_tags) if has
-        )
-        sys.exit(msg)
+    keys = [key for key in (git_rev, "git_branch", "git_tag") if key in source_meta]
+    if not keys:
+        # git_branch, git_tag, nor git_rev specified, return as-is
+        return source_meta
+    elif len(keys) > 1:
+        raise CondaBuildUserError(f"Multiple git_revs: {', '.join(keys)}")
 
     # make a copy of the input so we have no side-effects
     ret_meta = source_meta.copy()
-    # loop over the old versions
-    for key, has in zip(git_rev_tags[1:], has_rev_tags[1:]):
-        # update if needed
-        if has:
-            ret_meta[git_rev_tags[0]] = ret_meta[key]
-        # and remove
-        ret_meta.pop(key, None)
-
+    ret_meta[git_rev] = ret_meta.pop(keys[0])
     return ret_meta
 
 
@@ -736,15 +713,17 @@ def _str_version(package_meta):
     return package_meta
 
 
-def check_bad_chrs(s, field):
-    bad_chrs = "=@#$%^&*:;\"'\\|<>?/ "
+def check_bad_chrs(value: str, field: str) -> None:
+    bad_chrs = set("=@#$%^&*:;\"'\\|<>?/ ")
     if field in ("package/version", "build/string"):
-        bad_chrs += "-"
+        bad_chrs.add("-")
     if field != "package/version":
-        bad_chrs += "!"
-    for c in bad_chrs:
-        if c in s:
-            sys.exit(f"Error: bad character '{c}' in {field}: {s}")
+        bad_chrs.add("!")
+
+    if invalid := bad_chrs.intersection(value):
+        raise CondaBuildUserError(
+            f"Bad character(s) ({''.join(sorted(invalid))}) in {field}: {value}."
+        )
 
 
 def get_package_version_pin(build_reqs, name):
@@ -817,33 +796,37 @@ def build_string_from_metadata(metadata):
     return build_str
 
 
-# This really belongs in conda, and it is int conda.cli.common,
-#   but we don't presently have an API there.
-def _get_env_path(env_name_or_path):
-    if not os.path.isdir(env_name_or_path):
-        for envs_dir in list(context.envs_dirs) + [os.getcwd()]:
-            path = os.path.join(envs_dir, env_name_or_path)
-            if os.path.isdir(path):
-                env_name_or_path = path
-                break
-    bootstrap_metadir = os.path.join(env_name_or_path, "conda-meta")
-    if not os.path.isdir(bootstrap_metadir):
-        print(f"Bootstrap environment '{env_name_or_path}' not found")
-        sys.exit(1)
-    return env_name_or_path
+@deprecated(
+    "24.5", "24.7", addendum="Use `conda.base.context.locate_prefix_by_name` instead."
+)
+def _get_env_path(
+    env_name_or_path: str | os.PathLike | Path,
+) -> str | os.PathLike | Path:
+    return (
+        env_name_or_path
+        if isdir(env_name_or_path)
+        else locate_prefix_by_name(env_name_or_path)
+    )
 
 
-def _get_dependencies_from_environment(env_name_or_path):
-    path = _get_env_path(env_name_or_path)
+def _get_dependencies_from_environment(
+    env_name_or_path: str | os.PathLike | Path,
+) -> dict[str, dict[str, list[str]]]:
     # construct build requirements that replicate the given bootstrap environment
     # and concatenate them to the build requirements from the recipe
-    bootstrap_metadata = get_installed_packages(path)
-    bootstrap_requirements = []
-    for package, data in bootstrap_metadata.items():
-        bootstrap_requirements.append(
-            "{} {} {}".format(package, data["version"], data["build"])
-        )
-    return {"requirements": {"build": bootstrap_requirements}}
+    prefix = (
+        env_name_or_path
+        if isdir(env_name_or_path)
+        else locate_prefix_by_name(env_name_or_path)
+    )
+    return {
+        "requirements": {
+            "build": [
+                f"{prec.name} {prec.version} {prec.build}"
+                for prec in PrefixData(prefix).iter_records()
+            ]
+        }
+    }
 
 
 def toposort(output_metadata_map):
@@ -1304,12 +1287,11 @@ class MetaData:
     ):
         """variant contains key-value mapping for additional functions and values
         for jinja2 variables"""
-        # undefined_jinja_vars is refreshed by self.parse again
-        undefined_jinja_vars = ()
         # store the "final" state that we think we're in.  reloading the meta.yaml file
         #   can reset it (to True)
         final = self.final
-        # always parse again at least once.
+
+        # always parse again at least once
         self.parse_again(
             permit_undefined_jinja=True,
             allow_no_other_outputs=allow_no_other_outputs,
@@ -1317,6 +1299,8 @@ class MetaData:
         )
         self.final = final
 
+        # recursively parse again so long as each iteration has fewer undefined jinja variables
+        undefined_jinja_vars = ()
         while set(undefined_jinja_vars) != set(self.undefined_jinja_vars):
             undefined_jinja_vars = self.undefined_jinja_vars
             self.parse_again(
@@ -1325,18 +1309,8 @@ class MetaData:
                 bypass_env_check=bypass_env_check,
             )
             self.final = final
-        if undefined_jinja_vars:
-            self.parse_again(
-                permit_undefined_jinja=False,
-                allow_no_other_outputs=allow_no_other_outputs,
-                bypass_env_check=bypass_env_check,
-            )
-            sys.exit(
-                f"Undefined Jinja2 variables remain ({self.undefined_jinja_vars}).  Please enable "
-                "source downloading and try again."
-            )
 
-        # always parse again at the end, too.
+        # always parse again at the end without permit_undefined_jinja
         self.parse_again(
             permit_undefined_jinja=False,
             allow_no_other_outputs=allow_no_other_outputs,
@@ -1901,17 +1875,6 @@ class MetaData:
         permit_undefined_jinja: If True, *any* use of undefined jinja variables will
                                 evaluate to an emtpy string, without emitting an error.
         """
-        try:
-            import jinja2
-        except ImportError:
-            print("There was an error importing jinja2.", file=sys.stderr)
-            print(
-                "Please run `conda install jinja2` to enable jinja template support",
-                file=sys.stderr,
-            )  # noqa
-            with open(self.meta_path) as fd:
-                return fd.read()
-
         from .jinja_context import (
             FilteredLoader,
             UndefinedNeverFail,
@@ -1993,8 +1956,8 @@ class MetaData:
         except jinja2.TemplateError as ex:
             if "'None' has not attribute" in str(ex):
                 ex = "Failed to run jinja context function"
-            sys.exit(
-                f"Error: Failed to render jinja template in {self.meta_path}:\n{str(ex)}"
+            raise CondaBuildUserError(
+                f"Failed to render jinja template in {self.meta_path}:\n{str(ex)}"
             )
         finally:
             if "CONDA_BUILD_STATE" in os.environ:

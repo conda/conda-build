@@ -133,6 +133,10 @@ def test_filter_files():
         "python.exe.conda_trash",
         "bla.dll.conda_trash_1",
         "bla.dll.conda_trash.conda_trash",
+        # ignore top-level conda-meta
+        "conda-meta",
+        "conda-meta/something",
+        "conda-meta-something",
     ]
     assert not utils.filter_files(files_list, "")
 
@@ -150,6 +154,10 @@ def test_filter_files():
         "another.lab",
         "miniconda_trashcan.py",
         "conda_trash_avoider.py",
+        # keep nested conda-meta
+        "something/conda-meta",
+        "something/conda-meta/something",
+        "something/conda-meta-something",
     ]
     assert len(utils.filter_files(files_list, "")) == len(files_list)
 

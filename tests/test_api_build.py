@@ -37,6 +37,7 @@ from conda_build import __version__, api, exceptions
 from conda_build.config import Config
 from conda_build.exceptions import (
     CondaBuildException,
+    CondaBuildUserError,
     DependencyNeedsBuildingError,
     OverDependingError,
     OverLinkingError,
@@ -264,7 +265,9 @@ def test_no_include_recipe_config_arg(testing_metadata):
 
 
 @pytest.mark.slow
-def test_no_include_recipe_meta_yaml(testing_metadata, testing_config):
+def test_no_include_recipe_meta_yaml(
+    testing_metadata: MetaData, testing_config: Config
+) -> None:
     # first, make sure that the recipe is there by default.  This test copied from above, but copied
     # as a sanity check here.
     outputs = api.build(testing_metadata, notest=True)
@@ -277,7 +280,7 @@ def test_no_include_recipe_meta_yaml(testing_metadata, testing_config):
     )[0]
     assert not package_has_file(output_file, "info/recipe/meta.yaml")
 
-    with pytest.raises(SystemExit):
+    with pytest.raises(CondaBuildUserError):
         # we are testing that even with the recipe excluded, we still get the tests in place
         output_file = api.build(
             os.path.join(metadata_dir, "_no_include_recipe"), config=testing_config
@@ -473,9 +476,9 @@ def test_cmake_generator(platform, target_compiler, testing_config):
     api.build(os.path.join(metadata_dir, "_cmake_generator"), config=testing_config)
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="No windows symlinks")
-def test_symlink_fail(testing_config):
-    with pytest.raises((SystemExit, FileNotFoundError)):
+@pytest.mark.skipif(on_win, reason="No windows symlinks")
+def test_symlink_fail(testing_config: MetaData) -> None:
+    with pytest.raises(CondaBuildUserError):
         api.build(os.path.join(fail_dir, "symlinks"), config=testing_config)
 
 
@@ -541,11 +544,12 @@ def test_skip_existing_url(testing_metadata, testing_workdir, capfd):
     assert "are already built" in output
 
 
-def test_failed_tests_exit_build(testing_config):
-    """https://github.com/conda/conda-build/issues/1112"""
-    with pytest.raises(SystemExit, match="TESTS FAILED"):
+def test_failed_tests_exit_build(testing_config: Config) -> None:
+    # https://github.com/conda/conda-build/issues/1112
+    with pytest.raises(CondaBuildUserError, match=r"TESTS FAILED"):
         api.build(
-            os.path.join(metadata_dir, "_test_failed_test_exits"), config=testing_config
+            os.path.join(metadata_dir, "_test_failed_test_exits"),
+            config=testing_config,
         )
 
 
@@ -1796,11 +1800,11 @@ def test_empty_package_with_python_and_compiler_in_build_barfs(testing_config):
 
 
 @pytest.mark.sanity
-def test_downstream_tests(testing_config):
+def test_downstream_tests(testing_config: Config) -> None:
     upstream = os.path.join(metadata_dir, "_test_downstreams/upstream")
     downstream = os.path.join(metadata_dir, "_test_downstreams/downstream")
     api.build(downstream, config=testing_config, notest=True)
-    with pytest.raises(SystemExit):
+    with pytest.raises(CondaBuildUserError):
         api.build(upstream, config=testing_config)
 
 

@@ -16,7 +16,7 @@ from conda_build.config import (
     Config,
     zstd_compression_level_default,
 )
-from conda_build.exceptions import DependencyNeedsBuildingError
+from conda_build.exceptions import CondaBuildUserError, DependencyNeedsBuildingError
 from conda_build.os_utils.external import find_executable
 from conda_build.utils import get_build_folders, on_win, package_has_file
 
@@ -159,13 +159,15 @@ def test_slash_in_recipe_arg_keeps_build_id(
 
 @pytest.mark.sanity
 @pytest.mark.skipif(on_win, reason="prefix is always short on win.")
-def test_build_long_test_prefix_default_enabled(mocker, testing_workdir):
+def test_build_long_test_prefix_default_enabled(
+    mocker: MockerFixture, testing_workdir: str
+) -> None:
     recipe_path = os.path.join(metadata_dir, "_test_long_test_prefix")
     args = [recipe_path, "--no-anaconda-upload"]
     main_build.execute(args)
 
     args.append("--no-long-test-prefix")
-    with pytest.raises(SystemExit):
+    with pytest.raises(CondaBuildUserError):
         main_build.execute(args)
 
 
@@ -472,7 +474,7 @@ def test_relative_path_test_recipe(conda_build_test_recipe_envvar: str):
     main_build.execute(args)
 
 
-def test_test_extra_dep(testing_metadata):
+def test_test_extra_dep(testing_metadata: MetaData) -> None:
     testing_metadata.meta["test"]["imports"] = ["imagesize"]
     api.output_yaml(testing_metadata, "meta.yaml")
     output = api.build(testing_metadata, notest=True, anaconda_upload=False)[0]
@@ -483,7 +485,7 @@ def test_test_extra_dep(testing_metadata):
     main_build.execute(args)
 
     # missing click dep will fail tests
-    with pytest.raises(SystemExit):
+    with pytest.raises(CondaBuildUserError):
         args = [output, "-t"]
         # extra_deps will add it in
         main_build.execute(args)

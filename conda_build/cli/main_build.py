@@ -535,7 +535,6 @@ def execute(args: Sequence[str] | None = None) -> int:
     context.__init__(argparse_args=parsed)
 
     config = get_or_merge_config(None, **parsed.__dict__)
-    build.check_external()
 
     # change globals in build module, see comment there as well
     config.channel_urls = get_channel_urls(parsed.__dict__)

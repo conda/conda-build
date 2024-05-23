@@ -42,7 +42,12 @@ from . import __version__ as conda_build_version
 from . import environ, noarch_python, source, tarcheck, utils
 from .config import Config
 from .create_test import create_all_test_files
-from .exceptions import CondaBuildException, DependencyNeedsBuildingError
+from .deprecations import deprecated
+from .exceptions import (
+    CondaBuildException,
+    CondaBuildUserError,
+    DependencyNeedsBuildingError,
+)
 from .index import _delegated_update_index, get_build_index
 from .metadata import FIELDS, MetaData
 from .os_utils import external
@@ -81,6 +86,9 @@ from .variants import (
     get_package_variants,
     set_language_env_vars,
 )
+
+if TYPE_CHECKING:
+    from typing import Iterable
 
 if on_win:
     from . import windows
@@ -769,12 +777,12 @@ def copy_recipe(m):
             yaml.dump(m.config.variant, f)
 
 
-def copy_readme(m):
+def copy_readme(m: MetaData):
     readme = m.get_value("about/readme")
     if readme:
         src = join(m.config.work_dir, readme)
         if not isfile(src):
-            sys.exit(f"Error: no readme file: {readme}")
+            raise CondaBuildUserError(f"`about/readme` file ({readme}) doesn't exist")
         dst = join(m.config.info_dir, readme)
         utils.copy_into(src, dst, m.config.timeout, locking=m.config.locking)
         if os.path.split(readme)[1] not in {"README.md", "README.rst", "README"}:
@@ -1640,27 +1648,7 @@ def post_process_files(m: MetaData, initial_prefix_files):
     # The post processing may have deleted some files (like easy-install.pth)
     current_prefix_files = utils.prefix_files(prefix=host_prefix)
     new_files = sorted(current_prefix_files - initial_prefix_files)
-    """
-    if m.noarch == 'python' and m.config.subdir == 'win-32':
-        # Delete any PIP-created .exe launchers and fix entry_points.txt
-        # .. but we need to provide scripts instead here.
-        from .post import caseless_sepless_fnmatch
-        exes = caseless_sepless_fnmatch(new_files, 'Scripts/*.exe')
-        for ff in exes:
-            os.unlink(os.path.join(m.config.host_prefix, ff))
-            new_files.remove(ff)
-    """
     new_files = utils.filter_files(new_files, prefix=host_prefix)
-    meta_dir = m.config.meta_dir
-    if any(meta_dir in join(host_prefix, f) for f in new_files):
-        meta_files = (
-            tuple(f for f in new_files if m.config.meta_dir in join(host_prefix, f)),
-        )
-        sys.exit(
-            f"Error: Untracked file(s) {meta_files} found in conda-meta directory. This error usually comes "
-            "from using conda in the build script. Avoid doing this, as it can lead to packages "
-            "that include their dependencies."
-        )
     post_build(m, new_files, build_python=python)
 
     entry_point_script_names = get_entry_point_script_names(
@@ -1739,13 +1727,16 @@ def bundle_conda(output, metadata: MetaData, env, stats, **kw):
                     output["script"],
                     args[0],
                 )
-            if "system32" in args[0] and "bash" in args[0]:
-                print(
-                    "ERROR :: WSL bash.exe detected, this will not work (PRs welcome!). Please\n"
-                    "         use MSYS2 packages. Add `m2-base` and more (depending on what your"
-                    "         script needs) to `requirements/build` instead."
+            if (
+                # WSL bash is always the same path, it is an alias to the default
+                # distribution as configured by the user
+                on_win and Path("C:\\Windows\\System32\\bash.exe").samefile(args[0])
+            ):
+                raise CondaBuildUserError(
+                    "WSL bash.exe is not supported. Please use MSYS2 packages. Add "
+                    "`m2-base` and more (depending on what your script needs) to "
+                    "`requirements/build` instead."
                 )
-                sys.exit(1)
         else:
             args = interpreter.split(" ")
 
@@ -3410,10 +3401,11 @@ def test(
         env["CONDA_BUILD_STATE"] = "TEST"
 
     if config.test_run_post:
-        from .utils import get_installed_packages
-
-        installed = get_installed_packages(metadata.config.test_prefix)
-        files = installed[metadata.meta["package"]["name"]]["files"]
+        files = (
+            PrefixData(metadata.config.test_prefix)
+            .get(metadata.meta["package"]["name"])
+            .files
+        )
         replacements = get_all_replacements(metadata.config)
         try_download(metadata, False, True)
         create_info_files(metadata, replacements, files, metadata.config.test_prefix)
@@ -3483,7 +3475,12 @@ def test(
     return True
 
 
-def tests_failed(package_or_metadata, move_broken, broken_dir, config):
+def tests_failed(
+    package_or_metadata: str | os.PathLike | Path | MetaData,
+    move_broken: bool,
+    broken_dir: str | os.PathLike | Path,
+    config: Config,
+) -> None:
     """
     Causes conda to exit if any of the given package's tests failed.
 
@@ -3511,19 +3508,19 @@ def tests_failed(package_or_metadata, move_broken, broken_dir, config):
         _delegated_update_index(
             os.path.dirname(os.path.dirname(pkg)), verbose=config.debug, threads=1
         )
-    sys.exit("TESTS FAILED: " + os.path.basename(pkg))
+    raise CondaBuildUserError(f"TESTS FAILED: {os.path.basename(pkg)}")
 
 
+@deprecated("24.5", "24.7")
 def check_external():
     if on_linux:
         patchelf = external.find_executable("patchelf")
         if patchelf is None:
-            sys.exit(
-                "Error:\n"
-                f"    Did not find 'patchelf' in: {os.pathsep.join(external.dir_paths)}\n"
-                "    'patchelf' is necessary for building conda packages on Linux with\n"
-                "    relocatable ELF libraries.  You can install patchelf using conda install\n"
-                "    patchelf.\n"
+            raise CondaBuildUserError(
+                f"Did not find 'patchelf' in: {os.pathsep.join(external._DIR_PATHS)} "
+                f"'patchelf' is necessary for building conda packages on Linux with "
+                f"relocatable ELF libraries.  You can install patchelf using conda install "
+                f"patchelf."
             )
 
 
@@ -3902,7 +3899,10 @@ def build_tree(
     return list(built_packages.keys())
 
 
-def handle_anaconda_upload(paths, config):
+def handle_anaconda_upload(
+    paths: Iterable[str | os.PathLike | Path],
+    config: Config,
+) -> None:
     from .os_utils.external import find_executable
 
     paths = utils.ensure_list(paths)
@@ -3936,7 +3936,7 @@ def handle_anaconda_upload(paths, config):
             "# To have conda build upload to anaconda.org automatically, use\n"
             f"# {prompter}conda config --set anaconda_upload yes\n"
         )
-        no_upload_message += f"anaconda upload{joiner}" + joiner.join(paths)
+        no_upload_message += f"anaconda upload{joiner}" + joiner.join(map(str, paths))
 
     if not upload:
         print(no_upload_message)
@@ -3944,7 +3944,7 @@ def handle_anaconda_upload(paths, config):
 
     if not anaconda:
         print(no_upload_message)
-        sys.exit(
+        raise CondaBuildUserError(
             "Error: cannot locate anaconda command (required for upload)\n"
             "# Try:\n"
             f"# {prompter}conda install anaconda-client"
