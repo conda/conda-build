@@ -4,7 +4,7 @@
 
 ### Bug fixes
 
-*  Fix excessive memory use in `inspect_linkages_lief` (#5267 via #5348)
+*  Fix excessive memory use in `inspect_linkages_lief`. (#5267 via #5348)
 
 ### Deprecations
 
