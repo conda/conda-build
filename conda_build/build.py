@@ -42,7 +42,11 @@ from . import __version__ as conda_build_version
 from . import environ, noarch_python, source, tarcheck, utils
 from .config import Config
 from .create_test import create_all_test_files
-from .exceptions import CondaBuildException, DependencyNeedsBuildingError
+from .exceptions import (
+    BuildScriptException,
+    CondaBuildException,
+    DependencyNeedsBuildingError,
+)
 from .index import _delegated_update_index, get_build_index
 from .metadata import FIELDS, MetaData
 from .os_utils import external
@@ -1782,12 +1786,15 @@ def bundle_conda(output, metadata: MetaData, env, stats, **kw):
             _write_activation_text(dest_file, metadata)
 
         bundle_stats = {}
-        utils.check_call_env(
-            [*args, dest_file],
-            cwd=metadata.config.work_dir,
-            env=env_output,
-            stats=bundle_stats,
-        )
+        try:
+            utils.check_call_env(
+                [*args, dest_file],
+                cwd=metadata.config.work_dir,
+                env=env_output,
+                stats=bundle_stats,
+            )
+        except subprocess.CalledProcessError as exc:
+            raise BuildScriptException(str(exc), caused_by=exc) from exc
         log_stats(bundle_stats, f"bundling {metadata.name()}")
         if stats is not None:
             stats[stats_key(metadata, f"bundle_{metadata.name()}")] = bundle_stats
@@ -2478,9 +2485,12 @@ def build(
 
                     with codecs.getwriter("utf-8")(open(build_file, "wb")) as bf:
                         bf.write(script)
-                windows.build(
-                    m, build_file, stats=build_stats, provision_only=provision_only
-                )
+                try:
+                    windows.build(
+                        m, build_file, stats=build_stats, provision_only=provision_only
+                    )
+                except subprocess.CalledProcessError as exc:
+                    raise BuildScriptException(str(exc), caused_by=exc) from exc
             else:
                 build_file = join(m.path, "build.sh")
                 if isfile(build_file) and script:
@@ -2522,13 +2532,16 @@ def build(
                         del env["CONDA_BUILD"]
 
                         # this should raise if any problems occur while building
-                        utils.check_call_env(
-                            cmd,
-                            env=env,
-                            rewrite_stdout_env=rewrite_env,
-                            cwd=src_dir,
-                            stats=build_stats,
-                        )
+                        try:
+                            utils.check_call_env(
+                                cmd,
+                                env=env,
+                                rewrite_stdout_env=rewrite_env,
+                                cwd=src_dir,
+                                stats=build_stats,
+                            )
+                        except subprocess.CalledProcessError as exc:
+                            raise BuildScriptException(str(exc), caused_by=exc) from exc
                         utils.remove_pycache_from_scripts(m.config.host_prefix)
             if build_stats and not provision_only:
                 log_stats(build_stats, f"building {m.name()}")
