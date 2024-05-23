@@ -2886,9 +2886,10 @@ def warn_on_use_of_SRC_DIR(metadata):
     "3.16.0",
     "24.7.0",
     addendum=(
-        "Test built packages instead, not recipes. E.g., "
-        "`conda build --test package.conda` instead of `conda build --test recipe/`."
+        "Test built packages instead, not recipes "
+        "(e.g., `conda build --test package` instead of `conda build --test recipe/`)."
     ),
+    deprecation_type=FutureWarning,  # we need to warn users, not developers
 )
 def _construct_metadata_for_test_from_recipe(recipe_dir, config):
     config.need_cleanup = False
