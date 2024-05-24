@@ -612,7 +612,7 @@
   first_commit: 2015-08-30 06:44:37
 - name: Marcel Bargull
   email: marcel.bargull@udo.edu
-  num_commits: 87
+  num_commits: 88
   first_commit: 2016-09-26 11:45:54
   github: mbargull
   alternate_emails:
@@ -1202,7 +1202,7 @@
   alternate_emails:
   - clee@anaconda.com
 - name: Ken Odegard
-  num_commits: 203
+  num_commits: 204
   email: kodegard@anaconda.com
   first_commit: 2020-09-08 19:53:41
   github: kenodegard

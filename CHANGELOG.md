@@ -1,5 +1,25 @@
 [//]: # (current developments)
 
+## 24.5.1 (2024-05-23)
+
+### Bug fixes
+
+* Fix issue with modifying a `frozendict` when specifying `outputs/files` in `meta.yaml`. (#5342 via #5345)
+* Fix excessive memory use in `inspect_linkages_lief`. (#5267 via #5348)
+
+### Deprecations
+
+* Mark `conda_build.metadata.toposort` as deprecated. Use `conda_build.metadata.toposort_outputs` instead. (#5342 via #5345)
+* Mark `conda_build.metadata.check_circular_dependencies` as deprecated. Use `conda_build.metadata._check_circular_dependencies` instead. (#5342 via #5345)
+
+### Contributors
+
+* @beeankha
+* @kenodegard
+* @mbargull
+
+
+
 ## 24.5.0 (2024-05-06)
 
 ### Enhancements
