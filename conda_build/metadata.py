@@ -480,6 +480,24 @@ def _check_circular_dependencies(
         raise exceptions.RecipeError(error)
 
 
+def _check_run_constrained(metadata_tuples):
+    errors = []
+    for _, metadata in metadata_tuples:
+        for dep in _get_all_dependencies(metadata, envs=("run_constrained",)):
+            if "{{" in dep:
+                # skip Jinja content; it might have not been rendered yet; we'll get it next call
+                continue
+            try:
+                MatchSpec(dep)
+            except ValueError as exc:
+                errors.append(
+                    f"- Output '{metadata.name()}' has invalid run_constrained item: {dep}. "
+                    f"Reason: {exc}"
+                )
+    if errors:
+        raise exceptions.RecipeError("\n".join(["", *errors]))
+
+
 def _variants_equal(metadata, output_metadata):
     match = True
     for key, val in metadata.config.variant.items():
@@ -2755,6 +2773,7 @@ class MetaData:
                 m.final = True
                 final_conda_packages.append((out_d, m))
             output_tuples = final_conda_packages + non_conda_packages
+        _check_run_constrained(output_tuples)
         return output_tuples
 
     def get_loop_vars(self):
