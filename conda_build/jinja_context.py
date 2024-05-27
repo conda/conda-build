@@ -169,7 +169,9 @@ def load_setup_py_data(
         try:
             check_call_env(args, env=env)
         except CalledProcessError as exc:
-            raise CondaBuildException("Could not run load_setup_py_data in subprocess.") from exc
+            raise CondaBuildException(
+                "Could not run load_setup_py_data in subprocess"
+            ) from exc
         # this is a file that the subprocess will have written
         with open(
             os.path.join(m.config.work_dir, "conda_build_loaded_setup_py.json")
