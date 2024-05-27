@@ -1540,7 +1540,7 @@ def test_setup_py_data_in_env(testing_config):
     # should pass with any modern python (just not 3.5)
     api.build(recipe, config=testing_config)
     # make sure it fails with our special python logic
-    with pytest.raises(BuildScriptException):
+    with pytest.raises((BuildScriptException, CondaBuildException)):
         api.build(recipe, config=testing_config, python="3.5")
 
 

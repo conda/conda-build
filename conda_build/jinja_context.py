@@ -10,6 +10,7 @@ import re
 import time
 from functools import partial
 from io import StringIO, TextIOBase
+from subprocess import CalledProcessError
 from typing import TYPE_CHECKING
 from warnings import warn
 
@@ -165,7 +166,10 @@ def load_setup_py_data(
             args.extend(["--recipe-dir", recipe_dir])
         if permit_undefined_jinja:
             args.append("--permit-undefined-jinja")
-        check_call_env(args, env=env)
+        try:
+            check_call_env(args, env=env)
+        except CalledProcessError as exc:
+            raise CondaBuildException("Could not run load_setup_py_data in subprocess.") from exc
         # this is a file that the subprocess will have written
         with open(
             os.path.join(m.config.work_dir, "conda_build_loaded_setup_py.json")
