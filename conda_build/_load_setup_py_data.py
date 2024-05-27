@@ -111,7 +111,7 @@ def load_setup_py_data(
             exec(code, ns, ns)
     else:
         if not permit_undefined_jinja:
-            raise TypeError(f"{setup_file} is not a file that can be read")
+            raise TypeError("%s is not a file that can be read" % setup_file)
 
     sys.modules["versioneer"] = versioneer
 
