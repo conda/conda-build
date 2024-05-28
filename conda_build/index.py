@@ -1,9 +1,7 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
-import json
 import logging
 import os
-import time
 from functools import partial
 from os.path import dirname
 
@@ -15,7 +13,6 @@ from conda_index.index import update_index as _update_index
 
 from . import utils
 from .utils import (
-    JSONDecodeError,
     get_logger,
 )
 
@@ -54,8 +51,6 @@ def get_build_index(
     global cached_index
     global cached_channels
     mtime = 0
-
-    _channel_data = {}
 
     channel_urls = list(utils.ensure_list(channel_urls))
 
@@ -129,55 +124,11 @@ def get_build_index(
                     platform=subdir,
                 )
 
-            expanded_channels = {rec.channel for rec in cached_index}
-
-            superchannel = {}
-            # we need channeldata.json too, as it is a more reliable source of run_exports data
-            for channel in expanded_channels:
-                if channel.scheme == "file":
-                    location = channel.location
-                    if utils.on_win:
-                        location = location.lstrip("/")
-                    elif not os.path.isabs(channel.location) and os.path.exists(
-                        os.path.join(os.path.sep, channel.location)
-                    ):
-                        location = os.path.join(os.path.sep, channel.location)
-                    channeldata_file = os.path.join(
-                        location, channel.name, "channeldata.json"
-                    )
-                    retry = 0
-                    max_retries = 1
-                    if os.path.isfile(channeldata_file):
-                        while retry < max_retries:
-                            try:
-                                with open(channeldata_file, "r+") as f:
-                                    _channel_data[channel.name] = json.load(f)
-                                break
-                            except (OSError, JSONDecodeError):
-                                time.sleep(0.2)
-                                retry += 1
-                else:
-                    # download channeldata.json for url
-                    if not context.offline:
-                        try:
-                            _channel_data[channel.name] = utils.download_channeldata(
-                                channel.base_url + "/channeldata.json"
-                            )
-                        except CondaHTTPError:
-                            continue
-                # collapse defaults metachannel back into one superchannel, merging channeldata
-                if channel.base_url in context.default_channels and _channel_data.get(
-                    channel.name
-                ):
-                    packages = superchannel.get("packages", {})
-                    packages.update(_channel_data[channel.name])
-                    superchannel["packages"] = packages
-            _channel_data["defaults"] = superchannel
         local_index_timestamp = os.path.getmtime(index_file)
         local_subdir = subdir
         local_output_folder = output_folder
         cached_channels = channel_urls
-    return cached_index, local_index_timestamp, _channel_data
+    return cached_index, local_index_timestamp, None
 
 
 def _ensure_valid_channel(local_folder, subdir):
