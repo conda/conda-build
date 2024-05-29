@@ -79,7 +79,7 @@
   * `conda_build.conda_interface.VersionOrder` (use `conda.models.version.VersionOrder` instead)
   * `conda_build.conda_interface.walk_prefix` (use `conda.misc.walk_prefix` instead)
   * `conda_build.conda_interface.win_path_to_unix` (use `conda.common.path.win_path_to_unix` instead)
-  * `conda_build.index.channel_data`
+  * `conda_build.index.channel_data`; `conda_build.index.get_build_index` return value for `channel_data` is now always `None`
   * `conda_build.utils._convert_lists_to_sets` (use `frozendict.deepfreeze` instead)
   * `conda_build.utils.HashableDict` (use `frozendict.deepfreeze` instead)
   * `conda_build.utils.represent_hashabledict` (use `frozendict.deepfreeze` instead)
