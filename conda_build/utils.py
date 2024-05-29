@@ -66,7 +66,6 @@ from conda.models.records import PackageRecord
 from conda.models.version import VersionOrder
 from conda.utils import unix_path_to_win
 
-from .deprecations import deprecated
 from .exceptions import BuildLockError
 
 if TYPE_CHECKING:
@@ -1409,47 +1408,6 @@ def get_installed_packages(path):
     return installed
 
 
-@deprecated("24.5", "24.7", addendum="Use `frozendict.deepfreeze` instead.")
-def _convert_lists_to_sets(_dict):
-    for k, v in _dict.items():
-        if hasattr(v, "keys"):
-            _dict[k] = HashableDict(_convert_lists_to_sets(v))
-        elif hasattr(v, "__iter__") and not isinstance(v, str):
-            try:
-                _dict[k] = sorted(list(set(v)))
-            except TypeError:
-                _dict[k] = sorted(list({tuple(_) for _ in v}))
-    return _dict
-
-
-@deprecated("24.5", "24.7", addendum="Use `frozendict.deepfreeze` instead.")
-class HashableDict(dict):
-    """use hashable frozen dictionaries for resources and resource types so that they can be in sets"""
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self = _convert_lists_to_sets(self)
-
-    def __hash__(self):
-        return hash(json.dumps(self, sort_keys=True))
-
-
-@deprecated("24.5", "24.7", addendum="Use `frozendict.deepfreeze` instead.")
-def represent_hashabledict(dumper, data):
-    value = []
-
-    for item_key, item_value in data.items():
-        node_key = dumper.represent_data(item_key)
-        node_value = dumper.represent_data(item_value)
-
-        value.append((node_key, node_value))
-
-    return yaml.nodes.MappingNode("tag:yaml.org,2002:map", value)
-
-
-yaml.add_representer(HashableDict, represent_hashabledict)
-
-
 # http://stackoverflow.com/a/10743550/1170370
 @contextlib.contextmanager
 def capture():
@@ -1622,7 +1580,6 @@ def filter_info_files(files_list, prefix):
     )
 
 
-@deprecated.argument("24.5", "24.7", "config")
 def rm_rf(path):
     from conda.core.prefix_data import delete_prefix_from_linked_data
     from conda.gateways.disk.delete import rm_rf as rm_rf
