@@ -42,7 +42,12 @@ from . import __version__ as conda_build_version
 from . import environ, noarch_python, source, tarcheck, utils
 from .config import Config
 from .create_test import create_all_test_files
-from .exceptions import CondaBuildException, DependencyNeedsBuildingError
+from .deprecations import deprecated
+from .exceptions import (
+    BuildScriptException,
+    CondaBuildException,
+    DependencyNeedsBuildingError,
+)
 from .index import _delegated_update_index, get_build_index
 from .metadata import FIELDS, MetaData
 from .os_utils import external
@@ -774,7 +779,7 @@ def copy_readme(m):
     if readme:
         src = join(m.config.work_dir, readme)
         if not isfile(src):
-            sys.exit("Error: no readme file: %s" % readme)
+            sys.exit(f"Error: no readme file: {readme}")
         dst = join(m.config.info_dir, readme)
         utils.copy_into(src, dst, m.config.timeout, locking=m.config.locking)
         if os.path.split(readme)[1] not in {"README.md", "README.rst", "README"}:
@@ -1187,7 +1192,7 @@ def record_prefix_files(m, files_with_prefix):
                     if fn in text_has_prefix_files:
                         text_has_prefix_files.remove(fn)
                 else:
-                    ignored_because = " (not in build/%s_has_prefix_files)" % (mode)
+                    ignored_because = f" (not in build/{mode}_has_prefix_files)"
 
                 print(
                     "{fn} ({mode}): {action}{reason}".format(
@@ -1204,10 +1209,10 @@ def record_prefix_files(m, files_with_prefix):
     # make sure we found all of the files expected
     errstr = ""
     for f in text_has_prefix_files:
-        errstr += "Did not detect hard-coded path in %s from has_prefix_files\n" % f
+        errstr += f"Did not detect hard-coded path in {f} from has_prefix_files\n"
     for f in binary_has_prefix_files:
         errstr += (
-            "Did not detect hard-coded path in %s from binary_has_prefix_files\n" % f
+            f"Did not detect hard-coded path in {f} from binary_has_prefix_files\n"
         )
     if errstr:
         raise RuntimeError(errstr)
@@ -1276,7 +1281,7 @@ def write_about_json(m):
     with open(join(m.config.info_dir, "about.json"), "w") as fo:
         d = {}
         for key, default in FIELDS["about"].items():
-            value = m.get_value("about/%s" % key)
+            value = m.get_value(f"about/{key}")
             if value:
                 d[key] = value
             if default is list:
@@ -1332,7 +1337,7 @@ def write_info_json(m: MetaData):
                 "# $ conda create --name <env> --file <this file>"
             )
             for dist in sorted(runtime_deps + [" ".join(m.dist().rsplit("-", 2))]):
-                fo.write("%s\n" % "=".join(dist.split()))
+                fo.write("{}\n".format("=".join(dist.split())))
 
     mode_dict = {"mode": "w", "encoding": "utf-8"}
     with open(join(m.config.info_dir, "index.json"), **mode_dict) as fo:
@@ -1355,10 +1360,10 @@ def get_entry_point_script_names(entry_point_scripts):
     for entry_point in entry_point_scripts:
         cmd = entry_point[: entry_point.find("=")].strip()
         if utils.on_win:
-            scripts.append("Scripts\\%s-script.py" % cmd)
-            scripts.append("Scripts\\%s.exe" % cmd)
+            scripts.append(f"Scripts\\{cmd}-script.py")
+            scripts.append(f"Scripts\\{cmd}.exe")
         else:
-            scripts.append("bin/%s" % cmd)
+            scripts.append(f"bin/{cmd}")
     return scripts
 
 
@@ -1520,7 +1525,7 @@ def _recurse_symlink_to_size(path, seen=None):
             return _recurse_symlink_to_size(dest, seen=seen)
         elif not isfile(dest):
             # this is a symlink that points to nowhere, so is zero bytes
-            warnings.warn("file %s is a symlink with no target" % path, UserWarning)
+            warnings.warn(f"file {path} is a symlink with no target", UserWarning)
             return 0
 
     return 0
@@ -1771,8 +1776,7 @@ def bundle_conda(
                 var = var.split("=", 1)[0]
             elif var not in os.environ:
                 warnings.warn(
-                    "The environment variable '%s' specified in script_env is undefined."
-                    % var,
+                    f"The environment variable '{var}' specified in script_env is undefined.",
                     UserWarning,
                 )
                 val = ""
@@ -1789,12 +1793,15 @@ def bundle_conda(
             _write_activation_text(dest_file, metadata)
 
         bundle_stats = {}
-        utils.check_call_env(
-            [*args, dest_file],
-            cwd=metadata.config.work_dir,
-            env=env_output,
-            stats=bundle_stats,
-        )
+        try:
+            utils.check_call_env(
+                [*args, dest_file],
+                cwd=metadata.config.work_dir,
+                env=env_output,
+                stats=bundle_stats,
+            )
+        except subprocess.CalledProcessError as exc:
+            raise BuildScriptException(str(exc), caused_by=exc) from exc
         log_stats(bundle_stats, f"bundling {metadata.name()}")
         if stats is not None:
             stats[stats_key(metadata, f"bundle_{metadata.name()}")] = bundle_stats
@@ -2489,9 +2496,12 @@ def build(
 
                     with codecs.getwriter("utf-8")(open(build_file, "wb")) as bf:
                         bf.write(script)
-                windows.build(
-                    m, build_file, stats=build_stats, provision_only=provision_only
-                )
+                try:
+                    windows.build(
+                        m, build_file, stats=build_stats, provision_only=provision_only
+                    )
+                except subprocess.CalledProcessError as exc:
+                    raise BuildScriptException(str(exc), caused_by=exc) from exc
             else:
                 build_file = join(m.path, "build.sh")
                 if isfile(build_file) and script:
@@ -2533,13 +2543,16 @@ def build(
                         del env["CONDA_BUILD"]
 
                         # this should raise if any problems occur while building
-                        utils.check_call_env(
-                            cmd,
-                            env=env,
-                            rewrite_stdout_env=rewrite_env,
-                            cwd=src_dir,
-                            stats=build_stats,
-                        )
+                        try:
+                            utils.check_call_env(
+                                cmd,
+                                env=env,
+                                rewrite_stdout_env=rewrite_env,
+                                cwd=src_dir,
+                                stats=build_stats,
+                            )
+                        except subprocess.CalledProcessError as exc:
+                            raise BuildScriptException(str(exc), caused_by=exc) from exc
                         utils.remove_pycache_from_scripts(m.config.host_prefix)
             if build_stats and not provision_only:
                 log_stats(build_stats, f"building {m.name()}")
@@ -3330,9 +3343,9 @@ def test(
                     os.path.dirname(prefix),
                     "_".join(
                         (
-                            "%s_prefix_moved" % name,
+                            f"{name}_prefix_moved",
                             metadata.dist(),
-                            getattr(metadata.config, "%s_subdir" % name),
+                            getattr(metadata.config, f"{name}_subdir"),
                         )
                     ),
                 )
@@ -3550,6 +3563,11 @@ def tests_failed(package_or_metadata, move_broken, broken_dir, config):
     sys.exit("TESTS FAILED: " + os.path.basename(pkg))
 
 
+@deprecated(
+    "24.7",
+    "24.9",
+    addendum="`patchelf` is an explicit conda-build dependency on Linux so it will always be installed.",
+)
 def check_external():
     if on_linux:
         patchelf = external.find_executable("patchelf")

@@ -137,12 +137,11 @@ def execute(
 ) -> None:
     if not isdir(prefix):
         sys.exit(
-            """\
-Error: environment does not exist: %s
+            f"""\
+Error: environment does not exist: {prefix}
 #
 # Use 'conda create' to create the environment first.
 #"""
-            % prefix
         )
 
     assert find_executable("python", prefix=prefix)

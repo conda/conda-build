@@ -418,7 +418,7 @@ def convert(
             "Conversion from wheel packages is not implemented yet, stay tuned."
         )
     else:
-        raise RuntimeError("cannot convert: %s" % package_file)
+        raise RuntimeError(f"cannot convert: {package_file}")
 
 
 def test_installable(channel: str = "defaults") -> bool:

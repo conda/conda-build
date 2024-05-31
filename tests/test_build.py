@@ -324,3 +324,8 @@ def test_guess_interpreter(
 ):
     with pytest.raises(error) if error else nullcontext():
         assert build.guess_interpreter(script) == interpreter
+
+
+def test_check_external():
+    with pytest.deprecated_call():
+        build.check_external()

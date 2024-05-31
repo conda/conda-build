@@ -115,7 +115,7 @@ def _categorize_deps(m, specs, exclude_pattern, variant):
                 # for sake of comparison, ignore dashes and underscores
                 if dash_or_under.sub("", key) == dash_or_under.sub(
                     "", spec_name
-                ) and not re.search(r"%s\s+[0-9a-zA-Z\_\.\<\>\=\*]" % spec_name, spec):
+                ) and not re.search(rf"{spec_name}\s+[0-9a-zA-Z\_\.\<\>\=\*]", spec):
                     dependencies.append(" ".join((spec_name, value)))
         elif exclude_pattern.match(spec):
             pass_through_deps.append(spec)
