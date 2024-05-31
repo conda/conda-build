@@ -1,15 +1,17 @@
 import os
+import sys
 
 if os.getenv("PKG_NAME") == "my_script_subpackage_files":
     file_basename = "subpackage_file"
     dirname = "somedir"
     extension = "ext"
 
-    external_host_file = "lib/libpng16.so"
-    if "osx" in os.getenv("target_platform", ""):
+    if "darwin" in sys.platform:
         external_host_file = "lib/libpng16.dylib"
-    if "win" in os.getenv("target_platform", ""):
+    elif "win32" in sys.platform:
         external_host_file = "Library/bin/libpng16.dll"
+    else:
+        external_host_file = "lib/libpng16.so"
 
     filename = os.path.join(os.environ["PREFIX"], f"{file_basename}3.{extension}")
     print(filename)
@@ -26,11 +28,12 @@ if os.getenv("PKG_NAME") == "my_script_subpackage_include_exclude":
     dirname = "anotherdir"
     extension = "wav"
 
-    external_host_file = "lib/libdav1d.so.6"
-    if "osx" in os.getenv("target_platform", ""):
+    if "darwin" in sys.platform:
         external_host_file = "lib/libdav1d.6.dylib"
-    if "win" in os.getenv("target_platform", ""):
+    elif "win32" in sys.platform:
         external_host_file = "Library/bin/dav1d.dll"
+    else:
+        external_host_file = "lib/libdav1d.so.6"
 
     filename = os.path.join(os.environ["PREFIX"], f"{file_basename}3.{extension}")
     assert not os.path.isfile(filename), filename + " is missing"
