@@ -18,7 +18,6 @@ from .utils import get_valid_recipes, subpackage_dir
 
 
 @pytest.mark.slow
-@pytest.mark.serial
 @pytest.mark.parametrize(
     "recipe",
     [
