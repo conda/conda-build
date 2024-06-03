@@ -4,7 +4,7 @@
 
 ### Bug fixes
 
-* Include file path in addition to the content when generating the file hash. (#4821)
+* Include file path in addition to the content when generating the file hash to avoid unwanted caching during linkage analysis. (#4821)
 
 ### Deprecations
 
