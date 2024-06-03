@@ -34,6 +34,7 @@ from conda.exceptions import (
     LinkError,
     LockError,
     NoPackagesFoundError,
+    PackagesNotFoundError,
     PaddingError,
     UnsatisfiableError,
 )
@@ -889,7 +890,11 @@ def get_install_actions(
             with capture():
                 try:
                     precs = _install_actions(prefix, index, specs)["LINK"]
-                except (NoPackagesFoundError, UnsatisfiableError) as exc:
+                except (
+                    NoPackagesFoundError,
+                    UnsatisfiableError,
+                    PackagesNotFoundError,
+                ) as exc:
                     raise DependencyNeedsBuildingError(exc, subdir=subdir)
                 except (
                     SystemExit,
