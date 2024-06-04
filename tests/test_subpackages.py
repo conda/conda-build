@@ -6,12 +6,12 @@ import re
 import sys
 from glob import glob
 from pathlib import Path
-from subprocess import CalledProcessError
 
 import pytest
 from conda.base.context import context
 
 from conda_build import api, utils
+from conda_build.exceptions import BuildScriptException
 from conda_build.metadata import MetaDataTuple
 from conda_build.render import finalize_metadata
 
@@ -360,7 +360,7 @@ def test_build_script_does_not_set_env_from_script_env_if_missing(
 ):
     monkeypatch.delenv("TEST_FN_DOESNT_EXIST", raising=False)
     recipe = os.path.join(subpackage_dir, "_build_script_relying_on_missing_var")
-    with pytest.raises(CalledProcessError):
+    with pytest.raises(BuildScriptException):
         api.build(recipe, config=testing_config)
     captured = capfd.readouterr()
     assert "KeyError: 'TEST_FN_DOESNT_EXIST'" in captured.err
