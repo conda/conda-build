@@ -41,6 +41,7 @@ from conda_build.exceptions import (
     DependencyNeedsBuildingError,
     OverDependingError,
     OverLinkingError,
+    RecipeError,
 )
 from conda_build.os_utils.external import find_executable
 from conda_build.render import finalize_metadata
@@ -1462,6 +1463,12 @@ def test_run_constrained_stores_constrains_info(testing_config):
     assert "constrains" in info_contents
     assert len(info_contents["constrains"]) == 1
     assert info_contents["constrains"][0] == "bzip2  1.*"
+
+
+def test_run_constrained_is_validated(testing_config: Config):
+    recipe = os.path.join(metadata_dir, "_run_constrained_error")
+    with pytest.raises(RecipeError):
+        api.build(recipe, config=testing_config)
 
 
 @pytest.mark.sanity
