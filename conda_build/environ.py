@@ -888,7 +888,8 @@ def get_install_actions(
         with utils.LoggingContext(conda_log_level):
             with capture():
                 try:
-                    precs = _install_actions(prefix, index, specs)["LINK"]
+                    _actions = _install_actions(prefix, index, specs, subdir=subdir)
+                    precs = _actions["LINK"]
                 except (NoPackagesFoundError, UnsatisfiableError) as exc:
                     raise DependencyNeedsBuildingError(exc, subdir=subdir)
                 except (
@@ -1256,14 +1257,19 @@ def install_actions(
     prefix: str | os.PathLike | Path,
     index,
     specs: Iterable[str | MatchSpec],
+    subdir: str | None = None,
 ) -> InstallActionsType:
     # This is copied over from https://github.com/conda/conda/blob/23.11.0/conda/plan.py#L471
     # but reduced to only the functionality actually used within conda-build.
+    subdir_kwargs = {}
+    if subdir not in (None, "", "noarch"):
+        subdir_kwargs["CONDA_SUBDIR"] = subdir
 
     with env_vars(
         {
             "CONDA_ALLOW_NON_CHANNEL_URLS": "true",
             "CONDA_SOLVER_IGNORE_TIMESTAMPS": "false",
+            **subdir_kwargs,
         },
         callback=reset_context,
     ):

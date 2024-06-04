@@ -1978,6 +1978,15 @@ def test_add_pip_as_python_dependency_from_condarc_file(
             api.build(testing_metadata)
 
 
+@pytest.mark.skipif(on_win, reason="Tests cross-compilation targeting Windows")
+def test_cross_unix_windows_mingw(testing_config):
+    recipe = os.path.join(metadata_dir, "_cross_unix_windows_mingw")
+    testing_config.channel_urls = [
+        "conda-forge",
+    ]
+    api.build(recipe, config=testing_config)
+
+
 @pytest.mark.parametrize(
     "recipe", sorted(Path(metadata_dir, "_build_script_errors").glob("*"))
 )
