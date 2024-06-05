@@ -6,7 +6,7 @@ from functools import partial
 from os.path import dirname
 
 from conda.base.context import context
-from conda.core.index import get_index
+from conda.core.index import Index
 from conda.exceptions import CondaHTTPError
 from conda.utils import url_path
 from conda_index.index import update_index as _update_index
@@ -102,26 +102,26 @@ def get_build_index(
             if subdir == "noarch":
                 subdir = context.subdir
             try:
-                # get_index() is like conda reading the index, not conda_index
+                # Index() is like conda reading the index, not conda_index
                 # creating a new index.
-                cached_index = get_index(
-                    channel_urls=urls,
+                cached_index = Index(
+                    channels=urls,
                     prepend=not omit_defaults,
+                    platform=subdir,
                     use_local=False,
                     use_cache=context.offline,
-                    platform=subdir,
                 )
             # HACK: defaults does not have the many subfolders we support.  Omit it and
             #          try again.
             except CondaHTTPError:
                 if "defaults" in urls:
                     urls.remove("defaults")
-                cached_index = get_index(
-                    channel_urls=urls,
-                    prepend=omit_defaults,
+                cached_index = Index(
+                    channels=urls,
+                    prepend=not omit_defaults,
+                    platform=subdir,
                     use_local=False,
                     use_cache=context.offline,
-                    platform=subdir,
                 )
 
         local_index_timestamp = os.path.getmtime(index_file)
