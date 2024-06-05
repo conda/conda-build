@@ -2735,12 +2735,8 @@ def build(
                     # This is wrong, files has not been expanded at this time and could contain
                     # wildcards.  Also well, I just do not understand this, because when this
                     # does contain wildcards, the files in to_remove will slip back in.
-                    if (
-                        "files" in output_d
-                        and output_d["files"] is not None
-                        and not isinstance(output_d["files"], dict)
-                    ):
-                        output_d["files"] = set(output_d["files"]) - to_remove
+                    if (files := output_d.get("files")) and not isinstance(files, dict):
+                        output_d["files"] = set(files) - to_remove
 
                     # copies the backed-up new prefix files into the newly created host env
                     for f in new_prefix_files:
