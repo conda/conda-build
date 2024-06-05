@@ -137,6 +137,7 @@ jobs:
           repository: zklaus/conda.git
           ref: lazy-index
           path: conda-src
+          fetch-depth: 0
 
       - name: Install development conda
         run: |
