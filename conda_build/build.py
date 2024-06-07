@@ -1854,7 +1854,9 @@ def bundle_conda(output, metadata: MetaData, env, stats, **kw):
                 initial_files.remove(f)
                 has_matches = True
         if not has_matches:
-            log.warning("Glob %s from always_include_files does not match any files", pat)
+            log.warning(
+                "Glob %s from always_include_files does not match any files", pat
+            )
     files = post_process_files(metadata, initial_files)
 
     if output.get("name") and output.get("name") != "conda":
