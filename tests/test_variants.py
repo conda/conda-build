@@ -17,7 +17,10 @@ from conda_build.variants import (
     combine_specs,
     dict_of_lists_to_list_of_dicts,
     filter_combined_spec_to_used_keys,
+    find_used_variables_in_batch_script,
+    find_used_variables_in_shell_script,
     get_package_variants,
+    get_vars,
     validate_spec,
 )
 
@@ -70,7 +73,7 @@ def test_python_variants(testing_workdir, testing_config, as_yaml):
         testing_config.variant_config_files = [str(variants_path)]
 
     # render the metadata
-    metadata = api.render(
+    metadata_tuples = api.render(
         os.path.join(variants_dir, "variant_recipe"),
         no_download_source=False,
         config=testing_config,
@@ -79,14 +82,14 @@ def test_python_variants(testing_workdir, testing_config, as_yaml):
     )
 
     # we should have one package/metadata per python version
-    assert len(metadata) == 2
+    assert len(metadata_tuples) == 2
     # there should only be one run requirement for each package/metadata
-    assert len(metadata[0][0].meta["requirements"]["run"]) == 1
-    assert len(metadata[1][0].meta["requirements"]["run"]) == 1
+    assert len(metadata_tuples[0][0].meta["requirements"]["run"]) == 1
+    assert len(metadata_tuples[1][0].meta["requirements"]["run"]) == 1
     # the run requirements should be python ranges
     assert {
-        *metadata[0][0].meta["requirements"]["run"],
-        *metadata[1][0].meta["requirements"]["run"],
+        *metadata_tuples[0][0].meta["requirements"]["run"],
+        *metadata_tuples[1][0].meta["requirements"]["run"],
     } == {"python >=3.11,<3.12.0a0", "python >=3.12,<3.13.0a0"}
 
 
@@ -106,7 +109,7 @@ def test_use_selectors_in_variants(testing_workdir, testing_config):
     )
 )
 def test_variant_with_ignore_version_reduces_matrix():
-    metadata = api.render(
+    metadata_tuples = api.render(
         os.path.join(variants_dir, "03_ignore_version_reduces_matrix"),
         variants={
             "packageA": ["1.2", "3.4"],
@@ -116,13 +119,13 @@ def test_variant_with_ignore_version_reduces_matrix():
         },
         finalize=False,
     )
-    assert len(metadata) == 2
+    assert len(metadata_tuples) == 2
 
 
 def test_variant_with_numpy_pinned_has_matrix():
     recipe = os.path.join(variants_dir, "04_numpy_matrix_pinned")
-    metadata = api.render(recipe, finalize=False)
-    assert len(metadata) == 4
+    metadata_tuples = api.render(recipe, finalize=False)
+    assert len(metadata_tuples) == 4
 
 
 def test_pinning_in_build_requirements():
@@ -220,13 +223,13 @@ def test_validate_spec():
 
 def test_cross_compilers():
     recipe = os.path.join(variants_dir, "09_cross")
-    ms = api.render(
+    metadata_tuples = api.render(
         recipe,
         permit_unsatisfiable_variants=True,
         finalize=False,
         bypass_env_check=True,
     )
-    assert len(ms) == 3
+    assert len(metadata_tuples) == 3
 
 
 def test_variants_in_output_names():
@@ -249,11 +252,11 @@ def test_variants_in_versions_with_setup_py_data():
 
 def test_git_variables_with_variants(testing_config):
     recipe = os.path.join(variants_dir, "13_git_vars")
-    m = api.render(
+    metadata = api.render(
         recipe, config=testing_config, finalize=False, bypass_env_check=True
     )[0][0]
-    assert m.version() == "1.20.2"
-    assert m.build_number() == 0
+    assert metadata.version() == "1.20.2"
+    assert metadata.build_number() == 0
 
 
 def test_variant_input_with_zip_keys_keeps_zip_keys_list():
@@ -302,57 +305,109 @@ def test_serial_builds_have_independent_configs(testing_config):
 def test_subspace_selection(testing_config):
     recipe = os.path.join(variants_dir, "18_subspace_selection")
     testing_config.variant = {"a": "coffee"}
-    ms = api.render(
+    metadata_tuples = api.render(
         recipe, config=testing_config, finalize=False, bypass_env_check=True
     )
     # there are two entries with a==coffee, so we should end up with 2 variants
-    assert len(ms) == 2
+    assert len(metadata_tuples) == 2
     # ensure that the zipped keys still agree
-    assert sum(m.config.variant["b"] == "123" for m, _, _ in ms) == 1
-    assert sum(m.config.variant["b"] == "abc" for m, _, _ in ms) == 1
-    assert sum(m.config.variant["b"] == "concrete" for m, _, _ in ms) == 0
-    assert sum(m.config.variant["c"] == "mooo" for m, _, _ in ms) == 1
-    assert sum(m.config.variant["c"] == "baaa" for m, _, _ in ms) == 1
-    assert sum(m.config.variant["c"] == "woof" for m, _, _ in ms) == 0
+    assert (
+        sum(metadata.config.variant["b"] == "123" for metadata, _, _ in metadata_tuples)
+        == 1
+    )
+    assert (
+        sum(metadata.config.variant["b"] == "abc" for metadata, _, _ in metadata_tuples)
+        == 1
+    )
+    assert (
+        sum(
+            metadata.config.variant["b"] == "concrete"
+            for metadata, _, _ in metadata_tuples
+        )
+        == 0
+    )
+    assert (
+        sum(
+            metadata.config.variant["c"] == "mooo" for metadata, _, _ in metadata_tuples
+        )
+        == 1
+    )
+    assert (
+        sum(
+            metadata.config.variant["c"] == "baaa" for metadata, _, _ in metadata_tuples
+        )
+        == 1
+    )
+    assert (
+        sum(
+            metadata.config.variant["c"] == "woof" for metadata, _, _ in metadata_tuples
+        )
+        == 0
+    )
 
     # test compound selection
     testing_config.variant = {"a": "coffee", "b": "123"}
-    ms = api.render(
+    metadata_tuples = api.render(
         recipe, config=testing_config, finalize=False, bypass_env_check=True
     )
     # there are two entries with a==coffee, but one with both 'coffee' for a, and '123' for b,
     #     so we should end up with 1 variants
-    assert len(ms) == 1
+    assert len(metadata_tuples) == 1
     # ensure that the zipped keys still agree
-    assert sum(m.config.variant["b"] == "123" for m, _, _ in ms) == 1
-    assert sum(m.config.variant["b"] == "abc" for m, _, _ in ms) == 0
-    assert sum(m.config.variant["b"] == "concrete" for m, _, _ in ms) == 0
-    assert sum(m.config.variant["c"] == "mooo" for m, _, _ in ms) == 1
-    assert sum(m.config.variant["c"] == "baaa" for m, _, _ in ms) == 0
-    assert sum(m.config.variant["c"] == "woof" for m, _, _ in ms) == 0
+    assert (
+        sum(metadata.config.variant["b"] == "123" for metadata, _, _ in metadata_tuples)
+        == 1
+    )
+    assert (
+        sum(metadata.config.variant["b"] == "abc" for metadata, _, _ in metadata_tuples)
+        == 0
+    )
+    assert (
+        sum(
+            metadata.config.variant["b"] == "concrete"
+            for metadata, _, _ in metadata_tuples
+        )
+        == 0
+    )
+    assert (
+        sum(
+            metadata.config.variant["c"] == "mooo" for metadata, _, _ in metadata_tuples
+        )
+        == 1
+    )
+    assert (
+        sum(
+            metadata.config.variant["c"] == "baaa" for metadata, _, _ in metadata_tuples
+        )
+        == 0
+    )
+    assert (
+        sum(
+            metadata.config.variant["c"] == "woof" for metadata, _, _ in metadata_tuples
+        )
+        == 0
+    )
 
     # test when configuration leads to no valid combinations - only c provided, and its value
     #   doesn't match any other existing values of c, so it's then ambiguous which zipped
     #   values to choose
     testing_config.variant = {"c": "not an animal"}
     with pytest.raises(ValueError):
-        ms = api.render(
-            recipe, config=testing_config, finalize=False, bypass_env_check=True
-        )
+        api.render(recipe, config=testing_config, finalize=False, bypass_env_check=True)
 
     # all zipped keys provided by the new variant.  It should clobber the old one.
     testing_config.variant = {"a": "some", "b": "new", "c": "animal"}
-    ms = api.render(
+    metadata_tuples = api.render(
         recipe, config=testing_config, finalize=False, bypass_env_check=True
     )
-    assert len(ms) == 1
-    assert ms[0][0].config.variant["a"] == "some"
-    assert ms[0][0].config.variant["b"] == "new"
-    assert ms[0][0].config.variant["c"] == "animal"
+    assert len(metadata_tuples) == 1
+    assert metadata_tuples[0][0].config.variant["a"] == "some"
+    assert metadata_tuples[0][0].config.variant["b"] == "new"
+    assert metadata_tuples[0][0].config.variant["c"] == "animal"
 
 
 def test_get_used_loop_vars():
-    m = api.render(
+    metadata = api.render(
         os.path.join(variants_dir, "19_used_variables"),
         finalize=False,
         bypass_env_check=True,
@@ -360,9 +415,9 @@ def test_get_used_loop_vars():
     # conda_build_config.yaml has 4 loop variables defined, but only 3 are used.
     #   python and zlib are both implicitly used (depend on name matching), while
     #   some_package is explicitly used as a jinja2 variable
-    assert m.get_used_loop_vars() == {"python", "some_package"}
+    assert metadata.get_used_loop_vars() == {"python", "some_package"}
     # these are all used vars - including those with only one value (and thus not loop vars)
-    assert m.get_used_vars() == {
+    assert metadata.get_used_vars() == {
         "python",
         "some_package",
         "zlib",
@@ -377,49 +432,63 @@ def test_reprovisioning_source():
 
 def test_reduced_hashing_behavior(testing_config):
     # recipes using any compiler jinja2 function need a hash
-    m = api.render(
+    metadata = api.render(
         os.path.join(variants_dir, "26_reduced_hashing", "hash_yes_compiler"),
         finalize=False,
         bypass_env_check=True,
     )[0][0]
     assert (
-        "c_compiler" in m.get_hash_contents()
+        "c_compiler" in metadata.get_hash_contents()
     ), "hash contents should contain c_compiler"
     assert re.search(
-        "h[0-9a-f]{%d}" % testing_config.hash_length, m.build_id()
+        "h[0-9a-f]{%d}" % testing_config.hash_length, metadata.build_id()
     ), "hash should be present when compiler jinja2 function is used"
 
     # recipes that use some variable in conda_build_config.yaml to control what
     #     versions are present at build time also must have a hash (except
     #     python, r_base, and the other stuff covered by legacy build string
     #     behavior)
-    m = api.render(
+    metadata = api.render(
         os.path.join(variants_dir, "26_reduced_hashing", "hash_yes_pinned"),
         finalize=False,
         bypass_env_check=True,
     )[0][0]
-    assert "zlib" in m.get_hash_contents()
-    assert re.search("h[0-9a-f]{%d}" % testing_config.hash_length, m.build_id())
+    assert "zlib" in metadata.get_hash_contents()
+    assert re.search("h[0-9a-f]{%d}" % testing_config.hash_length, metadata.build_id())
 
     # anything else does not get a hash
-    m = api.render(
+    metadata = api.render(
         os.path.join(variants_dir, "26_reduced_hashing", "hash_no_python"),
         finalize=False,
         bypass_env_check=True,
     )[0][0]
-    assert not m.get_hash_contents()
-    assert not re.search("h[0-9a-f]{%d}" % testing_config.hash_length, m.build_id())
+    assert not metadata.get_hash_contents()
+    assert not re.search(
+        "h[0-9a-f]{%d}" % testing_config.hash_length, metadata.build_id()
+    )
 
 
 def test_variants_used_in_jinja2_conditionals():
-    ms = api.render(
+    metadata_tuples = api.render(
         os.path.join(variants_dir, "21_conditional_sections"),
         finalize=False,
         bypass_env_check=True,
     )
-    assert len(ms) == 2
-    assert sum(m.config.variant["blas_impl"] == "mkl" for m, _, _ in ms) == 1
-    assert sum(m.config.variant["blas_impl"] == "openblas" for m, _, _ in ms) == 1
+    assert len(metadata_tuples) == 2
+    assert (
+        sum(
+            metadata.config.variant["blas_impl"] == "mkl"
+            for metadata, _, _ in metadata_tuples
+        )
+        == 1
+    )
+    assert (
+        sum(
+            metadata.config.variant["blas_impl"] == "openblas"
+            for metadata, _, _ in metadata_tuples
+        )
+        == 1
+    )
 
 
 def test_build_run_exports_act_on_host(caplog):
@@ -429,18 +498,18 @@ def test_build_run_exports_act_on_host(caplog):
         platform="win",
         arch="64",
     )
-    assert "failed to get install actions, retrying" not in caplog.text
+    assert "failed to get package records, retrying" not in caplog.text
 
 
 def test_detect_variables_in_build_and_output_scripts():
-    ms = api.render(
+    metadata_tuples = api.render(
         os.path.join(variants_dir, "24_test_used_vars_in_scripts"),
         platform="linux",
         arch="64",
     )
-    for m, _, _ in ms:
-        if m.name() == "test_find_used_variables_in_scripts":
-            used_vars = m.get_used_vars()
+    for metadata, _, _ in metadata_tuples:
+        if metadata.name() == "test_find_used_variables_in_scripts":
+            used_vars = metadata.get_used_vars()
             assert used_vars
             assert "SELECTOR_VAR" in used_vars
             assert "OUTPUT_SELECTOR_VAR" not in used_vars
@@ -449,7 +518,7 @@ def test_detect_variables_in_build_and_output_scripts():
             assert "BAT_VAR" not in used_vars
             assert "OUTPUT_VAR" not in used_vars
         else:
-            used_vars = m.get_used_vars()
+            used_vars = metadata.get_used_vars()
             assert used_vars
             assert "SELECTOR_VAR" not in used_vars
             assert "OUTPUT_SELECTOR_VAR" in used_vars
@@ -458,14 +527,14 @@ def test_detect_variables_in_build_and_output_scripts():
             assert "BAT_VAR" not in used_vars
             assert "OUTPUT_VAR" in used_vars
     # on windows, we find variables in bat scripts as well as shell scripts
-    ms = api.render(
+    metadata_tuples = api.render(
         os.path.join(variants_dir, "24_test_used_vars_in_scripts"),
         platform="win",
         arch="64",
     )
-    for m, _, _ in ms:
-        if m.name() == "test_find_used_variables_in_scripts":
-            used_vars = m.get_used_vars()
+    for metadata, _, _ in metadata_tuples:
+        if metadata.name() == "test_find_used_variables_in_scripts":
+            used_vars = metadata.get_used_vars()
             assert used_vars
             assert "SELECTOR_VAR" in used_vars
             assert "OUTPUT_SELECTOR_VAR" not in used_vars
@@ -475,7 +544,7 @@ def test_detect_variables_in_build_and_output_scripts():
             assert "BAT_VAR" in used_vars
             assert "OUTPUT_VAR" not in used_vars
         else:
-            used_vars = m.get_used_vars()
+            used_vars = metadata.get_used_vars()
             assert used_vars
             assert "SELECTOR_VAR" not in used_vars
             assert "OUTPUT_SELECTOR_VAR" in used_vars
@@ -519,11 +588,11 @@ def test_exclusive_config_files():
         os.path.join("config_dir", "config-0.yaml"),
         os.path.join("config_dir", "config-1.yaml"),
     )
-    output = api.render(
+    metadata = api.render(
         os.path.join(variants_dir, "exclusive_config_file"),
         exclusive_config_files=exclusive_config_files,
     )[0][0]
-    variant = output.config.variant
+    variant = metadata.config.variant
     # is cwd ignored?
     assert "cwd" not in variant
     # did we load the exclusive configs?
@@ -544,11 +613,11 @@ def test_exclusive_config_file():
         yaml.dump(
             {"abc": ["super"], "exclusive": ["someval"]}, f, default_flow_style=False
         )
-    output = api.render(
+    metadata = api.render(
         os.path.join(variants_dir, "exclusive_config_file"),
         exclusive_config_file=os.path.join("config_dir", "config.yaml"),
     )[0][0]
-    variant = output.config.variant
+    variant = metadata.config.variant
     # is cwd ignored?
     assert "cwd" not in variant
     # did we load the exclusive config
@@ -607,27 +676,27 @@ def test_inner_python_loop_with_output(testing_config):
 
 
 def test_variant_as_dependency_name(testing_config):
-    outputs = api.render(
+    metadata_tuples = api.render(
         os.path.join(variants_dir, "27_requirements_host"), config=testing_config
     )
-    assert len(outputs) == 2
+    assert len(metadata_tuples) == 2
 
 
 def test_custom_compiler():
     recipe = os.path.join(variants_dir, "28_custom_compiler")
-    ms = api.render(
+    metadata_tuples = api.render(
         recipe,
         permit_unsatisfiable_variants=True,
         finalize=False,
         bypass_env_check=True,
     )
-    assert len(ms) == 3
+    assert len(metadata_tuples) == 3
 
 
 def test_different_git_vars():
     recipe = os.path.join(variants_dir, "29_different_git_vars")
-    ms = api.render(recipe)
-    versions = [m[0].version() for m in ms]
+    metadata_tuples = api.render(recipe)
+    versions = [metadata[0].version() for metadata in metadata_tuples]
     assert "1.20.0" in versions
     assert "1.21.11" in versions
 
@@ -644,7 +713,7 @@ def test_top_level_finalized(testing_config):
 
 
 def test_variant_subkeys_retained():
-    m = api.render(
+    metadata = api.render(
         os.path.join(variants_dir, "31_variant_subkeys"),
         finalize=False,
         bypass_env_check=True,
@@ -652,11 +721,11 @@ def test_variant_subkeys_retained():
     found_replacements = False
     from conda_build.build import get_all_replacements
 
-    for variant in m.config.variants:
+    for variant in metadata.config.variants:
         found_replacements = get_all_replacements(variant)
     assert len(found_replacements), "Did not find replacements"
-    m.final = False
-    outputs = m.get_output_metadata_set(permit_unsatisfiable_variants=False)
+    metadata.final = False
+    outputs = metadata.get_output_metadata_set(permit_unsatisfiable_variants=False)
     get_all_replacements(outputs[0][1].config.variant)
 
 
@@ -700,3 +769,39 @@ def test_zip_key_filtering(
     }
 
     assert filter_combined_spec_to_used_keys(combined_spec, specs=specs) == expected
+
+
+def test_get_vars():
+    variants = [
+        {
+            "python": "3.12",
+            "nodejs": "20",
+            "zip_keys": [],  # ignored
+        },
+        {"python": "3.12", "nodejs": "18"},
+        {"python": "3.12", "nodejs": "20"},
+    ]
+
+    assert get_vars(variants) == {"nodejs"}
+
+
+def test_find_used_variables_in_shell_script(tmp_path: Path) -> None:
+    variants = ("FOO", "BAR", "BAZ", "QUX")
+    (script := tmp_path / "script.sh").write_text(
+        f"${variants[0]}\n"
+        f"${{{variants[1]}}}\n"
+        f"${{{{{variants[2]}}}}}\n"
+        f"$${variants[3]}\n"
+    )
+    assert find_used_variables_in_shell_script(variants, script) == {"FOO", "BAR"}
+
+
+def test_find_used_variables_in_batch_script(tmp_path: Path) -> None:
+    variants = ("FOO", "BAR", "BAZ", "QUX")
+    (script := tmp_path / "script.sh").write_text(
+        f"%{variants[0]}%\n"
+        f"%%{variants[1]}%%\n"
+        f"${variants[2]}\n"
+        f"${{{variants[3]}}}\n"
+    )
+    assert find_used_variables_in_batch_script(variants, script) == {"FOO", "BAR"}

@@ -13,10 +13,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from conda.auxlib.ish import dals
+from conda.base.context import context
 from conda.common.io import dashlist
 
 from .. import api, build, source, utils
-from ..conda_interface import add_parser_channels, binstar_upload, cc_conda_build
 from ..config import (
     CondaPkgFormat,
     conda_pkg_format_default,
@@ -28,12 +28,17 @@ from ..utils import LoggingContext
 from .actions import KeyValueAction, PackageTypeNormalize
 from .main_render import get_render_parser
 
+try:
+    from conda.cli.helpers import add_parser_channels
+except ImportError:
+    # conda<23.11
+    from conda.cli.conda_argparse import add_parser_channels
+
 if TYPE_CHECKING:
     import os
-    from argparse import Namespace
+    from argparse import ArgumentParser, Namespace
     from typing import Sequence
 
-    from ..conda_interface import ArgumentParser
     from ..config import Config
 
 
@@ -59,21 +64,21 @@ def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
         action="store_false",
         help="Do not ask to upload the package to anaconda.org.",
         dest="anaconda_upload",
-        default=binstar_upload,
+        default=context.binstar_upload,
     )
     parser.add_argument(
         "--no-binstar-upload",
         action="store_false",
         help=argparse.SUPPRESS,
         dest="anaconda_upload",
-        default=binstar_upload,
+        default=context.binstar_upload,
     )
     parser.add_argument(
         "--no-include-recipe",
         action="store_false",
         help="Don't include the recipe inside the built package.",
         dest="include_recipe",
-        default=cc_conda_build.get("include_recipe", "true").lower() == "true",
+        default=context.conda_build.get("include_recipe", "true").lower() == "true",
     )
     parser.add_argument(
         "-s",
@@ -128,7 +133,7 @@ def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
             "Skip recipes for which there already exists an existing build "
             "(locally or in the channels)."
         ),
-        default=cc_conda_build.get("skip_existing", "false").lower() == "true",
+        default=context.conda_build.get("skip_existing", "false").lower() == "true",
     )
     parser.add_argument(
         "--keep-old-work",
@@ -148,7 +153,7 @@ def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
         "--quiet",
         action="store_true",
         help="do not display progress bar",
-        default=cc_conda_build.get("quiet", "false").lower() == "true",
+        default=context.conda_build.get("quiet", "false").lower() == "true",
     )
     parser.add_argument(
         "--debug",
@@ -158,12 +163,12 @@ def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
     parser.add_argument(
         "--token",
         help="Token to pass through to anaconda upload",
-        default=cc_conda_build.get("anaconda_token"),
+        default=context.conda_build.get("anaconda_token"),
     )
     parser.add_argument(
         "--user",
         help="User/organization to upload packages to on anaconda.org or pypi",
-        default=cc_conda_build.get("user"),
+        default=context.conda_build.get("user"),
     )
     parser.add_argument(
         "--label",
@@ -188,7 +193,7 @@ def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
         ),
         type=int,
         choices=range(1, 23),
-        default=cc_conda_build.get(
+        default=context.conda_build.get(
             "zstd_compression_level", zstd_compression_level_default
         ),
     )
@@ -213,23 +218,23 @@ def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
         "--config-file",
         help="path to .pypirc file to use when uploading to pypi",
         default=(
-            abspath(expanduser(expandvars(cc_conda_build.get("pypirc"))))
-            if cc_conda_build.get("pypirc")
-            else cc_conda_build.get("pypirc")
+            abspath(expanduser(expandvars(pypirc)))
+            if (pypirc := context.conda_build.get("pypirc"))
+            else None
         ),
     )
     pypi_grp.add_argument(
         "--repository",
         "-r",
         help="PyPI repository to upload to",
-        default=cc_conda_build.get("pypi_repository", "pypitest"),
+        default=context.conda_build.get("pypi_repository", "pypitest"),
     )
     parser.add_argument(
         "--no-activate",
         action="store_false",
         help="do not activate the build and test envs; just prepend to PATH",
         dest="activate",
-        default=cc_conda_build.get("activate", "true").lower() == "true",
+        default=context.conda_build.get("activate", "true").lower() == "true",
     )
     parser.add_argument(
         "--no-build-id",
@@ -240,7 +245,7 @@ def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
         ),
         dest="set_build_id",
         # note: inverted - dest stores positive logic
-        default=cc_conda_build.get("set_build_id", "true").lower() == "true",
+        default=context.conda_build.get("set_build_id", "true").lower() == "true",
     )
     parser.add_argument(
         "--build-id-pat",
@@ -249,7 +254,7 @@ def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
             "paths being too long."
         ),
         dest="build_id_pat",
-        default=cc_conda_build.get("build_id_pat", "{n}_{t}"),
+        default=context.conda_build.get("build_id_pat", "{n}_{t}"),
     )
     parser.add_argument(
         "--croot",
@@ -262,21 +267,22 @@ def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
         "--verify",
         action="store_true",
         help="run verification on recipes or packages when building",
-        default=cc_conda_build.get("verify", "true").lower() == "true",
+        default=context.conda_build.get("verify", "true").lower() == "true",
     )
     parser.add_argument(
         "--no-verify",
         action="store_false",
         dest="verify",
         help="do not run verification on recipes or packages when building",
-        default=cc_conda_build.get("verify", "true").lower() == "true",
+        default=context.conda_build.get("verify", "true").lower() == "true",
     )
     parser.add_argument(
         "--strict-verify",
         action="store_true",
         dest="exit_on_verify_error",
         help="Exit if any conda-verify check fail, instead of only printing them",
-        default=cc_conda_build.get("exit_on_verify_error", "false").lower() == "true",
+        default=context.conda_build.get("exit_on_verify_error", "false").lower()
+        == "true",
     )
     parser.add_argument(
         "--output-folder",
@@ -284,7 +290,7 @@ def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
             "folder to dump output package to.  Package are moved here if build or test succeeds."
             "  Destination folder must exist prior to using this."
         ),
-        default=cc_conda_build.get("output_folder"),
+        default=context.conda_build.get("output_folder"),
     )
     parser.add_argument(
         "--no-prefix-length-fallback",
@@ -353,7 +359,7 @@ def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
             "linked to any executables or shared libraries in built packages.  This is disabled "
             "by default, but will be enabled by default in conda-build 4.0."
         ),
-        default=cc_conda_build.get("error_overlinking", "false").lower() == "true",
+        default=context.conda_build.get("error_overlinking", "false").lower() == "true",
     )
     parser.add_argument(
         "--no-error-overlinking",
@@ -364,7 +370,7 @@ def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
             "linked to any executables or shared libraries in built packages.  This is currently "
             "the default behavior, but will change in conda-build 4.0."
         ),
-        default=cc_conda_build.get("error_overlinking", "false").lower() == "true",
+        default=context.conda_build.get("error_overlinking", "false").lower() == "true",
     )
     parser.add_argument(
         "--error-overdepending",
@@ -375,7 +381,8 @@ def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
             "`run_exports` are not auto-loaded by the OSes DSO loading mechanism by "
             "any of the files in this package."
         ),
-        default=cc_conda_build.get("error_overdepending", "false").lower() == "true",
+        default=context.conda_build.get("error_overdepending", "false").lower()
+        == "true",
     )
     parser.add_argument(
         "--no-error-overdepending",
@@ -386,7 +393,8 @@ def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
             "`run_exports` are not auto-loaded by the OSes DSO loading mechanism by "
             "any of the files in this package."
         ),
-        default=cc_conda_build.get("error_overdepending", "false").lower() == "true",
+        default=context.conda_build.get("error_overdepending", "false").lower()
+        == "true",
     )
     parser.add_argument(
         "--long-test-prefix",
@@ -396,7 +404,7 @@ def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
             "Linux and Mac.  Prefix length matches the --prefix-length flag.  This is on by "
             "default in conda-build 3.0+"
         ),
-        default=cc_conda_build.get("long_test_prefix", "true").lower() == "true",
+        default=context.conda_build.get("long_test_prefix", "true").lower() == "true",
     )
     parser.add_argument(
         "--no-long-test-prefix",
@@ -406,7 +414,7 @@ def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
             "Do not use a long prefix for the test prefix, as well as the build prefix."
             "  Affects only Linux and Mac.  Prefix length matches the --prefix-length flag.  "
         ),
-        default=cc_conda_build.get("long_test_prefix", "true").lower() == "true",
+        default=context.conda_build.get("long_test_prefix", "true").lower() == "true",
     )
     parser.add_argument(
         "--keep-going",
@@ -423,16 +431,17 @@ def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
             "Path to store the source files (archives, git clones, etc.) during the build."
         ),
         default=(
-            abspath(expanduser(expandvars(cc_conda_build.get("cache_dir"))))
-            if cc_conda_build.get("cache_dir")
-            else cc_conda_build.get("cache_dir")
+            abspath(expanduser(expandvars(cache_dir)))
+            if (cache_dir := context.conda_build.get("cache_dir"))
+            else None
         ),
     )
     parser.add_argument(
         "--no-copy-test-source-files",
         dest="copy_test_source_files",
         action="store_false",
-        default=cc_conda_build.get("copy_test_source_files", "true").lower() == "true",
+        default=context.conda_build.get("copy_test_source_files", "true").lower()
+        == "true",
         help=(
             "Disables copying the files necessary for testing the package into "
             "the info/test folder.  Passing this argument means it may not be possible "
@@ -448,7 +457,7 @@ def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
             "Merge the build and host directories, even when host section or compiler "
             "jinja2 is present"
         ),
-        default=cc_conda_build.get("merge_build_host", "false").lower() == "true",
+        default=context.conda_build.get("merge_build_host", "false").lower() == "true",
     )
     parser.add_argument(
         "--stats-file",
@@ -484,7 +493,7 @@ def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
         choices=CondaPkgFormat.acceptable(),
         action=PackageTypeNormalize,
         default=CondaPkgFormat.normalize(
-            cc_conda_build.get("pkg_format", conda_pkg_format_default)
+            context.conda_build.get("pkg_format", conda_pkg_format_default)
         ),
         help=(
             "Choose which package type(s) are outputted. (Accepted inputs tar.bz2 or 1, .conda or 2)"
@@ -554,15 +563,14 @@ def check_action(recipe: os.PathLike, config: Config):
 
 
 def execute(args: Sequence[str] | None = None) -> int:
-    parsed = parse_args(args)
+    _, parsed = parse_args(args)
+    context.__init__(argparse_args=parsed)
 
     config = get_or_merge_config(None, **parsed.__dict__)
-    build.check_external()
 
     # change globals in build module, see comment there as well
     config.channel_urls = get_channel_urls(parsed.__dict__)
 
-    config.override_channels = parsed.override_channels
     config.verbose = not parsed.quiet or parsed.debug
 
     if "purge" in parsed.recipe:

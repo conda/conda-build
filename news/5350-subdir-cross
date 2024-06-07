@@ -4,11 +4,11 @@
 
 ### Bug fixes
 
-* <news item>
+* Ensure cross-building recipes select the correct noarch package variants. (#5341 via #5350)
 
 ### Deprecations
 
-* Mark `conda_build.bdist_conda` module as pending deprecation. (#5196)
+* <news item>
 
 ### Docs
 

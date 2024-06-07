@@ -23,6 +23,7 @@ import urllib.request as urllib
 from collections import OrderedDict, defaultdict
 from functools import lru_cache
 from glob import glob
+from io import StringIO
 from itertools import filterfalse
 from json.decoder import JSONDecodeError
 from locale import getpreferredencoding
@@ -41,7 +42,7 @@ from os.path import (
 )
 from pathlib import Path
 from threading import Thread
-from typing import TYPE_CHECKING, Iterable
+from typing import TYPE_CHECKING, Iterable, overload
 
 import conda_package_handling.api
 import filelock
@@ -53,40 +54,35 @@ from conda.base.constants import (
     CONDA_PACKAGE_EXTENSIONS,
     KNOWN_SUBDIRS,
 )
-from conda.core.prefix_data import PrefixData
-from conda.models.dist import Dist
+from conda.base.context import context
+from conda.common.path import win_path_to_unix
+from conda.exceptions import CondaHTTPError
+from conda.gateways.connection.download import download
+from conda.gateways.disk.create import TemporaryDirectory
+from conda.gateways.disk.read import compute_sum
+from conda.models.channel import Channel
+from conda.models.match_spec import MatchSpec
+from conda.models.records import PackageRecord
+from conda.models.version import VersionOrder
+from conda.utils import unix_path_to_win
 
-from .conda_interface import (
-    CondaHTTPError,
-    MatchSpec,
-    PackageRecord,
-    StringIO,
-    TemporaryDirectory,
-    VersionOrder,
-    cc_conda_build,
-    context,
-    download,
-    get_conda_channel,
-    hashsum_file,
-    md5_file,
-    pkgs_dirs,
-    root_dir,
-    unix_path_to_win,
-    win_path_to_unix,
-)
-from .conda_interface import rm_rf as _rm_rf
-from .deprecations import deprecated
 from .exceptions import BuildLockError
 
 if TYPE_CHECKING:
-    from conda.models.records import PrefixRecord
+    from typing import Mapping, TypeVar
+
+    from .metadata import MetaData
+
+    T = TypeVar("T")
+    K = TypeVar("K")
+    V = TypeVar("V")
 
 on_win = sys.platform == "win32"
 on_mac = sys.platform == "darwin"
 on_linux = sys.platform == "linux"
 
 codec = getpreferredencoding() or "utf-8"
-root_script_dir = os.path.join(root_dir, "Scripts" if on_win else "bin")
+root_script_dir = os.path.join(context.root_prefix, "Scripts" if on_win else "bin")
 mmap_MAP_PRIVATE = 0 if on_win else mmap.MAP_PRIVATE
 mmap_PROT_READ = 0 if on_win else mmap.PROT_READ
 mmap_PROT_WRITE = 0 if on_win else mmap.PROT_WRITE
@@ -261,8 +257,8 @@ class PopenWrapper:
             psutil = None
             psutil_exceptions = (OSError, ValueError)
             log = get_logger(__name__)
-            log.warn(f"psutil import failed.  Error was {e}")
-            log.warn(
+            log.warning(f"psutil import failed.  Error was {e}")
+            log.warning(
                 "only disk usage and time statistics will be available.  Install psutil to "
                 "get CPU time and memory usage statistics."
             )
@@ -428,7 +424,7 @@ def bytes2human(n):
         if n >= prefix[s]:
             value = float(n) / prefix[s]
             return f"{value:.1f}{s}"
-    return "%sB" % n
+    return f"{n}B"
 
 
 def seconds2human(s):
@@ -461,7 +457,7 @@ def get_recipe_abspath(recipe):
                 tar_xf(recipe_tarfile, os.path.join(recipe_dir, "info"))
             need_cleanup = True
         else:
-            print("Ignoring non-recipe: %s" % recipe)
+            print(f"Ignoring non-recipe: {recipe}")
             return (None, None)
     else:
         recipe_dir = abspath(os.path.join(os.getcwd(), recipe))
@@ -598,7 +594,7 @@ def copy_into(
                 src_folder = os.getcwd()
 
         if os.path.islink(src) and not os.path.exists(os.path.realpath(src)):
-            log.warn("path %s is a broken symlink - ignoring copy", src)
+            log.warning("path %s is a broken symlink - ignoring copy", src)
             return
 
         if not lock and locking:
@@ -710,7 +706,7 @@ def merge_tree(
 #    at any time, but the lock within this process should all be tied to the same tracking
 #    mechanism.
 _lock_folders = (
-    os.path.join(root_dir, "locks"),
+    os.path.join(context.root_prefix, "locks"),
     os.path.expanduser(os.path.join("~", ".conda_build_locks")),
 )
 
@@ -754,9 +750,7 @@ def get_conda_operation_locks(locking=True, bldpkgs_dirs=None, timeout=900):
     bldpkgs_dirs = ensure_list(bldpkgs_dirs)
     # locks enabled by default
     if locking:
-        _pkgs_dirs = pkgs_dirs[:1]
-        locked_folders = _pkgs_dirs + list(bldpkgs_dirs)
-        for folder in locked_folders:
+        for folder in (*context.pkgs_dirs[:1], *bldpkgs_dirs):
             if not os.path.isdir(folder):
                 os.makedirs(folder)
             lock = get_lock(folder, timeout=timeout)
@@ -876,8 +870,8 @@ def tar_xf(tarball, dir_path):
 def file_info(path):
     return {
         "size": getsize(path),
-        "md5": md5_file(path),
-        "sha256": hashsum_file(path, "sha256"),
+        "md5": compute_sum(path, "md5"),
+        "sha256": compute_sum(path, "sha256"),
         "mtime": getmtime(path),
     }
 
@@ -1059,7 +1053,7 @@ def iter_entry_points(items):
     for item in items:
         m = entry_pat.match(item)
         if m is None:
-            sys.exit("Error cound not match entry point: %r" % item)
+            sys.exit(f"Error cound not match entry point: {item!r}")
         yield m.groups()
 
 
@@ -1081,7 +1075,7 @@ def create_entry_point(path, module, func, config):
             os.remove(path)
         with open(path, "w") as fo:
             if not config.noarch:
-                fo.write("#!%s\n" % config.host_python)
+                fo.write(f"#!{config.host_python}\n")
             fo.write(pyscript)
         os.chmod(path, 0o775)
 
@@ -1131,9 +1125,10 @@ def convert_path_for_cygwin_or_msys2(exe, path):
     return path
 
 
-def get_skip_message(m):
-    return "Skipped: {} from {} defines build/skip for this configuration ({}).".format(
-        m.name(), m.path, {k: m.config.variant[k] for k in m.get_used_vars()}
+def get_skip_message(m: MetaData) -> str:
+    return (
+        f"Skipped: {m.name()} from {m.path} defines build/skip for this configuration "
+        f"({({k: m.config.variant[k] for k in m.get_used_vars()})})."
     )
 
 
@@ -1162,7 +1157,7 @@ def package_has_file(package_path, file_path, refresh_mode="modified"):
         return content
 
 
-def ensure_list(arg, include_dict=True):
+def ensure_list(arg: T | Iterable[T] | None, include_dict: bool = True) -> list[T]:
     """
     Ensure the object is a list. If not return it in a list.
 
@@ -1181,7 +1176,11 @@ def ensure_list(arg, include_dict=True):
         return [arg]
 
 
-def islist(arg, uniform=False, include_dict=True):
+def islist(
+    arg: T | Iterable[T],
+    uniform: bool = False,
+    include_dict: bool = True,
+) -> bool:
     """
     Check whether `arg` is a `list`. Optionally determine whether the list elements
     are all uniform.
@@ -1252,9 +1251,13 @@ def tmp_chdir(dest):
         os.chdir(curdir)
 
 
-def expand_globs(path_list, root_dir):
+def expand_globs(
+    path_list: str | os.PathLike | Path | Iterable[str | os.PathLike | Path],
+    root_dir: str | os.PathLike | Path,
+) -> list[str]:
     files = []
     for path in ensure_list(path_list):
+        path = str(path)
         if not os.path.isabs(path):
             path = os.path.join(root_dir, path)
         if os.path.isfile(path):
@@ -1278,11 +1281,10 @@ def expand_globs(path_list, root_dir):
             # Avoid this potential ambiguity by sorting. (see #4185)
             files.extend(sorted(glob_files))
     prefix_path_re = re.compile("^" + re.escape(f"{root_dir}{os.path.sep}"))
-    files = [prefix_path_re.sub("", f, 1) for f in files]
-    return files
+    return [prefix_path_re.sub("", f, 1) for f in files]
 
 
-def find_recipe(path):
+def find_recipe(path: str) -> str:
     """recurse through a folder, locating valid meta files (see VALID_METAS).  Raises error if more than one is found.
 
     Returns full path to meta file to be built.
@@ -1342,7 +1344,7 @@ class LoggingContext:
         "dotupdate",
         "stdoutlog",
         "requests",
-        "conda.core.package_cache",
+        "conda.core.package_cache_data",
         "conda.plan",
         "conda.gateways.disk.delete",
         "conda_build",
@@ -1404,44 +1406,6 @@ def get_installed_packages(path):
             data = json.load(file)
             installed[data["name"]] = data
     return installed
-
-
-def _convert_lists_to_sets(_dict):
-    for k, v in _dict.items():
-        if hasattr(v, "keys"):
-            _dict[k] = HashableDict(_convert_lists_to_sets(v))
-        elif hasattr(v, "__iter__") and not isinstance(v, str):
-            try:
-                _dict[k] = sorted(list(set(v)))
-            except TypeError:
-                _dict[k] = sorted(list({tuple(_) for _ in v}))
-    return _dict
-
-
-class HashableDict(dict):
-    """use hashable frozen dictionaries for resources and resource types so that they can be in sets"""
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self = _convert_lists_to_sets(self)
-
-    def __hash__(self):
-        return hash(json.dumps(self, sort_keys=True))
-
-
-def represent_hashabledict(dumper, data):
-    value = []
-
-    for item_key, item_value in data.items():
-        node_key = dumper.represent_data(item_key)
-        node_value = dumper.represent_data(item_value)
-
-        value.append((node_key, node_value))
-
-    return yaml.nodes.MappingNode("tag:yaml.org,2002:map", value)
-
-
-yaml.add_representer(HashableDict, represent_hashabledict)
 
 
 # http://stackoverflow.com/a/10743550/1170370
@@ -1616,8 +1580,12 @@ def filter_info_files(files_list, prefix):
     )
 
 
-def rm_rf(path, config=None):
-    return _rm_rf(path)
+def rm_rf(path):
+    from conda.core.prefix_data import delete_prefix_from_linked_data
+    from conda.gateways.disk.delete import rm_rf as rm_rf
+
+    rm_rf(path)
+    delete_prefix_from_linked_data(path)
 
 
 # https://stackoverflow.com/a/31459386/1170370
@@ -1675,10 +1643,8 @@ def reset_deduplicator():
 
 def get_logger(name, level=logging.INFO, dedupe=True, add_stdout_stderr_handlers=True):
     config_file = None
-    if cc_conda_build.get("log_config_file"):
-        config_file = abspath(
-            expanduser(expandvars(cc_conda_build.get("log_config_file")))
-        )
+    if log_config_file := context.conda_build.get("log_config_file"):
+        config_file = abspath(expanduser(expandvars(log_config_file)))
     # by loading config file here, and then only adding handlers later, people
     # should be able to override conda-build's logger settings here.
     if config_file:
@@ -1767,7 +1733,10 @@ def merge_or_update_dict(
     return base
 
 
-def merge_dicts_of_lists(dol1, dol2):
+def merge_dicts_of_lists(
+    dol1: Mapping[K, Iterable[V]],
+    dol2: Mapping[K, Iterable[V]],
+) -> dict[K, list[V]]:
     """
     From Alex Martelli: https://stackoverflow.com/a/1495821/3257826
     """
@@ -1776,22 +1745,24 @@ def merge_dicts_of_lists(dol1, dol2):
     return {k: dol1.get(k, no) + dol2.get(k, no) for k in keys}
 
 
-def prefix_files(prefix):
+def prefix_files(prefix: str | os.PathLike | Path) -> set[str]:
     """
     Returns a set of all files in prefix.
     """
-    res = set()
-    prefix_rep = prefix + os.path.sep
-    for root, dirs, files in walk(prefix):
-        for fn in files:
-            # this is relpath, just hacked to be faster
-            res.add(join(root, fn).replace(prefix_rep, "", 1))
-        for dn in dirs:
-            path = join(root, dn)
-            if islink(path):
-                res.add(path.replace(prefix_rep, "", 1))
-                res.update(expand_globs((path,), prefix))
-    return res
+    prefix = f"{os.path.abspath(prefix)}{os.path.sep}"
+    prefix_files: set[str] = set()
+    for root, directories, files in walk(prefix):
+        # this is effectively os.path.relpath, just hacked to be faster
+        relroot = root[len(prefix) :].lstrip(os.path.sep)
+        # add all files
+        prefix_files.update(join(relroot, file) for file in files)
+        # add all symlink directories (they are "files")
+        prefix_files.update(
+            join(relroot, directory)
+            for directory in directories
+            if islink(join(root, directory))
+        )
+    return prefix_files
 
 
 def mmap_mmap(
@@ -1889,7 +1860,15 @@ spec_needing_star_re = re.compile(
 spec_ver_needing_star_re = re.compile(r"^([0-9a-zA-Z\.]+)$")
 
 
-def ensure_valid_spec(spec, warn=False):
+@overload
+def ensure_valid_spec(spec: str, warn: bool = False) -> str: ...
+
+
+@overload
+def ensure_valid_spec(spec: MatchSpec, warn: bool = False) -> MatchSpec: ...
+
+
+def ensure_valid_spec(spec: str | MatchSpec, warn: bool = False) -> str | MatchSpec:
     if isinstance(spec, MatchSpec):
         if (
             hasattr(spec, "version")
@@ -1911,7 +1890,7 @@ def ensure_valid_spec(spec, warn=False):
                 if "*" not in spec:
                     if match.group(1) not in ("python", "vc") and warn:
                         log = get_logger(__name__)
-                        log.warn(
+                        log.warning(
                             f"Adding .* to spec '{spec}' to ensure satisfiability.  Please "
                             "consider putting {{{{ var_name }}}}.* or some relational "
                             "operator (>/</>=/<=) on this spec in meta.yaml, or if req is "
@@ -1929,7 +1908,7 @@ def insert_variant_versions(requirements_dict, variant, env):
     )
     reqs = ensure_list(requirements_dict.get(env))
     for key, val in variant.items():
-        regex = re.compile(r"^(%s)(?:\s*$)" % key.replace("_", "[-_]"))
+        regex = re.compile(r"^({})(?:\s*$)".format(key.replace("_", "[-_]")))
         matches = [regex.match(pkg) for pkg in reqs]
         if any(matches):
             for i, x in enumerate(matches):
@@ -2093,7 +2072,7 @@ channeldata_cache = {}
 def download_channeldata(channel_url):
     global channeldata_cache
     if channel_url.startswith("file://") or channel_url not in channeldata_cache:
-        urls = get_conda_channel(channel_url).urls()
+        urls = Channel.from_value(channel_url).urls()
         urls = {url.rsplit("/", 1)[0] for url in urls}
         data = {}
         for url in urls:
@@ -2110,21 +2089,6 @@ def download_channeldata(channel_url):
     else:
         data = channeldata_cache[channel_url]
     return data
-
-
-@deprecated("24.1.0", "24.3.0")
-def linked_data_no_multichannels(
-    prefix: str | os.PathLike | Path,
-) -> dict[Dist, PrefixRecord]:
-    """
-    Return a dictionary of the linked packages in prefix, with correct channels, hopefully.
-    cc @kalefranz.
-    """
-    prefix = Path(prefix)
-    return {
-        Dist.from_string(prec.fn, channel_override=prec.channel.name): prec
-        for prec in PrefixData(str(prefix)).iter_records()
-    }
 
 
 def shutil_move_more_retrying(src, dest, debug_name):

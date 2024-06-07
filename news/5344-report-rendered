@@ -1,10 +1,10 @@
 ### Enhancements
 
-* <news item>
+* Report fully rendered recipe to stdout before the build process starts. (#3798 via #5344)
 
 ### Bug fixes
 
-* Fix stdlib being recognized in variant hash inputs. (#5190 via #5195)
+* <news item>
 
 ### Deprecations
 

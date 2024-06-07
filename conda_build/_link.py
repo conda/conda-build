@@ -4,6 +4,7 @@
 This is code that is added to noarch Python packages. See
 conda_build/noarch_python.py.
 """
+
 from __future__ import annotations
 
 import os
@@ -25,7 +26,7 @@ if sys.platform == "win32":
     SITE_PACKAGES = "Lib/site-packages"
 else:
     BIN_DIR = join(PREFIX, "bin")
-    SITE_PACKAGES = "lib/python%s/site-packages" % sys.version[:3]
+    SITE_PACKAGES = f"lib/python{sys.version[:3]}/site-packages"
 
 # the list of these files is going to be store in info/_files
 FILES = []
@@ -109,20 +110,20 @@ def create_script(fn):
     dst = join(BIN_DIR, fn)
     if sys.platform == "win32":
         shutil.copy2(src, dst + "-script.py")
-        FILES.append("Scripts/%s-script.py" % fn)
+        FILES.append(f"Scripts/{fn}-script.py")
         shutil.copy2(
             join(THIS_DIR, "cli-%d.exe" % (8 * tuple.__itemsize__)), dst + ".exe"
         )
-        FILES.append("Scripts/%s.exe" % fn)
+        FILES.append(f"Scripts/{fn}.exe")
     else:
         with open(src) as fi:
             data = fi.read()
         with open(dst, "w") as fo:
-            shebang = replace_long_shebang("#!%s\n" % normpath(sys.executable))
+            shebang = replace_long_shebang(f"#!{normpath(sys.executable)}\n")
             fo.write(shebang)
             fo.write(data)
         os.chmod(dst, 0o775)
-        FILES.append("bin/%s" % fn)
+        FILES.append(f"bin/{fn}")
 
 
 def create_scripts(files):
@@ -139,9 +140,9 @@ def main():
     link_files("site-packages", SITE_PACKAGES, DATA["site-packages"])
     link_files("Examples", "Examples", DATA["Examples"])
 
-    with open(join(PREFIX, "conda-meta", "%s.files" % DATA["dist"]), "w") as fo:
+    with open(join(PREFIX, "conda-meta", "{}.files".format(DATA["dist"])), "w") as fo:
         for f in FILES:
-            fo.write("%s\n" % f)
+            fo.write(f"{f}\n")
 
 
 if __name__ == "__main__":

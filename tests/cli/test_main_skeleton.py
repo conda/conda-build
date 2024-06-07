@@ -54,6 +54,6 @@ def test_skeleton_pypi_arguments_work(testing_workdir):
     assert os.path.isdir("photutils")
     # Check that the setup option occurs in bld.bat and build.sh.
 
-    m = api.render("photutils")[0][0]
-    assert "--offline" in m.meta["build"]["script"]
-    assert m.version() == "1.10.0"
+    metadata = api.render("photutils")[0][0]
+    assert "--offline" in metadata.meta["build"]["script"]
+    assert metadata.version() == "1.10.0"

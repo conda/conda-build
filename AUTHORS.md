@@ -75,6 +75,7 @@ Authors are sorted alphabetically.
 * Felix Kühnl
 * Ferry Firmansjah
 * Filipe Fernandes
+* Finn Womack
 * Floris Bruynooghe
 * Gabriel Reis
 * Gaëtan de Menten
@@ -119,6 +120,7 @@ Authors are sorted alphabetically.
 * Juan Lasheras
 * Julian Rüth
 * Julien Schueller
+* Justin Wood (Callek)
 * Jürgen Gmach
 * Jędrzej Nowak
 * Kai Tietz
@@ -216,6 +218,7 @@ Authors are sorted alphabetically.
 * Thomas Holder
 * Thomas Kluyver
 * Tim Snyder
+* Tobias Fischer
 * Todd Tomashek
 * Tom Davidson
 * Tom Pollard
@@ -234,6 +237,7 @@ Authors are sorted alphabetically.
 * Wolf Vollprecht
 * Wolfgang Ulmer
 * Yann
+* Yannik Tausch
 * Yoav Ram
 * Yu Feng
 * Zane Dufour
