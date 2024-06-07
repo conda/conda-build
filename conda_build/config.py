@@ -19,7 +19,6 @@ from typing import TYPE_CHECKING
 from conda.base.context import context
 from conda.utils import url_path
 
-from .deprecations import deprecated
 from .utils import (
     get_build_folders,
     get_conda_operation_locks,
@@ -54,7 +53,6 @@ filename_hashing_default = "true"
 _src_cache_root_default = None
 error_overlinking_default = "false"
 error_overdepending_default = "false"
-deprecated.constant("24.5", "24.7", "noarch_python_build_age_default", 0)
 enable_static_default = "false"
 no_rewrite_stdout_env_default = "false"
 ignore_verify_codes_default = []
@@ -776,17 +774,6 @@ class Config:
     @property
     def subdirs_same(self):
         return self.host_subdir == self.build_subdir
-
-    @property
-    @deprecated(
-        "24.5",
-        "24.7",
-        addendum="Defer to `conda.base.context.context.channels` instead.",
-    )
-    def override_channels(self) -> bool:
-        return bool(
-            context._argparse_args and context._argparse_args.get("override_channels")
-        )
 
     def clean(self, remove_folders=True):
         # build folder is the whole burrito containing envs and source folders

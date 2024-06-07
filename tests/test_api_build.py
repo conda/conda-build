@@ -41,6 +41,7 @@ from conda_build.exceptions import (
     DependencyNeedsBuildingError,
     OverDependingError,
     OverLinkingError,
+    RecipeError,
 )
 from conda_build.os_utils.external import find_executable
 from conda_build.render import finalize_metadata
@@ -1464,6 +1465,12 @@ def test_run_constrained_stores_constrains_info(testing_config):
     assert info_contents["constrains"][0] == "bzip2  1.*"
 
 
+def test_run_constrained_is_validated(testing_config: Config):
+    recipe = os.path.join(metadata_dir, "_run_constrained_error")
+    with pytest.raises(RecipeError):
+        api.build(recipe, config=testing_config)
+
+
 @pytest.mark.sanity
 def test_no_locking(testing_config):
     recipe = os.path.join(metadata_dir, "source_git_jinja2")
@@ -1980,6 +1987,15 @@ def test_rendered_is_reported(testing_config, capsys):
     assert "name: base-outputs_overwrite_base_file" in captured.out
     assert "- name: base-outputs_overwrite_base_file" in captured.out
     assert "- base-outputs_overwrite_base_file >=1.0,<2.0a0" in captured.out
+
+
+@pytest.mark.skipif(on_win, reason="Tests cross-compilation targeting Windows")
+def test_cross_unix_windows_mingw(testing_config):
+    recipe = os.path.join(metadata_dir, "_cross_unix_windows_mingw")
+    testing_config.channel_urls = [
+        "conda-forge",
+    ]
+    api.build(recipe, config=testing_config)
 
 
 @pytest.mark.parametrize(
