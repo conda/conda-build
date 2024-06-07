@@ -74,7 +74,7 @@ def download_to_cache(cache_folder, recipe_path, source_dict, verbose=False):
             hash_added = True
             break
     else:
-        log.warn(
+        log.warning(
             f"No hash (md5, sha1, sha256) provided for {unhashed_fn}.  Source download forced.  "
             "Add hash to recipe to use source cache."
         )
@@ -102,10 +102,10 @@ def download_to_cache(cache_folder, recipe_path, source_dict, verbose=False):
                 with LoggingContext():
                     download(url, path)
             except CondaHTTPError as e:
-                log.warn(f"Error: {str(e).strip()}")
+                log.warning(f"Error: {str(e).strip()}")
                 rm_rf(path)
             except RuntimeError as e:
-                log.warn(f"Error: {str(e).strip()}")
+                log.warning(f"Error: {str(e).strip()}")
                 rm_rf(path)
             else:
                 if verbose:
@@ -467,7 +467,7 @@ def git_info(src_dir, build_prefix, git=None, verbose=True, fo=None):
     if not git:
         git = external.find_executable("git", build_prefix)
     if not git:
-        log.warn(
+        log.warning(
             "git not installed in root environment.  Skipping recording of git info."
         )
         return

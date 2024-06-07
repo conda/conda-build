@@ -163,7 +163,7 @@ def test_logger_filtering(caplog, capfd):
     log.info("test info message")
     log.info("test duplicate message")
     log.info("test duplicate message")
-    log.warn("test warn message")
+    log.warning("test warn message")
     log.error("test error message")
     out, err = capfd.readouterr()
     assert "test debug message" in out
@@ -211,7 +211,7 @@ root:
     )
     log = utils.get_logger(__name__)
     # default log level is INFO, but our config file should set level to DEBUG
-    log.warn("test message")
+    log.warning("test message")
     # output should have gone to stdout according to config above.
     out, err = capfd.readouterr()
     assert "test message" in out
