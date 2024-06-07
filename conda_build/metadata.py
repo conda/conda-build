@@ -1127,7 +1127,7 @@ def finalize_outputs_pass(
                 raise
             else:
                 log = utils.get_logger(__name__)
-                log.warn(
+                log.warning(
                     "Could not finalize metadata due to missing dependencies: "
                     f"{e.packages}"
                 )
@@ -1348,7 +1348,7 @@ class MetaData:
 
         log = utils.get_logger(__name__)
         if kw:
-            log.warn(
+            log.warning(
                 "using unsupported internal conda-build function `parse_again`.  Please use "
                 "conda_build.api.render instead."
             )
@@ -1562,7 +1562,7 @@ class MetaData:
             # is passed in with an index, e.g. get_value('source/0/git_url')
             if index is None:
                 log = utils.get_logger(__name__)
-                log.warn(
+                log.warning(
                     f"No index specified in get_value('{name}'). Assuming index 0."
                 )
                 index = 0
@@ -3019,7 +3019,7 @@ class MetaData:
                 )
             else:
                 log = utils.get_logger(__name__)
-                log.warn(
+                log.warning(
                     f"Not detecting used variables in output script {script}; conda-build only knows "
                     "how to search .sh and .bat files right now."
                 )
