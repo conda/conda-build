@@ -1547,7 +1547,7 @@ def test_setup_py_data_in_env(testing_config):
     # should pass with any modern python (just not 3.5)
     api.build(recipe, config=testing_config)
     # make sure it fails with our special python logic
-    with pytest.raises(BuildScriptException):
+    with pytest.raises((BuildScriptException, CondaBuildException)):
         api.build(recipe, config=testing_config, python="3.5")
 
 
@@ -1976,6 +1976,17 @@ def test_add_pip_as_python_dependency_from_condarc_file(
     with env_var("CONDARC", conda_rc, reset_context):
         with check_build_fails:
             api.build(testing_metadata)
+
+
+def test_rendered_is_reported(testing_config, capsys):
+    recipe_dir = os.path.join(metadata_dir, "outputs_overwrite_base_file")
+    api.build(recipe_dir, config=testing_config)
+
+    captured = capsys.readouterr()
+    assert "Rendered as:" in captured.out
+    assert "name: base-outputs_overwrite_base_file" in captured.out
+    assert "- name: base-outputs_overwrite_base_file" in captured.out
+    assert "- base-outputs_overwrite_base_file >=1.0,<2.0a0" in captured.out
 
 
 @pytest.mark.skipif(on_win, reason="Tests cross-compilation targeting Windows")
