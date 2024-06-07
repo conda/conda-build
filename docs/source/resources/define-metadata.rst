@@ -1313,7 +1313,10 @@ build prefix. Explicit file lists support glob expressions.
 Directory names are also supported, and they recursively include
 contents.
 
-.. code-block:: none
+.. warning::
+   When defining `outputs/files` as a list without specifying `outputs/script`, any file in the prefix (including those installed by host dependencies) matching one of the glob expressions is included in the output.
+
+.. code-block:: yaml
 
    outputs:
      - name: subpackage-name
@@ -1322,6 +1325,29 @@ contents.
          - a-folder
          - *.some-extension
          - somefolder/*.some-extension
+
+Greater control over file matching may be
+achieved by defining ``files`` as a dictionary separating files to
+``include`` from those to ``exclude``.
+When using include/exclude, only files installed by
+the current recipe are considered. i.e. files in the prefix installed
+by host dependencies are excluded. include/exclude must not be used
+simultaneously with glob expressions listed directly in ``outputs/files``.
+Files matching both include and exclude expressions will be excluded.
+
+.. code-block:: yaml
+
+   outputs:
+     - name: subpackage-name
+       files:
+         include:
+           - a-file
+           - a-folder
+           - *.some-extension
+           - somefolder/*.some-extension
+         exclude:
+           - *.exclude-extension
+           - a-folder/**/*.some-extension
 
 Scripts that create or move files into the build prefix can be
 any kind of script. Known script types need only specify the
@@ -1372,10 +1398,9 @@ A subpackage does not automatically inherit any dependencies from its top-level
 recipe, so any build or run requirements needed by the subpackage must be
 explicitly specified.
 
-.. code-block:: none
+.. code-block:: yaml
 
    outputs:
-
      - name: subpackage-name
        requirements:
          build:

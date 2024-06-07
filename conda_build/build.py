@@ -1693,7 +1693,14 @@ def post_process_files(m: MetaData, initial_prefix_files):
     return new_files
 
 
-def bundle_conda(output, metadata: MetaData, env, stats, **kw):
+def bundle_conda(
+    output,
+    metadata: MetaData,
+    env,
+    stats,
+    new_prefix_files: set[str] = set(),
+    **kw,
+):
     log = utils.get_logger(__name__)
     log.info("Packaging %s", metadata.dist())
     get_all_replacements(metadata.config)
@@ -1803,10 +1810,26 @@ def bundle_conda(output, metadata: MetaData, env, stats, **kw):
     if files:
         # Files is specified by the output
         # we exclude the list of files that we want to keep, so post-process picks them up as "new"
-        keep_files = {
-            os.path.normpath(pth)
-            for pth in utils.expand_globs(files, metadata.config.host_prefix)
-        }
+        if isinstance(files, dict):
+            # When file matching with include/exclude lists, only
+            # new_prefix_files are considered. Files in the PREFIX from other
+            # recipes (dependencies) are ignored
+            include = files.get("include") or []
+            exclude = files.get("exclude") or []
+            exclude_files = {
+                os.path.normpath(pth)
+                for pth in utils.expand_globs(exclude, metadata.config.host_prefix)
+            }
+            keep_files = {
+                os.path.normpath(pth)
+                for pth in utils.expand_globs(include, metadata.config.host_prefix)
+            }
+            keep_files = new_prefix_files.intersection(keep_files) - exclude_files
+        else:
+            keep_files = {
+                os.path.normpath(pth)
+                for pth in utils.expand_globs(files, metadata.config.host_prefix)
+            }
         pfx_files = set(utils.prefix_files(metadata.config.host_prefix))
         initial_files = {
             item
@@ -1983,7 +2006,13 @@ def bundle_conda(output, metadata: MetaData, env, stats, **kw):
     return final_outputs
 
 
-def bundle_wheel(output, metadata: MetaData, env, stats):
+def bundle_wheel(
+    output,
+    metadata: MetaData,
+    env,
+    stats,
+    new_prefix_files: set[str] = set(),
+):
     ext = ".bat" if utils.on_win else ".sh"
     with TemporaryDirectory() as tmpdir, utils.tmp_chdir(metadata.config.work_dir):
         dest_file = os.path.join(metadata.config.work_dir, "wheel_output" + ext)
@@ -2709,8 +2738,8 @@ def build(
                     # This is wrong, files has not been expanded at this time and could contain
                     # wildcards.  Also well, I just do not understand this, because when this
                     # does contain wildcards, the files in to_remove will slip back in.
-                    if "files" in output_d:
-                        output_d["files"] = set(output_d["files"]) - to_remove
+                    if (files := output_d.get("files")) and not isinstance(files, dict):
+                        output_d["files"] = set(files) - to_remove
 
                     # copies the backed-up new prefix files into the newly created host env
                     for f in new_prefix_files:
@@ -2725,7 +2754,9 @@ def build(
                     with utils.path_prepended(m.config.build_prefix):
                         env = environ.get_dict(m=m)
                     pkg_type = "conda" if not hasattr(m, "type") else m.type
-                    newly_built_packages = bundlers[pkg_type](output_d, m, env, stats)
+                    newly_built_packages = bundlers[pkg_type](
+                        output_d, m, env, stats, new_prefix_files
+                    )
                     # warn about overlapping files.
                     if "checksums" in output_d:
                         for file, csum in output_d["checksums"].items():
