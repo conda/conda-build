@@ -199,7 +199,7 @@ def get_selectors(config: Config) -> dict[str, bool]:
     if not np:
         np = defaults["numpy"]
         if config.verbose:
-            utils.get_logger(__name__).warn(
+            utils.get_logger(__name__).warning(
                 "No numpy version specified in conda_build_config.yaml.  "
                 "Falling back to default numpy value of {}".format(defaults["numpy"])
             )
@@ -995,7 +995,7 @@ def _toposort_outputs(output_tuples: list[OutputTuple]) -> list[OutputTuple]:
             non_conda_outputs.append(output_tuple)
         else:
             # TODO: is it even possible to get here? and if so should we silently ignore or error?
-            utils.get_logger(__name__).warn("Found an output without a name, skipping")
+            utils.get_logger(__name__).warning("Found an output without a name, skipping")
 
     # Iterate over conda packages, creating a mapping of package names to their
     # dependencies to be used in toposort
@@ -2326,7 +2326,7 @@ class MetaData:
             output = output_matches[output_index] if output_matches else ""
         except ValueError:
             if not self.path and self.meta.get("extra", {}).get("parent_recipe"):
-                utils.get_logger(__name__).warn(
+                utils.get_logger(__name__).warning(
                     f"Didn't match any output in raw metadata.  Target value was: {output_name}"
                 )
                 output = ""
