@@ -132,3 +132,7 @@ class RunPathError(RuntimeError, CondaBuildException):
 
 class BuildScriptException(CondaBuildException):
     pass
+
+
+class CondaBuildUserError(CondaBuildException):
+    pass
