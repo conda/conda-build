@@ -995,7 +995,9 @@ def _toposort_outputs(output_tuples: list[OutputTuple]) -> list[OutputTuple]:
             non_conda_outputs.append(output_tuple)
         else:
             # TODO: is it even possible to get here? and if so should we silently ignore or error?
-            utils.get_logger(__name__).warning("Found an output without a name, skipping")
+            utils.get_logger(__name__).warning(
+                "Found an output without a name, skipping"
+            )
 
     # Iterate over conda packages, creating a mapping of package names to their
     # dependencies to be used in toposort
