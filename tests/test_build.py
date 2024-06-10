@@ -12,12 +12,17 @@ import os
 import sys
 from contextlib import nullcontext
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 
 from conda_build import api, build
+from conda_build.exceptions import CondaBuildUserError
 
 from .utils import get_noarch_python_meta, metadata_dir
+
+if TYPE_CHECKING:
+    from conda_build.metadata import MetaData
 
 
 def test_build_preserves_PATH(testing_config):
@@ -324,3 +329,19 @@ def test_guess_interpreter(
 ):
     with pytest.raises(error) if error else nullcontext():
         assert build.guess_interpreter(script) == interpreter
+
+
+def test_check_external():
+    with pytest.deprecated_call():
+        build.check_external()
+
+
+@pytest.mark.parametrize("readme", ["README.md", "README.rst", "README"])
+def test_copy_readme(testing_metadata: MetaData, readme: str):
+    testing_metadata.meta["about"]["readme"] = readme
+    with pytest.raises(CondaBuildUserError):
+        build.copy_readme(testing_metadata)
+
+    Path(testing_metadata.config.work_dir, readme).touch()
+    build.copy_readme(testing_metadata)
+    assert Path(testing_metadata.config.info_dir, readme).exists()

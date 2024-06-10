@@ -174,7 +174,7 @@ def package_exists(package_name):
 
 def getval(spec, k):
     if k not in spec:
-        raise Exception("Required key %s not in spec" % k)
+        raise Exception(f"Required key {k} not in spec")
     else:
         return spec[k]
 
@@ -184,7 +184,7 @@ def warn_against_branches(branch):
     print("=========================================")
     print("")
     print("WARNING:")
-    print("Building a rock referenced to branch %s." % branch)
+    print(f"Building a rock referenced to branch {branch}.")
     print("This is not a tag. This is dangerous, because rebuilding")
     print("at a later date may produce a different package.")
     print("Please replace with a tag, git commit, or tarball.")
@@ -253,7 +253,7 @@ def skeletonize(
         package = packages.pop()
 
         packagename = (
-            "lua-%s" % package.lower() if package[:4] != "lua-" else package.lower()
+            f"lua-{package.lower()}" if package[:4] != "lua-" else package.lower()
         )
         d = package_dicts.setdefault(
             package,
@@ -372,13 +372,13 @@ def skeletonize(
                     modules = spec["build"]["platforms"][our_plat]["modules"]
         if modules:
             d["test_commands"] = INDENT.join(
-                [""] + ["""lua -e "require '%s'\"""" % r for r in modules.keys()]
+                [""] + [f"""lua -e "require '{r}'\"""" for r in modules.keys()]
             )
 
     # If we didn't find any modules to import, import the base name
     if d["test_commands"] == "":
         d["test_commands"] = INDENT.join(
-            [""] + ["""lua -e "require '%s'" """ % d["rockname"]]
+            [""] + ["""lua -e "require '{}'" """.format(d["rockname"])]
         )
 
     # Build the luarocks skeleton

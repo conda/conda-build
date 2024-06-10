@@ -66,7 +66,6 @@ from conda.models.records import PackageRecord
 from conda.models.version import VersionOrder
 from conda.utils import unix_path_to_win
 
-from .deprecations import deprecated
 from .exceptions import BuildLockError
 
 if TYPE_CHECKING:
@@ -258,8 +257,8 @@ class PopenWrapper:
             psutil = None
             psutil_exceptions = (OSError, ValueError)
             log = get_logger(__name__)
-            log.warn(f"psutil import failed.  Error was {e}")
-            log.warn(
+            log.warning(f"psutil import failed.  Error was {e}")
+            log.warning(
                 "only disk usage and time statistics will be available.  Install psutil to "
                 "get CPU time and memory usage statistics."
             )
@@ -425,7 +424,7 @@ def bytes2human(n):
         if n >= prefix[s]:
             value = float(n) / prefix[s]
             return f"{value:.1f}{s}"
-    return "%sB" % n
+    return f"{n}B"
 
 
 def seconds2human(s):
@@ -458,7 +457,7 @@ def get_recipe_abspath(recipe):
                 tar_xf(recipe_tarfile, os.path.join(recipe_dir, "info"))
             need_cleanup = True
         else:
-            print("Ignoring non-recipe: %s" % recipe)
+            print(f"Ignoring non-recipe: {recipe}")
             return (None, None)
     else:
         recipe_dir = abspath(os.path.join(os.getcwd(), recipe))
@@ -595,7 +594,7 @@ def copy_into(
                 src_folder = os.getcwd()
 
         if os.path.islink(src) and not os.path.exists(os.path.realpath(src)):
-            log.warn("path %s is a broken symlink - ignoring copy", src)
+            log.warning("path %s is a broken symlink - ignoring copy", src)
             return
 
         if not lock and locking:
@@ -1054,7 +1053,7 @@ def iter_entry_points(items):
     for item in items:
         m = entry_pat.match(item)
         if m is None:
-            sys.exit("Error cound not match entry point: %r" % item)
+            sys.exit(f"Error cound not match entry point: {item!r}")
         yield m.groups()
 
 
@@ -1076,7 +1075,7 @@ def create_entry_point(path, module, func, config):
             os.remove(path)
         with open(path, "w") as fo:
             if not config.noarch:
-                fo.write("#!%s\n" % config.host_python)
+                fo.write(f"#!{config.host_python}\n")
             fo.write(pyscript)
         os.chmod(path, 0o775)
 
@@ -1409,47 +1408,6 @@ def get_installed_packages(path):
     return installed
 
 
-@deprecated("24.5", "24.7", addendum="Use `frozendict.deepfreeze` instead.")
-def _convert_lists_to_sets(_dict):
-    for k, v in _dict.items():
-        if hasattr(v, "keys"):
-            _dict[k] = HashableDict(_convert_lists_to_sets(v))
-        elif hasattr(v, "__iter__") and not isinstance(v, str):
-            try:
-                _dict[k] = sorted(list(set(v)))
-            except TypeError:
-                _dict[k] = sorted(list({tuple(_) for _ in v}))
-    return _dict
-
-
-@deprecated("24.5", "24.7", addendum="Use `frozendict.deepfreeze` instead.")
-class HashableDict(dict):
-    """use hashable frozen dictionaries for resources and resource types so that they can be in sets"""
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self = _convert_lists_to_sets(self)
-
-    def __hash__(self):
-        return hash(json.dumps(self, sort_keys=True))
-
-
-@deprecated("24.5", "24.7", addendum="Use `frozendict.deepfreeze` instead.")
-def represent_hashabledict(dumper, data):
-    value = []
-
-    for item_key, item_value in data.items():
-        node_key = dumper.represent_data(item_key)
-        node_value = dumper.represent_data(item_value)
-
-        value.append((node_key, node_value))
-
-    return yaml.nodes.MappingNode("tag:yaml.org,2002:map", value)
-
-
-yaml.add_representer(HashableDict, represent_hashabledict)
-
-
 # http://stackoverflow.com/a/10743550/1170370
 @contextlib.contextmanager
 def capture():
@@ -1622,7 +1580,6 @@ def filter_info_files(files_list, prefix):
     )
 
 
-@deprecated.argument("24.5", "24.7", "config")
 def rm_rf(path):
     from conda.core.prefix_data import delete_prefix_from_linked_data
     from conda.gateways.disk.delete import rm_rf as rm_rf
@@ -1933,7 +1890,7 @@ def ensure_valid_spec(spec: str | MatchSpec, warn: bool = False) -> str | MatchS
                 if "*" not in spec:
                     if match.group(1) not in ("python", "vc") and warn:
                         log = get_logger(__name__)
-                        log.warn(
+                        log.warning(
                             f"Adding .* to spec '{spec}' to ensure satisfiability.  Please "
                             "consider putting {{{{ var_name }}}}.* or some relational "
                             "operator (>/</>=/<=) on this spec in meta.yaml, or if req is "
@@ -1951,7 +1908,7 @@ def insert_variant_versions(requirements_dict, variant, env):
     )
     reqs = ensure_list(requirements_dict.get(env))
     for key, val in variant.items():
-        regex = re.compile(r"^(%s)(?:\s*$)" % key.replace("_", "[-_]"))
+        regex = re.compile(r"^({})(?:\s*$)".format(key.replace("_", "[-_]")))
         matches = [regex.match(pkg) for pkg in reqs]
         if any(matches):
             for i, x in enumerate(matches):

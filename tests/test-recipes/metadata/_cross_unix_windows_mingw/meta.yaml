@@ -1,0 +1,18 @@
+package:
+  name: foo
+  version: 0.0.1
+
+build:
+  number: 0
+  script:
+    - echo 'hello'
+    - ls $PREFIX
+    # this is the unix layout.
+    - test ! -d $PREFIX/x86_64-w64-mingw32
+    - test -d $PREFIX/Library
+
+requirements:
+  build:
+  host:
+    - m2w64-sysroot_win-64
+  run:

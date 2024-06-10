@@ -1,6 +1,6 @@
 ### Enhancements
 
-* Add `conda_build.metadata._split_line_selector` to cache line-selector parsed text. (#5237)
+* Add new include/exclude sections for glob expressions in multi-output `outputs/files`. (#4196 via #5216)
 
 ### Bug fixes
 

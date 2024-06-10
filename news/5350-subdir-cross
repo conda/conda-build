@@ -4,11 +4,11 @@
 
 ### Bug fixes
 
-* <news item>
+* Ensure cross-building recipes select the correct noarch package variants. (#5341 via #5350)
 
 ### Deprecations
 
-* Deprecate `conda_build.variants.get_vars(loop_only)`. Unused. (#5280)
+* <news item>
 
 ### Docs
 

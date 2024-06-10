@@ -1,6 +1,6 @@
 ### Enhancements
 
-* <news item>
+* Report fully rendered recipe to stdout before the build process starts. (#3798 via #5344)
 
 ### Bug fixes
 
@@ -16,4 +16,4 @@
 
 ### Other
 
-* Enable CodSpeed benchmarks for select tests. (#5233)
+* <news item>
