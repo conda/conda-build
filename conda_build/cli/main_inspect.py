@@ -4,20 +4,30 @@ from __future__ import annotations
 
 import logging
 import sys
-from argparse import Namespace
 from os.path import expanduser
 from pprint import pprint
-from typing import Sequence
+from typing import TYPE_CHECKING
 
-from conda.base.context import context, determine_target_prefix
+from conda.base.context import context
 
 from .. import api
-from ..conda_interface import ArgumentParser, add_parser_prefix
+
+try:
+    from conda.cli.helpers import add_parser_prefix
+except ImportError:
+    # conda<23.11
+    from conda.cli.conda_argparse import add_parser_prefix
+
+if TYPE_CHECKING:
+    from argparse import ArgumentParser, Namespace
+    from typing import Sequence
 
 logging.basicConfig(level=logging.INFO)
 
 
 def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
+    from conda.cli.conda_argparse import ArgumentParser
+
     parser = ArgumentParser(
         prog="conda inspect",
         description="Tools for inspecting conda packages.",
@@ -184,8 +194,9 @@ Tools for investigating conda channels.
     return parser, parser.parse_args(args)
 
 
-def execute(args: Sequence[str] | None = None):
+def execute(args: Sequence[str] | None = None) -> int:
     parser, parsed = parse_args(args)
+    context.__init__(argparse_args=parsed)
 
     if not parsed.subcommand:
         parser.print_help()
@@ -196,7 +207,7 @@ def execute(args: Sequence[str] | None = None):
         print(
             api.inspect_linkages(
                 parsed.packages,
-                prefix=determine_target_prefix(context, parsed),
+                prefix=context.target_prefix,
                 untracked=parsed.untracked,
                 all_packages=parsed.all,
                 show_files=parsed.show_files,
@@ -208,7 +219,7 @@ def execute(args: Sequence[str] | None = None):
         print(
             api.inspect_objects(
                 parsed.packages,
-                prefix=determine_target_prefix(context, parsed),
+                prefix=context.target_prefix,
                 groupby=parsed.groupby,
             )
         )
@@ -221,3 +232,5 @@ def execute(args: Sequence[str] | None = None):
         pprint(api.inspect_hash_inputs(parsed.packages))
     else:
         parser.error(f"Unrecognized subcommand: {parsed.subcommand}.")
+
+    return 0

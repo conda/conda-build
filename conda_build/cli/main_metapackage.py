@@ -4,16 +4,28 @@ from __future__ import annotations
 
 import argparse
 import logging
-from argparse import Namespace
-from typing import Sequence
+from typing import TYPE_CHECKING
+
+from conda.base.context import context
 
 from .. import api
-from ..conda_interface import ArgumentParser, add_parser_channels, binstar_upload
+
+try:
+    from conda.cli.helpers import add_parser_channels
+except ImportError:
+    # conda<23.11
+    from conda.cli.conda_argparse import add_parser_channels
+
+if TYPE_CHECKING:
+    from argparse import ArgumentParser, Namespace
+    from typing import Sequence
 
 logging.basicConfig(level=logging.INFO)
 
 
 def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
+    from conda.cli.conda_argparse import ArgumentParser
+
     parser = ArgumentParser(
         prog="conda metapackage",
         description="""
@@ -32,14 +44,14 @@ command line with the conda metapackage command.
         action="store_false",
         help="Do not ask to upload the package to anaconda.org.",
         dest="anaconda_upload",
-        default=binstar_upload,
+        default=context.binstar_upload,
     )
     parser.add_argument(
         "--no-binstar-upload",
         action="store_false",
         help=argparse.SUPPRESS,
         dest="anaconda_upload",
-        default=binstar_upload,
+        default=context.binstar_upload,
     )
     parser.add_argument("--token", help="Token to pass through to anaconda upload")
     parser.add_argument(
@@ -108,7 +120,13 @@ command line with the conda metapackage command.
     return parser, parser.parse_args(args)
 
 
-def execute(args: Sequence[str] | None = None):
-    _, args = parse_args(args)
-    channel_urls = args.__dict__.get("channel") or args.__dict__.get("channels") or ()
-    api.create_metapackage(channel_urls=channel_urls, **args.__dict__)
+def execute(args: Sequence[str] | None = None) -> int:
+    _, parsed = parse_args(args)
+    context.__init__(argparse_args=parsed)
+
+    api.create_metapackage(
+        channel_urls=context.channels,
+        **parsed.__dict__,
+    )
+
+    return 0

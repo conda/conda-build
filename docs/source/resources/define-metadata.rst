@@ -116,6 +116,18 @@ If an extracted archive contains only 1 folder at its top level, its contents
 will be moved 1 level up, so that the extracted package contents sit in the
 root of the work folder.
 
+You can also specify multiple URLs for the same source archive.
+They will be attempted in order, should one fail.
+
+.. code-block:: yaml
+
+   source:
+     url:
+       - https://archive.linux.duke.edu/cran/src/contrib/ggblanket_6.0.0.tar.gz
+       - https://archive.linux.duke.edu/cran/src/contrib/Archive/ggblanket/ggblanket_6.0.0.tar.gz
+     sha256: cd2181fe3d3365eaf36ff8bbbc90ea9d76c56d40e63386b4eefa0e3120ec6665
+
+
 Source from git
 ---------------
 
@@ -125,7 +137,7 @@ The git_url can also be a relative path to the recipe directory.
 
    source:
      git_url: https://github.com/ilanschnell/bsdiff4.git
-     git_rev: 1.1.4
+     git_rev: 1.1.4 # (Defaults to "HEAD")
      git_depth: 1 # (Defaults to -1/not shallow)
 
 The depth argument relates to the ability to perform a shallow clone.
@@ -734,7 +746,7 @@ implicitly added by host requirements (e.g. libpng exports libpng), and with
        - libpng
 
 Here, because no specific kind of ``run_exports`` is specified, libpng's ``run_exports``
-are considered "weak." This means they will only apply when libpng is in the
+are considered "weak". This means they will only apply when libpng is in the
 host section, when they will add their export to the run section. If libpng were
 listed in the build section, the ``run_exports`` would not apply to the run section.
 
@@ -745,6 +757,9 @@ listed in the build section, the ``run_exports`` would not apply to the run sect
      run_exports:
        strong:
          - libgcc
+
+There is also ``run_exports/weak`` which is equivalent to an unspecific kind of
+``run_exports`` but useful if you want to define both strong and weak run exports.
 
 Strong ``run_exports`` are used for things like runtimes, where the same runtime
 needs to be present in the host and the run environment, and exactly which
@@ -1298,7 +1313,10 @@ build prefix. Explicit file lists support glob expressions.
 Directory names are also supported, and they recursively include
 contents.
 
-.. code-block:: none
+.. warning::
+   When defining `outputs/files` as a list without specifying `outputs/script`, any file in the prefix (including those installed by host dependencies) matching one of the glob expressions is included in the output.
+
+.. code-block:: yaml
 
    outputs:
      - name: subpackage-name
@@ -1307,6 +1325,29 @@ contents.
          - a-folder
          - *.some-extension
          - somefolder/*.some-extension
+
+Greater control over file matching may be
+achieved by defining ``files`` as a dictionary separating files to
+``include`` from those to ``exclude``.
+When using include/exclude, only files installed by
+the current recipe are considered. i.e. files in the prefix installed
+by host dependencies are excluded. include/exclude must not be used
+simultaneously with glob expressions listed directly in ``outputs/files``.
+Files matching both include and exclude expressions will be excluded.
+
+.. code-block:: yaml
+
+   outputs:
+     - name: subpackage-name
+       files:
+         include:
+           - a-file
+           - a-folder
+           - *.some-extension
+           - somefolder/*.some-extension
+         exclude:
+           - *.exclude-extension
+           - a-folder/**/*.some-extension
 
 Scripts that create or move files into the build prefix can be
 any kind of script. Known script types need only specify the
@@ -1357,10 +1398,9 @@ A subpackage does not automatically inherit any dependencies from its top-level
 recipe, so any build or run requirements needed by the subpackage must be
 explicitly specified.
 
-.. code-block:: none
+.. code-block:: yaml
 
    outputs:
-
      - name: subpackage-name
        requirements:
          build:
@@ -1554,9 +1594,17 @@ information displays in the Anaconda.org channel.
 
   about:
     home: https://github.com/ilanschnell/bsdiff4
-    license: BSD
+    license: BSD 3-Clause
     license_file: LICENSE
-    summary: binary diff and patch using the BSDIFF4-format
+    license_family: BSD
+    license_url: https://github.com/bacchusrx/bsdiff4/blob/master/LICENSE
+    summary: binary diff and patch using the BSDIFF4 format
+    description: |
+      This module provides an interface to the BSDIFF4 format, command line interfaces
+      (bsdiff4, bspatch4) and tests.
+    dev_url: https://github.com/ilanschnell/bsdiff4
+    doc_url: https://bsdiff4.readthedocs.io
+    doc_source_url: https://github.com/ilanschnell/bsdiff4/blob/main/README.rst
 
 
 License file
@@ -1756,11 +1804,11 @@ retrieve a fully rendered ``meta.yaml``, use the
 Loading data from other files
 -----------------------------
 
-There are several additional functions available to Jinja2 which can be used
+There are several additional functions available to Jinja2, which can be used
 to load data from other files. These are ``load_setup_py_data``, ``load_file_regex``,
 ``load_file_data``, and ``load_str_data``.
 
-* ``load_setup_py_data``: Loads data from a ``setup.py`` file. This can be useful to
+* ``load_setup_py_data``: Load data from a ``setup.py`` file. This can be useful to
   obtain metadata such as the version from a project's ``setup.py`` file. For example::
 
     {% set data = load_setup_py_data() %}
@@ -1769,16 +1817,23 @@ to load data from other files. These are ``load_setup_py_data``, ``load_file_reg
       name: foo
       version: {{ version }}
 
-* ``load_file_regex``: Searches a file for a regular expression and returns the
-  first match as a Python ``re.Match object``. For example::
+* ``load_file_regex``: Search a file for a regular expression returning the
+  first match as a Python `re.Match
+  <https://docs.python.org/3/library/re.html#match-objects>`_ object.
 
-    {% set readme_heading = load_file_regex(load_file='README.rst', regex_pattern=r'^# (\S+)') %}
+  For example, using ``load_file_regex(load_file, regex_pattern, from_recipe_dir=False) -> re.Match | None``::
+
+    {% set version_match = load_file_regex(
+      load_file="conda_package_streaming/__init__.py",
+      regex_pattern='^__version__ = "(.+)"') %}
+    {% set version = version_match[1] %}
+
     package:
-      name: {{ readme_heading.string }}
+      version: {{ version }}
 
-* ``load_file_data``: You can also parse JSON, TOML, or YAML files and load data
-  from them. For example you can use this to load poetry configurations from
-  ``pyproject.toml``. This is especially useful as ``setup.py`` is no longer the
+* ``load_file_data``: Parse JSON, TOML, or YAML files and load data
+  from them. For example, you can use this to load poetry configurations from
+  ``pyproject.toml``. This is especially useful, as ``setup.py`` is no longer the
   only standard way to define project metadata (see
   `PEP 517 <https://peps.python.org/pep-0517>`_ and
   `PEP 518 <https://peps.python.org/pep-0518>`_)::
@@ -1789,7 +1844,7 @@ to load data from other files. These are ``load_setup_py_data``, ``load_file_reg
       name: {{ poetry.get('name') }}
       version: {{ poetry.get('version') }}
 
-* ``load_str_data``: Loads and parses data from a string. This is similar to
+* ``load_str_data``: Load and parse data from a string. This is similar to
   ``load_file_data``, but it takes a string instead of a file as an argument.
   This may seem pointless at first, but you can use this to pass more complex
   data structures by environment variables. For example::

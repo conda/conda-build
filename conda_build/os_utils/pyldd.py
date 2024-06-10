@@ -9,6 +9,7 @@ import os
 import re
 import struct
 import sys
+from functools import partial
 from pathlib import Path
 
 from ..utils import ensure_list, get_logger, on_linux, on_mac, on_win
@@ -1047,7 +1048,7 @@ def codefile_class(
         return None
 
 
-def _trim_sysroot(sysroot):
+def _trim_sysroot(sysroot: str) -> str:
     if sysroot:
         while sysroot.endswith("/") or sysroot.endswith("\\"):
             sysroot = sysroot[:-1]
@@ -1065,7 +1066,7 @@ def _get_arch_if_native(arch):
 
 # TODO :: Consider memoizing instead of repeatedly scanning
 # TODO :: libc.so/libSystem.dylib when inspect_linkages(recurse=True)
-def _inspect_linkages_this(filename, sysroot="", arch="native"):
+def _inspect_linkages_this(filename, sysroot: str = "", arch="native"):
     """
 
     :param filename:
@@ -1099,7 +1100,7 @@ def _inspect_linkages_this(filename, sysroot="", arch="native"):
 
 # TODO :: Consider returning a tree structure or a dict when recurse is True?
 def inspect_linkages(
-    filename, resolve_filenames=True, recurse=True, sysroot="", arch="native"
+    filename, resolve_filenames=True, recurse=True, sysroot: str = "", arch="native"
 ):
     already_seen = set()
     todo = {filename}
@@ -1208,8 +1209,6 @@ def main(argv):
 
 def main_maybe_test():
     if sys.argv[1] == "test":
-        import functools
-
         tool = sys.argv[2]
         if tool != "otool" and tool != "ldd":
             if on_mac:
@@ -1228,21 +1227,21 @@ def main_maybe_test():
         else:
             sysroot = ""
         if tool == "otool":
-            test_this = functools.partial(
+            test_this = partial(
                 inspect_linkages,
                 sysroot=sysroot,
                 resolve_filenames=False,
                 recurse=False,
             )
             if on_mac:
-                test_that = functools.partial(inspect_linkages_otool)
+                test_that = partial(inspect_linkages_otool)
             SOEXT = "dylib"
         elif tool == "ldd":
-            test_this = functools.partial(
+            test_this = partial(
                 inspect_linkages, sysroot=sysroot, resolve_filenames=True, recurse=True
             )
             if on_linux:
-                test_that = functools.partial(inspect_linkages_ldd)
+                test_that = partial(inspect_linkages_ldd)
             SOEXT = "so"
         # Find a load of dylibs or elfs and compare
         # the output against 'otool -L' or 'ldd'

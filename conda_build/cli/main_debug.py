@@ -4,13 +4,18 @@ from __future__ import annotations
 
 import logging
 import sys
-from argparse import ArgumentParser
-from typing import Sequence
+from typing import TYPE_CHECKING
+
+from conda.base.context import context
 
 from .. import api
 from ..utils import on_win
 from . import validators as valid
 from .main_render import get_render_parser
+
+if TYPE_CHECKING:
+    from argparse import ArgumentParser
+    from typing import Sequence
 
 logging.basicConfig(level=logging.INFO)
 
@@ -88,9 +93,10 @@ Set up environments and activation scripts to debug your build or test phase.
     return p
 
 
-def execute(args: Sequence[str] | None = None):
+def execute(args: Sequence[str] | None = None) -> int:
     parser = get_parser()
     parsed = parser.parse_args(args)
+    context.__init__(argparse_args=parsed)
 
     try:
         activation_string = api.debug(
@@ -118,3 +124,5 @@ def execute(args: Sequence[str] | None = None):
             f"Error: conda-debug encountered the following error:\n{e}", file=sys.stderr
         )
         sys.exit(1)
+
+    return 0

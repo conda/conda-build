@@ -12,16 +12,15 @@ import time
 from os.path import abspath, basename, exists, expanduser, isdir, isfile, join, normpath
 from pathlib import Path
 from subprocess import CalledProcessError
-from typing import Iterable
+from typing import TYPE_CHECKING
 from urllib.parse import urljoin
 
-from .conda_interface import (
-    CondaHTTPError,
-    TemporaryDirectory,
-    download,
-    hashsum_file,
-    url_path,
-)
+from conda.exceptions import CondaHTTPError
+from conda.gateways.connection.download import download
+from conda.gateways.disk.create import TemporaryDirectory
+from conda.gateways.disk.read import compute_sum
+from conda.utils import url_path
+
 from .exceptions import MissingDependency
 from .os_utils import external
 from .utils import (
@@ -40,6 +39,9 @@ from .utils import (
     tar_xf,
 )
 
+if TYPE_CHECKING:
+    from typing import Iterable
+
 log = get_logger(__name__)
 
 git_submod_re = re.compile(r"(?:.+)\.(.+)\.(?:.+)\s(.+)")
@@ -53,7 +55,7 @@ def append_hash_to_fn(fn, hash_value):
 def download_to_cache(cache_folder, recipe_path, source_dict, verbose=False):
     """Download a source to the local cache."""
     if verbose:
-        log.info("Source cache directory is: %s" % cache_folder)
+        log.info(f"Source cache directory is: {cache_folder}")
     if not isdir(cache_folder) and not os.path.islink(cache_folder):
         os.makedirs(cache_folder)
 
@@ -72,17 +74,17 @@ def download_to_cache(cache_folder, recipe_path, source_dict, verbose=False):
             hash_added = True
             break
     else:
-        log.warn(
+        log.warning(
             f"No hash (md5, sha1, sha256) provided for {unhashed_fn}.  Source download forced.  "
             "Add hash to recipe to use source cache."
         )
     path = join(cache_folder, fn)
     if isfile(path):
         if verbose:
-            log.info("Found source in cache: %s" % fn)
+            log.info(f"Found source in cache: {fn}")
     else:
         if verbose:
-            log.info("Downloading source to cache: %s" % fn)
+            log.info(f"Downloading source to cache: {fn}")
 
         for url in source_urls:
             if "://" not in url:
@@ -96,14 +98,14 @@ def download_to_cache(cache_folder, recipe_path, source_dict, verbose=False):
                     url = "file:///" + expanduser(url[8:]).replace("\\", "/")
             try:
                 if verbose:
-                    log.info("Downloading %s" % url)
+                    log.info(f"Downloading {url}")
                 with LoggingContext():
                     download(url, path)
             except CondaHTTPError as e:
-                log.warn("Error: %s" % str(e).strip())
+                log.warning(f"Error: {str(e).strip()}")
                 rm_rf(path)
             except RuntimeError as e:
-                log.warn("Error: %s" % str(e).strip())
+                log.warning(f"Error: {str(e).strip()}")
                 rm_rf(path)
             else:
                 if verbose:
@@ -111,13 +113,13 @@ def download_to_cache(cache_folder, recipe_path, source_dict, verbose=False):
                 break
         else:  # no break
             rm_rf(path)
-            raise RuntimeError("Could not download %s" % url)
+            raise RuntimeError(f"Could not download {url}")
 
     hashed = None
     for tp in ("md5", "sha1", "sha256"):
         if tp in source_dict:
             expected_hash = source_dict[tp]
-            hashed = hashsum_file(path, tp)
+            hashed = compute_sum(path, tp)
             if expected_hash != hashed:
                 rm_rf(path)
                 raise RuntimeError(
@@ -129,7 +131,7 @@ def download_to_cache(cache_folder, recipe_path, source_dict, verbose=False):
     #    collisions in our source cache, but the end user will get no benefit from the cache.
     if not hash_added:
         if not hashed:
-            hashed = hashsum_file(path, "sha256")
+            hashed = compute_sum(path, "sha256")
         dest_path = append_hash_to_fn(path, hashed)
         if not os.path.isfile(dest_path):
             shutil.move(path, dest_path)
@@ -198,19 +200,19 @@ def unpack(
             shutil.move(os.path.join(tmpdir, f), os.path.join(src_dir, f))
 
 
-def check_git_lfs(git, cwd):
+def check_git_lfs(git, cwd, git_ref):
     try:
-        lfs_list_output = check_output_env([git, "lfs", "ls-files", "--all"], cwd=cwd)
+        lfs_list_output = check_output_env([git, "lfs", "ls-files", git_ref], cwd=cwd)
         return lfs_list_output and lfs_list_output.strip()
     except CalledProcessError:
         return False
 
 
-def git_lfs_fetch(git, cwd, stdout, stderr):
+def git_lfs_fetch(git, cwd, git_ref, stdout, stderr):
     lfs_version = check_output_env([git, "lfs", "version"], cwd=cwd)
     log.info(lfs_version)
     check_call_env(
-        [git, "lfs", "fetch", "origin", "--all"], cwd=cwd, stdout=stdout, stderr=stderr
+        [git, "lfs", "fetch", "origin", git_ref], cwd=cwd, stdout=stdout, stderr=stderr
     )
 
 
@@ -269,8 +271,8 @@ def git_mirror_checkout_recursive(
                 check_call_env(
                     [git, "fetch"], cwd=mirror_dir, stdout=stdout, stderr=stderr
                 )
-                if check_git_lfs(git, mirror_dir):
-                    git_lfs_fetch(git, mirror_dir, stdout, stderr)
+                if check_git_lfs(git, mirror_dir, git_ref):
+                    git_lfs_fetch(git, mirror_dir, git_ref, stdout, stderr)
             else:
                 # Unlike 'git clone', fetch doesn't automatically update the cache's HEAD,
                 # So here we explicitly store the remote HEAD in the cache's local refs/heads,
@@ -314,8 +316,8 @@ def git_mirror_checkout_recursive(
             check_call_env(
                 args + [git_url, git_mirror_dir], stdout=stdout, stderr=stderr
             )
-            if check_git_lfs(git, mirror_dir):
-                git_lfs_fetch(git, mirror_dir, stdout, stderr)
+            if check_git_lfs(git, mirror_dir, git_ref):
+                git_lfs_fetch(git, mirror_dir, git_ref, stdout, stderr)
         except CalledProcessError:
             # on windows, remote URL comes back to us as cygwin or msys format.  Python doesn't
             # know how to normalize it.  Need to convert it to a windows path.
@@ -342,7 +344,7 @@ def git_mirror_checkout_recursive(
             )
             checkout = output.decode("utf-8")
         if verbose:
-            print("checkout: %r" % checkout)
+            print(f"checkout: {checkout!r}")
         if checkout:
             check_call_env(
                 [git, "checkout", checkout],
@@ -375,9 +377,8 @@ def git_mirror_checkout_recursive(
             )
             if verbose:
                 print(
-                    "Relative submodule {} found: url is {}, submod_mirror_dir is {}".format(
-                        submod_name, submod_url, submod_mirror_dir
-                    )
+                    f"Relative submodule {submod_name} found: url is {submod_url}, "
+                    f"submod_mirror_dir is {submod_mirror_dir}"
                 )
             with TemporaryDirectory() as temp_checkout_dir:
                 git_mirror_checkout_recursive(
@@ -466,7 +467,7 @@ def git_info(src_dir, build_prefix, git=None, verbose=True, fo=None):
     if not git:
         git = external.find_executable("git", build_prefix)
     if not git:
-        log.warn(
+        log.warning(
             "git not installed in root environment.  Skipping recording of git info."
         )
         return
@@ -491,7 +492,7 @@ def git_info(src_dir, build_prefix, git=None, verbose=True, fo=None):
             stdout = check_output_env(cmd, stderr=stderr, cwd=src_dir, env=env)
         except CalledProcessError as e:
             if check_error:
-                raise Exception("git error: %s" % str(e))
+                raise Exception(f"git error: {str(e)}")
         encoding = locale.getpreferredencoding()
         if not fo:
             encoding = sys.stdout.encoding
@@ -534,7 +535,7 @@ def hg_source(source_dict, src_dir, hg_cache, verbose):
     # now clone in to work directory
     update = source_dict.get("hg_tag") or "tip"
     if verbose:
-        print("checkout: %r" % update)
+        print(f"checkout: {update!r}")
 
     check_call_env(["hg", "clone", cache_repo, src_dir], stdout=stdout, stderr=stderr)
     check_call_env(
@@ -952,7 +953,7 @@ def apply_one_patch(src_dir, recipe_dir, rel_path, config, git=None):
 
     exception = None
     if not isfile(path):
-        raise RuntimeError("Error: no such patch: %s" % path)
+        raise RuntimeError(f"Error: no such patch: {path}")
 
     if config.verbose:
         stdout = None

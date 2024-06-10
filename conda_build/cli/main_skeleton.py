@@ -2,23 +2,29 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from __future__ import annotations
 
-import importlib
 import logging
 import os
 import pkgutil
 import sys
-from argparse import Namespace
-from typing import Sequence
+from importlib import import_module
+from typing import TYPE_CHECKING
+
+from conda.base.context import context
 
 from .. import api
-from ..conda_interface import ArgumentParser
 from ..config import Config
+
+if TYPE_CHECKING:
+    from argparse import ArgumentParser, Namespace
+    from typing import Sequence
 
 thisdir = os.path.dirname(os.path.abspath(__file__))
 logging.basicConfig(level=logging.INFO)
 
 
 def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
+    from conda.cli.conda_argparse import ArgumentParser
+
     parser = ArgumentParser(
         prog="conda skeleton",
         description="""
@@ -40,14 +46,16 @@ options available.
     for skeleton in skeletons:
         if skeleton.startswith("_"):
             continue
-        module = importlib.import_module("conda_build.skeletons." + skeleton)
+        module = import_module("conda_build.skeletons." + skeleton)
         module.add_parser(repos)
 
     return parser, parser.parse_args(args)
 
 
-def execute(args: Sequence[str] | None = None):
+def execute(args: Sequence[str] | None = None) -> int:
     parser, parsed = parse_args(args)
+    context.__init__(argparse_args=parsed)
+
     config = Config(**parsed.__dict__)
 
     if not parsed.repo:
@@ -62,3 +70,5 @@ def execute(args: Sequence[str] | None = None):
         version=parsed.version,
         config=config,
     )
+
+    return 0

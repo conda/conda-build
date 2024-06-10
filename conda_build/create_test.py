@@ -3,15 +3,19 @@
 """
 Module to handle generating test files.
 """
+
 from __future__ import annotations
 
 import json
 import os
 from os.path import basename, exists, isfile, join
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-from .metadata import MetaData
 from .utils import copy_into, ensure_list, on_win, rm_rf
+
+if TYPE_CHECKING:
+    from .metadata import MetaData
 
 
 def create_files(m: MetaData, test_dir: Path) -> bool:
@@ -118,7 +122,7 @@ def _create_test_files(
                 fo.write(
                     f"{comment_char} tests for {m.dist()} (this is a generated file);\n"
                 )
-                fo.write("print('===== testing package: %s =====');\n" % m.dist())
+                fo.write(f"print('===== testing package: {m.dist()} =====');\n")
 
                 try:
                     with open(test_file) as fi:
@@ -130,7 +134,7 @@ def _create_test_files(
                     fo.write(
                         "# tests were not packaged with this module, and cannot be run\n"
                     )
-                fo.write("\nprint('===== %s OK =====');\n" % m.dist())
+                fo.write(f"\nprint('===== {m.dist()} OK =====');\n")
     return (
         out_file,
         bool(name) and isfile(out_file) and basename(test_file) != "no-file",
@@ -171,8 +175,8 @@ def create_py_files(m: MetaData, test_dir: os.PathLike) -> bool:
     if imports:
         with open(tf, "a") as fo:
             for name in imports:
-                fo.write('print("import: %r")\n' % name)
-                fo.write("import %s\n" % name)
+                fo.write(f'print("import: {name!r}")\n')
+                fo.write(f"import {name}\n")
                 fo.write("\n")
     return tf if (tf_exists or imports) else False
 
@@ -198,8 +202,8 @@ def create_r_files(m: MetaData, test_dir: os.PathLike) -> bool:
     if imports:
         with open(tf, "a") as fo:
             for name in imports:
-                fo.write('print("library(%r)")\n' % name)
-                fo.write("library(%s)\n" % name)
+                fo.write(f'print("library({name!r})")\n')
+                fo.write(f"library({name})\n")
                 fo.write("\n")
     return tf if (tf_exists or imports) else False
 
@@ -221,11 +225,13 @@ def create_pl_files(m: MetaData, test_dir: os.PathLike) -> bool:
                 break
     if tf_exists or imports:
         with open(tf, "a") as fo:
-            print(r'my $expected_version = "%s";' % m.version().rstrip("0"), file=fo)
+            print(
+                r'my $expected_version = "{}";'.format(m.version().rstrip("0")), file=fo
+            )
             if imports:
                 for name in imports:
-                    print(r'print("import: %s\n");' % name, file=fo)
-                    print("use %s;\n" % name, file=fo)
+                    print(rf'print("import: {name}\n");', file=fo)
+                    print(f"use {name};\n", file=fo)
                     # Don't try to print version for complex imports
                     if " " not in name:
                         print(
@@ -260,8 +266,8 @@ def create_lua_files(m: MetaData, test_dir: os.PathLike) -> bool:
     if imports:
         with open(tf, "a+") as fo:
             for name in imports:
-                print(r'print("require \"%s\"\n");' % name, file=fo)
-                print('require "%s"\n' % name, file=fo)
+                print(rf'print("require \"{name}\"\n");', file=fo)
+                print(f'require "{name}"\n', file=fo)
     return tf if (tf_exists or imports) else False
 
 

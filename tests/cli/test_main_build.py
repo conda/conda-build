@@ -5,25 +5,29 @@ from __future__ import annotations
 import os
 import re
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
-from pytest import FixtureRequest, MonkeyPatch
-from pytest_mock import MockerFixture
+from conda.exceptions import PackagesNotFoundError
 
 from conda_build import api
 from conda_build.cli import main_build, main_render
-from conda_build.conda_interface import TemporaryDirectory
 from conda_build.config import (
     Config,
     zstd_compression_level_default,
 )
 from conda_build.exceptions import DependencyNeedsBuildingError
-from conda_build.metadata import MetaData
 from conda_build.os_utils.external import find_executable
 from conda_build.utils import get_build_folders, on_win, package_has_file
 
 from ..utils import metadata_dir
 from ..utils import reset_config as _reset_config
+
+if TYPE_CHECKING:
+    from pytest import FixtureRequest, MonkeyPatch
+    from pytest_mock import MockerFixture
+
+    from conda_build.metadata import MetaData
 
 
 @pytest.mark.sanity
@@ -130,15 +134,23 @@ def test_build_output_build_path_multiple_recipes(
     assert output.rstrip().splitlines() == test_paths, error
 
 
-def test_slash_in_recipe_arg_keeps_build_id(testing_workdir, testing_config):
+def test_slash_in_recipe_arg_keeps_build_id(
+    testing_workdir: str, testing_config: Config
+):
     args = [
         os.path.join(metadata_dir, "has_prefix_files"),
         "--croot",
         testing_config.croot,
         "--no-anaconda-upload",
     ]
-    outputs = main_build.execute(args)
-    data = package_has_file(outputs[0], "binary-has-prefix", refresh_mode="forced")
+    main_build.execute(args)
+
+    output = os.path.join(
+        testing_config.croot,
+        testing_config.host_subdir,
+        "conda-build-test-has-prefix-files-1.0-0.tar.bz2",
+    )
+    data = package_has_file(output, "binary-has-prefix", refresh_mode="forced")
     assert data
     if hasattr(data, "decode"):
         data = data.decode("UTF-8")
@@ -157,7 +169,7 @@ def test_build_long_test_prefix_default_enabled(mocker, testing_workdir):
         main_build.execute(args)
 
 
-def test_build_no_build_id(testing_workdir, testing_config):
+def test_build_no_build_id(testing_workdir: str, testing_config: Config):
     args = [
         os.path.join(metadata_dir, "has_prefix_files"),
         "--no-build-id",
@@ -166,8 +178,14 @@ def test_build_no_build_id(testing_workdir, testing_config):
         "--no-activate",
         "--no-anaconda-upload",
     ]
-    outputs = main_build.execute(args)
-    data = package_has_file(outputs[0], "binary-has-prefix", refresh_mode="forced")
+    main_build.execute(args)
+
+    output = os.path.join(
+        testing_config.croot,
+        testing_config.host_subdir,
+        "conda-build-test-has-prefix-files-1.0-0.tar.bz2",
+    )
+    data = package_has_file(output, "binary-has-prefix", refresh_mode="forced")
     assert data
     if hasattr(data, "decode"):
         data = data.decode("UTF-8")
@@ -191,7 +209,7 @@ def test_build_multiple_recipes(testing_metadata, testing_workdir, testing_confi
     main_build.execute(args)
 
 
-def test_build_output_folder(testing_workdir: str, testing_metadata):
+def test_build_output_folder(testing_workdir: str, testing_metadata: MetaData):
     api.output_yaml(testing_metadata, "meta.yaml")
 
     out = Path(testing_workdir, "out")
@@ -207,9 +225,10 @@ def test_build_output_folder(testing_workdir: str, testing_metadata):
         "--output-folder",
         str(out),
     ]
-    output = main_build.execute(args)[0]
+    main_build.execute(args)
+
     assert (
-        out / testing_metadata.config.host_subdir / os.path.basename(output)
+        out / testing_metadata.config.host_subdir / testing_metadata.pkg_fn()
     ).is_file()
 
 
@@ -245,20 +264,19 @@ def test_purge(testing_workdir, testing_metadata):
 
 
 @pytest.mark.serial
-def test_purge_all(testing_workdir, testing_metadata):
+def test_purge_all(
+    testing_workdir: str, testing_metadata: MetaData, tmp_path: Path
+) -> None:
     """
     purge-all clears out build folders as well as build packages in the osx-64 folders and such
     """
     api.output_yaml(testing_metadata, "meta.yaml")
-    with TemporaryDirectory() as tmpdir:
-        testing_metadata.config.croot = tmpdir
-        outputs = api.build(
-            testing_workdir, config=testing_metadata.config, notest=True
-        )
-        args = ["purge-all", "--croot", tmpdir]
-        main_build.execute(args)
-        assert not get_build_folders(testing_metadata.config.croot)
-        assert not any(os.path.isfile(fn) for fn in outputs)
+    testing_metadata.config.croot = str(tmp_path)
+    outputs = api.build(testing_workdir, config=testing_metadata.config, notest=True)
+    args = ["purge-all", f"--croot={tmp_path}"]
+    main_build.execute(args)
+    assert not get_build_folders(testing_metadata.config.croot)
+    assert not any(os.path.isfile(fn) for fn in outputs)
 
 
 @pytest.mark.serial
@@ -277,7 +295,7 @@ def test_no_force_upload(
 
     # render recipe
     api.output_yaml(testing_metadata, "meta.yaml")
-    pkg = api.get_output_file_path(testing_metadata)
+    pkg = api.get_output_file_paths(testing_metadata)
 
     # mock Config.set_keys to always set anaconda_upload to True
     # conda's Context + conda_build's MetaData & Config objects interact in such an
@@ -375,38 +393,53 @@ def test_activate_scripts_not_included(testing_workdir):
         assert not package_has_file(out, f)
 
 
-def test_relative_path_croot(conda_build_test_recipe_envvar: str):
+def test_relative_path_croot(
+    conda_build_test_recipe_envvar: str, testing_config: Config
+):
     # this tries to build a package while specifying the croot with a relative path:
     # conda-build --no-test --croot ./relative/path
+    empty_sections = Path(metadata_dir, "empty_with_build_script")
+    croot = Path(".", "relative", "path")
 
-    empty_sections = os.path.join(metadata_dir, "empty_with_build_script")
-    croot_rel = os.path.join(".", "relative", "path")
-    args = ["--no-anaconda-upload", "--croot", croot_rel, empty_sections]
-    outputfile = main_build.execute(args)
+    args = ["--no-anaconda-upload", f"--croot={croot}", str(empty_sections)]
+    main_build.execute(args)
 
-    assert len(outputfile) == 1
-    assert os.path.isfile(outputfile[0])
+    assert len(list(croot.glob("**/*.tar.bz2"))) == 1
+    assert (
+        croot / testing_config.subdir / "empty_with_build_script-0.0-0.tar.bz2"
+    ).is_file()
 
 
-def test_relative_path_test_artifact(conda_build_test_recipe_envvar: str):
+def test_relative_path_test_artifact(
+    conda_build_test_recipe_envvar: str, testing_config: Config
+):
     # this test builds a package into (cwd)/relative/path and then calls:
     # conda-build --test ./relative/path/{platform}/{artifact}.tar.bz2
-
-    empty_sections = os.path.join(metadata_dir, "empty_with_build_script")
-    croot_rel = os.path.join(".", "relative", "path")
-    croot_abs = os.path.abspath(os.path.normpath(croot_rel))
+    empty_sections = Path(metadata_dir, "empty_with_build_script")
+    croot_rel = Path(".", "relative", "path")
+    croot_abs = croot_rel.resolve()
 
     # build the package
-    args = ["--no-anaconda-upload", "--no-test", "--croot", croot_abs, empty_sections]
-    output_file_abs = main_build.execute(args)
-    assert len(output_file_abs) == 1
+    args = [
+        "--no-anaconda-upload",
+        "--no-test",
+        f"--croot={croot_abs}",
+        str(empty_sections),
+    ]
+    main_build.execute(args)
 
-    output_file_rel = os.path.join(
-        croot_rel, os.path.relpath(output_file_abs[0], croot_abs)
-    )
+    assert len(list(croot_abs.glob("**/*.tar.bz2"))) == 1
 
     # run the test stage with relative path
-    args = ["--no-anaconda-upload", "--test", output_file_rel]
+    args = [
+        "--no-anaconda-upload",
+        "--test",
+        os.path.join(
+            croot_rel,
+            testing_config.subdir,
+            "empty_with_build_script-0.0-0.tar.bz2",
+        ),
+    ]
     main_build.execute(args)
 
 
@@ -414,17 +447,28 @@ def test_relative_path_test_recipe(conda_build_test_recipe_envvar: str):
     # this test builds a package into (cwd)/relative/path and then calls:
     # conda-build --test --croot ./relative/path/ /abs/path/to/recipe
 
-    empty_sections = os.path.join(metadata_dir, "empty_with_build_script")
-    croot_rel = os.path.join(".", "relative", "path")
-    croot_abs = os.path.abspath(os.path.normpath(croot_rel))
+    empty_sections = Path(metadata_dir, "empty_with_build_script")
+    croot_rel = Path(".", "relative", "path")
+    croot_abs = croot_rel.resolve()
 
     # build the package
-    args = ["--no-anaconda-upload", "--no-test", "--croot", croot_abs, empty_sections]
-    output_file_abs = main_build.execute(args)
-    assert len(output_file_abs) == 1
+    args = [
+        "--no-anaconda-upload",
+        "--no-test",
+        f"--croot={croot_abs}",
+        str(empty_sections),
+    ]
+    main_build.execute(args)
+
+    assert len(list(croot_abs.glob("**/*.tar.bz2"))) == 1
 
     # run the test stage with relative croot
-    args = ["--no-anaconda-upload", "--test", "--croot", croot_rel, empty_sections]
+    args = [
+        "--no-anaconda-upload",
+        "--test",
+        f"--croot={croot_rel}",
+        str(empty_sections),
+    ]
     main_build.execute(args)
 
 
@@ -506,3 +550,14 @@ def test_user_warning(tmpdir, recwarn):
 
     main_build.parse_args([str(dir_recipe_path)])
     assert not recwarn.list
+
+
+def test_build_with_empty_channel_fails(empty_channel: Path) -> None:
+    with pytest.raises(PackagesNotFoundError):
+        main_build.execute(
+            [
+                "--override-channels",
+                f"--channel={empty_channel}",
+                os.path.join(metadata_dir, "_recipe_requiring_external_channel"),
+            ]
+        )

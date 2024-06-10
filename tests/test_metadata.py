@@ -5,12 +5,13 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+from itertools import product
+from typing import TYPE_CHECKING
 
 import pytest
 from conda import __version__ as conda_version
 from conda.base.context import context
 from packaging.version import Version
-from pytest import MonkeyPatch
 
 from conda_build import api
 from conda_build.config import Config
@@ -27,6 +28,9 @@ from conda_build.utils import DEFAULT_SUBDIRS
 from conda_build.variants import DEFAULT_VARIANTS
 
 from .utils import metadata_dir, metadata_path, thisdir
+
+if TYPE_CHECKING:
+    from pytest import MonkeyPatch
 
 
 def test_uses_vcs_in_metadata(testing_workdir, testing_metadata):
@@ -51,50 +55,108 @@ def test_uses_vcs_in_metadata(testing_workdir, testing_metadata):
 
 
 def test_select_lines():
-    lines = """
-test
-test [abc] no
-test [abc] # no
-
-test [abc]
- 'quoted # [abc] '
- "quoted # [abc] yes "
-test # stuff [abc] yes
-test {{ JINJA_VAR[:2] }}
-test {{ JINJA_VAR[:2] }} # stuff [abc] yes
-test {{ JINJA_VAR[:2] }} # stuff yes [abc]
-test {{ JINJA_VAR[:2] }} # [abc] stuff yes
-{{ environ["test"] }}  # [abc]
-"""
-
-    assert (
-        select_lines(lines, {"abc": True}, variants_in_place=True)
-        == """
-test
-test [abc] no
-test [abc] # no
-
-test
- 'quoted'
- "quoted"
-test
-test {{ JINJA_VAR[:2] }}
-test {{ JINJA_VAR[:2] }}
-test {{ JINJA_VAR[:2] }}
-test {{ JINJA_VAR[:2] }}
-{{ environ["test"] }}
-"""
+    lines = "\n".join(
+        (
+            "",  # preserve leading newline
+            "test",
+            "test [abc] no",
+            "test [abc] # no",
+            " ' test ' ",
+            ' " test " ',
+            "",  # preserve newline
+            "# comment line",  # preserve comment line (but not the comment)
+            "test [abc]",
+            " 'quoted # [abc] '",
+            ' "quoted # [abc] yes "',
+            "test # stuff [abc] yes",
+            "test {{ JINJA_VAR[:2] }}",
+            "test {{ JINJA_VAR[:2] }} # stuff [abc] yes",
+            "test {{ JINJA_VAR[:2] }} # stuff yes [abc]",
+            "test {{ JINJA_VAR[:2] }} # [abc] stuff yes",
+            '{{ environ["test"] }}  # [abc]',
+            "",  # preserve trailing newline
+        )
     )
-    assert (
-        select_lines(lines, {"abc": False}, variants_in_place=True)
-        == """
-test
-test [abc] no
-test [abc] # no
 
-test {{ JINJA_VAR[:2] }}
-"""
+    assert select_lines(lines, {"abc": True}, variants_in_place=True) == "\n".join(
+        (
+            "",  # preserve leading newline
+            "test",
+            "test [abc] no",
+            "test [abc] # no",
+            " ' test '",
+            ' " test "',
+            "",  # preserve newline
+            "",  # preserve comment line (but not the comment)
+            "test",
+            " 'quoted'",
+            ' "quoted"',
+            "test",
+            "test {{ JINJA_VAR[:2] }}",
+            "test {{ JINJA_VAR[:2] }}",
+            "test {{ JINJA_VAR[:2] }}",
+            "test {{ JINJA_VAR[:2] }}",
+            '{{ environ["test"] }}',
+            "",  # preserve trailing newline
+        )
     )
+    assert select_lines(lines, {"abc": False}, variants_in_place=True) == "\n".join(
+        (
+            "",  # preserve leading newline
+            "test",
+            "test [abc] no",
+            "test [abc] # no",
+            " ' test '",
+            ' " test "',
+            "",  # preserve newline
+            "",  # preserve comment line (but not the comment)
+            "test {{ JINJA_VAR[:2] }}",
+            "",  # preserve trailing newline
+        )
+    )
+
+
+@pytest.mark.benchmark
+def test_select_lines_battery():
+    test_foo = "test [foo]"
+    test_bar = "test [bar]"
+    test_baz = "test [baz]"
+    test_foo_and_bar = "test [foo and bar]"
+    test_foo_and_baz = "test [foo and baz]"
+    test_foo_or_bar = "test [foo or bar]"
+    test_foo_or_baz = "test [foo or baz]"
+
+    lines = "\n".join(
+        (
+            test_foo,
+            test_bar,
+            test_baz,
+            test_foo_and_bar,
+            test_foo_and_baz,
+            test_foo_or_bar,
+            test_foo_or_baz,
+        )
+        * 10
+    )
+
+    for _ in range(10):
+        for foo, bar, baz in product((True, False), repeat=3):
+            namespace = {"foo": foo, "bar": bar, "baz": baz}
+            selection = (
+                ["test"]
+                * (
+                    foo
+                    + bar
+                    + baz
+                    + (foo and bar)
+                    + (foo and baz)
+                    + (foo or bar)
+                    + (foo or baz)
+                )
+                * 10
+            )
+            selection = "\n".join(selection) + "\n"  # trailing newline
+            assert select_lines(lines, namespace, variants_in_place=True) == selection
 
 
 def test_disallow_leading_period_in_version(testing_metadata):
@@ -230,16 +292,16 @@ def test_compiler_metadata_cross_compiler():
 
 
 @pytest.mark.parametrize(
-    "platform,arch,stdlibs",
+    "platform,arch,stdlib,stdlib_version",
     [
-        ("linux", "64", {"sysroot_linux-64 2.12.*"}),
-        ("linux", "aarch64", {"sysroot_linux-aarch64 2.17.*"}),
-        ("osx", "64", {"macosx_deployment_target_osx-64 10.13.*"}),
-        ("osx", "arm64", {"macosx_deployment_target_osx-arm64 11.0.*"}),
+        ("linux", "64", "sysroot", "2.12"),
+        ("linux", "aarch64", "sysroot", "2.17"),
+        ("osx", "64", "macosx_deployment_target", "10.13"),
+        ("osx", "arm64", "macosx_deployment_target", "11.0"),
     ],
 )
 def test_native_stdlib_metadata(
-    platform: str, arch: str, stdlibs: set[str], testing_config
+    platform: str, arch: str, stdlib: str, stdlib_version: str, testing_config
 ):
     testing_config.platform = platform
     metadata = api.render(
@@ -253,7 +315,12 @@ def test_native_stdlib_metadata(
         bypass_env_check=True,
         python="3.11",  # irrelevant
     )[0][0]
-    assert stdlibs <= set(metadata.meta["requirements"]["host"])
+    stdlib_req = f"{stdlib}_{platform}-{arch} {stdlib_version}.*"
+    assert stdlib_req in metadata.meta["requirements"]["host"]
+    assert {"c_stdlib", "c_stdlib_version"} <= metadata.get_used_vars()
+    hash_contents = metadata.get_hash_contents()
+    assert stdlib == hash_contents["c_stdlib"]
+    assert stdlib_version == hash_contents["c_stdlib_version"]
 
 
 def test_hash_build_id(testing_metadata):

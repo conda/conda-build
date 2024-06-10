@@ -4,18 +4,27 @@ from __future__ import annotations
 
 import argparse
 import logging
-from argparse import Namespace
 from pprint import pprint
-from typing import Sequence
+from typing import TYPE_CHECKING
 
 import yaml
+from conda.base.context import context
 from yaml.parser import ParserError
 
 from .. import __version__, api
-from ..conda_interface import ArgumentParser, add_parser_channels, cc_conda_build
 from ..config import get_channel_urls, get_or_merge_config
 from ..utils import LoggingContext
 from ..variants import get_package_variants, set_language_env_vars
+
+try:
+    from conda.cli.helpers import add_parser_channels
+except ImportError:
+    # conda<23.11
+    from conda.cli.conda_argparse import add_parser_channels
+
+if TYPE_CHECKING:
+    from argparse import ArgumentParser, Namespace
+    from typing import Sequence
 
 log = logging.getLogger(__name__)
 
@@ -40,7 +49,9 @@ class ParseYAMLArgument(argparse.Action):
             )
 
 
-def get_render_parser():
+def get_render_parser() -> ArgumentParser:
+    from conda.cli.conda_argparse import ArgumentParser
+
     p = ArgumentParser(
         prog="conda render",
         description="""
@@ -55,7 +66,7 @@ environment information to generate the rendered meta.yml files.""",
         "--version",
         action="version",
         help="Show the conda-build version number and exit.",
-        version="conda-build %s" % __version__,
+        version=f"conda-build {__version__}",
     )
     p.add_argument(
         "-n",
@@ -135,7 +146,7 @@ source to try fill in related template variables.",
         "--old-build-string",
         dest="filename_hashing",
         action="store_false",
-        default=cc_conda_build.get("filename_hashing", "true").lower() == "true",
+        default=context.conda_build.get("filename_hashing", "true").lower() == "true",
         help=(
             "Disable hash additions to filenames to distinguish package "
             "variants from one another. NOTE: any filename collisions are "
@@ -189,8 +200,9 @@ def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
     return parser, parser.parse_args(args)
 
 
-def execute(args: Sequence[str] | None = None, print_results: bool = True):
+def execute(args: Sequence[str] | None = None) -> int:
     _, parsed = parse_args(args)
+    context.__init__(argparse_args=parsed)
 
     config = get_or_merge_config(None, **parsed.__dict__)
 
@@ -201,8 +213,6 @@ def execute(args: Sequence[str] | None = None, print_results: bool = True):
     set_language_env_vars(variants)
 
     config.channel_urls = get_channel_urls(parsed.__dict__)
-
-    config.override_channels = parsed.override_channels
 
     if parsed.output:
         config.verbose = False
@@ -221,24 +231,23 @@ def execute(args: Sequence[str] | None = None, print_results: bool = True):
             f"Only one will be written to the file you specified ({parsed.file})."
         )
 
-    if print_results:
-        if parsed.output:
-            with LoggingContext(logging.CRITICAL + 1):
-                paths = api.get_output_file_paths(metadata_tuples, config=config)
-                print("\n".join(sorted(paths)))
-            if parsed.file:
-                m = metadata_tuples[-1][0]
-                api.output_yaml(m, parsed.file, suppress_outputs=True)
-        else:
-            logging.basicConfig(level=logging.INFO)
-            for m, _, _ in metadata_tuples:
-                print("--------------")
-                print("Hash contents:")
-                print("--------------")
-                pprint(m.get_hash_contents())
-                print("----------")
-                print("meta.yaml:")
-                print("----------")
-                print(api.output_yaml(m, parsed.file, suppress_outputs=True))
+    if parsed.output:
+        with LoggingContext(logging.CRITICAL + 1):
+            paths = api.get_output_file_paths(metadata_tuples, config=config)
+            print("\n".join(sorted(paths)))
+        if parsed.file:
+            m = metadata_tuples[-1][0]
+            api.output_yaml(m, parsed.file, suppress_outputs=True)
     else:
-        return metadata_tuples
+        logging.basicConfig(level=logging.INFO)
+        for m, _, _ in metadata_tuples:
+            print("--------------")
+            print("Hash contents:")
+            print("--------------")
+            pprint(m.get_hash_contents())
+            print("----------")
+            print("meta.yaml:")
+            print("----------")
+            print(api.output_yaml(m, parsed.file, suppress_outputs=True))
+
+    return 0

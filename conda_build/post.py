@@ -33,21 +33,18 @@ from os.path import (
 )
 from pathlib import Path
 from subprocess import CalledProcessError, call, check_output
-from typing import Literal
+from typing import TYPE_CHECKING
 
 from conda.core.prefix_data import PrefixData
+from conda.gateways.disk.create import TemporaryDirectory
+from conda.gateways.disk.link import lchmod
+from conda.gateways.disk.read import compute_sum
+from conda.misc import walk_prefix
 from conda.models.records import PrefixRecord
 
 from . import utils
-from .conda_interface import (
-    TemporaryDirectory,
-    lchmod,
-    md5_file,
-    walk_prefix,
-)
 from .exceptions import OverDependingError, OverLinkingError, RunPathError
 from .inspect_pkg import which_package
-from .metadata import MetaData
 from .os_utils import external, macho
 from .os_utils.liefldd import (
     get_exports_memoized,
@@ -66,6 +63,11 @@ from .os_utils.pyldd import (
 )
 from .utils import on_mac, on_win, prefix_files
 
+if TYPE_CHECKING:
+    from typing import Literal
+
+    from .metadata import MetaData
+
 filetypes_for_platform = {
     "win": (DLLfile, EXEfile),
     "osx": (machofile,),
@@ -75,7 +77,7 @@ filetypes_for_platform = {
 
 def fix_shebang(f, prefix, build_python, osx_is_app=False):
     path = join(prefix, f)
-    if codefile_class(path):
+    if codefile_class(path, skip_symlinks=True):
         return
     elif islink(path):
         return
@@ -149,11 +151,11 @@ def write_pth(egg_path, config):
     with open(
         join(
             utils.get_site_packages(config.host_prefix, py_ver),
-            "%s.pth" % (fn.split("-")[0]),
+            "{}.pth".format(fn.split("-")[0]),
         ),
         "w",
     ) as fo:
-        fo.write("./%s\n" % fn)
+        fo.write(f"./{fn}\n")
 
 
 def remove_easy_install_pth(files, prefix, config, preserve_egg_dir=False):
@@ -367,7 +369,7 @@ def find_lib(link, prefix, files, path=None):
     if link.startswith(prefix):
         link = normpath(link[len(prefix) + 1 :])
         if not any(link == normpath(w) for w in files):
-            sys.exit("Error: Could not find %s" % link)
+            sys.exit(f"Error: Could not find {link}")
         return link
     if link.startswith("/"):  # but doesn't start with the build prefix
         return
@@ -381,7 +383,7 @@ def find_lib(link, prefix, files, path=None):
         for f in files:
             file_names[basename(f)].append(f)
         if link not in file_names:
-            sys.exit("Error: Could not find %s" % link)
+            sys.exit(f"Error: Could not find {link}")
         if len(file_names[link]) > 1:
             if path and basename(path) == link:
                 # The link is for the file itself, just use it
@@ -390,7 +392,7 @@ def find_lib(link, prefix, files, path=None):
             # multiple places.
             md5s = set()
             for f in file_names[link]:
-                md5s.add(md5_file(join(prefix, f)))
+                md5s.add(compute_sum(join(prefix, f), "md5"))
             if len(md5s) > 1:
                 sys.exit(
                     f"Error: Found multiple instances of {link}: {file_names[link]}"
@@ -402,7 +404,7 @@ def find_lib(link, prefix, files, path=None):
                     "Choosing the first one."
                 )
         return file_names[link][0]
-    print("Don't know how to find %s, skipping" % link)
+    print(f"Don't know how to find {link}, skipping")
 
 
 def osx_ch_link(path, link_dict, host_prefix, build_prefix, files):
@@ -414,10 +416,9 @@ def osx_ch_link(path, link_dict, host_prefix, build_prefix, files):
             ".. seems to be linking to a compiler runtime, replacing build prefix with "
             "host prefix and"
         )
-        if not codefile_class(link):
+        if not codefile_class(link, skip_symlinks=True):
             sys.exit(
-                "Error: Compiler runtime library in build prefix not found in host prefix %s"
-                % link
+                f"Error: Compiler runtime library in build prefix not found in host prefix {link}"
             )
         else:
             print(f".. fixing linking of {link} in {path} instead")
@@ -428,7 +429,7 @@ def osx_ch_link(path, link_dict, host_prefix, build_prefix, files):
         return
 
     print(f"Fixing linking of {link} in {path}")
-    print("New link location is %s" % (link_loc))
+    print(f"New link location is {link_loc}")
 
     lib_to_link = relpath(dirname(link_loc), "lib")
     # path_to_lib = utils.relative(path[len(prefix) + 1:])
@@ -659,7 +660,7 @@ def assert_relative_osx(path, host_prefix, build_prefix):
         for prefix in (host_prefix, build_prefix):
             if prefix and name.startswith(prefix):
                 raise RuntimeError(
-                    "library at %s appears to have an absolute path embedded" % path
+                    f"library at {path} appears to have an absolute path embedded"
                 )
 
 
@@ -667,7 +668,7 @@ def get_dsos(prec: PrefixRecord, prefix: str | os.PathLike | Path) -> set[str]:
     return {
         file
         for file in prec["files"]
-        if codefile_class(Path(prefix, file))
+        if codefile_class(Path(prefix, file), skip_symlinks=True)
         # codefile_class already filters by extension/binary type, do we need this second filter?
         for ext in (".dylib", ".so", ".dll", ".pyd")
         if ext in file
@@ -850,7 +851,7 @@ def _collect_needed_dsos(
         sysroots = list(sysroots_files.keys())[0]
     for f in files:
         path = join(run_prefix, f)
-        if not codefile_class(path):
+        if not codefile_class(path, skip_symlinks=True):
             continue
         build_prefix = build_prefix.replace(os.sep, "/")
         run_prefix = run_prefix.replace(os.sep, "/")
@@ -1188,7 +1189,7 @@ def _show_linking_messages(
             )
     for f in files:
         path = join(run_prefix, f)
-        codefile = codefile_class(path)
+        codefile = codefile_class(path, skip_symlinks=True)
         if codefile not in filetypes_for_platform[subdir.split("-")[0]]:
             continue
         warn_prelude = "WARNING ({},{})".format(pkg_name, f.replace(os.sep, "/"))
@@ -1287,7 +1288,7 @@ def check_overlinking_impl(
     filesu = []
     for file in files:
         path = join(run_prefix, file)
-        codefile = codefile_class(path)
+        codefile = codefile_class(path, skip_symlinks=True)
         if codefile in filetypes_for_platform[subdir.split("-")[0]]:
             files_to_inspect.append(file)
         filesu.append(file.replace("\\", "/"))
@@ -1412,9 +1413,11 @@ def check_overlinking_impl(
             if diffs:
                 log = utils.get_logger(__name__)
                 log.warning(
-                    "Partially parsed some '.tbd' files in sysroot {}, pretending .tbds are their install-names\n"
+                    "Partially parsed some '.tbd' files in sysroot %s, pretending .tbds are their install-names\n"
                     "Adding support to 'conda-build' for parsing these in 'liefldd.py' would be easy and useful:\n"
-                    "{} ...".format(sysroot, list(diffs)[1:3])
+                    "%s...",
+                    sysroot,
+                    list(diffs)[1:3],
                 )
                 sysroots_files[srs] = sysroot_files
     sysroots_files = OrderedDict(
@@ -1592,7 +1595,7 @@ def post_process_shared_lib(m, f, files, host_prefix=None):
     if not host_prefix:
         host_prefix = m.config.host_prefix
     path = join(host_prefix, f)
-    codefile = codefile_class(path)
+    codefile = codefile_class(path, skip_symlinks=True)
     if not codefile or path.endswith(".debug"):
         return
     rpaths = m.get_value("build/rpaths", ["lib"])
@@ -1606,7 +1609,7 @@ def post_process_shared_lib(m, f, files, host_prefix=None):
     elif codefile == machofile:
         if m.config.host_platform != "osx":
             log = utils.get_logger(__name__)
-            log.warn(
+            log.warning(
                 "Found Mach-O file but patching is only supported on macOS, skipping: %s",
                 path,
             )
@@ -1642,7 +1645,7 @@ def fix_permissions(files, prefix):
                 lchmod(path, new_mode)
             except (OSError, utils.PermissionError) as e:
                 log = utils.get_logger(__name__)
-                log.warn(str(e))
+                log.warning(str(e))
 
 
 def check_menuinst_json(files, prefix) -> None:
@@ -1751,7 +1754,9 @@ def check_symlinks(files, prefix, croot):
             # symlinks to binaries outside of the same dir don't work.  RPATH stuff gets confused
             #    because ld.so follows symlinks in RPATHS
             #    If condition exists, then copy the file rather than symlink it.
-            if not dirname(link_path) == dirname(real_link_path) and codefile_class(f):
+            if not dirname(link_path) == dirname(real_link_path) and codefile_class(
+                f, skip_symlinks=True
+            ):
                 os.remove(path)
                 utils.copy_into(real_link_path, path)
             elif real_link_path.startswith(real_build_prefix):
@@ -1778,7 +1783,7 @@ def check_symlinks(files, prefix, croot):
 
     if msgs:
         for msg in msgs:
-            print("Error: %s" % msg, file=sys.stderr)
+            print(f"Error: {msg}", file=sys.stderr)
         sys.exit(1)
 
 

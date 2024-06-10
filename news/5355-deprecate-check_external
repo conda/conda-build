@@ -1,0 +1,19 @@
+### Enhancements
+
+* <news item>
+
+### Bug fixes
+
+* <news item>
+
+### Deprecations
+
+* Mark `conda_build.build.check_external` for deprecation. `patchelf` is an explicit conda-build dependency on Linux so it will always be installed. (#5355)
+
+### Docs
+
+* <news item>
+
+### Other
+
+* <news item>

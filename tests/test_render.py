@@ -4,14 +4,25 @@ from __future__ import annotations
 
 import json
 import os
-from pathlib import Path
+import re
+from typing import TYPE_CHECKING
 from uuid import uuid4
 
 import pytest
 
-from conda_build import api, render
-from conda_build.metadata import MetaData
+from conda_build.api import get_output_file_paths
+from conda_build.render import (
+    _simplify_to_exact_constraints,
+    find_pkg_dir_or_file_in_pkgs_dirs,
+    get_pin_from_build,
+    open_recipe,
+)
 from conda_build.utils import CONDA_PACKAGE_EXTENSION_V1
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from conda_build.metadata import MetaData
 
 
 @pytest.mark.parametrize(
@@ -23,7 +34,7 @@ from conda_build.utils import CONDA_PACKAGE_EXTENSION_V1
 )
 def test_noarch_output(build, testing_metadata):
     testing_metadata.meta["build"].update(build)
-    output = api.get_output_file_path(testing_metadata)
+    output = get_output_file_paths(testing_metadata)
     assert os.path.sep + "noarch" + os.path.sep in output[0]
 
 
@@ -32,7 +43,7 @@ def test_reduce_duplicate_specs(testing_metadata):
         "build": ["exact", "exact 1.2.3 1", "exact >1.0,<2"],
         "host": ["exact", "exact 1.2.3 1"],
     }
-    render._simplify_to_exact_constraints(testing_metadata)
+    _simplify_to_exact_constraints(testing_metadata)
     simplified = testing_metadata.meta["requirements"]
 
     assert simplified["build"] == simplified["host"]
@@ -43,9 +54,7 @@ def test_reduce_duplicate_specs(testing_metadata):
 def test_pin_run_as_build_preserve_string(testing_metadata):
     m = testing_metadata
     m.config.variant["pin_run_as_build"]["pkg"] = {"max_pin": "x.x"}
-    dep = render.get_pin_from_build(
-        m, "pkg * somestring*", {"pkg": "1.2.3 somestring_h1234"}
-    )
+    dep = get_pin_from_build(m, "pkg * somestring*", {"pkg": "1.2.3 somestring_h1234"})
     assert dep == "pkg >=1.2.3,<1.3.0a0 somestring*"
 
 
@@ -70,7 +79,7 @@ def test_find_package(
     """
     Testing our ability to find the package directory or archive.
 
-    The render.find_pkg_dir_or_file_in_pkgs_dirs function will scan the various
+    The find_pkg_dir_or_file_in_pkgs_dirs function will scan the various
     locations where packages may exist locally and returns the full package path
     if found.
     """
@@ -101,9 +110,27 @@ def test_find_package(
             package = other_cache / distribution
 
     # attempt to find the package and check we found the expected path
-    found = render.find_pkg_dir_or_file_in_pkgs_dirs(
+    found = find_pkg_dir_or_file_in_pkgs_dirs(
         distribution,
         testing_metadata,
         files_only=files_only,
     )
     assert package is found is None or package.samefile(found)
+
+
+def test_open_recipe(tmp_path: Path):
+    path = tmp_path / "missing"
+    with pytest.raises(
+        SystemExit,
+        match=rf"Error: non-existent: {re.escape(str(path))}",
+    ):
+        with open_recipe(path):
+            pass
+
+    (path := tmp_path / "bad.ext").touch()
+    with pytest.raises(
+        SystemExit,
+        match=rf"Error: non-recipe: {re.escape(str(path))}",
+    ):
+        with open_recipe(path):
+            pass

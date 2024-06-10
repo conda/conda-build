@@ -6,13 +6,15 @@ import os
 import shlex
 import sys
 from pathlib import Path
-from typing import Generator
+from typing import TYPE_CHECKING
 
-from conda.base.context import context, reset_context
+from conda.base.context import reset_context
 from conda.common.compat import on_mac
 
-from conda_build.conda_interface import cc_conda_build
 from conda_build.metadata import MetaData
+
+if TYPE_CHECKING:
+    from typing import Generator
 
 tests_path = Path(__file__).parent
 metadata_path = tests_path / "test-recipes" / "metadata"
@@ -89,8 +91,7 @@ def assert_package_consistency(package_path):
                 has_prefix_present = False
     except tarfile.ReadError:
         raise RuntimeError(
-            "Could not extract metadata from %s. "
-            "File probably corrupt." % package_path
+            f"Could not extract metadata from {package_path}. File probably corrupt."
         )
     errors = []
     member_set = set(member_list)  # The tar format allows duplicates in member_list
@@ -99,7 +100,7 @@ def assert_package_consistency(package_path):
     file_set = set(file_list)
     # Check that there are no duplicates in info/files
     if len(file_list) != len(file_set):
-        errors.append("Duplicate files in info/files in %s" % package_path)
+        errors.append(f"Duplicate files in info/files in {package_path}")
     # Compare the contents of files and members
     unlisted_members = member_set.difference(file_set)
     missing_members = file_set.difference(member_set)
@@ -107,14 +108,16 @@ def assert_package_consistency(package_path):
     missing_files = [m for m in unlisted_members if not m.startswith("info/")]
     if len(missing_files) > 0:
         errors.append(
-            "The following package files are not listed in "
-            "info/files: %s" % ", ".join(missing_files)
+            "The following package files are not listed in info/files: {}".format(
+                ", ".join(missing_files)
+            )
         )
     # Find any files missing in the archive
     if len(missing_members) > 0:
         errors.append(
-            "The following files listed in info/files are missing: "
-            "%s" % ", ".join(missing_members)
+            "The following files listed in info/files are missing: {}".format(
+                ", ".join(missing_members)
+            )
         )
     # Find any files in has_prefix that are not present in files
     if has_prefix_present:
@@ -127,15 +130,15 @@ def assert_package_consistency(package_path):
             elif len(parts) == 3:
                 prefix_path_list.append(parts[2])
             else:
-                errors.append("Invalid has_prefix file in package: %s" % package_path)
+                errors.append(f"Invalid has_prefix file in package: {package_path}")
         prefix_path_set = set(prefix_path_list)
         if len(prefix_path_list) != len(prefix_path_set):
-            errors.append("Duplicate files in info/has_prefix in %s" % package_path)
+            errors.append(f"Duplicate files in info/has_prefix in {package_path}")
         prefix_not_in_files = prefix_path_set.difference(file_set)
         if len(prefix_not_in_files) > 0:
             errors.append(
                 "The following files listed in info/has_prefix are missing "
-                "from info/files: %s" % ", ".join(prefix_not_in_files)
+                "from info/files: {}".format(", ".join(prefix_not_in_files))
             )
 
     # Assert that no errors are detected
@@ -150,7 +153,3 @@ def get_noarch_python_meta(meta):
 
 def reset_config(search_path=None):
     reset_context(search_path)
-    cc_conda_build.clear()
-    cc_conda_build.update(
-        context.conda_build if hasattr(context, "conda_build") else {}
-    )
