@@ -1318,7 +1318,7 @@ def find_recipe(path: str) -> str:
 
     metas = [m for m in VALID_METAS if os.path.isfile(os.path.join(path, m))]
     if len(metas) == 1:
-        get_logger(__name__).warn(
+        get_logger(__name__).warning(
             "Multiple meta files found. "
             f"The {metas[0]} file in the base directory ({path}) "
             "will be used."
