@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
+from conda.common.compat import on_win
 
 from conda_build import api, build
 from conda_build.exceptions import CondaBuildUserError
@@ -22,6 +23,8 @@ from conda_build.exceptions import CondaBuildUserError
 from .utils import get_noarch_python_meta, metadata_dir
 
 if TYPE_CHECKING:
+    from pytest_mock import MockerFixture
+
     from conda_build.metadata import MetaData
 
 
@@ -345,3 +348,24 @@ def test_copy_readme(testing_metadata: MetaData, readme: str):
     Path(testing_metadata.config.work_dir, readme).touch()
     build.copy_readme(testing_metadata)
     assert Path(testing_metadata.config.info_dir, readme).exists()
+
+
+@pytest.mark.skipif(not on_win, reason="WSL is only on Windows")
+def test_wsl_unsupported(
+    testing_metadata: MetaData,
+    mocker: MockerFixture,
+    tmp_path: Path,
+):
+    mocker.patch(
+        "conda_build.os_utils.external.find_executable",
+        return_value="C:\\Windows\\System32\\bash.exe",
+    )
+
+    (script := tmp_path / "install.sh").touch()
+    with pytest.raises(CondaBuildUserError):
+        build.bundle_conda(
+            output={"script": script},
+            metadata=testing_metadata,
+            env={},
+            stats={},
+        )
