@@ -369,3 +369,13 @@ def test_wsl_unsupported(
             env={},
             stats={},
         )
+
+
+def test_tests_failed(testing_metadata: MetaData, tmp_path: Path):
+    with pytest.raises(CondaBuildUserError):
+        build.tests_failed(
+            package_or_metadata=testing_metadata,
+            move_broken=True,
+            broken_dir=tmp_path,
+            config=testing_metadata.config,
+        )
