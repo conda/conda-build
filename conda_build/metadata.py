@@ -21,9 +21,16 @@ from conda.gateways.disk.read import compute_sum
 from conda.models.match_spec import MatchSpec
 from frozendict import deepfreeze
 
-from . import exceptions, utils
+from . import utils
 from .config import Config, get_or_merge_config
 from .deprecations import deprecated
+from .exceptions import (
+    CondaBuildException,
+    DependencyNeedsBuildingError,
+    RecipeError,
+    UnableToParse,
+    UnableToParseMissingJinja2,
+)
 from .features import feature_list
 from .license_family import ensure_valid_license_family
 from .utils import (
@@ -356,10 +363,10 @@ def yamlize(data):
 
                 jinja2  # Avoid pyflakes failure: 'jinja2' imported but unused
             except ImportError:
-                raise exceptions.UnableToParseMissingJinja2(original=e)
+                raise UnableToParseMissingJinja2(original=e)
         print("Problematic recipe:", file=sys.stderr)
         print(data, file=sys.stderr)
-        raise exceptions.UnableToParse(original=e)
+        raise UnableToParse(original=e)
 
 
 def ensure_valid_fields(meta):
@@ -400,9 +407,7 @@ def _trim_None_strings(meta_dict):
 def ensure_valid_noarch_value(meta):
     build_noarch = meta.get("build", {}).get("noarch")
     if build_noarch and build_noarch not in NOARCH_TYPES:
-        raise exceptions.CondaBuildException(
-            f"Invalid value for noarch: {build_noarch}"
-        )
+        raise CondaBuildException(f"Invalid value for noarch: {build_noarch}")
 
 
 def _get_all_dependencies(metadata, envs=("host", "build", "run")):
@@ -444,7 +449,7 @@ def check_circular_dependencies(
         error = "Circular dependencies in recipe: \n"
         for pair in pairs:
             error += "    {} <-> {}\n".format(*pair)
-        raise exceptions.RecipeError(error)
+        raise RecipeError(error)
 
 
 def _check_circular_dependencies(
@@ -477,7 +482,7 @@ def _check_circular_dependencies(
         error = "Circular dependencies in recipe: \n"
         for pair in pairs:
             error += "    {} <-> {}\n".format(*pair)
-        raise exceptions.RecipeError(error)
+        raise RecipeError(error)
 
 
 def _check_run_constrained(metadata_tuples):
@@ -495,7 +500,7 @@ def _check_run_constrained(metadata_tuples):
                     f"Reason: {exc}"
                 )
     if errors:
-        raise exceptions.RecipeError("\n".join(["", *errors]))
+        raise RecipeError("\n".join(["", *errors]))
 
 
 def _variants_equal(metadata, output_metadata):
@@ -539,7 +544,7 @@ def ensure_matching_hashes(output_metadata):
             error += "Mismatching package: {} (id {}); dep: {}; consumer package: {}\n".format(
                 *prob
             )
-        raise exceptions.RecipeError(
+        raise RecipeError(
             "Mismatching hashes in recipe. Exact pins in dependencies "
             "that contribute to the hash often cause this. Can you "
             "change one or more exact pins to version bound constraints?\n"
@@ -1124,7 +1129,7 @@ def finalize_outputs_pass(
                     fm.name(),
                     deepfreeze({k: fm.config.variant[k] for k in fm.get_used_vars()}),
                 ] = (output_d, fm)
-        except exceptions.DependencyNeedsBuildingError as e:
+        except DependencyNeedsBuildingError as e:
             if not permit_unsatisfiable_variants:
                 raise
             else:
