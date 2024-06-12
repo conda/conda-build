@@ -22,6 +22,7 @@ from conda_build.metadata import (
     OPTIONALLY_ITERABLE_FIELDS,
     MetaData,
     _hash_dependencies,
+    check_bad_chrs,
     get_selectors,
     sanitize,
     select_lines,
@@ -581,8 +582,28 @@ def test_select_lines_invalid():
 )
 def test_sanitize_source(keys: list[str], expected: dict[str, str] | None) -> None:
     with pytest.raises(
-        CondaBuildUserError, match=r"Multiple git_revs:"
+        CondaBuildUserError,
+        match=r"Multiple git_revs:",
     ) if expected is None else nullcontext():
         assert sanitize({"source": {key: "rev" for key in keys}}) == {
             "source": expected
         }
+
+
+@pytest.mark.parametrize(
+    "value,field,invalid",
+    [
+        pytest.param("good", "field", None, id="valid field"),
+        pytest.param("!@d&;-", "field", "!&;@", id="invalid field"),
+        pytest.param("good", "package/version", None, id="valid package/version"),
+        pytest.param("!@d&;-", "package/version", "&-;@", id="invalid package/version"),
+        pytest.param("good", "build/string", None, id="valid build/string"),
+        pytest.param("!@d&;-", "build/string", "!&-;@", id="invalid build/string"),
+    ],
+)
+def test_check_bad_chrs(value: str, field: str, invalid: str) -> None:
+    with pytest.raises(
+        CondaBuildUserError,
+        match=rf"Bad character\(s\) \({invalid}\) in {field}: {value}\.",
+    ) if invalid else nullcontext():
+        check_bad_chrs(value, field)

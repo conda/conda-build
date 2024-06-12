@@ -797,15 +797,16 @@ def _str_version(package_meta):
     return package_meta
 
 
-def check_bad_chrs(s, field):
-    bad_chrs = "=@#$%^&*:;\"'\\|<>?/ "
+def check_bad_chrs(value: str, field: str) -> None:
+    bad_chrs = set("=@#$%^&*:;\"'\\|<>?/ ")
     if field in ("package/version", "build/string"):
-        bad_chrs += "-"
+        bad_chrs.add("-")
     if field != "package/version":
-        bad_chrs += "!"
-    for c in bad_chrs:
-        if c in s:
-            sys.exit(f"Error: bad character '{c}' in {field}: {s}")
+        bad_chrs.add("!")
+    if invalid := bad_chrs.intersection(value):
+        raise CondaBuildUserError(
+            f"Bad character(s) ({''.join(sorted(invalid))}) in {field}: {value}."
+        )
 
 
 def get_package_version_pin(build_reqs, name):
