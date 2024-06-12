@@ -26,6 +26,7 @@ from .config import Config, get_or_merge_config
 from .deprecations import deprecated
 from .exceptions import (
     CondaBuildException,
+    CondaBuildUserError,
     DependencyNeedsBuildingError,
     RecipeError,
     UnableToParse,
@@ -343,12 +344,12 @@ def select_lines(text: str, namespace: dict[str, Any], variants_in_place: bool) 
                     if value:
                         lines.append(line)
                 except Exception as e:
-                    sys.exit(
-                        f"Error: Invalid selector in meta.yaml line {i + 1}:\n"
-                        f"offending line:\n"
-                        f"{line}\n"
+                    raise CondaBuildUserError(
+                        f"Invalid selector in meta.yaml line {i + 1}:\n"
+                        f"offending selector:\n"
+                        f"  [{selector}]\n"
                         f"exception:\n"
-                        f"{e.__class__.__name__}: {e}\n"
+                        f"  {e.__class__.__name__}: {e}\n"
                     )
     return "\n".join(lines) + "\n"
 
