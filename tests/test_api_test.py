@@ -9,6 +9,7 @@ import os
 import pytest
 
 from conda_build import api
+from conda_build.exceptions import CondaBuildUserError
 
 from .utils import metadata_dir
 
@@ -63,5 +64,5 @@ def test_api_extra_dep(testing_metadata):
     api.test(output, config=testing_metadata.config, extra_deps=["click"])
 
     # missing click dep will fail tests
-    with pytest.raises(SystemExit):
+    with pytest.raises(CondaBuildUserError):
         api.test(output, config=testing_metadata.config)
