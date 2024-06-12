@@ -773,28 +773,18 @@ def _git_clean(source_meta):
     and complain.
     """
 
-    git_rev_tags_old = ("git_branch", "git_tag")
     git_rev = "git_rev"
 
-    git_rev_tags = (git_rev,) + git_rev_tags_old
-
-    has_rev_tags = tuple(bool(source_meta.get(tag, "")) for tag in git_rev_tags)
-    if sum(has_rev_tags) > 1:
-        msg = "Error: multiple git_revs:"
-        msg += ", ".join(
-            f"{key}" for key, has in zip(git_rev_tags, has_rev_tags) if has
-        )
-        sys.exit(msg)
+    keys = [key for key in (git_rev, "git_branch", "git_tag") if key in source_meta]
+    if not keys:
+        # git_branch, git_tag, nor git_rev specified, return as-is
+        return source_meta
+    elif len(keys) > 1:
+        raise CondaBuildUserError(f"Multiple git_revs: {', '.join(keys)}")
 
     # make a copy of the input so we have no side-effects
     ret_meta = source_meta.copy()
-    # loop over the old versions
-    for key, has in zip(git_rev_tags[1:], has_rev_tags[1:]):
-        # update if needed
-        if has:
-            ret_meta[git_rev_tags[0]] = ret_meta[key]
-        # and remove
-        ret_meta.pop(key, None)
+    ret_meta[git_rev] = ret_meta.pop(keys[0])
 
     return ret_meta
 

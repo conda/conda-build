@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+from contextlib import nullcontext
 from itertools import product
 from typing import TYPE_CHECKING
 
@@ -22,6 +23,7 @@ from conda_build.metadata import (
     MetaData,
     _hash_dependencies,
     get_selectors,
+    sanitize,
     select_lines,
     yamlize,
 )
@@ -558,3 +560,29 @@ def test_select_lines_invalid():
         match=r"Invalid selector in meta\.yaml",
     ):
         select_lines("text # [{bad]", {}, variants_in_place=True)
+
+
+@pytest.mark.parametrize(
+    "keys,expected",
+    [
+        pytest.param([], {}, id="git_tag"),
+        pytest.param(["git_tag"], {"git_rev": "rev"}, id="git_tag"),
+        pytest.param(["git_branch"], {"git_rev": "rev"}, id="git_branch"),
+        pytest.param(["git_rev"], {"git_rev": "rev"}, id="git_rev"),
+        pytest.param(["git_tag", "git_branch"], None, id="git_tag + git_branch"),
+        pytest.param(["git_tag", "git_rev"], None, id="git_tag + git_rev"),
+        pytest.param(["git_branch", "git_rev"], None, id="git_branch + git_rev"),
+        pytest.param(
+            ["git_tag", "git_branch", "git_rev"],
+            None,
+            id="git_tag + git_branch + git_rev",
+        ),
+    ],
+)
+def test_sanitize_source(keys: list[str], expected: dict[str, str] | None) -> None:
+    with pytest.raises(
+        CondaBuildUserError, match=r"Multiple git_revs:"
+    ) if expected is None else nullcontext():
+        assert sanitize({"source": {key: "rev" for key in keys}}) == {
+            "source": expected
+        }
