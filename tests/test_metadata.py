@@ -15,6 +15,7 @@ from packaging.version import Version
 
 from conda_build import api
 from conda_build.config import Config
+from conda_build.exceptions import CondaBuildUserError
 from conda_build.metadata import (
     FIELDS,
     OPTIONALLY_ITERABLE_FIELDS,
@@ -549,3 +550,11 @@ def test_get_section(testing_metadata: MetaData):
             assert isinstance(section, list)
         else:
             assert isinstance(section, dict)
+
+
+def test_select_lines_invalid():
+    with pytest.raises(
+        CondaBuildUserError,
+        match=r"Invalid selector in meta\.yaml",
+    ):
+        select_lines("text # [{bad]", {}, variants_in_place=True)
