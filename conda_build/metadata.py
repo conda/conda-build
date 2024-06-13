@@ -15,6 +15,7 @@ from functools import lru_cache
 from os.path import isfile, join
 from typing import TYPE_CHECKING, NamedTuple, overload
 
+import yaml
 from bs4 import UnicodeDammit
 from conda.base.context import context
 from conda.gateways.disk.read import compute_sum
@@ -30,7 +31,6 @@ from .exceptions import (
     DependencyNeedsBuildingError,
     RecipeError,
     UnableToParse,
-    UnableToParseMissingJinja2,
 )
 from .features import feature_list
 from .license_family import ensure_valid_license_family
@@ -59,13 +59,6 @@ if TYPE_CHECKING:
     OutputDict = dict[str, Any]
     OutputTuple = tuple[OutputDict, "MetaData"]
 
-try:
-    import yaml
-except ImportError:
-    sys.exit(
-        "Error: could not import yaml (required to read meta.yaml "
-        "files of conda recipes)"
-    )
 
 try:
     Loader = yaml.CLoader
@@ -358,13 +351,6 @@ def yamlize(data):
     try:
         return yaml.load(data, Loader=StringifyNumbersLoader)
     except yaml.error.YAMLError as e:
-        if "{{" in data:
-            try:
-                import jinja2
-
-                jinja2  # Avoid pyflakes failure: 'jinja2' imported but unused
-            except ImportError:
-                raise UnableToParseMissingJinja2(original=e)
         print("Problematic recipe:", file=sys.stderr)
         print(data, file=sys.stderr)
         raise UnableToParse(original=e)
