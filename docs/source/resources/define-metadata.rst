@@ -110,7 +110,10 @@ Source from tarball or zip archive
      url: https://pypi.python.org/packages/source/b/bsdiff4/bsdiff4-1.1.4.tar.gz
      md5: 29f6089290505fc1a852e176bd276c43
      sha1: f0a2c9a30073449cfb7d171c57552f3109d93894
+     sha224: ebf3e3b54353146ca21128ed6399739663a1256a223f438ed0223845
      sha256: 5a022ff4c1d1de87232b1c70bde50afbb98212fd246be4a867d8737173cf1f8f
+     sha384: 23eee6ee2e5d1054780e331857589bfba098255a88ae4edd47102fce676694ce0f543dc5c0d27c51f77cc4546d4e74c0
+     sha512: b968c7dc99132252a83b175a96ec75ec842edf9e2494db2c07b419e61a0b1cf6984e7c544452f9ab56aa8581caf966c0f6933fc22a071ccc4fbb5d22b363fe54
 
 If an extracted archive contains only 1 folder at its top level, its contents
 will be moved 1 level up, so that the extracted package contents sit in the
