@@ -206,6 +206,7 @@ def test_clobber_section_data(testing_metadata):
 
 
 @pytest.mark.serial
+@pytest.mark.filterwarnings("ignore", category=PendingDeprecationWarning)
 def test_build_bootstrap_env_by_name(testing_metadata):
     assert not any(
         "git" in pkg for pkg in testing_metadata.meta["requirements"].get("build", [])
@@ -224,6 +225,7 @@ def test_build_bootstrap_env_by_name(testing_metadata):
         subprocess.check_call(cmd.split())
 
 
+@pytest.mark.filterwarnings("ignore", category=PendingDeprecationWarning)
 def test_build_bootstrap_env_by_path(testing_metadata):
     assert not any(
         "git" in pkg for pkg in testing_metadata.meta["requirements"].get("build", [])
