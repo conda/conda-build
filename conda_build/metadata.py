@@ -1408,12 +1408,11 @@ class MetaData:
     ):
         """variant contains key-value mapping for additional functions and values
         for jinja2 variables"""
-        # undefined_jinja_vars is refreshed by self.parse again
-        undefined_jinja_vars = ()
         # store the "final" state that we think we're in.  reloading the meta.yaml file
         #   can reset it (to True)
         final = self.final
-        # always parse again at least once.
+
+        # always parse again at least once
         self.parse_again(
             permit_undefined_jinja=True,
             allow_no_other_outputs=allow_no_other_outputs,
@@ -1421,6 +1420,8 @@ class MetaData:
         )
         self.final = final
 
+        # recursively parse again so long as each iteration has fewer undefined jinja variables
+        undefined_jinja_vars = ()
         while set(undefined_jinja_vars) != set(self.undefined_jinja_vars):
             undefined_jinja_vars = self.undefined_jinja_vars
             self.parse_again(
@@ -1429,18 +1430,8 @@ class MetaData:
                 bypass_env_check=bypass_env_check,
             )
             self.final = final
-        if undefined_jinja_vars:
-            self.parse_again(
-                permit_undefined_jinja=False,
-                allow_no_other_outputs=allow_no_other_outputs,
-                bypass_env_check=bypass_env_check,
-            )
-            sys.exit(
-                f"Undefined Jinja2 variables remain ({self.undefined_jinja_vars}).  Please enable "
-                "source downloading and try again."
-            )
 
-        # always parse again at the end, too.
+        # always parse again at the end without permit_undefined_jinja
         self.parse_again(
             permit_undefined_jinja=False,
             allow_no_other_outputs=allow_no_other_outputs,
