@@ -15,6 +15,7 @@ from functools import lru_cache
 from os.path import isdir, isfile, join
 from typing import TYPE_CHECKING, NamedTuple, overload
 
+import jinja2
 import yaml
 from bs4 import UnicodeDammit
 from conda.base.context import locate_prefix_by_name
@@ -1996,17 +1997,6 @@ class MetaData:
         permit_undefined_jinja: If True, *any* use of undefined jinja variables will
                                 evaluate to an emtpy string, without emitting an error.
         """
-        try:
-            import jinja2
-        except ImportError:
-            print("There was an error importing jinja2.", file=sys.stderr)
-            print(
-                "Please run `conda install jinja2` to enable jinja template support",
-                file=sys.stderr,
-            )  # noqa
-            with open(self.meta_path) as fd:
-                return fd.read()
-
         from .jinja_context import (
             FilteredLoader,
             UndefinedNeverFail,
@@ -2088,8 +2078,8 @@ class MetaData:
         except jinja2.TemplateError as ex:
             if "'None' has not attribute" in str(ex):
                 ex = "Failed to run jinja context function"
-            sys.exit(
-                f"Error: Failed to render jinja template in {self.meta_path}:\n{str(ex)}"
+            raise CondaBuildUserError(
+                f"Failed to render jinja template in {self.meta_path}:\n{str(ex)}"
             )
         finally:
             if "CONDA_BUILD_STATE" in os.environ:
