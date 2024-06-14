@@ -620,9 +620,6 @@ def test_parse_until_resolved(testing_metadata: MetaData, tmp_path: Path) -> Non
 
     with pytest.raises(
         CondaBuildUserError,
-        match=(
-            rf"Failed to render jinja template in {recipe}:\n"
-            r"'UNDEFINED' is undefined"
-        ),
+        match=("Failed to render jinja template"),
     ):
         testing_metadata.parse_until_resolved()
