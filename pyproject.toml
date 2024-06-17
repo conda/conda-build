@@ -126,6 +126,9 @@ filterwarnings = [
   "error::DeprecationWarning:conda_build",
   # ignore numpy.distutils error
   'ignore:\s+`numpy.distutils` is deprecated:DeprecationWarning:conda_build._load_setup_py_data',
+  # ignore conda-index error
+  "ignore::PendingDeprecationWarning:conda_index",
+  "ignore::DeprecationWarning:conda_index",
 ]
 markers = [
   "serial: execute test serially (to avoid race conditions)",
