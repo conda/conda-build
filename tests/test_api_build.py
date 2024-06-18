@@ -833,7 +833,11 @@ def test_disable_pip(testing_metadata):
 @pytest.mark.skipif(
     sys.platform.startswith("win"), reason="rpath fixup not done on Windows."
 )
-def test_rpath_unix(testing_config, variants_conda_build_sysroot):
+def test_rpath_unix(
+    testing_config: Config,
+    variants_conda_build_sysroot: dict,
+    get_macosx_sdk: str,
+) -> None:
     testing_config.activate = True
     api.build(
         os.path.join(metadata_dir, "_rpath"),
@@ -1704,7 +1708,10 @@ def test_provides_features_metadata(testing_config):
 
 
 def test_overlinking_detection(
-    testing_config, testing_workdir, variants_conda_build_sysroot
+    testing_config: Config,
+    testing_workdir: str,
+    variants_conda_build_sysroot: dict,
+    get_macosx_sdk: str,
 ):
     testing_config.activate = True
     testing_config.error_overlinking = True
@@ -1736,7 +1743,10 @@ def test_overlinking_detection(
 
 
 def test_overlinking_detection_ignore_patterns(
-    testing_config, testing_workdir, variants_conda_build_sysroot
+    testing_config: Config,
+    testing_workdir: str,
+    variants_conda_build_sysroot: dict,
+    get_macosx_sdk: str,
 ):
     testing_config.activate = True
     testing_config.error_overlinking = True
@@ -1766,7 +1776,11 @@ def test_overlinking_detection_ignore_patterns(
     rm_rf(dest_bat)
 
 
-def test_overdepending_detection(testing_config, variants_conda_build_sysroot):
+def test_overdepending_detection(
+    testing_config: Config,
+    variants_conda_build_sysroot: dict,
+    get_macosx_sdk: str,
+):
     testing_config.activate = True
     testing_config.error_overlinking = True
     testing_config.error_overdepending = True
@@ -1777,7 +1791,11 @@ def test_overdepending_detection(testing_config, variants_conda_build_sysroot):
 
 
 @pytest.mark.skipif(sys.platform != "darwin", reason="macOS-only test (at present)")
-def test_macos_tbd_handling(testing_config, variants_conda_build_sysroot):
+def test_macos_tbd_handling(
+    testing_config: Config,
+    variants_conda_build_sysroot: dict,
+    get_macosx_sdk: str,
+):
     """
     Test path handling after installation... The test case uses a Hello World
     example in C/C++ for testing the installation of C libraries...
