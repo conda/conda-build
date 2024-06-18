@@ -337,7 +337,8 @@ jobs:
     needs: changes
     if: github.event_name == 'schedule' || needs.changes.outputs.code == 'true'
 
-    runs-on: macos-latest
+    # not all tests work on arm64
+    runs-on: macos-13
     defaults:
       run:
         # https://github.com/conda-incubator/setup-miniconda#use-a-default-shell
