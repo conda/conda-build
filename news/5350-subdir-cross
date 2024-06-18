@@ -4,7 +4,7 @@
 
 ### Bug fixes
 
-* <news item>
+* Ensure cross-building recipes select the correct noarch package variants. (#5341 via #5350)
 
 ### Deprecations
 
@@ -16,4 +16,4 @@
 
 ### Other
 
-* Enable CodSpeed benchmarks for select tests. (#5233)
+* <news item>

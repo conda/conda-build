@@ -10,12 +10,10 @@ import string
 import subprocess
 import sys
 import tarfile
-import tempfile
 from collections import OrderedDict, defaultdict
 from contextlib import contextmanager
 from functools import lru_cache
 from os.path import (
-    dirname,
     isabs,
     isdir,
     isfile,
@@ -27,14 +25,17 @@ from typing import TYPE_CHECKING
 
 import yaml
 from conda.base.context import context
+from conda.cli.common import specs_from_url
 from conda.core.package_cache_data import ProgressiveFetchExtract
-from conda.exceptions import UnsatisfiableError
+from conda.exceptions import NoPackagesFoundError, UnsatisfiableError
+from conda.gateways.disk.create import TemporaryDirectory
+from conda.models.records import PackageRecord
+from conda.models.version import VersionOrder
 
 from . import environ, exceptions, source, utils
-from .conda_interface import PackageRecord, TemporaryDirectory, specs_from_url
 from .exceptions import DependencyNeedsBuildingError
 from .index import get_build_index
-from .metadata import MetaData, combine_top_level_metadata_with_output
+from .metadata import MetaData, MetaDataTuple, combine_top_level_metadata_with_output
 from .utils import (
     CONDA_PACKAGE_EXTENSION_V1,
     CONDA_PACKAGE_EXTENSION_V2,
@@ -47,7 +48,8 @@ from .variants import (
 )
 
 if TYPE_CHECKING:
-    from typing import Iterator
+    import os
+    from typing import Any, Iterable, Iterator
 
     from .config import Config
 
@@ -61,7 +63,7 @@ yaml.add_representer(tuple, yaml.representer.SafeRepresenter.represent_list)
 yaml.add_representer(OrderedDict, odict_representer)
 
 
-def bldpkg_path(m):
+def bldpkg_path(m: MetaData) -> str:
     """
     Returns path to built package's tarball given its ``Metadata``.
     """
@@ -113,7 +115,7 @@ def _categorize_deps(m, specs, exclude_pattern, variant):
                 # for sake of comparison, ignore dashes and underscores
                 if dash_or_under.sub("", key) == dash_or_under.sub(
                     "", spec_name
-                ) and not re.search(r"%s\s+[0-9a-zA-Z\_\.\<\>\=\*]" % spec_name, spec):
+                ) and not re.search(rf"{spec_name}\s+[0-9a-zA-Z\_\.\<\>\=\*]", spec):
                     dependencies.append(" ".join((spec_name, value)))
         elif exclude_pattern.match(spec):
             pass_through_deps.append(spec)
@@ -737,14 +739,14 @@ def finalize_metadata(
         if build_unsat or host_unsat:
             m.final = False
             log = utils.get_logger(__name__)
-            log.warn(
+            log.warning(
                 f"Returning non-final recipe for {m.dist()}; one or more dependencies "
                 "was unsatisfiable:"
             )
             if build_unsat:
-                log.warn(f"Build: {build_unsat}")
+                log.warning(f"Build: {build_unsat}")
             if host_unsat:
-                log.warn(f"Host: {host_unsat}")
+                log.warning(f"Host: {host_unsat}")
         else:
             m.final = True
     if is_top_level:
@@ -793,42 +795,28 @@ def reparse(metadata):
 
 
 def distribute_variants(
-    metadata,
+    metadata: MetaData,
     variants,
-    permit_unsatisfiable_variants=False,
-    allow_no_other_outputs=False,
-    bypass_env_check=False,
-):
-    rendered_metadata = {}
+    permit_unsatisfiable_variants: bool = False,
+    allow_no_other_outputs: bool = False,
+    bypass_env_check: bool = False,
+) -> list[MetaDataTuple]:
+    rendered_metadata: dict[
+        tuple[str, str, tuple[tuple[str, str], ...]], MetaDataTuple
+    ] = {}
     need_source_download = True
 
     # don't bother distributing python if it's a noarch package, and figure out
     # which python version we prefer. `python_age` can use used to tweak which
     # python gets used here.
     if metadata.noarch or metadata.noarch_python:
-        from .conda_interface import VersionOrder
-
-        age = int(
-            metadata.get_value(
-                "build/noarch_python_build_age", metadata.config.noarch_python_build_age
-            )
-        )
-        versions = []
-        for variant in variants:
-            if "python" in variant:
-                vo = variant["python"]
-                if vo not in versions:
-                    versions.append(vo)
-        version_indices = sorted(
-            range(len(versions)), key=lambda k: VersionOrder(versions[k].split(" ")[0])
-        )
-        if age < 0:
-            age = 0
-        elif age > len(versions) - 1:
-            age = len(versions) - 1
-        build_ver = versions[version_indices[len(versions) - 1 - age]]
+        # filter variants by the newest Python version
+        version = sorted(
+            {version for variant in variants if (version := variant.get("python"))},
+            key=lambda key: VersionOrder(key.split(" ")[0]),
+        )[-1]
         variants = filter_by_key_value(
-            variants, "python", build_ver, "noarch_python_reduction"
+            variants, "python", version, "noarch_python_reduction"
         )
 
     # store these for reference later
@@ -906,23 +894,25 @@ def distribute_variants(
                 mv.config.variant.get("target_platform", mv.config.subdir),
                 tuple((var, mv.config.variant.get(var)) for var in mv.get_used_vars()),
             )
-        ] = (mv, need_source_download, None)
+        ] = MetaDataTuple(mv, need_source_download, False)
     # list of tuples.
     # each tuple item is a tuple of 3 items:
-    #    metadata, need_download, need_reparse_in_env
+    #    metadata, need_download, need_reparse
     return list(rendered_metadata.values())
 
 
-def expand_outputs(metadata_tuples):
+def expand_outputs(
+    metadata_tuples: Iterable[MetaDataTuple],
+) -> list[tuple[dict, MetaData]]:
     """Obtain all metadata objects for all outputs from recipe.  Useful for outputting paths."""
-    expanded_outputs = OrderedDict()
+    from copy import deepcopy
+
+    from .build import get_all_replacements
+
+    expanded_outputs: dict[str, tuple[dict, MetaData]] = {}
 
     for _m, download, reparse in metadata_tuples:
-        from .build import get_all_replacements
-
         get_all_replacements(_m.config)
-        from copy import deepcopy
-
         for output_dict, m in deepcopy(_m).get_output_metadata_set(
             permit_unsatisfiable_variants=False
         ):
@@ -943,7 +933,7 @@ def open_recipe(recipe: str | os.PathLike | Path) -> Iterator[Path]:
         yield recipe
     elif recipe.suffixes in [[".tar"], [".tar", ".gz"], [".tgz"], [".tar", ".bz2"]]:
         # extract the recipe to a temporary directory
-        with tempfile.TemporaryDirectory() as tmp, tarfile.open(recipe, "r:*") as tar:
+        with TemporaryDirectory() as tmp, tarfile.open(recipe, "r:*") as tar:
             tar.extractall(path=tmp)
             yield Path(tmp)
     elif recipe.suffix == ".yaml":
@@ -957,11 +947,11 @@ def render_recipe(
     recipe_dir: str | os.PathLike | Path,
     config: Config,
     no_download_source: bool = False,
-    variants: dict | None = None,
+    variants: dict[str, Any] | None = None,
     permit_unsatisfiable_variants: bool = True,
     reset_build_id: bool = True,
     bypass_env_check: bool = False,
-) -> list[tuple[MetaData, bool, bool]]:
+) -> list[MetaDataTuple]:
     """Returns a list of tuples, each consisting of
 
     (metadata-object, needs_download, needs_render_in_env)
@@ -994,7 +984,7 @@ def render_recipe(
                     m.config.variant_config_files = [cbc_yaml]
                 m.config.variants = get_package_variants(m, variants=variants)
                 m.config.variant = m.config.variants[0]
-            return [(m, False, False)]
+            return [MetaDataTuple(m, False, False)]
         else:
             # merge any passed-in variants with any files found
             variants = get_package_variants(m, variants=variants)
@@ -1008,6 +998,59 @@ def render_recipe(
                 allow_no_other_outputs=True,
                 bypass_env_check=bypass_env_check,
             )
+
+
+def render_metadata_tuples(
+    metadata_tuples: Iterable[MetaDataTuple],
+    config: Config,
+    permit_unsatisfiable_variants: bool = True,
+    finalize: bool = True,
+    bypass_env_check: bool = False,
+) -> list[MetaDataTuple]:
+    output_metas: dict[tuple[str, str, tuple[tuple[str, str], ...]], MetaDataTuple] = {}
+    for meta, download, render_in_env in metadata_tuples:
+        if not meta.skip() or not config.trim_skip:
+            for od, om in meta.get_output_metadata_set(
+                permit_unsatisfiable_variants=permit_unsatisfiable_variants,
+                permit_undefined_jinja=not finalize,
+                bypass_env_check=bypass_env_check,
+            ):
+                if not om.skip() or not config.trim_skip:
+                    if "type" not in od or od["type"] == "conda":
+                        if finalize and not om.final:
+                            try:
+                                om = finalize_metadata(
+                                    om,
+                                    permit_unsatisfiable_variants=permit_unsatisfiable_variants,
+                                )
+                            except (DependencyNeedsBuildingError, NoPackagesFoundError):
+                                if not permit_unsatisfiable_variants:
+                                    raise
+
+                        # remove outputs section from output objects for simplicity
+                        if not om.path and (outputs := om.get_section("outputs")):
+                            om.parent_outputs = outputs
+                            del om.meta["outputs"]
+
+                        output_metas[
+                            om.dist(),
+                            om.config.variant.get("target_platform"),
+                            tuple(
+                                (var, om.config.variant[var])
+                                for var in om.get_used_vars()
+                            ),
+                        ] = MetaDataTuple(om, download, render_in_env)
+                    else:
+                        output_metas[
+                            f"{om.type}: {om.name()}",
+                            om.config.variant.get("target_platform"),
+                            tuple(
+                                (var, om.config.variant[var])
+                                for var in om.get_used_vars()
+                            ),
+                        ] = MetaDataTuple(om, download, render_in_env)
+
+    return list(output_metas.values())
 
 
 # Keep this out of the function below so it can be imported by other modules.
@@ -1055,7 +1098,11 @@ yaml.add_representer(str, _unicode_representer)
 unicode = None  # silence pyflakes about unicode not existing in py3
 
 
-def output_yaml(metadata, filename=None, suppress_outputs=False):
+def output_yaml(
+    metadata: MetaData,
+    filename: str | os.PathLike | Path | None = None,
+    suppress_outputs: bool = False,
+) -> str:
     local_metadata = metadata.copy()
     if (
         suppress_outputs
@@ -1070,13 +1117,9 @@ def output_yaml(metadata, filename=None, suppress_outputs=False):
         indent=2,
     )
     if filename:
-        if any(sep in filename for sep in ("\\", "/")):
-            try:
-                os.makedirs(dirname(filename))
-            except OSError:
-                pass
-        with open(filename, "w") as f:
-            f.write(output)
-        return "Wrote yaml to %s" % filename
+        filename = Path(filename)
+        filename.parent.mkdir(parents=True, exist_ok=True)
+        filename.write_text(output)
+        return f"Wrote yaml to {filename}"
     else:
         return output

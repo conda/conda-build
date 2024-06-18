@@ -6,11 +6,12 @@ import logging
 from os.path import abspath, expanduser
 from typing import TYPE_CHECKING
 
+from conda.base.context import context
+
 from .. import api
-from ..conda_interface import ArgumentParser
 
 if TYPE_CHECKING:
-    from argparse import Namespace
+    from argparse import ArgumentParser, Namespace
     from typing import Sequence
 
 logging.basicConfig(level=logging.INFO)
@@ -41,6 +42,8 @@ install on Mac OS X):
 
 
 def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
+    from conda.cli.conda_argparse import ArgumentParser
+
     parser = ArgumentParser(
         prog="conda convert",
         description="""
@@ -125,6 +128,8 @@ all.""",
 
 def execute(args: Sequence[str] | None = None) -> int:
     _, parsed = parse_args(args)
+    context.__init__(argparse_args=parsed)
+
     files = parsed.files
     del parsed.__dict__["files"]
 

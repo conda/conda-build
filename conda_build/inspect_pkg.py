@@ -15,13 +15,11 @@ from typing import TYPE_CHECKING
 
 from conda.api import Solver
 from conda.base.context import context
+from conda.cli.common import specs_from_args
 from conda.core.index import get_index
 from conda.core.prefix_data import PrefixData
 from conda.models.records import PrefixRecord
 
-from .conda_interface import (
-    specs_from_args,
-)
 from .os_utils.ldd import (
     get_linkages,
     get_package_obj_files,
@@ -134,7 +132,7 @@ def print_linkages(
             else sort_order.get(key[0], (4, key[0]))
         ),
     ):
-        output_string += "%s:\n" % prec
+        output_string += f"{prec}:\n"
         if show_files:
             for lib, path, binary in sorted(links):
                 output_string += f"    {lib} ({path}) from {binary}\n"
@@ -218,8 +216,8 @@ def inspect_linkages(
     all_packages: bool = False,
     show_files: bool = False,
     groupby: Literal["package", "dependency"] = "package",
-    sysroot="",
-):
+    sysroot: str = "",
+) -> str:
     if not packages and not untracked and not all_packages:
         sys.exit("At least one package or --untracked or --all must be provided")
     elif on_win:
@@ -260,7 +258,7 @@ def inspect_linkages(
                 if relative:
                     precs = list(which_package(relative, prefix))
                     if len(precs) > 1:
-                        get_logger(__name__).warn(
+                        get_logger(__name__).warning(
                             "Warning: %s comes from multiple packages: %s",
                             path,
                             comma_join(map(str, precs)),
@@ -298,7 +296,7 @@ def inspect_linkages(
             output_string += print_linkages(inverted_map[dep], show_files=show_files)
 
     else:
-        raise ValueError("Unrecognized groupby: %s" % groupby)
+        raise ValueError(f"Unrecognized groupby: {groupby}")
     if hasattr(output_string, "decode"):
         output_string = output_string.decode("utf-8")
     return output_string

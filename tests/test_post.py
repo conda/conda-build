@@ -18,7 +18,7 @@ from conda_build.utils import (
     package_has_file,
 )
 
-from .utils import add_mangling, metadata_dir
+from .utils import add_mangling, metadata_dir, subpackage_path
 
 
 @pytest.mark.skipif(
@@ -154,6 +154,26 @@ def test_menuinst_validation_fails_bad_json(testing_config, caplog, tmp_path):
     assert "Found 'Menu/*.json' files but couldn't validate:" not in captured_text
     assert "not a valid menuinst JSON document" in captured_text
     assert "JSONDecodeError" in captured_text
+
+
+def test_file_hash(testing_config, caplog, tmp_path):
+    "check that the post-link check caching takes the file path into consideration"
+    recipe = Path(subpackage_path, "_test-file-hash")
+    recipe_tmp = tmp_path / "test-file-hash"
+    shutil.copytree(recipe, recipe_tmp)
+
+    variants = {"python": ["3.11", "3.12"]}
+    testing_config.ignore_system_config = True
+    testing_config.activate = True
+
+    with caplog.at_level(logging.INFO):
+        api.build(
+            str(recipe_tmp),
+            config=testing_config,
+            notest=True,
+            variants=variants,
+            activate=True,
+        )
 
 
 @pytest.mark.skipif(on_win, reason="rpath fixup not done on Windows.")
