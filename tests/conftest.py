@@ -312,10 +312,7 @@ MACOSX_SDKS = {
 
 
 @pytest.fixture(scope="session")
-def get_macosx_sdk(
-    pytestconfig: PytestConfig,
-    tmp_path_factory: TempPathFactory,
-) -> str | None:
+def get_macosx_sdk(pytestconfig: PytestConfig) -> str | None:
     if not on_mac:
         return None
 
