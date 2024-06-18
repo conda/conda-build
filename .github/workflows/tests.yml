@@ -132,10 +132,7 @@ jobs:
           ${{ env.CONDA_CHANNEL_LABEL }}${{ env.CONDA_VERSION }}
 
       - name: Install development conda
-        run: |
-          cd conda-src
-          pip install git+https://github.com/zklaus/conda@lazy-index && python -m conda init --install 
-          cd ..
+        run: pip install git+https://github.com/zklaus/conda@lazy-index && python -m conda init --install
 
       # TODO: how can we remove this step?
       - name: Install Self
