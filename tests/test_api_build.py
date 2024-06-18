@@ -836,7 +836,6 @@ def test_disable_pip(testing_metadata):
 def test_rpath_unix(
     testing_config: Config,
     variants_conda_build_sysroot: dict,
-    get_macosx_sdk: str,
 ) -> None:
     testing_config.activate = True
     api.build(
@@ -1711,7 +1710,6 @@ def test_overlinking_detection(
     testing_config: Config,
     testing_workdir: str,
     variants_conda_build_sysroot: dict,
-    get_macosx_sdk: str,
 ):
     testing_config.activate = True
     testing_config.error_overlinking = True
@@ -1746,7 +1744,6 @@ def test_overlinking_detection_ignore_patterns(
     testing_config: Config,
     testing_workdir: str,
     variants_conda_build_sysroot: dict,
-    get_macosx_sdk: str,
 ):
     testing_config.activate = True
     testing_config.error_overlinking = True
@@ -1779,7 +1776,6 @@ def test_overlinking_detection_ignore_patterns(
 def test_overdepending_detection(
     testing_config: Config,
     variants_conda_build_sysroot: dict,
-    get_macosx_sdk: str,
 ):
     testing_config.activate = True
     testing_config.error_overlinking = True
@@ -1794,7 +1790,6 @@ def test_overdepending_detection(
 def test_macos_tbd_handling(
     testing_config: Config,
     variants_conda_build_sysroot: dict,
-    get_macosx_sdk: str,
 ):
     """
     Test path handling after installation... The test case uses a Hello World

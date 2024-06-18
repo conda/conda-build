@@ -41,7 +41,7 @@ if TYPE_CHECKING:
     from typing import Iterator
 
     from pytest import Config as PytestConfig
-    from pytest import TempPathFactory
+    from pytest import FixtureRequest, TempPathFactory
 
 
 @pytest.hookimpl
@@ -125,7 +125,11 @@ def testing_config(testing_workdir):
 
 
 @pytest.fixture(scope="function", autouse=True)
-def default_testing_config(testing_config, monkeypatch, request):
+def default_testing_config(
+    testing_config: Config,
+    monkeypatch: MonkeyPatch,
+    request: FixtureRequest,
+):
     """Monkeypatch get_or_merge_config to use testing_config by default
 
     This requests fixture testing_config, thus implicitly testing_workdir, too.
@@ -156,7 +160,7 @@ def default_testing_config(testing_config, monkeypatch, request):
 
 
 @pytest.fixture(scope="function")
-def testing_metadata(request, testing_config):
+def testing_metadata(request: FixtureRequest, testing_config: Config):
     d = defaultdict(dict)
     d["package"]["name"] = request.function.__name__
     d["package"]["version"] = "1.0"
@@ -176,7 +180,11 @@ def testing_metadata(request, testing_config):
 
 
 @pytest.fixture(scope="function")
-def testing_env(testing_workdir, request, monkeypatch):
+def testing_env(
+    testing_workdir: str,
+    request: FixtureRequest,
+    monkeypatch: MonkeyPatch,
+):
     env_path = os.path.join(testing_workdir, "env")
 
     check_call_env(
@@ -211,28 +219,9 @@ def testing_env(testing_workdir, request, monkeypatch):
         pytest.param({}, id="no MACOSX_DEPLOYMENT_TARGET"),
     ],
 )
-def variants_conda_build_sysroot(monkeypatch, request):
+def variants_conda_build_sysroot(get_macosx_sdk: str, request: FixtureRequest):
     if not on_mac:
         return {}
-
-    monkeypatch.setenv(
-        "CONDA_BUILD_SYSROOT",
-        subprocess.run(
-            ["xcrun", "--sdk", "macosx", "--show-sdk-path"],
-            check=True,
-            capture_output=True,
-            text=True,
-        ).stdout.strip(),
-    )
-    monkeypatch.setenv(
-        "MACOSX_DEPLOYMENT_TARGET",
-        subprocess.run(
-            ["xcrun", "--sdk", "macosx", "--show-sdk-version"],
-            check=True,
-            capture_output=True,
-            text=True,
-        ).stdout.strip(),
-    )
     return request.param
 
 
