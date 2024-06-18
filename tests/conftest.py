@@ -350,7 +350,7 @@ def get_macosx_sdk(pytestconfig: PytestConfig) -> str | None:
             for chunk in iter(lambda: path.read(8192), b""):
                 computed_sha256.update(chunk)
         if computed_sha256.hexdigest() != expected_sha256:
-            tarball_sdk.remove()
+            tarball_sdk.unlink()
             raise ValueError("SHA 256 mismatch for downloaded SDK")
 
         # extract the SDK
