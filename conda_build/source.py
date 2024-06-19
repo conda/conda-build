@@ -754,7 +754,11 @@ def _get_patch_attributes(
     amalgamated = False
     if len(files_list) != len(files):
         amalgamated = True
-    strip_level, strip_level_guessed = _guess_patch_strip_level(files, src_dir)
+    if is_git_format:
+        strip_level = 1
+        strip_level_guessed = False
+    else:
+        strip_level, strip_level_guessed = _guess_patch_strip_level(files, src_dir)
     if strip_level:
         files = {f.split("/", strip_level)[-1] for f in files}
 
