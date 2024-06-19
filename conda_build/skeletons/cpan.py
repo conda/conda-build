@@ -21,7 +21,7 @@ from os import makedirs
 from os.path import basename, dirname, exists, join
 
 import requests
-from conda.core.index import get_index
+from conda.core.index import Index
 from conda.exceptions import CondaError, CondaHTTPError
 from conda.gateways.connection.download import TmpDownload, download
 from conda.gateways.disk.create import TemporaryDirectory
@@ -695,7 +695,7 @@ def latest_pkg_version(pkg):
     """
     :returns: the latest version of the specified conda package available
     """
-    r = Resolve(get_index())
+    r = Resolve(Index())
     try:
         pkg_list = sorted(r.get_pkgs(MatchSpec(pkg)))
     except:
