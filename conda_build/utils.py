@@ -113,6 +113,52 @@ if __name__ == '__main__':
 VALID_METAS = ("meta.yaml", "meta.yml", "conda.yaml", "conda.yml")
 
 
+# https://stackoverflow.com/a/31459386/1170370
+class LessThanFilter(logging.Filter):
+    def __init__(self, exclusive_maximum, name=""):
+        super().__init__(name)
+        self.max_level = exclusive_maximum
+
+    def filter(self, record):
+        # non-zero return means we log this message
+        return 1 if record.levelno < self.max_level else 0
+
+
+class GreaterThanFilter(logging.Filter):
+    def __init__(self, exclusive_minimum, name=""):
+        super().__init__(name)
+        self.min_level = exclusive_minimum
+
+    def filter(self, record):
+        # non-zero return means we log this message
+        return 1 if record.levelno > self.min_level else 0
+
+
+# unclutter logs - show messages only once
+class DuplicateFilter(logging.Filter):
+    def __init__(self):
+        self.msgs = set()
+
+    def filter(self, record):
+        log = record.msg not in self.msgs
+        self.msgs.add(record.msg)
+        return int(log)
+
+
+dedupe_filter = DuplicateFilter()
+info_debug_stdout_filter = LessThanFilter(logging.WARNING)
+warning_error_stderr_filter = GreaterThanFilter(logging.INFO)
+level_formatter = logging.Formatter("%(levelname)s: %(message)s")
+
+# set filelock's logger to only show warnings by default
+logging.getLogger("filelock").setLevel(logging.WARN)
+
+# quiet some of conda's less useful output
+logging.getLogger("conda.core.linked_data").setLevel(logging.WARN)
+logging.getLogger("conda.gateways.disk.delete").setLevel(logging.WARN)
+logging.getLogger("conda.gateways.disk.test").setLevel(logging.WARN)
+
+
 def get_logger(name, level=logging.INFO, dedupe=True, add_stdout_stderr_handlers=True):
     config_file = None
     if log_config_file := context.conda_build.get("log_config_file"):
@@ -1619,52 +1665,6 @@ def rm_rf(path):
 
     rm_rf(path)
     delete_prefix_from_linked_data(path)
-
-
-# https://stackoverflow.com/a/31459386/1170370
-class LessThanFilter(logging.Filter):
-    def __init__(self, exclusive_maximum, name=""):
-        super().__init__(name)
-        self.max_level = exclusive_maximum
-
-    def filter(self, record):
-        # non-zero return means we log this message
-        return 1 if record.levelno < self.max_level else 0
-
-
-class GreaterThanFilter(logging.Filter):
-    def __init__(self, exclusive_minimum, name=""):
-        super().__init__(name)
-        self.min_level = exclusive_minimum
-
-    def filter(self, record):
-        # non-zero return means we log this message
-        return 1 if record.levelno > self.min_level else 0
-
-
-# unclutter logs - show messages only once
-class DuplicateFilter(logging.Filter):
-    def __init__(self):
-        self.msgs = set()
-
-    def filter(self, record):
-        log = record.msg not in self.msgs
-        self.msgs.add(record.msg)
-        return int(log)
-
-
-dedupe_filter = DuplicateFilter()
-info_debug_stdout_filter = LessThanFilter(logging.WARNING)
-warning_error_stderr_filter = GreaterThanFilter(logging.INFO)
-level_formatter = logging.Formatter("%(levelname)s: %(message)s")
-
-# set filelock's logger to only show warnings by default
-logging.getLogger("filelock").setLevel(logging.WARN)
-
-# quiet some of conda's less useful output
-logging.getLogger("conda.core.linked_data").setLevel(logging.WARN)
-logging.getLogger("conda.gateways.disk.delete").setLevel(logging.WARN)
-logging.getLogger("conda.gateways.disk.test").setLevel(logging.WARN)
 
 
 def reset_deduplicator():
