@@ -1,0 +1,10 @@
+package:
+  name: test_run_constrained_error
+  version: 1.0
+
+requirements:
+  run_constrained:
+    # obtained from https://github.com/conda-forge/willow-feedstock/blob/67d9ac1c5232295ccaac41b131e3982a335b365b/recipe/meta.yaml#L29
+    - pillow-heif  >=0.10.0,<1.0.0<py312|>=0.13.0,<1.0.0>=py312
+    - {{ 'another-package' }} {{ '>=0.20.0,<2.0.0<py310|>=0.23.0,<2.0.0>=py310' }}
+  

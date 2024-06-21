@@ -1,0 +1,15 @@
+{% set name = "gh-5342" %}
+
+package:
+  name: {{ name }}
+  version: 1.0
+
+outputs:
+  - name: {{ name }}
+    build:
+        skip: true
+
+  - name: {{ name }}-dev
+    build:
+    files:
+      - file

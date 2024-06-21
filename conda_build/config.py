@@ -18,8 +18,8 @@ from os.path import abspath, expanduser, expandvars, join
 from typing import TYPE_CHECKING
 
 from conda.base.context import context
+from conda.utils import url_path
 
-from .conda_interface import cc_conda_build, url_path
 from .utils import (
     get_build_folders,
     get_conda_operation_locks,
@@ -31,6 +31,7 @@ from .variants import get_default_variant
 
 if TYPE_CHECKING:
     from pathlib import Path
+    from typing import Any
 
 invocation_time = ""
 
@@ -53,7 +54,6 @@ filename_hashing_default = "true"
 _src_cache_root_default = None
 error_overlinking_default = "false"
 error_overdepending_default = "false"
-noarch_python_build_age_default = 0
 enable_static_default = "false"
 no_rewrite_stdout_env_default = "false"
 ignore_verify_codes_default = []
@@ -89,7 +89,6 @@ def _get_default_settings():
         Setting("dirty", False),
         Setting("include_recipe", True),
         Setting("no_download_source", False),
-        Setting("override_channels", False),
         Setting("skip_existing", False),
         Setting("token", None),
         Setting("user", None),
@@ -111,14 +110,16 @@ def _get_default_settings():
         Setting("test_run_post", False),
         Setting(
             "filename_hashing",
-            cc_conda_build.get("filename_hashing", filename_hashing_default).lower()
+            context.conda_build.get(
+                "filename_hashing", filename_hashing_default
+            ).lower()
             == "true",
         ),
         Setting("keep_old_work", False),
         Setting(
             "_src_cache_root",
-            abspath(expanduser(expandvars(cc_conda_build.get("cache_dir"))))
-            if cc_conda_build.get("cache_dir")
+            abspath(expanduser(expandvars(cache_dir)))
+            if (cache_dir := context.conda_build.get("cache_dir"))
             else _src_cache_root_default,
         ),
         Setting("copy_test_source_files", True),
@@ -143,30 +144,26 @@ def _get_default_settings():
         #    cli/main_build.py that this default will switch in conda-build 4.0.
         Setting(
             "error_overlinking",
-            cc_conda_build.get("error_overlinking", error_overlinking_default).lower()
+            context.conda_build.get(
+                "error_overlinking", error_overlinking_default
+            ).lower()
             == "true",
         ),
         Setting(
             "error_overdepending",
-            cc_conda_build.get(
+            context.conda_build.get(
                 "error_overdepending", error_overdepending_default
             ).lower()
             == "true",
         ),
         Setting(
-            "noarch_python_build_age",
-            cc_conda_build.get(
-                "noarch_python_build_age", noarch_python_build_age_default
-            ),
-        ),
-        Setting(
             "enable_static",
-            cc_conda_build.get("enable_static", enable_static_default).lower()
+            context.conda_build.get("enable_static", enable_static_default).lower()
             == "true",
         ),
         Setting(
             "no_rewrite_stdout_env",
-            cc_conda_build.get(
+            context.conda_build.get(
                 "no_rewrite_stdout_env", no_rewrite_stdout_env_default
             ).lower()
             == "true",
@@ -205,11 +202,13 @@ def _get_default_settings():
         Setting("verify", True),
         Setting(
             "ignore_verify_codes",
-            cc_conda_build.get("ignore_verify_codes", ignore_verify_codes_default),
+            context.conda_build.get("ignore_verify_codes", ignore_verify_codes_default),
         ),
         Setting(
             "exit_on_verify_error",
-            cc_conda_build.get("exit_on_verify_error", exit_on_verify_error_default),
+            context.conda_build.get(
+                "exit_on_verify_error", exit_on_verify_error_default
+            ),
         ),
         # Recipes that have no host section, only build, should bypass the build/host line.
         # This is to make older recipes still work with cross-compiling.  True cross-compiling
@@ -227,17 +226,17 @@ def _get_default_settings():
         Setting("_pip_cache_dir", None),
         Setting(
             "zstd_compression_level",
-            cc_conda_build.get(
+            context.conda_build.get(
                 "zstd_compression_level", zstd_compression_level_default
             ),
         ),
         # this can be set to different values (currently only 2 means anything) to use package formats
         Setting(
             "conda_pkg_format",
-            cc_conda_build.get("pkg_format", conda_pkg_format_default),
+            context.conda_build.get("pkg_format", conda_pkg_format_default),
         ),
         Setting("suppress_variables", False),
-        Setting("build_id_pat", cc_conda_build.get("build_id_pat", "{n}_{t}")),
+        Setting("build_id_pat", context.conda_build.get("build_id_pat", "{n}_{t}")),
     ]
 
 
@@ -291,6 +290,10 @@ class Config:
         for lang in ("perl", "lua", "python", "numpy", "r_base"):
             set_lang(self.variant, lang)
 
+        # --override-channels is a valid CLI argument but we no longer wish to set it here
+        # use conda.base.context.context.override_channels instead
+        kwargs.pop("override_channels", None)
+
         self._build_id = kwargs.pop("build_id", getattr(self, "_build_id", ""))
         source_cache = kwargs.pop("cache_dir", None)
         croot = kwargs.pop("croot", None)
@@ -322,7 +325,7 @@ class Config:
     @arch.setter
     def arch(self, value):
         log = get_logger(__name__)
-        log.warn(
+        log.warning(
             "Setting build arch. This is only useful when pretending to be on another "
             "arch, such as for rendering necessary dependencies on a non-native arch. "
             "I trust that you know what you're doing."
@@ -338,7 +341,7 @@ class Config:
     @platform.setter
     def platform(self, value):
         log = get_logger(__name__)
-        log.warn(
+        log.warning(
             "Setting build platform. This is only useful when "
             "pretending to be on another platform, such as "
             "for rendering necessary dependencies on a non-native "
@@ -450,7 +453,7 @@ class Config:
         """This is where source caches and work folders live"""
         if not self._croot:
             _bld_root_env = os.getenv("CONDA_BLD_PATH")
-            _bld_root_rc = cc_conda_build.get("root-dir")
+            _bld_root_rc = context.conda_build.get("root-dir")
             if _bld_root_env:
                 self._croot = abspath(expanduser(_bld_root_env))
             elif _bld_root_rc:
@@ -816,7 +819,7 @@ class Config:
         for folder in self.bldpkgs_dirs:
             rm_rf(folder)
 
-    def copy(self):
+    def copy(self) -> Config:
         new = copy.copy(self)
         # Use picke.loads(pickle.dumps(...) as a faster copy.deepcopy alternative.
         new.variant = pickle.loads(pickle.dumps(self.variant, -1))
@@ -843,7 +846,11 @@ class Config:
             self.clean(remove_folders=False)
 
 
-def _get_or_merge_config(config, variant=None, **kwargs):
+def _get_or_merge_config(
+    config: Config | None,
+    variant: dict[str, Any] | None = None,
+    **kwargs,
+) -> Config:
     # This function should only ever be called via get_or_merge_config.
     # It only exists for us to monkeypatch a default config when running tests.
     if not config:
@@ -859,7 +866,11 @@ def _get_or_merge_config(config, variant=None, **kwargs):
     return config
 
 
-def get_or_merge_config(config, variant=None, **kwargs):
+def get_or_merge_config(
+    config: Config | None,
+    variant: dict[str, Any] | None = None,
+    **kwargs,
+) -> Config:
     """Always returns a new object - never changes the config that might be passed in."""
     return _get_or_merge_config(config, variant=variant, **kwargs)
 
