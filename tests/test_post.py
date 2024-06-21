@@ -102,7 +102,7 @@ def test_pypi_installer_metadata(testing_config):
     assert "conda" == (package_has_file(pkg, expected_installer, refresh_mode="forced"))
 
 
-def test_menuinst_validation_ok(testing_config, caplog, tmp_path):
+def test_menuinst_validation_ok(testing_config, caplog, tmp_path, capsys):
     "1st check - validation passes with recipe as is"
     recipe = Path(metadata_dir, "_menu_json_validation")
     recipe_tmp = tmp_path / "_menu_json_validation"
@@ -111,14 +111,15 @@ def test_menuinst_validation_ok(testing_config, caplog, tmp_path):
     with caplog.at_level(logging.INFO):
         pkg = api.build(str(recipe_tmp), config=testing_config, notest=True)[0]
 
-    captured_text = caplog.text
+    out, err = capsys.readouterr()
+    captured_text = caplog.text + "\n" + out + "\n" + err
     assert "Found 'Menu/*.json' files but couldn't validate:" not in captured_text
     assert "not a valid menuinst JSON file" not in captured_text
     assert "is a valid menuinst JSON document" in captured_text
     assert package_has_file(pkg, "Menu/menu_json_validation.json")
 
 
-def test_menuinst_validation_fails_bad_schema(testing_config, caplog, tmp_path):
+def test_menuinst_validation_fails_bad_schema(testing_config, caplog, tmp_path, capsys):
     "2nd check - valid JSON but invalid content fails validation"
     recipe = Path(metadata_dir, "_menu_json_validation")
     recipe_tmp = tmp_path / "_menu_json_validation"
@@ -132,13 +133,14 @@ def test_menuinst_validation_fails_bad_schema(testing_config, caplog, tmp_path):
     with caplog.at_level(logging.WARNING):
         api.build(str(recipe_tmp), config=testing_config, notest=True)
 
-    captured_text = caplog.text
+    out, err = capsys.readouterr()
+    captured_text = caplog.text + "\n" + out + "\n" + err
     assert "Found 'Menu/*.json' files but couldn't validate:" not in captured_text
     assert "not a valid menuinst JSON document" in captured_text
     assert "ValidationError" in captured_text
 
 
-def test_menuinst_validation_fails_bad_json(testing_config, caplog, tmp_path):
+def test_menuinst_validation_fails_bad_json(testing_config, caplog, tmp_path, capsys):
     "3rd check - non-parsable JSON fails validation"
     recipe = Path(metadata_dir, "_menu_json_validation")
     recipe_tmp = tmp_path / "_menu_json_validation"
@@ -150,7 +152,8 @@ def test_menuinst_validation_fails_bad_json(testing_config, caplog, tmp_path):
     with caplog.at_level(logging.WARNING):
         api.build(str(recipe_tmp), config=testing_config, notest=True)
 
-    captured_text = caplog.text
+    out, err = capsys.readouterr()
+    captured_text = caplog.text + "\n" + out + "\n" + err
     assert "Found 'Menu/*.json' files but couldn't validate:" not in captured_text
     assert "not a valid menuinst JSON document" in captured_text
     assert "JSONDecodeError" in captured_text

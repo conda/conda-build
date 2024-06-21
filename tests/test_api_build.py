@@ -1864,16 +1864,17 @@ def test_ignore_verify_codes(testing_config):
 
 
 @pytest.mark.sanity
-def test_extra_meta(testing_config, caplog):
+def test_extra_meta(testing_config, caplog, capsys):
     recipe_dir = os.path.join(metadata_dir, "_extra_meta")
     extra_meta_data = {"foo": "bar"}
     testing_config.extra_meta = extra_meta_data
     outputs = api.build(recipe_dir, config=testing_config)
     about = json.loads(package_has_file(outputs[0], "info/about.json"))
     assert "foo" in about["extra"] and about["extra"]["foo"] == "bar"
+    out, err = capsys.readouterr()
+    text = caplog.text + "\n" + out + "\n" + err
     assert (
-        f"Adding the following extra-meta data to about.json: {extra_meta_data}"
-        in caplog.text
+        f"Adding the following extra-meta data to about.json: {extra_meta_data}" in text
     )
 
 
