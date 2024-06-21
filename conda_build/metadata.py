@@ -65,6 +65,9 @@ except AttributeError:
     Loader = yaml.Loader
 
 
+LOGGER = utils.get_logger(__name__)
+
+
 class StringifyNumbersLoader(Loader):
     @classmethod
     def remove_implicit_resolver(cls, tag):
@@ -199,7 +202,7 @@ def get_selectors(config: Config) -> dict[str, bool]:
     if not np:
         np = defaults["numpy"]
         if config.verbose:
-            utils.get_logger(__name__).warning(
+            LOGGER.warning(
                 "No numpy version specified in conda_build_config.yaml.  "
                 "Falling back to default numpy value of {}".format(defaults["numpy"])
             )
@@ -273,8 +276,7 @@ def eval_selector(selector_string, namespace, variants_in_place):
     except NameError as e:
         missing_var = parseNameNotFound(e)
         if variants_in_place:
-            log = utils.get_logger(__name__)
-            log.debug(
+            LOGGER.debug(
                 "Treating unknown selector '" + missing_var + "' as if it was False."
             )
         next_string = selector_string.replace(missing_var, "False")
@@ -371,7 +373,6 @@ def ensure_valid_fields(meta):
 
 
 def _trim_None_strings(meta_dict):
-    log = utils.get_logger(__name__)
     for key, value in meta_dict.items():
         if hasattr(value, "keys"):
             meta_dict[key] = _trim_None_strings(value)
@@ -391,7 +392,7 @@ def _trim_None_strings(meta_dict):
                     keep = [i for i in value if i not in ("None", "NoneType")]
                 meta_dict[key] = keep
         else:
-            log.debug(
+            LOGGER.debug(
                 f"found unrecognized data type in dictionary: {value}, type: {type(value)}"
             )
     return meta_dict
@@ -995,9 +996,7 @@ def _toposort_outputs(output_tuples: list[OutputTuple]) -> list[OutputTuple]:
             non_conda_outputs.append(output_tuple)
         else:
             # TODO: is it even possible to get here? and if so should we silently ignore or error?
-            utils.get_logger(__name__).warning(
-                "Found an output without a name, skipping"
-            )
+            LOGGER.warning("Found an output without a name, skipping")
 
     # Iterate over conda packages, creating a mapping of package names to their
     # dependencies to be used in toposort
@@ -1078,11 +1077,10 @@ def finalize_outputs_pass(
         if metadata.skip():
             continue
         try:
-            log = utils.get_logger(__name__)
             # We should reparse the top-level recipe to get all of our dependencies fixed up.
             # we base things on base_metadata because it has the record of the full origin recipe
             if base_metadata.config.verbose:
-                log.info(f"Attempting to finalize metadata for {metadata.name()}")
+                LOGGER.info(f"Attempting to finalize metadata for {metadata.name()}")
             # Using base_metadata is important for keeping the reference to the parent recipe
             om = base_metadata.copy()
             # other_outputs is the context of what's available for
@@ -1128,8 +1126,7 @@ def finalize_outputs_pass(
             if not permit_unsatisfiable_variants:
                 raise
             else:
-                log = utils.get_logger(__name__)
-                log.warning(
+                LOGGER.warning(
                     "Could not finalize metadata due to missing dependencies: "
                     f"{e.packages}"
                 )
@@ -1348,9 +1345,8 @@ class MetaData:
         """
         assert not self.final, "modifying metadata after finalization"
 
-        log = utils.get_logger(__name__)
         if kw:
-            log.warning(
+            LOGGER.warning(
                 "using unsupported internal conda-build function `parse_again`.  Please use "
                 "conda_build.api.render instead."
             )
@@ -1374,7 +1370,7 @@ class MetaData:
 
         append_sections_file = self.config.append_sections_file or append_sections_file
         if append_sections_file and not os.path.isfile(append_sections_file):
-            log.debug(
+            LOGGER.debug(
                 "input append sections file did not exist: %s", append_sections_file
             )
             append_sections_file = None
@@ -1382,7 +1378,7 @@ class MetaData:
             self.config.clobber_sections_file or clobber_sections_file
         )
         if clobber_sections_file and not os.path.isfile(clobber_sections_file):
-            log.debug(
+            LOGGER.debug(
                 "input clobber sections file did not exist: %s", clobber_sections_file
             )
             clobber_sections_file = None
@@ -1563,8 +1559,7 @@ class MetaData:
             # The 'source' section can be written a list, in which case the name
             # is passed in with an index, e.g. get_value('source/0/git_url')
             if index is None:
-                log = utils.get_logger(__name__)
-                log.warning(
+                LOGGER.warning(
                     f"No index specified in get_value('{name}'). Assuming index 0."
                 )
                 index = 0
@@ -2328,7 +2323,7 @@ class MetaData:
             output = output_matches[output_index] if output_matches else ""
         except ValueError:
             if not self.path and self.meta.get("extra", {}).get("parent_recipe"):
-                utils.get_logger(__name__).warning(
+                LOGGER.warning(
                     f"Didn't match any output in raw metadata.  Target value was: {output_name}"
                 )
                 output = ""
@@ -3020,8 +3015,7 @@ class MetaData:
                     find_used_variables_in_batch_script(self.config.variant, script)
                 )
             else:
-                log = utils.get_logger(__name__)
-                log.warning(
+                LOGGER.warning(
                     f"Not detecting used variables in output script {script}; conda-build only knows "
                     "how to search .sh and .bat files right now."
                 )

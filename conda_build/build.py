@@ -95,6 +95,8 @@ if on_win:
 if TYPE_CHECKING:
     from typing import Any, Iterable
 
+LOGGER = utils.get_logger(__name__)
+
 if "bsd" in sys.platform:
     shell_path = "/bin/sh"
 elif utils.on_win:
@@ -925,8 +927,7 @@ def copy_test_source_files(m, destination):
                             clobber=True,
                         )
                     except OSError as e:
-                        log = utils.get_logger(__name__)
-                        log.warning(
+                        LOGGER.warning(
                             f"Failed to copy {f} into test files.  Error was: {str(e)}"
                         )
                 for ext in ".pyc", ".pyo":
@@ -1305,8 +1306,7 @@ def write_about_json(m):
         extra = m.get_section("extra")
         # Add burn-in information to extra
         if m.config.extra_meta:
-            log = utils.get_logger(__name__)
-            log.info(
+            LOGGER.info(
                 "Adding the following extra-meta data to about.json: %s",
                 m.config.extra_meta,
             )
@@ -1612,8 +1612,7 @@ def post_process_files(m: MetaData, initial_prefix_files):
         if not os.path.exists(os.path.join(host_prefix, f)):
             missing.append(f)
     if len(missing):
-        log = utils.get_logger(__name__)
-        log.warning(
+        LOGGER.warning(
             f"The install/build script(s) for {package_name} deleted the following "
             f"files (from dependencies) from the prefix:\n{missing}\n"
             "This will cause the post-link checks to mis-report. Please "
@@ -1702,8 +1701,7 @@ def bundle_conda(
     new_prefix_files: set[str] = set(),
     **kw,
 ):
-    log = utils.get_logger(__name__)
-    log.info("Packaging %s", metadata.dist())
+    LOGGER.info("Packaging %s", metadata.dist())
     get_all_replacements(metadata.config)
     files = output.get("files", [])
 
@@ -1748,7 +1746,7 @@ def bundle_conda(
             args = list(guess_interpreter(output["script"]))
             args[0] = external.find_executable(args[0], metadata.config.build_prefix)
             if not args[0]:
-                log.error(
+                LOGGER.error(
                     "Did not find an interpreter to run %s, looked for %s",
                     output["script"],
                     args[0],
@@ -1845,7 +1843,7 @@ def bundle_conda(
         }
     elif not output.get("script"):
         if not metadata.always_include_files():
-            log.warning(
+            LOGGER.warning(
                 "No files or script found for output {}".format(output.get("name"))
             )
             build_deps = metadata.get_value("requirements/build")
@@ -1883,7 +1881,7 @@ def bundle_conda(
                 initial_files.remove(f)
                 has_matches = True
         if not has_matches:
-            log.warning(
+            LOGGER.warning(
                 "Glob %s from always_include_files does not match any files", pat
             )
     files = post_process_files(metadata, initial_files)
@@ -1944,7 +1942,7 @@ def bundle_conda(
                 from conda_verify.verify import Verify
             except ImportError:
                 Verify = None
-                log.warning(
+                LOGGER.warning(
                     "Importing conda-verify failed.  Please be sure to test your packages.  "
                     "conda install conda-verify to make this message go away."
                 )
@@ -1961,7 +1959,7 @@ def bundle_conda(
                         exit_on_error=metadata.config.exit_on_verify_error,
                     )
                 except KeyError as e:
-                    log.warning(
+                    LOGGER.warning(
                         "Package doesn't have necessary files.  It might be too old to inspect."
                         f"Legacy noarch packages are known to fail.  Full message was {e}"
                     )
@@ -2193,8 +2191,7 @@ def _write_activation_text(script_path, m):
         elif os.path.splitext(script_path)[1].lower() == ".sh":
             _write_sh_activation_text(fh, m)
         else:
-            log = utils.get_logger(__name__)
-            log.warning(
+            LOGGER.warning(
                 f"not adding activation to {script_path} - I don't know how to do so for "
                 "this file type"
             )
@@ -2334,7 +2331,6 @@ def build(
         print(utils.get_skip_message(m))
         return default_return
 
-    log = utils.get_logger(__name__)
     host_precs = []
     build_precs = []
     output_metas = []
@@ -2412,7 +2408,7 @@ def build(
                 ):
                     specs.append(vcs_source)
 
-                    log.warning(
+                    LOGGER.warning(
                         "Your recipe depends on %s at build time (for templates), "
                         "but you have not listed it as a build dependency.  Doing "
                         "so for this build.",
@@ -2675,7 +2671,7 @@ def build(
                 ), f"output metadata for {m.dist()} is not finalized"
                 pkg_path = bldpkg_path(m)
                 if pkg_path not in built_packages and pkg_path not in new_pkgs:
-                    log.info(f"Packaging {m.name()}")
+                    LOGGER.info(f"Packaging {m.name()}")
                     # for more than one output, we clear and rebuild the environment before each
                     #    package.  We also do this for single outputs that present their own
                     #    build reqs.
@@ -2688,7 +2684,7 @@ def build(
                     ):
                         # This log message contradicts both the not (m.is_output or ..) check above
                         # and also the comment "For more than one output, ..."
-                        log.debug(
+                        LOGGER.debug(
                             "Not creating new env for output - already exists from top-level"
                         )
                     else:
@@ -2788,7 +2784,7 @@ def build(
                                 if file in prev_output_d.get("checksums", {}):
                                     prev_csum = prev_output_d["checksums"][file]
                                     nature = "Exact" if csum == prev_csum else "Inexact"
-                                    log.warning(
+                                    LOGGER.warning(
                                         "{} overlap between {} in packages {} and {}".format(
                                             nature,
                                             file,
@@ -2893,8 +2889,7 @@ def _construct_metadata_for_test_from_recipe(recipe_dir, config):
     metadata = expand_outputs(
         render_recipe(recipe_dir, config=config, reset_build_id=False)
     )[0][1]
-    log = utils.get_logger(__name__)
-    log.warning(
+    LOGGER.warning(
         "Testing based on recipes is deprecated as of conda-build 3.16.0.  Please adjust "
         "your code to pass your desired conda package to test instead."
     )
@@ -2931,8 +2926,6 @@ def _construct_metadata_for_test_from_package(package, config):
     #    This is still necessary for computing the hash correctly though
     config.variant = hash_input
 
-    log = utils.get_logger(__name__)
-
     # get absolute file location
     local_pkg_location = os.path.normpath(os.path.abspath(os.path.dirname(package)))
 
@@ -2944,7 +2937,7 @@ def _construct_metadata_for_test_from_package(package, config):
             is_channel = True
 
     if not is_channel:
-        log.warning(
+        LOGGER.warning(
             "Copying package to conda-build croot.  No packages otherwise alongside yours will"
             " be available unless you specify -c local.  To avoid this warning, your package "
             "must reside in a channel structure with platform-subfolders.  See more info on "
@@ -3138,7 +3131,6 @@ def _write_test_run_script(
     shell_files,
     trace,
 ):
-    log = utils.get_logger(__name__)
     with open(test_run_script, "w") as tf:
         tf.write(
             '{source} "{test_env_script}"\n'.format(
@@ -3203,7 +3195,7 @@ def _write_test_run_script(
                         tf.write(f'call "{shell_file}"\n')
                         tf.write("IF %ERRORLEVEL% NEQ 0 exit /B 1\n")
                     else:
-                        log.warning(
+                        LOGGER.warning(
                             "Found sh test file on windows.  Ignoring this for now (PRs welcome)"
                         )
                 elif os.path.splitext(shell_file)[1] == ".sh":
@@ -3297,7 +3289,6 @@ def test(
     :param m: Package's metadata.
     :type m: Metadata
     """
-    log = utils.get_logger(__name__)
     # we want to know if we're dealing with package input.  If so, we can move the input on success.
     hash_input = {}
 
@@ -3388,7 +3379,7 @@ def test(
             # Needs to come after create_files in case there's test/source_files
             shutil_move_more_retrying(config.work_dir, dest, "work")
     else:
-        log.warning(
+        LOGGER.warning(
             "Not moving work directory after build.  Your package may depend on files "
             "in the work directory that are not included with your package"
         )
@@ -3452,7 +3443,7 @@ def test(
         CondaError,
         AssertionError,
     ) as exc:
-        log.warning(
+        LOGGER.warning(
             "failed to get package records, retrying.  exception was: %s", str(exc)
         )
         tests_failed(
@@ -3581,10 +3572,9 @@ def tests_failed(
     dest = join(broken_dir, os.path.basename(pkg))
 
     if move_broken:
-        log = utils.get_logger(__name__)
         try:
             shutil.move(pkg, dest)
-            log.warning(
+            LOGGER.warning(
                 f"Tests failed for {os.path.basename(pkg)} - moving package to {broken_dir}"
             )
         except OSError:
@@ -3750,18 +3740,17 @@ def build_tree(
                                     )
                                 ]
                             )
-                            log = utils.get_logger(__name__)
                             # downstreams can be a dict, for adding capability for worker labels
                             if hasattr(downstreams, "keys"):
                                 downstreams = list(downstreams.keys())
-                                log.warning(
+                                LOGGER.warning(
                                     "Dictionary keys for downstreams are being "
                                     "ignored right now.  Coming soon..."
                                 )
                             else:
                                 downstreams = utils.ensure_list(downstreams)
                             for dep in downstreams:
-                                log.info(f"Testing downstream package: {dep}")
+                                LOGGER.info(f"Testing downstream package: {dep}")
                                 # resolve downstream packages to a known package
 
                                 r_string = "".join(
@@ -3793,7 +3782,7 @@ def build_tree(
                                     UnsatisfiableError,
                                     DependencyNeedsBuildingError,
                                 ) as e:
-                                    log.warning(
+                                    LOGGER.warning(
                                         f"Skipping downstream test for spec {dep}; was "
                                         f"unsatisfiable.  Error was {e}"
                                     )
@@ -4090,11 +4079,11 @@ def handle_pypi_upload(wheels, config):
             try:
                 utils.check_call_env(args + [f])
             except:
-                utils.get_logger(__name__).warning(
+                LOGGER.warning(
                     "wheel upload failed - is twine installed?"
                     "  Is this package registered?"
                 )
-                utils.get_logger(__name__).warning(f"Wheel file left in {f}")
+                LOGGER.warning(f"Wheel file left in {f}")
 
     else:
         print(f"anaconda_upload is not set.  Not uploading wheels: {wheels}")

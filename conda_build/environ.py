@@ -14,7 +14,6 @@ import warnings
 from collections import defaultdict
 from functools import lru_cache
 from glob import glob
-from logging import getLogger
 from os.path import join, normpath
 from typing import TYPE_CHECKING
 
@@ -69,7 +68,7 @@ if TYPE_CHECKING:
         LINK: list[PackageRecord]
 
 
-log = getLogger(__name__)
+LOGGER = utils.get_logger(__name__)
 
 # these are things that we provide env vars for more explicitly.  This list disables the
 #    pass-through of variant values to env vars for these keys.
@@ -125,7 +124,6 @@ def verify_git_repo(
     git_exe, git_dir, git_url, git_commits_since_tag, debug=False, expected_rev="HEAD"
 ):
     env = os.environ.copy()
-    log = utils.get_logger(__name__)
 
     stderr = None if debug else subprocess.DEVNULL
 
@@ -198,13 +196,13 @@ def verify_git_repo(
         # If the current source directory in conda-bld/work doesn't match the user's
         # metadata git_url or git_rev, then we aren't looking at the right source.
         if not os.path.isdir(remote_url) and remote_url.lower() != git_url.lower():
-            log.debug("remote does not match git_url")
-            log.debug("Remote: " + remote_url.lower())
-            log.debug("git_url: " + git_url.lower())
+            LOGGER.debug("remote does not match git_url")
+            LOGGER.debug("Remote: " + remote_url.lower())
+            LOGGER.debug("git_url: " + git_url.lower())
             OK = False
     except subprocess.CalledProcessError as error:
-        log.debug("Error obtaining git information in verify_git_repo.  Error was: ")
-        log.debug(str(error))
+        LOGGER.debug("Error obtaining git information in verify_git_repo.  Error was: ")
+        LOGGER.debug(str(error))
         OK = False
     return OK
 
@@ -240,7 +238,6 @@ def get_git_info(git_exe, repo, debug):
     :return:
     """
     d = {}
-    log = utils.get_logger(__name__)
 
     stderr = None if debug else subprocess.DEVNULL
 
@@ -267,7 +264,7 @@ def get_git_info(git_exe, repo, debug):
             "Consider using annotated tags if you are not already "
             "as they are more reliable when used with git describe."
         )
-        log.debug(msg)
+        LOGGER.debug(msg)
 
     # If there was no tag reachable from HEAD, the above failed and the short hash is not set.
     # Try to get the short hash from describing with all refs (not just the tags).
@@ -286,8 +283,8 @@ def get_git_info(git_exe, repo, debug):
                 # described a branch. We just want to save the short hash.
                 d["GIT_DESCRIBE_HASH"] = parts[-1]
         except subprocess.CalledProcessError as error:
-            log.debug("Error obtaining git commit information.  Error was: ")
-            log.debug(str(error))
+            LOGGER.debug("Error obtaining git commit information.  Error was: ")
+            LOGGER.debug(str(error))
 
     try:
         # get the _full_ hash of the current HEAD
@@ -301,8 +298,8 @@ def get_git_info(git_exe, repo, debug):
 
         d["GIT_FULL_HASH"] = output
     except subprocess.CalledProcessError as error:
-        log.debug("Error obtaining git commit information.  Error was: ")
-        log.debug(str(error))
+        LOGGER.debug("Error obtaining git commit information.  Error was: ")
+        LOGGER.debug(str(error))
 
     # set up the build string
     if "GIT_DESCRIBE_NUMBER" in d and "GIT_DESCRIBE_HASH" in d:
@@ -841,7 +838,6 @@ def get_install_actions(
     global cached_precs
     global last_index_ts
 
-    log = utils.get_logger(__name__)
     conda_log_level = logging.WARN
     specs = list(specs)
     if specs:
@@ -902,7 +898,7 @@ def get_install_actions(
                     BuildLockError,
                 ) as exc:
                     if "lock" in str(exc):
-                        log.warning(
+                        LOGGER.warning(
                             "failed to get package records, retrying.  exception was: %s",
                             str(exc),
                         )
@@ -923,7 +919,7 @@ def get_install_actions(
                             ):
                                 pkg_dir = os.path.dirname(pkg_dir)
                                 folder += 1
-                            log.warning(
+                            LOGGER.warning(
                                 "I think conda ended up with a partial extraction for %s. "
                                 "Removing the folder and retrying",
                                 pkg_dir,
@@ -931,7 +927,7 @@ def get_install_actions(
                             if pkg_dir in context.pkgs_dirs and os.path.isdir(pkg_dir):
                                 utils.rm_rf(pkg_dir)
                     if retries < max_env_retry:
-                        log.warning(
+                        LOGGER.warning(
                             "failed to get package records, retrying.  exception was: %s",
                             str(exc),
                         )
@@ -952,7 +948,7 @@ def get_install_actions(
                             channel_urls=tuple(channel_urls),
                         )
                     else:
-                        log.error(
+                        LOGGER.error(
                             "Failed to get package records, max retries exceeded."
                         )
                         raise
@@ -998,15 +994,13 @@ def create_env(
             utils.rm_rf(entry)
 
     with external_logger_context:
-        log = utils.get_logger(__name__)
-
         # if os.path.isdir(prefix):
         #     utils.rm_rf(prefix)
 
         specs_or_precs = tuple(ensure_list(specs_or_precs))
         if specs_or_precs:  # Don't waste time if there is nothing to do
-            log.debug("Creating environment in %s", prefix)
-            log.debug(str(specs_or_precs))
+            LOGGER.debug("Creating environment in %s", prefix)
+            LOGGER.debug(str(specs_or_precs))
 
             if not locks:
                 locks = utils.get_conda_operation_locks(config)
@@ -1064,20 +1058,20 @@ def create_env(
                     or isinstance(exc, PaddingError)
                 ) and config.prefix_length > 80:
                     if config.prefix_length_fallback:
-                        log.warning(
+                        LOGGER.warning(
                             "Build prefix failed with prefix length %d",
                             config.prefix_length,
                         )
-                        log.warning("Error was: ")
-                        log.warning(str(exc))
-                        log.warning(
+                        LOGGER.warning("Error was: ")
+                        LOGGER.warning(str(exc))
+                        LOGGER.warning(
                             "One or more of your package dependencies needs to be rebuilt "
                             "with a longer prefix length."
                         )
-                        log.warning(
+                        LOGGER.warning(
                             "Falling back to legacy prefix length of 80 characters."
                         )
-                        log.warning(
+                        LOGGER.warning(
                             "Your package will not install into prefixes > 80 characters."
                         )
                         config.prefix_length = 80
@@ -1099,7 +1093,7 @@ def create_env(
                         raise
                 elif "lock" in str(exc):
                     if retry < config.max_env_retry:
-                        log.warning(
+                        LOGGER.warning(
                             "failed to create env, retrying.  exception was: %s",
                             str(exc),
                         )
@@ -1125,7 +1119,7 @@ def create_env(
                         ):
                             pkg_dir = os.path.dirname(pkg_dir)
                             folder += 1
-                        log.warning(
+                        LOGGER.warning(
                             "I think conda ended up with a partial extraction for %s.  "
                             "Removing the folder and retrying",
                             pkg_dir,
@@ -1133,7 +1127,7 @@ def create_env(
                         if os.path.isdir(pkg_dir):
                             utils.rm_rf(pkg_dir)
                     if retry < config.max_env_retry:
-                        log.warning(
+                        LOGGER.warning(
                             "failed to create env, retrying.  exception was: %s",
                             str(exc),
                         )
@@ -1148,7 +1142,7 @@ def create_env(
                             is_cross=is_cross,
                         )
                     else:
-                        log.error("Failed to create env, max retries exceeded.")
+                        LOGGER.error("Failed to create env, max retries exceeded.")
                         raise
                 else:
                     raise
@@ -1164,7 +1158,7 @@ def create_env(
                 if isinstance(exc, AssertionError):
                     with utils.try_acquire_locks(locks, timeout=config.timeout):
                         pkg_dir = os.path.dirname(os.path.dirname(str(exc)))
-                        log.warning(
+                        LOGGER.warning(
                             "I think conda ended up with a partial extraction for %s.  "
                             "Removing the folder and retrying",
                             pkg_dir,
@@ -1172,7 +1166,7 @@ def create_env(
                         if os.path.isdir(pkg_dir):
                             utils.rm_rf(pkg_dir)
                 if retry < config.max_env_retry:
-                    log.warning(
+                    LOGGER.warning(
                         "failed to create env, retrying.  exception was: %s", str(exc)
                     )
                     create_env(
@@ -1186,7 +1180,7 @@ def create_env(
                         is_cross=is_cross,
                     )
                 else:
-                    log.error("Failed to create env, max retries exceeded.")
+                    LOGGER.error("Failed to create env, max retries exceeded.")
                     raise
 
 
@@ -1203,11 +1197,11 @@ def clean_pkg_cache(dist: str, config: Config) -> None:
                     os.path.exists(os.path.join(pkgs_dir, f"{dist}{ext}"))
                     for ext in ("", *CONDA_PACKAGE_EXTENSIONS)
                 ):
-                    log.debug(
+                    LOGGER.debug(
                         "Conda caching error: %s package remains in cache after removal",
                         dist,
                     )
-                    log.debug("manually removing to compensate")
+                    LOGGER.debug("manually removing to compensate")
                     package_cache = PackageCacheData.first_writable([pkgs_dir])
                     for cache_pkg_id in package_cache.query(dist):
                         package_cache.remove(cache_pkg_id)
@@ -1334,9 +1328,9 @@ def _execute_actions(prefix, precs):
     stp = PrefixSetup(prefix, (), precs, (), [], ())
     unlink_link_transaction = UnlinkLinkTransaction(stp)
 
-    log.debug(" %s(%r)", "PROGRESSIVEFETCHEXTRACT", progressive_fetch_extract)
+    LOGGER.debug(" %s(%r)", "PROGRESSIVEFETCHEXTRACT", progressive_fetch_extract)
     progressive_fetch_extract.execute()
-    log.debug(" %s(%r)", "UNLINKLINKTRANSACTION", unlink_link_transaction)
+    LOGGER.debug(" %s(%r)", "UNLINKLINKTRANSACTION", unlink_link_transaction)
     unlink_link_transaction.execute()
 
 

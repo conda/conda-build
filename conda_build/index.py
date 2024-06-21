@@ -16,7 +16,7 @@ from .utils import (
     get_logger,
 )
 
-log = get_logger(__name__)
+LOGGER = get_logger(__name__)
 
 
 local_index_timestamp = 0

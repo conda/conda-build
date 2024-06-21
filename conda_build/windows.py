@@ -28,6 +28,8 @@ from .utils import (
 )
 from .variants import get_default_variant, set_language_env_vars
 
+LOGGER = get_logger(__name__)
+
 VS_VERSION_STRING = {
     "8.0": "Visual Studio 8 2005",
     "9.0": "Visual Studio 9 2008",
@@ -101,17 +103,18 @@ def msvc_env_cmd(bits, config, override=None):
     # TODO: this function will likely break on `win-arm64`. However, unless
     # there's clear user demand, it's not clear that we should invest the
     # effort into updating a known deprecated function for a new platform.
-    log = get_logger(__name__)
-    log.warning(
+    LOGGER.warning(
         "Using legacy MSVC compiler setup.  This will be removed in conda-build 4.0. "
         "If this recipe does not use a compiler, this message is safe to ignore.  "
         "Otherwise, use {{compiler('<language>')}} jinja2 in requirements/build."
     )
     if bits not in ["64", "32"]:
-        log.warning(f"The legacy MSVC compiler setup does not support {bits} builds. ")
+        LOGGER.warning(
+            f"The legacy MSVC compiler setup does not support {bits} builds. "
+        )
         return ""
     if override:
-        log.warning(
+        LOGGER.warning(
             "msvc_compiler key in meta.yaml is deprecated. Use the new"
             "variant-powered compiler configuration instead. Note that msvc_compiler"
             "is incompatible with the new {{{{compiler('c')}}}} jinja scheme."

@@ -41,7 +41,7 @@ except:
 if TYPE_CHECKING:
     from typing import IO, Any
 
-log = get_logger(__name__)
+LOGGER = get_logger(__name__)
 
 
 class UndefinedNeverFail(jinja2.Undefined):
@@ -191,7 +191,7 @@ def load_setup_py_data(
             pass
         except ImportError as e:
             if permit_undefined_jinja:
-                log.debug(
+                LOGGER.debug(
                     "Reading setup.py failed due to missing modules.  This is probably OK, "
                     "since it may succeed in later passes.  Watch for incomplete recipe "
                     "info, though."
@@ -263,7 +263,7 @@ def load_file_regex(
         load_file = _find_file(load_file, from_recipe_dir, recipe_dir, config)
     except FileNotFoundError as e:
         if permit_undefined_jinja:
-            log.debug(e)
+            LOGGER.debug(e)
             return None
         raise
     else:
@@ -675,7 +675,7 @@ def load_file_data(
         file_path = _find_file(filename, from_recipe_dir, recipe_dir, config)
     except FileNotFoundError as e:
         if permit_undefined_jinja:
-            log.debug(e)
+            LOGGER.debug(e)
             return {}
         raise
     else:

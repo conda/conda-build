@@ -113,6 +113,44 @@ if __name__ == '__main__':
 VALID_METAS = ("meta.yaml", "meta.yml", "conda.yaml", "conda.yml")
 
 
+def get_logger(name, level=logging.INFO, dedupe=True, add_stdout_stderr_handlers=True):
+    config_file = None
+    if log_config_file := context.conda_build.get("log_config_file"):
+        config_file = abspath(expanduser(expandvars(log_config_file)))
+    # by loading config file here, and then only adding handlers later, people
+    # should be able to override conda-build's logger settings here.
+    if config_file:
+        with open(config_file) as f:
+            config_dict = yaml.safe_load(f)
+        logging.config.dictConfig(config_dict)
+        level = config_dict.get("loggers", {}).get(name, {}).get("level", level)
+    log = logging.getLogger(name)
+    log.setLevel(level)
+    if dedupe:
+        log.addFilter(dedupe_filter)
+
+    # these are defaults.  They can be overridden by configuring a log config yaml file.
+    top_pkg = name.split(".")[0]
+    if top_pkg == "conda_build":
+        # we don't want propagation in CLI, but we do want it in tests
+        # this is a pytest limitation: https://github.com/pytest-dev/pytest/issues/3697
+        logging.getLogger(top_pkg).propagate = "PYTEST_CURRENT_TEST" in os.environ
+    if add_stdout_stderr_handlers and not log.handlers:
+        stdout_handler = logging.StreamHandler(sys.stdout)
+        stderr_handler = logging.StreamHandler(sys.stderr)
+        stdout_handler.addFilter(info_debug_stdout_filter)
+        stderr_handler.addFilter(warning_error_stderr_filter)
+        stderr_handler.setFormatter(level_formatter)
+        stdout_handler.setLevel(level)
+        stderr_handler.setLevel(level)
+        log.addHandler(stdout_handler)
+        log.addHandler(stderr_handler)
+    return log
+
+
+LOGGER = get_logger(__name__)
+
+
 @lru_cache(maxsize=None)
 def stat_file(path):
     return os.stat(path)
@@ -256,9 +294,8 @@ class PopenWrapper:
         except ImportError as e:
             psutil = None
             psutil_exceptions = (OSError, ValueError)
-            log = get_logger(__name__)
-            log.warning(f"psutil import failed.  Error was {e}")
-            log.warning(
+            LOGGER.warning(f"psutil import failed.  Error was {e}")
+            LOGGER.warning(
                 "only disk usage and time statistics will be available.  Install psutil to "
                 "get CPU time and memory usage statistics."
             )
@@ -548,7 +585,6 @@ def copy_into(
     src, dst, timeout=900, symlinks=False, lock=None, locking=True, clobber=False
 ):
     """Copy all the files and directories in src to the directory dst"""
-    log = get_logger(__name__)
     if symlinks and islink(src):
         try:
             os.makedirs(os.path.dirname(dst))
@@ -594,7 +630,7 @@ def copy_into(
                 src_folder = os.getcwd()
 
         if os.path.islink(src) and not os.path.exists(os.path.realpath(src)):
-            log.warning("path %s is a broken symlink - ignoring copy", src)
+            LOGGER.warning("path %s is a broken symlink - ignoring copy", src)
             return
 
         if not lock and locking:
@@ -611,7 +647,7 @@ def copy_into(
             try:
                 _copy_with_shell_fallback(src, dst_fn)
             except shutil.Error:
-                log.debug(
+                LOGGER.debug(
                     "skipping %s - already exists in %s", os.path.basename(src), dst
                 )
 
@@ -624,8 +660,7 @@ def move_with_fallback(src, dst):
             copy_into(src, dst)
             os.unlink(src)
         except PermissionError:
-            log = get_logger(__name__)
-            log.debug(
+            LOGGER.debug(
                 f"Failed to copy/remove path from {src} to {dst} due to permission error"
             )
 
@@ -1118,8 +1153,7 @@ def convert_path_for_cygwin_or_msys2(exe, path):
                 .decode(getpreferredencoding())
             )
         except OSError:
-            log = get_logger(__name__)
-            log.debug(
+            LOGGER.debug(
                 "cygpath executable not found.  Passing native path.  This is OK for msys2."
             )
     return path
@@ -1274,8 +1308,7 @@ def expand_globs(
             # File compared to the globs use / as separator independently of the os
             glob_files = glob(path, recursive=True)
             if not glob_files:
-                log = get_logger(__name__)
-                log.error(f"Glob {path} did not match in root_dir {root_dir}")
+                LOGGER.error(f"Glob {path} did not match in root_dir {root_dir}")
             # https://docs.python.org/3/library/glob.html#glob.glob states that
             # "whether or not the results are sorted depends on the file system".
             # Avoid this potential ambiguity by sorting. (see #4185)
@@ -1641,41 +1674,6 @@ def reset_deduplicator():
     dedupe_filter = DuplicateFilter()
 
 
-def get_logger(name, level=logging.INFO, dedupe=True, add_stdout_stderr_handlers=True):
-    config_file = None
-    if log_config_file := context.conda_build.get("log_config_file"):
-        config_file = abspath(expanduser(expandvars(log_config_file)))
-    # by loading config file here, and then only adding handlers later, people
-    # should be able to override conda-build's logger settings here.
-    if config_file:
-        with open(config_file) as f:
-            config_dict = yaml.safe_load(f)
-        logging.config.dictConfig(config_dict)
-        level = config_dict.get("loggers", {}).get(name, {}).get("level", level)
-    log = logging.getLogger(name)
-    log.setLevel(level)
-    if dedupe:
-        log.addFilter(dedupe_filter)
-
-    # these are defaults.  They can be overridden by configuring a log config yaml file.
-    top_pkg = name.split(".")[0]
-    if top_pkg == "conda_build":
-        # we don't want propagation in CLI, but we do want it in tests
-        # this is a pytest limitation: https://github.com/pytest-dev/pytest/issues/3697
-        logging.getLogger(top_pkg).propagate = "PYTEST_CURRENT_TEST" in os.environ
-    if add_stdout_stderr_handlers and not log.handlers:
-        stdout_handler = logging.StreamHandler(sys.stdout)
-        stderr_handler = logging.StreamHandler(sys.stderr)
-        stdout_handler.addFilter(info_debug_stdout_filter)
-        stderr_handler.addFilter(warning_error_stderr_filter)
-        stderr_handler.setFormatter(level_formatter)
-        stdout_handler.setLevel(level)
-        stderr_handler.setLevel(level)
-        log.addHandler(stdout_handler)
-        log.addHandler(stderr_handler)
-    return log
-
-
 def _equivalent(base_value, value, path):
     equivalent = value == base_value
     if isinstance(value, str) and isinstance(base_value, str):
@@ -1694,7 +1692,6 @@ def merge_or_update_dict(
 ):
     if base == new:
         return base
-    log = get_logger(__name__)
     for key, value in new.items():
         if key in base or add_missing_keys:
             base_value = base.get(key, value)
@@ -1723,7 +1720,7 @@ def merge_or_update_dict(
                     and not _equivalent(base_value, value, path)
                     and raise_on_clobber
                 ):
-                    log.debug(
+                    LOGGER.debug(
                         f"clobbering key {key} (original value {base_value}) with value {value}"
                     )
                 if value is None and key in base:
@@ -1889,8 +1886,7 @@ def ensure_valid_spec(spec: str | MatchSpec, warn: bool = False) -> str | MatchS
             else:
                 if "*" not in spec:
                     if match.group(1) not in ("python", "vc") and warn:
-                        log = get_logger(__name__)
-                        log.warning(
+                        LOGGER.warning(
                             f"Adding .* to spec '{spec}' to ensure satisfiability.  Please "
                             "consider putting {{{{ var_name }}}}.* or some relational "
                             "operator (>/</>=/<=) on this spec in meta.yaml, or if req is "
@@ -2092,25 +2088,24 @@ def download_channeldata(channel_url):
 
 
 def shutil_move_more_retrying(src, dest, debug_name):
-    log = get_logger(__name__)
-    log.info(f"Renaming {debug_name} directory '{src}' to '{dest}'")
+    LOGGER.info(f"Renaming {debug_name} directory '{src}' to '{dest}'")
     attempts_left = 5
 
     while attempts_left > 0:
         if os.path.exists(dest):
             rm_rf(dest)
         try:
-            log.info(f"shutil.move({debug_name})={src}, dest={dest})")
+            LOGGER.info(f"shutil.move({debug_name})={src}, dest={dest})")
             shutil.move(src, dest)
             if attempts_left != 5:
-                log.warning(
+                LOGGER.warning(
                     f"shutil.move({debug_name}={src}, dest={dest}) succeeded on attempt number {6 - attempts_left}"
                 )
             attempts_left = -1
         except:
             attempts_left = attempts_left - 1
         if attempts_left > 0:
-            log.warning(
+            LOGGER.warning(
                 f"Failed to rename {debug_name} directory, check with strace, struss or procmon. "
                 "Will sleep for 3 seconds and try again!"
             )
@@ -2118,7 +2113,7 @@ def shutil_move_more_retrying(src, dest, debug_name):
 
             time.sleep(3)
         elif attempts_left != -1:
-            log.error(
+            LOGGER.error(
                 f"Failed to rename {debug_name} directory despite sleeping and retrying."
             )
 

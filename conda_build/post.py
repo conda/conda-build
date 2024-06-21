@@ -67,6 +67,8 @@ if TYPE_CHECKING:
 
     from .metadata import MetaData
 
+LOGGER = utils.get_logger(__name__)
+
 filetypes_for_platform = {
     "win": (DLLfile, EXEfile),
     "osx": (machofile,),
@@ -1397,8 +1399,7 @@ def check_overlinking_impl(
                 sysroot_files.append(replaced)
             diffs = set(orig_sysroot_files) - set(sysroot_files)
             if diffs:
-                log = utils.get_logger(__name__)
-                log.warning(
+                LOGGER.warning(
                     "Partially parsed some '.tbd' files in sysroot %s, pretending .tbds are their install-names\n"
                     "Adding support to 'conda-build' for parsing these in 'liefldd.py' would be easy and useful:\n"
                     "%s...",
@@ -1594,8 +1595,7 @@ def post_process_shared_lib(m, f, files, host_prefix=None):
         )
     elif codefile == machofile:
         if m.config.host_platform != "osx":
-            log = utils.get_logger(__name__)
-            log.warning(
+            LOGGER.warning(
                 "Found Mach-O file but patching is only supported on macOS, skipping: %s",
                 path,
             )
@@ -1630,8 +1630,7 @@ def fix_permissions(files, prefix):
             try:
                 lchmod(path, new_mode)
             except (OSError, utils.PermissionError) as e:
-                log = utils.get_logger(__name__)
-                log.warning(str(e))
+                LOGGER.warning(str(e))
 
 
 def check_menuinst_json(files, prefix) -> None:
@@ -1651,12 +1650,11 @@ def check_menuinst_json(files, prefix) -> None:
         return
 
     print("Validating Menu/*.json files")
-    log = utils.get_logger(__name__, dedupe=False)
     try:
         import jsonschema
         from menuinst.utils import data_path
     except ImportError as exc:
-        log.warning(
+        LOGGER.warning(
             "Found 'Menu/*.json' files but couldn't validate: %s",
             ", ".join(json_files),
             exc_info=exc,
@@ -1670,7 +1668,7 @@ def check_menuinst_json(files, prefix) -> None:
         ValidatorClass = jsonschema.validators.validator_for(schema)
         validator = ValidatorClass(schema)
     except (jsonschema.SchemaError, json.JSONDecodeError, OSError) as exc:
-        log.warning("'%s' is not a valid menuinst schema", schema_path, exc_info=exc)
+        LOGGER.warning("'%s' is not a valid menuinst schema", schema_path, exc_info=exc)
         return
 
     for json_file in json_files:
@@ -1678,19 +1676,19 @@ def check_menuinst_json(files, prefix) -> None:
             with open(join(prefix, json_file)) as f:
                 text = f.read()
             if "$schema" not in text:
-                log.warning(
+                LOGGER.warning(
                     "menuinst v1 JSON document '%s' won't be validated.", json_file
                 )
                 continue
             validator.validate(json.loads(text))
         except (jsonschema.ValidationError, json.JSONDecodeError, OSError) as exc:
-            log.warning(
+            LOGGER.warning(
                 "'%s' is not a valid menuinst JSON document!",
                 json_file,
                 exc_info=exc,
             )
         else:
-            log.info("'%s' is a valid menuinst JSON document", json_file)
+            LOGGER.info("'%s' is a valid menuinst JSON document", json_file)
 
 
 def post_build(m, files, build_python, host_prefix=None, is_already_linked=False):

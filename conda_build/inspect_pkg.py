@@ -40,7 +40,7 @@ from .utils import (
 if TYPE_CHECKING:
     from typing import Iterable, Literal
 
-log = get_logger(__name__)
+LOGGER = get_logger(__name__)
 
 
 def which_package(
@@ -171,7 +171,7 @@ def replace_path(binary, path, prefix):
 def test_installable(channel: str = "defaults") -> bool:
     success = True
     for subdir in ["osx-64", "linux-32", "linux-64", "win-32", "win-64"]:
-        log.info("######## Testing subdir %s ########", subdir)
+        LOGGER.info("######## Testing subdir %s ########", subdir)
         for prec in get_index(channel_urls=[channel], prepend=False, platform=subdir):
             name = prec["name"]
             if name in {"conda", "conda-build"}:
@@ -183,7 +183,7 @@ def test_installable(channel: str = "defaults") -> bool:
                 continue
 
             version = prec["version"]
-            log.info("Testing %s=%s", name, version)
+            LOGGER.info("Testing %s=%s", name, version)
 
             try:
                 check_install(
@@ -194,7 +194,7 @@ def test_installable(channel: str = "defaults") -> bool:
                 )
             except Exception as err:
                 success = False
-                log.error(
+                LOGGER.error(
                     "[%s/%s::%s=%s] %s",
                     channel,
                     subdir,
@@ -258,7 +258,7 @@ def inspect_linkages(
                 if relative:
                     precs = list(which_package(relative, prefix))
                     if len(precs) > 1:
-                        get_logger(__name__).warning(
+                        LOGGER.warning(
                             "Warning: %s comes from multiple packages: %s",
                             path,
                             comma_join(map(str, precs)),

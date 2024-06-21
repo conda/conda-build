@@ -42,7 +42,7 @@ from .utils import (
 if TYPE_CHECKING:
     from typing import Iterable
 
-log = get_logger(__name__)
+LOGGER = get_logger(__name__)
 
 git_submod_re = re.compile(r"(?:.+)\.(.+)\.(?:.+)\s(.+)")
 ext_re = re.compile(r"(.*?)(\.(?:tar\.)?[^.]+)$")
@@ -55,7 +55,7 @@ def append_hash_to_fn(fn, hash_value):
 def download_to_cache(cache_folder, recipe_path, source_dict, verbose=False):
     """Download a source to the local cache."""
     if verbose:
-        log.info(f"Source cache directory is: {cache_folder}")
+        LOGGER.info(f"Source cache directory is: {cache_folder}")
     if not isdir(cache_folder) and not os.path.islink(cache_folder):
         os.makedirs(cache_folder)
 
@@ -74,17 +74,17 @@ def download_to_cache(cache_folder, recipe_path, source_dict, verbose=False):
             hash_added = True
             break
     else:
-        log.warning(
+        LOGGER.warning(
             f"No hash (md5, sha1, sha256) provided for {unhashed_fn}.  Source download forced.  "
             "Add hash to recipe to use source cache."
         )
     path = join(cache_folder, fn)
     if isfile(path):
         if verbose:
-            log.info(f"Found source in cache: {fn}")
+            LOGGER.info(f"Found source in cache: {fn}")
     else:
         if verbose:
-            log.info(f"Downloading source to cache: {fn}")
+            LOGGER.info(f"Downloading source to cache: {fn}")
 
         for url in source_urls:
             if "://" not in url:
@@ -98,18 +98,18 @@ def download_to_cache(cache_folder, recipe_path, source_dict, verbose=False):
                     url = "file:///" + expanduser(url[8:]).replace("\\", "/")
             try:
                 if verbose:
-                    log.info(f"Downloading {url}")
+                    LOGGER.info(f"Downloading {url}")
                 with LoggingContext():
                     download(url, path)
             except CondaHTTPError as e:
-                log.warning(f"Error: {str(e).strip()}")
+                LOGGER.warning(f"Error: {str(e).strip()}")
                 rm_rf(path)
             except RuntimeError as e:
-                log.warning(f"Error: {str(e).strip()}")
+                LOGGER.warning(f"Error: {str(e).strip()}")
                 rm_rf(path)
             else:
                 if verbose:
-                    log.info("Success")
+                    LOGGER.info("Success")
                 break
         else:  # no break
             rm_rf(path)
@@ -210,7 +210,7 @@ def check_git_lfs(git, cwd, git_ref):
 
 def git_lfs_fetch(git, cwd, git_ref, stdout, stderr):
     lfs_version = check_output_env([git, "lfs", "version"], cwd=cwd)
-    log.info(lfs_version)
+    LOGGER.info(lfs_version)
     check_call_env(
         [git, "lfs", "fetch", "origin", git_ref], cwd=cwd, stdout=stdout, stderr=stderr
     )
@@ -467,7 +467,7 @@ def git_info(src_dir, build_prefix, git=None, verbose=True, fo=None):
     if not git:
         git = external.find_executable("git", build_prefix)
     if not git:
-        log.warning(
+        LOGGER.warning(
             "git not installed in root environment.  Skipping recording of git info."
         )
         return
@@ -636,7 +636,7 @@ def get_repository_info(recipe_path):
                 time.ctime(os.path.getmtime(join(recipe_path, "meta.yaml"))),
             )
     except CalledProcessError:
-        get_logger(__name__).debug("Failed to checkout source in " + recipe_path)
+        LOGGER.debug("Failed to checkout source in " + recipe_path)
         return "{}, last modified {}".format(
             recipe_path, time.ctime(os.path.getmtime(join(recipe_path, "meta.yaml")))
         )
@@ -787,11 +787,11 @@ def _get_patch_attributes(
     result["line_endings"] = "mixed" if (crlf and lf) else "crlf" if crlf else "lf"
 
     if not patch_exe:
-        log.warning(
+        LOGGER.warning(
             f"No patch program found, cannot determine patch attributes for {path}"
         )
         if not git:
-            log.error(
+            LOGGER.error(
                 "No git program found either. Please add a dependency for one of these."
             )
         return result
@@ -935,7 +935,7 @@ def apply_one_patch(src_dir, recipe_dir, rel_path, config, git=None):
         try:
             try_patch_args = base_patch_args[:]
             try_patch_args.append("--dry-run")
-            log.debug(f"dry-run applying with\n{patch} {try_patch_args}")
+            LOGGER.debug(f"dry-run applying with\n{patch} {try_patch_args}")
             check_call_env(
                 [patch] + try_patch_args, cwd=cwd, stdout=stdout, stderr=stderr
             )
