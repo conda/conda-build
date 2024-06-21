@@ -1,0 +1,3 @@
+### Enhancements
+
+* Python loggers are now initialized only once to reduce overheads and increase performance.
