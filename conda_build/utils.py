@@ -1653,7 +1653,8 @@ def get_logger(name, level=logging.INFO, dedupe=True, add_stdout_stderr_handlers
         logging.config.dictConfig(config_dict)
         level = config_dict.get("loggers", {}).get(name, {}).get("level", level)
     log = logging.getLogger(name)
-    log.setLevel(level)
+    if log.getEffectiveLevel() != level:
+        log.setLevel(level)
     if dedupe:
         log.addFilter(dedupe_filter)
 
