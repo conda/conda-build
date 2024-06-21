@@ -824,7 +824,9 @@ class Config:
         # Use picke.loads(pickle.dumps(...) as a faster copy.deepcopy alternative.
         new.variant = pickle.loads(pickle.dumps(self.variant, pickle.HIGHEST_PROTOCOL))
         if hasattr(self, "variants"):
-            new.variants = pickle.loads(pickle.dumps(self.variants, pickle.HIGHEST_PROTOCOL))
+            new.variants = pickle.loads(
+                pickle.dumps(self.variants, pickle.HIGHEST_PROTOCOL)
+            )
         return new
 
     # context management - automatic cleanup if self.dirty or self.keep_old_work is not True
