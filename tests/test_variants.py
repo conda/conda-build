@@ -275,13 +275,15 @@ def test_variant_input_with_zip_keys_keeps_zip_keys_list():
 
 @pytest.mark.serial
 @pytest.mark.xfail(sys.platform == "win32", reason="console readout issues on appveyor")
-def test_ensure_valid_spec_on_run_and_test(testing_config, caplog):
+def test_ensure_valid_spec_on_run_and_test(testing_config, caplog, capsys):
     testing_config.debug = True
     testing_config.verbose = True
     recipe = os.path.join(variants_dir, "14_variant_in_run_and_test")
     api.render(recipe, config=testing_config)
 
-    text = caplog.text
+    out, err = capsys.readouterr()
+    text = caplog.text + "\n" + out + "\n" + err
+
     assert "Adding .* to spec 'pytest  3.2'" in text
     assert "Adding .* to spec 'click  6'" in text
     assert "Adding .* to spec 'pytest-cov  2.3'" not in text
