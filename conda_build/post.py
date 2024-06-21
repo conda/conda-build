@@ -9,7 +9,6 @@ import re
 import shutil
 import stat
 import sys
-import traceback
 from collections import OrderedDict, defaultdict
 from copy import copy
 from fnmatch import filter as fnmatch_filter
@@ -608,14 +607,15 @@ def mk_relative_linux(f, prefix, rpaths=("lib",), method=None):
         try:
             existing2, _, _ = get_rpaths_raw(elf)
         except Exception as e:
+            log = utils.get_logger(__name__)
             if method == "LIEF":
-                print(
-                    f"ERROR :: get_rpaths_raw({elf!r}) with LIEF failed: {e}, but LIEF was specified"
+                log.error(
+                    f"get_rpaths_raw({elf!r}) with LIEF failed: {e}, but LIEF was specified",
+                    exc_info=True,
                 )
-                traceback.print_tb(e.__traceback__)
             else:
-                print(
-                    f"WARNING :: get_rpaths_raw({elf!r}) with LIEF failed: {e}, will proceed with patchelf"
+                log.warning(
+                    f"get_rpaths_raw({elf!r}) with LIEF failed: {e}, will proceed with patchelf"
                 )
             method = "patchelf"
         if existing_pe and existing_pe != existing2:
