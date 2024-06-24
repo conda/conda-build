@@ -320,11 +320,11 @@ def test_no_force_upload(
 
 @pytest.mark.slow
 def test_conda_py_no_period(testing_workdir, testing_metadata, monkeypatch):
-    monkeypatch.setenv("CONDA_PY", "36")
+    monkeypatch.setenv("CONDA_PY", "311")
     testing_metadata.meta["requirements"] = {"host": ["python"], "run": ["python"]}
     api.output_yaml(testing_metadata, "meta.yaml")
     outputs = api.build(testing_workdir, notest=True)
-    assert any("py36" in output for output in outputs)
+    assert any("py311" in output for output in outputs)
 
 
 def test_build_skip_existing(
