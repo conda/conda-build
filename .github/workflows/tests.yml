@@ -337,7 +337,10 @@ jobs:
     needs: changes
     if: github.event_name == 'schedule' || needs.changes.outputs.code == 'true'
 
-    runs-on: macos-latest
+    # we still need intel macs so we are stuck on macos-13 (not -14 or -latest)
+    # the issue is that there are recipes that depend on packages
+    # that do not exist for osx-arm64 - see #5388
+    runs-on: macos-13
     defaults:
       run:
         # https://github.com/conda-incubator/setup-miniconda#use-a-default-shell
