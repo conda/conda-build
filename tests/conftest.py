@@ -208,21 +208,19 @@ def testing_env(
 @pytest.fixture(
     scope="function",
     params=[
-        pytest.param({}, id="default MACOSX_DEPLOYMENT_TARGET"),
-        pytest.param(
-            {"MACOSX_DEPLOYMENT_TARGET": ["10.9"]},
-            id="override MACOSX_DEPLOYMENT_TARGET",
-        ),
+        pytest.param(False, id="default MACOSX_DEPLOYMENT_TARGET"),
+        pytest.param(True, id="override MACOSX_DEPLOYMENT_TARGET"),
     ]
     if on_mac
-    else [
-        pytest.param({}, id="no MACOSX_DEPLOYMENT_TARGET"),
-    ],
+    else [pytest.param(False, id="no MACOSX_DEPLOYMENT_TARGET")],
 )
-def variants_conda_build_sysroot(get_macosx_sdk: str, request: FixtureRequest):
-    if not on_mac:
-        return {}
-    return request.param
+def variants_conda_build_sysroot(
+    get_macosx_sdk: str,
+    request: FixtureRequest,
+) -> dict[str, str]:
+    if request.param:
+        return {"MACOSX_DEPLOYMENT_TARGET": os.environ["MACOSX_DEPLOYMENT_TARGET"]}
+    return {}
 
 
 @pytest.fixture(scope="session")
