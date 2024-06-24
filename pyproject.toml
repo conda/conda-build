@@ -129,7 +129,7 @@ filterwarnings = [
   # ignore conda-index error
   "ignore::PendingDeprecationWarning:conda_index",
   "ignore::DeprecationWarning:conda_index",
-  "ignore::DeprecationWarning:tarfile",
+  "ignore::DeprecationWarning: Python 3.14",
 ]
 markers = [
   "serial: execute test serially (to avoid race conditions)",
