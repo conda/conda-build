@@ -337,11 +337,7 @@ jobs:
     needs: changes
     if: github.event_name == 'schedule' || needs.changes.outputs.code == 'true'
 
-    # Old macOS needed for old SDK (see xcode step below)
-    # This is needed for some MACOSX_DEPLOYMENT_TARGET tests
-    # We could also install SDKs from a external provider in the future
-    # if we want to update this runner to a non-deprecated version
-    runs-on: macos-11
+    runs-on: macos-latest
     defaults:
       run:
         # https://github.com/conda-incubator/setup-miniconda#use-a-default-shell
@@ -384,9 +380,6 @@ jobs:
         with:
           condarc-file: .github/condarc
           run-post: false  # skip post cleanup
-
-      - name: Xcode Install
-        run: sudo xcode-select --switch /Applications/Xcode_11.7.app
 
       - name: Conda Install
         run: >
