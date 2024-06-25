@@ -375,7 +375,9 @@ jobs:
       - name: Cache Conda
         uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9
         with:
-          path: ~/conda_pkgs_dir
+          path: |
+            ~/conda_pkgs_dir
+            ~/macosx_sdks
           key: cache-${{ env.HASH }}
 
       - name: Setup Miniconda
@@ -387,7 +389,15 @@ jobs:
       # this step installs the 13.3 SDK
       # see https://github.com/actions/runner-images/blob/main/images/macos/macos-13-Readme.md
       - name: Xcode Install
-        run: sudo xcode-select --switch /Applications/Xcode_14.3.1.app
+        run: |
+          # sudo xcode-select --switch /Applications/Xcode_14.3.1.app
+          if [ ! -d ~/macosx_sdks ]; then mkdir ~/macosx_sdks; fi
+          if [ ! -d ~/macosx_sdks/MacOSX11.3.sdk ]; then
+            curl -L --output MacOSX11.3.sdk.tar.xz "https://github.com/alexey-lysiuk/macos-sdk/releases/download/11.3/MacOSX11.3.tar.xz"
+            sdk_sha256=cd4f08a75577145b8f05245a2975f7c81401d75e9535dcffbb879ee1deefcbf4
+            echo "${sdk_sha256} *MacOSX11.3.sdk.tar.xz" | shasum -a 256 -c
+            tar -xf MacOSX11.3.sdk.tar.xz -C ~/macosx_sdks
+          fi
 
       - name: Conda Install
         run: >
@@ -416,7 +426,7 @@ jobs:
           --cov=conda_build
           -n auto
           -m "${{ env.PYTEST_MARKER }}"
-          --maxfail=5
+          --maxfail=3
 
       - name: Upload Coverage
         uses: codecov/codecov-action@e28ff129e5465c2c0dcc6f003fc735cb6ae0c673 # v4.5.0
