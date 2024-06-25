@@ -1,0 +1,3 @@
+### Enhancements
+
+* Increased performance by using pickle instead of deepcopy. (#5281)
