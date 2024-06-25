@@ -398,6 +398,10 @@ jobs:
             echo "${sdk_sha256} *MacOSX11.3.sdk.tar.bz2" | shasum -a 256 -c
             tar -xf MacOSX11.3.sdk.tar.bz2 -C ~/macosx_sdks
           fi
+          echo "SDKROOT=~/macosx_sdks/MacOSX11.3.sdk" >> $GITHUB_ENV
+          export SDKROOT=~/macosx_sdks/MacOSX11.3.sdk
+          echo "SDKROOT in xcode is:"
+          xcrun --sdk macosx --show-sdk-path
 
       - name: Conda Install
         run: >
