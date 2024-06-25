@@ -383,7 +383,10 @@ jobs:
         with:
           condarc-file: .github/condarc
           run-post: false  # skip post cleanup
-
+      # this step installs the 13.3 SDK
+      # see https://github.com/actions/runner-images/blob/main/images/macos/macos-13-Readme.md
+      - name: Xcode Install
+        run: sudo xcode-select --switch /Applications/Xcode_14.3.1.app
       - name: Conda Install
         run: >
           conda install
