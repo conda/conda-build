@@ -15,7 +15,6 @@ from functools import lru_cache
 from os.path import isdir, isfile, join
 from typing import TYPE_CHECKING, NamedTuple, overload
 
-import jinja2
 import yaml
 from bs4 import UnicodeDammit
 from conda.base.context import locate_prefix_by_name
@@ -32,6 +31,7 @@ from .exceptions import (
     DependencyNeedsBuildingError,
     RecipeError,
     UnableToParse,
+    UnableToParseMissingJinja2,
 )
 from .features import feature_list
 from .license_family import ensure_valid_license_family
@@ -61,6 +61,13 @@ if TYPE_CHECKING:
     OutputDict = dict[str, Any]
     OutputTuple = tuple[OutputDict, "MetaData"]
 
+try:
+    import yaml
+except ImportError:
+    sys.exit(
+        "Error: could not import yaml (required to read meta.yaml "
+        "files of conda recipes)"
+    )
 
 try:
     Loader = yaml.CLoader
@@ -353,6 +360,13 @@ def yamlize(data):
     try:
         return yaml.load(data, Loader=StringifyNumbersLoader)
     except yaml.error.YAMLError as e:
+        if "{{" in data:
+            try:
+                import jinja2
+
+                jinja2  # Avoid pyflakes failure: 'jinja2' imported but unused
+            except ImportError:
+                raise UnableToParseMissingJinja2(original=e)
         print("Problematic recipe:", file=sys.stderr)
         print(data, file=sys.stderr)
         raise UnableToParse(original=e)
@@ -760,8 +774,11 @@ def _git_clean(source_meta):
     If more than one field is used to specified, exit
     and complain.
     """
-
+    git_rev_tags_old = ("git_branch", "git_tag")
     git_rev = "git_rev"
+
+    git_rev_tags = (git_rev,) + git_rev_tags_old
+    has_rev_tags = tuple(bool(source_meta.get(tag, "")) for tag in git_rev_tags)
 
     keys = [key for key in (git_rev, "git_branch", "git_tag") if key in source_meta]
     if not keys:
@@ -772,7 +789,13 @@ def _git_clean(source_meta):
 
     # make a copy of the input so we have no side-effects
     ret_meta = source_meta.copy()
-    ret_meta[git_rev] = ret_meta.pop(keys[0])
+    # loop over the old versions
+    for key, has in zip(git_rev_tags[1:], has_rev_tags[1:]):
+        # update if needed
+        if has:
+            ret_meta[git_rev_tags[0]] = ret_meta[key]
+        # and remove
+        ret_meta.pop(key, None)
 
     return ret_meta
 
@@ -1997,6 +2020,17 @@ class MetaData:
         permit_undefined_jinja: If True, *any* use of undefined jinja variables will
                                 evaluate to an emtpy string, without emitting an error.
         """
+        try:
+            import jinja2
+        except ImportError:
+            print("There was an error importing jinja2.", file=sys.stderr)
+            print(
+                "Please run `conda install jinja2` to enable jinja template support",
+                file=sys.stderr,
+            )  # noqa
+            with open(self.meta_path) as fd:
+                return fd.read()
+
         from .jinja_context import (
             FilteredLoader,
             UndefinedNeverFail,
