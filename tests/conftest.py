@@ -205,11 +205,11 @@ def variants_conda_build_sysroot(monkeypatch, request):
         return {}
 
     monkeypatch.setenv(
-        "CONDA_BUILD_SYSROOT", os.path.expanduser("~/macosx_sdks/MacOSX11.3.sdk")
+        "CONDA_BUILD_SYSROOT", os.environ["SDKROOT"])
     )
     monkeypatch.setenv(
         "MACOSX_DEPLOYMENT_TARGET",
-        "11.3",
+        os.environ["MACOSX_SDK_VERSION"],
     )
     return request.param
 
