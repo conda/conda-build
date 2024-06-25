@@ -402,7 +402,6 @@ jobs:
             url="https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX${MACOSX_SDK_VERSION}.sdk.tar.xz"
             curl -L --output MacOSX${MACOSX_SDK_VERSION}.sdk.tar.xz "${url}"
             sdk_sha256=ac75d9e0eb619881f5aa6240689fce862dcb8e123f710032b7409ff5f4c3d18b
-            echo "${sdk_sha256} *MacOSX11.3.sdk.tar.bz2" | shasum -a 256 -c
             echo "${sdk_sha256} *MacOSX${MACOSX_SDK_VERSION}.sdk.tar.xz" | shasum -a 256 -c
             tar -xf MacOSX${MACOSX_SDK_VERSION}.sdk.tar.xz -C "${SDK_DIR}"
           fi
