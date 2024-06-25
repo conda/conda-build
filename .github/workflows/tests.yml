@@ -393,10 +393,10 @@ jobs:
           # sudo xcode-select --switch /Applications/Xcode_14.3.1.app
           if [ ! -d ~/macosx_sdks ]; then mkdir ~/macosx_sdks; fi
           if [ ! -d ~/macosx_sdks/MacOSX11.3.sdk ]; then
-            curl -L --output MacOSX11.3.sdk.tar.xz "https://github.com/alexey-lysiuk/macos-sdk/releases/download/11.3/MacOSX11.3.tar.xz"
+            curl -L --output MacOSX11.3.sdk.tar.bz2 "https://github.com/alexey-lysiuk/macos-sdk/releases/download/11.3/MacOSX11.3.tar.bz2"
             sdk_sha256=cd4f08a75577145b8f05245a2975f7c81401d75e9535dcffbb879ee1deefcbf4
-            echo "${sdk_sha256} *MacOSX11.3.sdk.tar.xz" | shasum -a 256 -c
-            tar -xf MacOSX11.3.sdk.tar.xz -C ~/macosx_sdks
+            echo "${sdk_sha256} *MacOSX11.3.sdk.tar.bz2" | shasum -a 256 -c
+            tar -xf MacOSX11.3.sdk.tar.bz2 -C ~/macosx_sdks
           fi
 
       - name: Conda Install
