@@ -386,20 +386,26 @@ jobs:
           condarc-file: .github/condarc
           run-post: false  # skip post cleanup
 
-      # this step installs the 13.3 SDK
-      # see https://github.com/actions/runner-images/blob/main/images/macos/macos-13-Readme.md
-      - name: Xcode Install
+      - name: SDK Download
         run: |
+          echo "SDK_DIR=${HOME}/macosx_sdks" >> "$GITHUB_ENV"
+          export SDK_DIR=${HOME}/macosx_sdks
+          echo "MACOSX_SDK_VERSION=10.15" >> "$GITHUB_ENV"
+          export MACOSX_SDK_VERSION=10.15
+          echo "SDKROOT=${SDK_DIR}/MacOSX${MACOSX_SDK_VERSION}.sdk" >> "$GITHUB_ENV"
+          export SDKROOT=${SDK_DIR}/MacOSX${MACOSX_SDK_VERSION}.sdk
+
           # sudo xcode-select --switch /Applications/Xcode_14.3.1.app
-          if [ ! -d ~/macosx_sdks ]; then mkdir ~/macosx_sdks; fi
-          if [ ! -d ~/macosx_sdks/MacOSX11.3.sdk ]; then
-            curl -L --output MacOSX11.3.sdk.tar.bz2 "https://github.com/alexey-lysiuk/macos-sdk/releases/download/11.3/MacOSX11.3.tar.bz2"
-            sdk_sha256=d6604578f4ee3090d1c3efce1e5c336ecfd7be345d046c729189d631ea3b8ec6
+
+          if [ ! -d ${SDK_DIR} ]; then mkdir ${SDK_DIR}; fi
+          if [ ! -d ${SDKROOT} ]; then
+            url="https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX${MACOSX_SDK_VERSION}.sdk.tar.xz"
+            curl -L --output MacOSX${MACOSX_SDK_VERSION}.sdk.tar.xz "${url}"
+            sdk_sha256=ac75d9e0eb619881f5aa6240689fce862dcb8e123f710032b7409ff5f4c3d18b
             echo "${sdk_sha256} *MacOSX11.3.sdk.tar.bz2" | shasum -a 256 -c
-            tar -xf MacOSX11.3.sdk.tar.bz2 -C ~/macosx_sdks
+            echo "${sdk_sha256} *MacOSX${MACOSX_SDK_VERSION}.sdk.tar.xz" | shasum -a 256 -c
+            tar -xf MacOSX${MACOSX_SDK_VERSION}.sdk.tar.xz -C "${SDK_DIR}"
           fi
-          echo "SDKROOT=~/macosx_sdks/MacOSX11.3.sdk" >> $GITHUB_ENV
-          export SDKROOT=~/macosx_sdks/MacOSX11.3.sdk
           echo "SDKROOT in xcode is:"
           xcrun --sdk macosx --show-sdk-path
 
@@ -430,7 +436,7 @@ jobs:
           --cov=conda_build
           -n auto
           -m "${{ env.PYTEST_MARKER }}"
-          --maxfail=3
+          --maxfail=2
         env:
           CONDA_BUILD_SYSROOT: ${{ env.SDKROOT }}
 
