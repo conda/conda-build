@@ -11,6 +11,7 @@ import pytest
 from conda.base.context import context
 
 from conda_build import api, utils
+from conda_build.exceptions import CondaBuildUserError
 from conda_build.metadata import MetaDataTuple
 from conda_build.render import finalize_metadata
 
@@ -292,7 +293,7 @@ def test_per_output_tests(testing_config):
 @pytest.mark.sanity
 def test_per_output_tests_script(testing_config):
     recipe_dir = os.path.join(subpackage_dir, "_output_test_script")
-    with pytest.raises(SystemExit):
+    with pytest.raises(CondaBuildUserError):
         api.build(recipe_dir, config=testing_config)
 
 

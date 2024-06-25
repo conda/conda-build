@@ -1775,6 +1775,7 @@ def bundle_conda(
         env_output["RECIPE_DIR"] = metadata.path
         env_output["MSYS2_PATH_TYPE"] = "inherit"
         env_output["CHERE_INVOKING"] = "1"
+        _set_env_variables_for_build(metadata, env_output)
         for var in utils.ensure_list(metadata.get_value("build/script_env")):
             if "=" in var:
                 val = var.split("=", 1)[1]
@@ -3060,13 +3061,7 @@ def construct_metadata_for_test(recipedir_or_package, config):
     return m, hash_input
 
 
-def write_build_scripts(m, script, build_file):
-    # TODO: Prepending the prefixes here should probably be guarded by
-    #         if not m.activate_build_script:
-    #       Leaving it as is, for now, since we need a quick, non-disruptive patch release.
-    with utils.path_prepended(m.config.host_prefix, False):
-        with utils.path_prepended(m.config.build_prefix, False):
-            env = environ.get_dict(m=m)
+def _set_env_variables_for_build(m, env):
     env["CONDA_BUILD_STATE"] = "BUILD"
 
     # hard-code this because we never want pip's build isolation
@@ -3097,6 +3092,17 @@ def write_build_scripts(m, script, build_file):
     # The stuff in replacements is not parsable in a shell script (or we need to escape it)
     if "replacements" in env:
         del env["replacements"]
+
+
+def write_build_scripts(m, script, build_file):
+    # TODO: Prepending the prefixes here should probably be guarded by
+    #         if not m.activate_build_script:
+    #       Leaving it as is, for now, since we need a quick, non-disruptive patch release.
+    with utils.path_prepended(m.config.host_prefix, False):
+        with utils.path_prepended(m.config.build_prefix, False):
+            env = environ.get_dict(m=m)
+
+    _set_env_variables_for_build(m, env)
 
     work_file = join(m.config.work_dir, "conda_build.sh")
     env_file = join(m.config.work_dir, "build_env_setup.sh")
@@ -3553,7 +3559,12 @@ def test(
     return True
 
 
-def tests_failed(package_or_metadata, move_broken, broken_dir, config):
+def tests_failed(
+    package_or_metadata: str | os.PathLike | Path | MetaData,
+    move_broken: bool,
+    broken_dir: str | os.PathLike | Path,
+    config: Config,
+) -> None:
     """
     Causes conda to exit if any of the given package's tests failed.
 
@@ -3581,7 +3592,7 @@ def tests_failed(package_or_metadata, move_broken, broken_dir, config):
         _delegated_update_index(
             os.path.dirname(os.path.dirname(pkg)), verbose=config.debug, threads=1
         )
-    sys.exit("TESTS FAILED: " + os.path.basename(pkg))
+    raise CondaBuildUserError("TESTS FAILED: " + os.path.basename(pkg))
 
 
 @deprecated(
