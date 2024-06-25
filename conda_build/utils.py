@@ -783,32 +783,14 @@ def _tar_xf_fallback(tarball, dir_path, mode="r:*"):
     from .os_utils.external import find_executable
 
     if tarball.lower().endswith(".tar.z"):
-        uncompress = find_executable("uncompress")
+        uncompress = find_executable("uncompress") or find_executable("gunzip")
         if not uncompress:
-            uncompress = find_executable("gunzip")
-        if not uncompress:
-            sys.exit(
-                """\
-uncompress (or gunzip) is required to unarchive .z source files.
-"""
-            )
+            sys.exit("uncompress/gunzip is required to unarchive .z source files.")
         check_call_env([uncompress, "-f", tarball])
         tarball = tarball[:-2]
 
-    t = tarfile.open(tarball, mode)
-    members = t.getmembers()
-    for i, member in enumerate(members, 0):
-        if os.path.isabs(member.name):
-            member.name = os.path.relpath(member.name, "/")
-        cwd = os.path.realpath(os.getcwd())
-        if not os.path.realpath(member.name).startswith(cwd):
-            member.name = member.name.replace("../", "")
-        if not os.path.realpath(member.name).startswith(cwd):
-            sys.exit("tarball contains unsafe path: " + member.name + " cwd is: " + cwd)
-        members[i] = member
-
-    t.extractall(path=dir_path)
-    t.close()
+    with tarfile.open(tarball, mode) as tar:
+        tar.extractall(path=dir_path, filter="data")
 
 
 def tar_xf_file(tarball, entries):

@@ -934,7 +934,7 @@ def open_recipe(recipe: str | os.PathLike | Path) -> Iterator[Path]:
     elif recipe.suffixes in [[".tar"], [".tar", ".gz"], [".tgz"], [".tar", ".bz2"]]:
         # extract the recipe to a temporary directory
         with TemporaryDirectory() as tmp, tarfile.open(recipe, "r:*") as tar:
-            tar.extractall(path=tmp)
+            tar.extractall(path=tmp, filter="data")
             yield Path(tmp)
     elif recipe.suffix == ".yaml":
         # read the recipe from the parent directory

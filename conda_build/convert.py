@@ -131,9 +131,8 @@ def extract_temporary_directory(file_path):
     """
     temporary_directory = tempfile.mkdtemp()
 
-    source = tarfile.open(file_path)
-    source.extractall(temporary_directory)
-    source.close()
+    with tarfile.open(file_path) as tar:
+        tar.extractall(temporary_directory, filter="data")
 
     return temporary_directory
 
