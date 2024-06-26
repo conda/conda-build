@@ -395,8 +395,6 @@ jobs:
           echo "MACOSX_SDK_ROOT=${MACOSX_SDK_DIR}/MacOSX${MACOSX_SDK_VERSION}.sdk" >> "$GITHUB_ENV"
           export MACOSX_SDK_ROOT=${MACOSX_SDK_DIR}/MacOSX${MACOSX_SDK_VERSION}.sdk
 
-          # sudo xcode-select --switch /Applications/Xcode_14.3.1.app
-
           if [ ! -d ${MACOSX_SDK_DIR} ]; then mkdir ${MACOSX_SDK_DIR}; fi
           if [ ! -d ${MACOSX_SDK_ROOT} ]; then
             url="https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX${MACOSX_SDK_VERSION}.sdk.tar.xz"
@@ -405,10 +403,6 @@ jobs:
             echo "${sdk_sha256} *MacOSX${MACOSX_SDK_VERSION}.sdk.tar.xz" | shasum -a 256 -c
             tar -xf MacOSX${MACOSX_SDK_VERSION}.sdk.tar.xz -C "${MACOSX_SDK_DIR}"
           fi
-          echo "SDKROOT in xcode is:"
-          xcrun --sdk macosx --show-sdk-path
-          echo "MACOSX_SDK_ROOT is:"
-          echo ${MACOSX_SDK_ROOT}
 
       - name: Conda Install
         run: >
@@ -437,8 +431,6 @@ jobs:
           --cov=conda_build
           -n auto
           -m "${{ env.PYTEST_MARKER }}"
-          -x
-          -k test_rpath_unix
         env:
           SDKROOT: ${{ env.MACOSX_SDK_ROOT }}
           CONDA_BUILD_SYSROOT: ${{ env.MACOSX_SDK_ROOT }}
