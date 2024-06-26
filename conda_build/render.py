@@ -31,6 +31,7 @@ from conda.exceptions import NoPackagesFoundError, UnsatisfiableError
 from conda.gateways.disk.create import TemporaryDirectory
 from conda.models.records import PackageRecord
 from conda.models.version import VersionOrder
+from conda_package_handling.api import extract
 
 from . import environ, exceptions, source, utils
 from .exceptions import DependencyNeedsBuildingError
@@ -933,13 +934,8 @@ def open_recipe(recipe: str | os.PathLike | Path) -> Iterator[Path]:
         yield recipe
     elif recipe.suffixes in [[".tar"], [".tar", ".gz"], [".tgz"], [".tar", ".bz2"]]:
         # extract the recipe to a temporary directory
-        with TemporaryDirectory() as tmp, tarfile.open(recipe, "r:*") as tar:
-            # FUTURE: Python 3.12+, remove try-except
-            try:
-                tar.extractall(path=tmp, filter="data")
-            except TypeError:
-                # TypeError: `filter` is unsupported in this Python version
-                tar.extractall(path=tmp)
+        with TemporaryDirectory() as tmp:
+            extract(recipe, dest_dir=tmp)
             yield Path(tmp)
     elif recipe.suffix == ".yaml":
         # read the recipe from the parent directory

@@ -15,7 +15,6 @@ import shutil
 import stat
 import subprocess
 import sys
-import tarfile
 import tempfile
 import time
 import urllib.parse as urlparse
@@ -44,7 +43,6 @@ from pathlib import Path
 from threading import Thread
 from typing import TYPE_CHECKING, Iterable, overload
 
-import conda_package_handling.api
 import filelock
 import libarchive
 import yaml
@@ -65,6 +63,7 @@ from conda.models.match_spec import MatchSpec
 from conda.models.records import PackageRecord
 from conda.models.version import VersionOrder
 from conda.utils import unix_path_to_win
+from conda_package_handling.api import extract
 
 from .exceptions import BuildLockError
 
@@ -446,9 +445,7 @@ def get_recipe_abspath(recipe):
         ):
             recipe_dir = tempfile.mkdtemp()
             if recipe.lower().endswith(CONDA_PACKAGE_EXTENSIONS):
-                import conda_package_handling.api
-
-                conda_package_handling.api.extract(recipe, recipe_dir)
+                extract(recipe, dest_dir=recipe_dir)
             else:
                 tar_xf(recipe, recipe_dir)
             # At some stage the old build system started to tar up recipes.
@@ -789,13 +786,7 @@ def _tar_xf_fallback(tarball, dir_path, mode="r:*"):
         check_call_env([uncompress, "-f", tarball])
         tarball = tarball[:-2]
 
-    with tarfile.open(tarball, mode) as tar:
-        # FUTURE: Python 3.12+, remove try-except
-        try:
-            tar.extractall(path=dir_path, filter="data")
-        except TypeError:
-            # TypeError: `filter` is unsupported in this Python version
-            tar.extractall(path=dir_path)
+    extract(tarball, dest_dir=dir_path)
 
 
 def tar_xf_file(tarball, entries):
@@ -1123,13 +1114,9 @@ def package_has_file(package_path, file_path, refresh_mode="modified"):
     # This version does nothing to the package cache.
     with TemporaryDirectory() as td:
         if file_path.startswith("info"):
-            conda_package_handling.api.extract(
-                package_path, dest_dir=td, components="info"
-            )
+            extract(package_path, dest_dir=td, components="info")
         else:
-            conda_package_handling.api.extract(
-                package_path, dest_dir=td, components=file_path
-            )
+            extract(package_path, dest_dir=td, components=file_path)
         resolved_file_path = os.path.join(td, file_path)
         if os.path.exists(resolved_file_path):
             # TODO :: Remove this text-mode load. Files are binary.
