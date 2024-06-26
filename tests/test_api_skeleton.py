@@ -387,7 +387,7 @@ def test_list_skeletons():
 
 
 def test_pypi_with_entry_points(tmp_path: Path):
-    api.skeletonize("planemo", repo="pypi", python_version="3.11", output_dir=tmp_path)
+    api.skeletonize("planemo", repo="pypi", python_version="3.7", output_dir=tmp_path)
     assert (tmp_path / "planemo").is_dir()
 
 
@@ -411,7 +411,7 @@ def test_pypi_with_extra_specs(tmp_path: Path, testing_config):
         "pypi",
         extra_specs=extra_specs,
         version="0.1.24",
-        python="3.11",
+        python="3.6",
         config=testing_config,
         output_dir=tmp_path,
     )
@@ -434,7 +434,7 @@ def test_pypi_with_version_inconsistency(tmp_path: Path, testing_config):
         "pypi",
         extra_specs=extra_specs,
         version="0.0.10",
-        python="3.11",
+        python="3.6",
         config=testing_config,
         output_dir=tmp_path,
     )
