@@ -432,7 +432,6 @@ jobs:
           -n auto
           -m "${{ env.PYTEST_MARKER }}"
         env:
-          # SDKROOT: ${{ env.MACOSX_SDK_ROOT }}
           CONDA_BUILD_SYSROOT: ${{ env.MACOSX_SDK_ROOT }}
 
       - name: Upload Coverage

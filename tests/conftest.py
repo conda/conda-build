@@ -110,8 +110,6 @@ def testing_config(testing_workdir):
         var_dict = {}
         if "CONDA_BUILD_SYSROOT" in os.environ:
             var_dict["CONDA_BUILD_SYSROOT"] = [os.environ["CONDA_BUILD_SYSROOT"]]
-        # if "SDKROOT" in os.environ:
-        #     var_dict["SDKROOT"] = [os.environ["SDKROOT"]]
         if not var_dict:
             var_dict = None
     else:
