@@ -206,7 +206,11 @@ def variants_conda_build_sysroot(monkeypatch, request):
 
     monkeypatch.setenv(
         "CONDA_BUILD_SYSROOT",
-        os.environ["SDKROOT"],
+        os.environ["MACOSX_SDK_ROOT"],
+    )
+    monkeypatch.setenv(
+        "SDKROOT",
+        os.environ["MACOSX_SDK_ROOT"],
     )
     monkeypatch.setenv(
         "MACOSX_DEPLOYMENT_TARGET",

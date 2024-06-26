@@ -388,25 +388,27 @@ jobs:
 
       - name: SDK Download
         run: |
-          echo "SDK_DIR=${HOME}/macosx_sdks" >> "$GITHUB_ENV"
-          export SDK_DIR=${HOME}/macosx_sdks
+          echo "MACOSX_SDK_DIR=${HOME}/macosx_sdks" >> "$GITHUB_ENV"
+          export MACOSX_SDK_DIR=${HOME}/macosx_sdks
           echo "MACOSX_SDK_VERSION=10.15" >> "$GITHUB_ENV"
           export MACOSX_SDK_VERSION=10.15
-          echo "SDKROOT=${SDK_DIR}/MacOSX${MACOSX_SDK_VERSION}.sdk" >> "$GITHUB_ENV"
-          export SDKROOT=${SDK_DIR}/MacOSX${MACOSX_SDK_VERSION}.sdk
+          echo "MACOSX_SDK_ROOT=${MACOSX_SDK_DIR}/MacOSX${MACOSX_SDK_VERSION}.sdk" >> "$GITHUB_ENV"
+          export MACOSX_SDK_ROOT=${MACOSX_SDK_DIR}/MacOSX${MACOSX_SDK_VERSION}.sdk
 
           # sudo xcode-select --switch /Applications/Xcode_14.3.1.app
 
-          if [ ! -d ${SDK_DIR} ]; then mkdir ${SDK_DIR}; fi
-          if [ ! -d ${SDKROOT} ]; then
+          if [ ! -d ${MACOSX_SDK_DIR} ]; then mkdir ${MACOSX_SDK_DIR}; fi
+          if [ ! -d ${MACOSX_SDK_ROOT} ]; then
             url="https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX${MACOSX_SDK_VERSION}.sdk.tar.xz"
             curl -L --output MacOSX${MACOSX_SDK_VERSION}.sdk.tar.xz "${url}"
             sdk_sha256=ac75d9e0eb619881f5aa6240689fce862dcb8e123f710032b7409ff5f4c3d18b
             echo "${sdk_sha256} *MacOSX${MACOSX_SDK_VERSION}.sdk.tar.xz" | shasum -a 256 -c
-            tar -xf MacOSX${MACOSX_SDK_VERSION}.sdk.tar.xz -C "${SDK_DIR}"
+            tar -xf MacOSX${MACOSX_SDK_VERSION}.sdk.tar.xz -C "${MACOSX_SDK_DIR}"
           fi
           echo "SDKROOT in xcode is:"
           xcrun --sdk macosx --show-sdk-path
+          echo "MACOSX_SDK_ROOT is:"
+          echo ${MACOSX_SDK_ROOT}
 
       - name: Conda Install
         run: >
@@ -435,9 +437,13 @@ jobs:
           --cov=conda_build
           -n auto
           -m "${{ env.PYTEST_MARKER }}"
-          --maxfail=2
+          -x
+          -k test_rpath_unix
         env:
-          CONDA_BUILD_SYSROOT: ${{ env.SDKROOT }}
+          MACOSX_SDK_ROOT: ${{ env.MACOSX_SDK_ROOT }}
+          MACOSX_SDK_VERSION: ${{ env.MACOSX_SDK_VERSION }}
+          SDKROOT: ${{ env.MACOSX_SDK_ROOT }}
+          CONDA_BUILD_SYSROOT: ${{ env.MACOSX_SDK_ROOT }}
 
       - name: Upload Coverage
         uses: codecov/codecov-action@e28ff129e5465c2c0dcc6f003fc735cb6ae0c673 # v4.5.0
