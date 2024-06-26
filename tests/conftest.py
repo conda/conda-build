@@ -106,12 +106,10 @@ def testing_config(testing_workdir):
         conda_pkg_format=conda_pkg_format_default,
     )
 
-    if on_mac:
-        var_dict = {}
-        if "CONDA_BUILD_SYSROOT" in os.environ:
-            var_dict["CONDA_BUILD_SYSROOT"] = [os.environ["CONDA_BUILD_SYSROOT"]]
-        if not var_dict:
-            var_dict = None
+    if on_mac and "CONDA_BUILD_SYSROOT" in os.environ:
+        var_dict = {
+            "CONDA_BUILD_SYSROOT": [os.environ["CONDA_BUILD_SYSROOT"]],
+        }
     else:
         var_dict = None
 
