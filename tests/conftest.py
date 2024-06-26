@@ -159,8 +159,16 @@ def testing_metadata(request, testing_config):
     d["about"]["summary"] = "a test package"
     d["about"]["tags"] = ["a", "b"]
     d["about"]["identifiers"] = "a"
-    testing_config.variant = get_default_variant(testing_config)
-    testing_config.variants = [testing_config.variant]
+
+    var_dict = get_default_variant(testing_config)
+    if on_mac:
+        if "CONDA_BUILD_SYSROOT" in os.environ:
+            var_dict["CONDA_BUILD_SYSROOT"] = [os.environ["CONDA_BUILD_SYSROOT"]]
+        if "SDKROOT" in os.environ:
+            var_dict["SDKROOT"] = [os.environ["SDKROOT"]]
+
+    testing_config.variant = var_dict
+    testing_config.variants = [var_dict]
     return MetaData.fromdict(d, config=testing_config)
 
 
@@ -205,16 +213,10 @@ def variants_conda_build_sysroot(monkeypatch, request):
         return {}
 
     monkeypatch.setenv(
-        "CONDA_BUILD_SYSROOT",
-        os.environ["MACOSX_SDK_ROOT"],
-    )
-    monkeypatch.setenv(
-        "SDKROOT",
-        os.environ["MACOSX_SDK_ROOT"],
-    )
-    monkeypatch.setenv(
         "MACOSX_DEPLOYMENT_TARGET",
-        os.environ["MACOSX_SDK_VERSION"],
+        os.path.basename(os.environ["CONDA_BUILD_SYSROOT"])
+        .replace("MacOSX", "")
+        .replace(".sdk", ""),
     )
     return request.param
 

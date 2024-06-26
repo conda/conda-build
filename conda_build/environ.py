@@ -723,10 +723,6 @@ def osx_vars(m, get_default, prefix):
     get_default("MACOSX_DEPLOYMENT_TARGET", MACOSX_DEPLOYMENT_TARGET)
     get_default("BUILD", BUILD)
 
-    # FIXME - MRB hack to figure out testing on osx
-    get_default("CONDA_BUILD_SYSROOT")
-    get_default("SDKROOT")
-
 
 @lru_cache(maxsize=None)
 def _machine_and_architecture():
