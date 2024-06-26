@@ -105,7 +105,19 @@ def testing_config(testing_workdir):
         exit_on_verify_error=exit_on_verify_error_default,
         conda_pkg_format=conda_pkg_format_default,
     )
-    result = Config(variant=None, **testing_config_kwargs)
+
+    if on_mac:
+        var_dict = {}
+        if "CONDA_BUILD_SYSROOT" in os.environ:
+            var_dict["CONDA_BUILD_SYSROOT"] = [os.environ["CONDA_BUILD_SYSROOT"]]
+        if "SDKROOT" in os.environ:
+            var_dict["SDKROOT"] = [os.environ["SDKROOT"]]
+        if not var_dict:
+            var_dict = None
+    else:
+        var_dict = None
+
+    result = Config(variant=var_dict, **testing_config_kwargs)
     result._testing_config_kwargs = testing_config_kwargs
     assert result.no_rewrite_stdout_env is False
     assert result._src_cache_root is None
@@ -159,16 +171,8 @@ def testing_metadata(request, testing_config):
     d["about"]["summary"] = "a test package"
     d["about"]["tags"] = ["a", "b"]
     d["about"]["identifiers"] = "a"
-
-    var_dict = get_default_variant(testing_config)
-    if on_mac:
-        if "CONDA_BUILD_SYSROOT" in os.environ:
-            var_dict["CONDA_BUILD_SYSROOT"] = [os.environ["CONDA_BUILD_SYSROOT"]]
-        if "SDKROOT" in os.environ:
-            var_dict["SDKROOT"] = [os.environ["SDKROOT"]]
-
-    testing_config.variant = var_dict
-    testing_config.variants = [var_dict]
+    testing_config.variant = get_default_variant(testing_config)
+    testing_config.variants = [get_default_variant(testing_config)]
     return MetaData.fromdict(d, config=testing_config)
 
 

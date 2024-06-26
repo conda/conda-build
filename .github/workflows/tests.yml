@@ -440,8 +440,6 @@ jobs:
           -x
           -k test_rpath_unix
         env:
-          MACOSX_SDK_ROOT: ${{ env.MACOSX_SDK_ROOT }}
-          MACOSX_SDK_VERSION: ${{ env.MACOSX_SDK_VERSION }}
           SDKROOT: ${{ env.MACOSX_SDK_ROOT }}
           CONDA_BUILD_SYSROOT: ${{ env.MACOSX_SDK_ROOT }}
 
