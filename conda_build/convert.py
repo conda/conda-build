@@ -132,7 +132,12 @@ def extract_temporary_directory(file_path):
     temporary_directory = tempfile.mkdtemp()
 
     with tarfile.open(file_path) as tar:
-        tar.extractall(temporary_directory, filter="data")
+        # FUTURE: Python 3.12+, remove try-except
+        try:
+            tar.extractall(path=temporary_directory, filter="data")
+        except TypeError:
+            # TypeError: `filter` is unsupported in this Python version
+            tar.extractall(path=temporary_directory)
 
     return temporary_directory
 

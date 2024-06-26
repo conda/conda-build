@@ -790,7 +790,12 @@ def _tar_xf_fallback(tarball, dir_path, mode="r:*"):
         tarball = tarball[:-2]
 
     with tarfile.open(tarball, mode) as tar:
-        tar.extractall(path=dir_path, filter="data")
+        # FUTURE: Python 3.12+, remove try-except
+        try:
+            tar.extractall(path=dir_path, filter="data")
+        except TypeError:
+            # TypeError: `filter` is unsupported in this Python version
+            tar.extractall(path=dir_path)
 
 
 def tar_xf_file(tarball, entries):
