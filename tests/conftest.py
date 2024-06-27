@@ -37,12 +37,11 @@ from conda_build.variants import get_default_variant
 if TYPE_CHECKING:
     from typing import Iterator
 
-    from pytest import Config as PytestConfig
     from pytest import FixtureRequest, TempPathFactory
 
 
 @pytest.hookimpl
-def pytest_report_header(config: PytestConfig):
+def pytest_report_header(config: pytest.Config):
     # ensuring the expected development conda is being run
     expected = Path(__file__).parent.parent / "conda_build" / "__init__.py"
     assert expected.samefile(conda_build.__file__)
@@ -91,7 +90,7 @@ def testing_homedir() -> Iterator[Path]:
 
 @pytest.fixture(scope="function")
 def testing_config(
-    testing_workdir: str | os.PathLike | Path,
+    testing_workdir: str,
     get_macosx_sdk: None | tuple[str, str],
 ) -> Config:
     def boolify(v):
@@ -270,7 +269,7 @@ def empty_channel(tmp_path_factory: TempPathFactory) -> Path:
 
 
 @pytest.fixture(scope="session")
-def get_macosx_sdk(pytestconfig: PytestConfig) -> None | tuple[str, str]:
+def get_macosx_sdk() -> None | tuple[str, str]:
     if not on_mac:
         return None
 
