@@ -337,11 +337,10 @@ jobs:
     needs: changes
     if: github.event_name == 'schedule' || needs.changes.outputs.code == 'true'
 
-    # Old macOS needed for old SDK (see xcode step below)
-    # This is needed for some MACOSX_DEPLOYMENT_TARGET tests
-    # We could also install SDKs from a external provider in the future
-    # if we want to update this runner to a non-deprecated version
-    runs-on: macos-11
+    # we still need intel macs so we are stuck on macos-13 (not -14 or -latest)
+    # the issue is that there are recipes that depend on packages
+    # that do not exist for osx-arm64 - see #5388
+    runs-on: macos-13
     defaults:
       run:
         # https://github.com/conda-incubator/setup-miniconda#use-a-default-shell
@@ -376,7 +375,9 @@ jobs:
       - name: Cache Conda
         uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9
         with:
-          path: ~/conda_pkgs_dir
+          path: |
+            ~/conda_pkgs_dir
+            ~/macosx_sdks
           key: cache-${{ env.HASH }}
 
       - name: Setup Miniconda
@@ -385,8 +386,23 @@ jobs:
           condarc-file: .github/condarc
           run-post: false  # skip post cleanup
 
-      - name: Xcode Install
-        run: sudo xcode-select --switch /Applications/Xcode_11.7.app
+      - name: SDK Download
+        run: |
+          echo "MACOSX_SDK_DIR=${HOME}/macosx_sdks" >> "$GITHUB_ENV"
+          export MACOSX_SDK_DIR=${HOME}/macosx_sdks
+          echo "MACOSX_SDK_VERSION=10.15" >> "$GITHUB_ENV"
+          export MACOSX_SDK_VERSION=10.15
+          echo "MACOSX_SDK_ROOT=${MACOSX_SDK_DIR}/MacOSX${MACOSX_SDK_VERSION}.sdk" >> "$GITHUB_ENV"
+          export MACOSX_SDK_ROOT=${MACOSX_SDK_DIR}/MacOSX${MACOSX_SDK_VERSION}.sdk
+
+          if [ ! -d ${MACOSX_SDK_DIR} ]; then mkdir ${MACOSX_SDK_DIR}; fi
+          if [ ! -d ${MACOSX_SDK_ROOT} ]; then
+            url="https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX${MACOSX_SDK_VERSION}.sdk.tar.xz"
+            curl -L --output MacOSX${MACOSX_SDK_VERSION}.sdk.tar.xz "${url}"
+            sdk_sha256=ac75d9e0eb619881f5aa6240689fce862dcb8e123f710032b7409ff5f4c3d18b
+            echo "${sdk_sha256} *MacOSX${MACOSX_SDK_VERSION}.sdk.tar.xz" | shasum -a 256 -c
+            tar -xf MacOSX${MACOSX_SDK_VERSION}.sdk.tar.xz -C "${MACOSX_SDK_DIR}"
+          fi
 
       - name: Conda Install
         run: >
@@ -415,6 +431,8 @@ jobs:
           --cov=conda_build
           -n auto
           -m "${{ env.PYTEST_MARKER }}"
+        env:
+          CONDA_BUILD_SYSROOT: ${{ env.MACOSX_SDK_ROOT }}
 
       - name: Upload Coverage
         uses: codecov/codecov-action@e28ff129e5465c2c0dcc6f003fc735cb6ae0c673 # v4.5.0
