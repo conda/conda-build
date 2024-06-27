@@ -118,7 +118,7 @@ def testing_config(
 
     variant = None
     if get_macosx_sdk:
-        sysroot, macosx_sdk_version = get_macosx_sdk
+        sysroot, _ = get_macosx_sdk
         variant = {"CONDA_BUILD_SYSROOT": [sysroot]}
 
     result = Config(variant=variant, **testing_config_kwargs)
