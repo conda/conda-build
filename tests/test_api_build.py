@@ -830,9 +830,7 @@ def test_disable_pip(testing_metadata):
 
 
 @pytest.mark.sanity
-@pytest.mark.skipif(
-    sys.platform.startswith("win"), reason="rpath fixup not done on Windows."
-)
+@pytest.mark.skipif(on_win, reason="rpath fixup not done on Windows.")
 def test_rpath_unix(
     testing_config: Config,
     variants_conda_build_sysroot: dict,
@@ -1786,7 +1784,7 @@ def test_overdepending_detection(
         api.build(recipe, config=testing_config, variants=variants_conda_build_sysroot)
 
 
-@pytest.mark.skipif(sys.platform != "darwin", reason="macOS-only test (at present)")
+@pytest.mark.skipif(not on_mac, reason="macOS-only test (at present)")
 def test_macos_tbd_handling(
     testing_config: Config,
     variants_conda_build_sysroot: dict,

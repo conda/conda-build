@@ -93,7 +93,10 @@ def testing_homedir() -> Iterator[Path]:
 
 
 @pytest.fixture(scope="function")
-def testing_config(testing_workdir):
+def testing_config(
+    testing_workdir: str | os.PathLike | Path,
+    get_macosx_sdk: None | tuple[str, str],
+) -> Config:
     def boolify(v):
         return v == "true"
 
@@ -116,7 +119,13 @@ def testing_config(testing_workdir):
         exit_on_verify_error=exit_on_verify_error_default,
         conda_pkg_format=conda_pkg_format_default,
     )
-    result = Config(variant=None, **testing_config_kwargs)
+
+    variant = None
+    if get_macosx_sdk:
+        sysroot, macosx_sdk_version = get_macosx_sdk
+        variant = {"CONDA_BUILD_SYSROOT": [sysroot]}
+
+    result = Config(variant=variant, **testing_config_kwargs)
     result._testing_config_kwargs = testing_config_kwargs
     assert result.no_rewrite_stdout_env is False
     assert result._src_cache_root is None
@@ -208,19 +217,25 @@ def testing_env(
 @pytest.fixture(
     scope="function",
     params=[
-        pytest.param(False, id="default MACOSX_DEPLOYMENT_TARGET"),
-        pytest.param(True, id="override MACOSX_DEPLOYMENT_TARGET"),
+        pytest.param({}, id="default MACOSX_DEPLOYMENT_TARGET"),
+        pytest.param(
+            {"MACOSX_DEPLOYMENT_TARGET": ["10.9"]},
+            id="override MACOSX_DEPLOYMENT_TARGET",
+        ),
     ]
     if on_mac
-    else [pytest.param(False, id="no MACOSX_DEPLOYMENT_TARGET")],
+    else [
+        pytest.param({}, id="no MACOSX_DEPLOYMENT_TARGET"),
+    ],
 )
 def variants_conda_build_sysroot(
-    get_macosx_sdk: str,
+    get_macosx_sdk: None | tuple[str, str],
+    monkeypatch: MonkeyPatch,
     request: FixtureRequest,
 ) -> dict[str, str]:
-    if request.param:
-        return {"MACOSX_DEPLOYMENT_TARGET": os.environ["MACOSX_DEPLOYMENT_TARGET"]}
-    return {}
+    if not get_macosx_sdk:
+        return {}
+    return request.param
 
 
 @pytest.fixture(scope="session")
@@ -310,51 +325,80 @@ MACOSX_SDKS = {
 
 
 @pytest.fixture(scope="session")
-def get_macosx_sdk(pytestconfig: PytestConfig) -> str | None:
+def get_macosx_sdk(pytestconfig: PytestConfig) -> None | tuple[str, str]:
     if not on_mac:
         return None
 
-    macosx_sdk_version = os.getenv("MACOSX_SDK_VERSION") or "10.9"
-    if os.getenv("CI"):
-        cache = Path.home() / "macosx_sdks"
-        cache.mkdir(exist_ok=True)
+    # requested SDK version
+    macosx_sdk_version = os.getenv("MACOSX_SDK_VERSION")
+
+    # installed SDK version
+    sys_sdk_version = subprocess.run(
+        ["xcrun", "--sdk", "macosx", "--show-sdk-version"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+
+    if not macosx_sdk_version or macosx_sdk_version == sys_sdk_version:
+        # MACOSK_SDK_VERSION is undefined or same as installed SDK version
+
+        macosx_sdk_version = sys_sdk_version
+        sysroot = subprocess.run(
+            ["xcrun", "--sdk", "macosx", "--show-sdk-path"],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
     else:
-        cache = pytestconfig.cache.mkdir("macosx_sdks")
-    cached_sdk = cache / f"MacOSX{macosx_sdk_version}.sdk"
+        # MACOSK_SDK_VERSION is defined and different from installed SDK version
 
-    if not cached_sdk.exists():
-        try:
-            sdk = MACOSX_SDKS[macosx_sdk_version]
-        except KeyError:
-            # KeyError: unknown MacOSX SDK version
-            raise ValueError(f"Unknown MacOSX SDK version: {macosx_sdk_version}")
+        if os.getenv("CI"):
+            # CI testing use a cached directory at ~/macosx_sdks
+            cache = Path.home() / "macosx_sdks"
+            cache.mkdir(exist_ok=True)
+        else:
+            # local testing use pytest cached directory at <SRC>/.pytest_cache/d/macosx_sdks
+            cache = pytestconfig.cache.mkdir("macosx_sdks")
+        cached_sdk = cache / f"MacOSX{macosx_sdk_version}.sdk"
+        sysroot = str(cached_sdk)
 
-        # download SDK and compute SHA 256
-        url = sdk["url"]
-        tarball_sdk = cache / url.rsplit("/", 1)[-1]
-        if not tarball_sdk.exists():
-            with requests.get(url, stream=True) as response:
-                response.raise_for_status()
+        # download SDK if not cached
+        if not cached_sdk.exists():
+            try:
+                sdk = MACOSX_SDKS[macosx_sdk_version]
+            except KeyError:
+                # KeyError: unknown MacOSX SDK version
+                raise ValueError(f"Unknown MacOSX SDK version: {macosx_sdk_version}")
 
-                with tarball_sdk.open("wb") as path:
-                    for chunk in response.iter_content(chunk_size=8192):
-                        if chunk:
-                            path.write(chunk)
+            # download SDK and compute SHA 256
+            url = sdk["url"]
+            tarball_sdk = cache / url.rsplit("/", 1)[-1]
+            if not tarball_sdk.exists():
+                with requests.get(url, stream=True) as response:
+                    response.raise_for_status()
 
-        # verify SDK's SHA 256
-        expected_sha256 = sdk["sha256"]
-        computed_sha256 = hashlib.sha256()
-        with tarball_sdk.open("rb") as path:
-            for chunk in iter(lambda: path.read(8192), b""):
-                computed_sha256.update(chunk)
-        if computed_sha256.hexdigest() != expected_sha256:
-            tarball_sdk.unlink()
-            raise ValueError("SHA 256 mismatch for downloaded SDK")
+                    with tarball_sdk.open("wb") as path:
+                        for chunk in response.iter_content(chunk_size=8192):
+                            if chunk:
+                                path.write(chunk)
 
-        # extract the SDK
-        tarfile.open(tarball_sdk).extractall(cached_sdk)
+            # verify SDK's SHA 256
+            expected_sha256 = sdk["sha256"]
+            computed_sha256 = hashlib.sha256()
+            with tarball_sdk.open("rb") as path:
+                for chunk in iter(lambda: path.read(8192), b""):
+                    computed_sha256.update(chunk)
+            if computed_sha256.hexdigest() != expected_sha256:
+                tarball_sdk.unlink()
+                raise ValueError("SHA 256 mismatch for downloaded SDK")
+
+            # extract the SDK
+            assert not cached_sdk.exists()
+            tarfile.open(tarball_sdk).extractall(cache)
+            assert cached_sdk.exists()
 
     with MonkeyPatch.context() as monkeypatch:
-        monkeypatch.setenv("CONDA_BUILD_SYSROOT", str(cached_sdk))
+        monkeypatch.setenv("CONDA_BUILD_SYSROOT", sysroot)
         monkeypatch.setenv("MACOSX_DEPLOYMENT_TARGET", macosx_sdk_version)
-        return macosx_sdk_version
+        return sysroot, macosx_sdk_version
