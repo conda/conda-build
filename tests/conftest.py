@@ -1,12 +1,14 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
+
 import os
 import subprocess
 import sys
 import tempfile
 from collections import defaultdict
 from pathlib import Path
-from typing import Iterator
+from typing import TYPE_CHECKING
 
 import pytest
 from conda.common.compat import on_mac, on_win
@@ -31,6 +33,11 @@ from conda_build.config import (
 from conda_build.metadata import MetaData
 from conda_build.utils import check_call_env, copy_into, prepend_bin_path
 from conda_build.variants import get_default_variant
+
+if TYPE_CHECKING:
+    from typing import Iterator
+
+    from pytest import FixtureRequest, TempPathFactory
 
 
 @pytest.hookimpl
@@ -82,7 +89,10 @@ def testing_homedir() -> Iterator[Path]:
 
 
 @pytest.fixture(scope="function")
-def testing_config(testing_workdir):
+def testing_config(
+    testing_workdir: str,
+    get_macosx_sdk: None | tuple[str, str],
+) -> Config:
     def boolify(v):
         return v == "true"
 
@@ -105,7 +115,13 @@ def testing_config(testing_workdir):
         exit_on_verify_error=exit_on_verify_error_default,
         conda_pkg_format=conda_pkg_format_default,
     )
-    result = Config(variant=None, **testing_config_kwargs)
+
+    variant = None
+    if get_macosx_sdk:
+        sysroot, _ = get_macosx_sdk
+        variant = {"CONDA_BUILD_SYSROOT": [sysroot]}
+
+    result = Config(variant=variant, **testing_config_kwargs)
     result._testing_config_kwargs = testing_config_kwargs
     assert result.no_rewrite_stdout_env is False
     assert result._src_cache_root is None
@@ -114,7 +130,11 @@ def testing_config(testing_workdir):
 
 
 @pytest.fixture(scope="function", autouse=True)
-def default_testing_config(testing_config, monkeypatch, request):
+def default_testing_config(
+    testing_config: Config,
+    monkeypatch: MonkeyPatch,
+    request: FixtureRequest,
+):
     """Monkeypatch get_or_merge_config to use testing_config by default
 
     This requests fixture testing_config, thus implicitly testing_workdir, too.
@@ -145,7 +165,7 @@ def default_testing_config(testing_config, monkeypatch, request):
 
 
 @pytest.fixture(scope="function")
-def testing_metadata(request, testing_config):
+def testing_metadata(request: FixtureRequest, testing_config: Config):
     d = defaultdict(dict)
     d["package"]["name"] = request.function.__name__
     d["package"]["version"] = "1.0"
@@ -165,7 +185,11 @@ def testing_metadata(request, testing_config):
 
 
 @pytest.fixture(scope="function")
-def testing_env(testing_workdir, request, monkeypatch):
+def testing_env(
+    testing_workdir: str,
+    request: FixtureRequest,
+    monkeypatch: MonkeyPatch,
+):
     env_path = os.path.join(testing_workdir, "env")
 
     check_call_env(
@@ -200,33 +224,18 @@ def testing_env(testing_workdir, request, monkeypatch):
         pytest.param({}, id="no MACOSX_DEPLOYMENT_TARGET"),
     ],
 )
-def variants_conda_build_sysroot(monkeypatch, request):
-    if not on_mac:
+def variants_conda_build_sysroot(
+    get_macosx_sdk: None | tuple[str, str],
+    monkeypatch: MonkeyPatch,
+    request: FixtureRequest,
+) -> dict[str, str]:
+    if not get_macosx_sdk:
         return {}
-
-    monkeypatch.setenv(
-        "CONDA_BUILD_SYSROOT",
-        subprocess.run(
-            ["xcrun", "--sdk", "macosx", "--show-sdk-path"],
-            check=True,
-            capture_output=True,
-            text=True,
-        ).stdout.strip(),
-    )
-    monkeypatch.setenv(
-        "MACOSX_DEPLOYMENT_TARGET",
-        subprocess.run(
-            ["xcrun", "--sdk", "macosx", "--show-sdk-version"],
-            check=True,
-            capture_output=True,
-            text=True,
-        ).stdout.strip(),
-    )
     return request.param
 
 
 @pytest.fixture(scope="session")
-def conda_build_test_recipe_path(tmp_path_factory: pytest.TempPathFactory) -> Path:
+def conda_build_test_recipe_path(tmp_path_factory: TempPathFactory) -> Path:
     """Clone conda_build_test_recipe.
 
     This exposes the special dummy package "source code" used to test various git/svn/local recipe configurations.
@@ -243,7 +252,7 @@ def conda_build_test_recipe_path(tmp_path_factory: pytest.TempPathFactory) -> Pa
 @pytest.fixture
 def conda_build_test_recipe_envvar(
     conda_build_test_recipe_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    monkeypatch: MonkeyPatch,
 ) -> str:
     """Exposes the cloned conda_build_test_recipe as an environment variable."""
     name = "CONDA_BUILD_TEST_RECIPE_PATH"
@@ -252,8 +261,33 @@ def conda_build_test_recipe_envvar(
 
 
 @pytest.fixture(scope="session")
-def empty_channel(tmp_path_factory: pytest.TempPathFactory) -> Path:
+def empty_channel(tmp_path_factory: TempPathFactory) -> Path:
     """Create a temporary, empty conda channel."""
     channel = tmp_path_factory.mktemp("empty_channel", numbered=False)
     update_index(channel)
     return channel
+
+
+@pytest.fixture(scope="session")
+def get_macosx_sdk() -> None | tuple[str, str]:
+    if not on_mac:
+        return None
+
+    version = subprocess.run(
+        ["xcrun", "--sdk", "macosx", "--show-sdk-version"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+
+    sysroot = subprocess.run(
+        ["xcrun", "--sdk", "macosx", "--show-sdk-path"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+
+    with MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setenv("CONDA_BUILD_SYSROOT", sysroot)
+        monkeypatch.setenv("MACOSX_DEPLOYMENT_TARGET", version)
+        return sysroot, version
