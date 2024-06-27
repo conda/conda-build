@@ -373,9 +373,7 @@ jobs:
       - name: Cache Conda
         uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9
         with:
-          path: |
-            ~/conda_pkgs_dir
-            ~/macosx_sdks
+          path: ~/conda_pkgs_dir
           key: cache-${{ env.HASH }}
 
       - name: Setup Miniconda

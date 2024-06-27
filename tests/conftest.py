@@ -2,18 +2,15 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from __future__ import annotations
 
-import hashlib
 import os
 import subprocess
 import sys
-import tarfile
 import tempfile
 from collections import defaultdict
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
-import requests
 from conda.common.compat import on_mac, on_win
 from conda_index.api import update_index
 from pytest import MonkeyPatch
@@ -272,133 +269,26 @@ def empty_channel(tmp_path_factory: TempPathFactory) -> Path:
     return channel
 
 
-MACOSX_SDKS = {
-    "13.3": {
-        "sha256": "71ae3a78ab1be6c45cf52ce44cb29a3cc27ed312c9f7884ee88e303a862a1404",
-        "url": "https://github.com/alexey-lysiuk/macos-sdk/releases/download/13.3/MacOSX13.3.tar.xz",
-    },
-    "12.3": {
-        "sha256": "91c03be5399be04d8f6b773da13045525e01298c1dfff273b4e1f1e904ee5484",
-        "url": "https://github.com/alexey-lysiuk/macos-sdk/releases/download/12.3/MacOSX12.3.tar.xz",
-    },
-    "11.3": {
-        "sha256": "d6604578f4ee3090d1c3efce1e5c336ecfd7be345d046c729189d631ea3b8ec6",
-        "url": "https://github.com/alexey-lysiuk/macos-sdk/releases/download/11.3/MacOSX11.3.tar.bz2",
-    },
-    "11.1": {
-        "sha256": "68797baaacb52f56f713400de306a58a7ca00b05c3dc6d58f0a8283bcac721f8",
-        "url": "https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX11.1.sdk.tar.xz",
-    },
-    "11.0": {
-        "sha256": "d3feee3ef9c6016b526e1901013f264467bb927865a03422a9cb925991cc9783",
-        "url": "https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX11.0.sdk.tar.xz",
-    },
-    "10.15": {
-        "sha256": "bb548125ebf5cf4ae6c80d226f40ad39e155564ca78bc00554a2e84074d0180e",
-        "url": "https://github.com/alexey-lysiuk/macos-sdk/releases/download/10.15/MacOSX10.15.tar.bz2",
-    },
-    "10.14": {
-        "sha256": "e0a9747ae9838aeac70430c005f9757587aa055c690383d91165cf7b4a80401d",
-        "url": "https://github.com/alexey-lysiuk/macos-sdk/releases/download/10.14/MacOSX10.14.tar.bz2",
-    },
-    "10.13": {
-        "sha256": "27943fb63c35e262b2da1cb4cc60d7427702a40caf20ec15c9d773919c6e409b",
-        "url": "https://github.com/alexey-lysiuk/macos-sdk/releases/download/10.13/MacOSX10.13.tar.bz2",
-    },
-    "10.12": {
-        "sha256": "fd4e1151056f34f76b5930cb45b9cd859414acbc3f6529c0c0ecaaf2566823ff",
-        "url": "https://github.com/alexey-lysiuk/macos-sdk/releases/download/10.12/MacOSX10.12.tar.bz2",
-    },
-    "10.11": {
-        "sha256": "2e28c2eeb716236d89ea3d12a228e291bdab875c50f013a909f3592007f21484",
-        "url": "https://github.com/alexey-lysiuk/macos-sdk/releases/download/10.11/MacOSX10.11.tar.bz2",
-    },
-    "10.10": {
-        "sha256": "9fae9028802bca2c2b953f1dcc51c71382eeab4ca28644a45bcdf072b56950b9",
-        "url": "https://github.com/alexey-lysiuk/macos-sdk/releases/download/10.10/MacOSX10.10.tar.bz2",
-    },
-    "10.9": {
-        "sha256": "a119c169b39800b4646beed55ad450bbcdd01c7209ced71872f7ba644f7a5dee",
-        "url": "https://github.com/alexey-lysiuk/macos-sdk/releases/download/10.9/MacOSX10.9.tar.bz2",
-    },
-}
-
-
 @pytest.fixture(scope="session")
 def get_macosx_sdk(pytestconfig: PytestConfig) -> None | tuple[str, str]:
     if not on_mac:
         return None
 
-    # requested SDK version
-    macosx_sdk_version = os.getenv("MACOSX_SDK_VERSION")
-
-    # installed SDK version
-    sys_sdk_version = subprocess.run(
+    version = subprocess.run(
         ["xcrun", "--sdk", "macosx", "--show-sdk-version"],
         check=True,
         capture_output=True,
         text=True,
     ).stdout.strip()
 
-    if not macosx_sdk_version or macosx_sdk_version == sys_sdk_version:
-        # MACOSK_SDK_VERSION is undefined or same as installed SDK version
-
-        macosx_sdk_version = sys_sdk_version
-        sysroot = subprocess.run(
-            ["xcrun", "--sdk", "macosx", "--show-sdk-path"],
-            check=True,
-            capture_output=True,
-            text=True,
-        ).stdout.strip()
-    else:
-        # MACOSK_SDK_VERSION is defined and different from installed SDK version
-
-        if os.getenv("CI"):
-            # CI testing use a cached directory at ~/macosx_sdks
-            cache = Path.home() / "macosx_sdks"
-            cache.mkdir(exist_ok=True)
-        else:
-            # local testing use pytest cached directory at <SRC>/.pytest_cache/d/macosx_sdks
-            cache = pytestconfig.cache.mkdir("macosx_sdks")
-        cached_sdk = cache / f"MacOSX{macosx_sdk_version}.sdk"
-        sysroot = str(cached_sdk)
-
-        # download SDK if not cached
-        if not cached_sdk.exists():
-            try:
-                sdk = MACOSX_SDKS[macosx_sdk_version]
-            except KeyError:
-                # KeyError: unknown MacOSX SDK version
-                raise ValueError(f"Unknown MacOSX SDK version: {macosx_sdk_version}")
-
-            # download SDK and compute SHA 256
-            url = sdk["url"]
-            tarball_sdk = cache / url.rsplit("/", 1)[-1]
-            if not tarball_sdk.exists():
-                with requests.get(url, stream=True) as response:
-                    response.raise_for_status()
-
-                    with tarball_sdk.open("wb") as path:
-                        for chunk in response.iter_content(chunk_size=8192):
-                            if chunk:
-                                path.write(chunk)
-
-            # verify SDK's SHA 256
-            expected_sha256 = sdk["sha256"]
-            computed_sha256 = hashlib.sha256()
-            with tarball_sdk.open("rb") as path:
-                for chunk in iter(lambda: path.read(8192), b""):
-                    computed_sha256.update(chunk)
-            if computed_sha256.hexdigest() != expected_sha256:
-                tarball_sdk.unlink()
-                raise ValueError("SHA 256 mismatch for downloaded SDK")
-
-            # extract the SDK
-            assert not cached_sdk.exists()
-            tarfile.open(tarball_sdk).extractall(cache)
-            assert cached_sdk.exists()
+    sysroot = subprocess.run(
+        ["xcrun", "--sdk", "macosx", "--show-sdk-path"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
 
     with MonkeyPatch.context() as monkeypatch:
         monkeypatch.setenv("CONDA_BUILD_SYSROOT", sysroot)
-        monkeypatch.setenv("MACOSX_DEPLOYMENT_TARGET", macosx_sdk_version)
-        return sysroot, macosx_sdk_version
+        monkeypatch.setenv("MACOSX_DEPLOYMENT_TARGET", version)
+        return sysroot, version
