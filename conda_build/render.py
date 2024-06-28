@@ -832,11 +832,12 @@ def distribute_variants(
         recipe_text = recipe_text.decode()
 
     metadata.config.variant = variants[0]
+    # reduce total variants once to all actually used variants
+    all_used = metadata.get_used_vars(force_global=True)
+    metadata.config.variants = metadata.get_reduced_variant_set(all_used)
+    # metadata.config.variants = metadata.get_reduced_variant_set(all_used)
     used_variables = metadata.get_used_loop_vars(force_global=False)
-    # discard unused variants
-    top_loop = metadata.config.variants = metadata.get_reduced_variant_set(
-        used_variables
-    )
+    top_loop = metadata.get_reduced_variant_set(used_variables)
 
     for variant in top_loop:
         from .build import get_all_replacements
