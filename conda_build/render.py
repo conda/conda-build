@@ -833,7 +833,10 @@ def distribute_variants(
 
     metadata.config.variant = variants[0]
     used_variables = metadata.get_used_loop_vars(force_global=False)
-    top_loop = metadata.get_reduced_variant_set(used_variables)
+    # discard unused variants
+    top_loop = metadata.config.variants = metadata.get_reduced_variant_set(
+        used_variables
+    )
 
     for variant in top_loop:
         from .build import get_all_replacements
