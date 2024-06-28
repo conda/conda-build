@@ -10,8 +10,9 @@ from uuid import uuid4
 import pytest
 from conda.core.prefix_data import PrefixData
 
-from conda_build.inspect_pkg import which_package
-from conda_build.utils import on_win
+from conda_build.exceptions import CondaBuildUserError
+from conda_build.inspect_pkg import inspect_linkages, inspect_objects, which_package
+from conda_build.utils import on_mac, on_win
 
 
 def test_which_package(tmp_path: Path):
@@ -271,3 +272,26 @@ def test_which_package_battery(tmp_path: Path):
 
     # missing files should return no packages
     assert not len(list(which_package(tmp_path / "missing", tmp_path)))
+
+
+def test_inspect_linkages_no_packages():
+    with pytest.raises(CondaBuildUserError):
+        inspect_linkages([])
+
+
+@pytest.mark.skipif(not on_win, reason="inspect_linkages is available")
+def test_inspect_linkages_on_win():
+    with pytest.raises(CondaBuildUserError):
+        inspect_linkages(["packages"])
+
+
+@pytest.mark.skipif(on_win, reason="inspect_linkages is not available")
+def test_inspect_linkages_not_installed():
+    with pytest.raises(CondaBuildUserError):
+        inspect_linkages(["not_installed_pkg"])
+
+
+@pytest.mark.skipif(on_mac, reason="inspect_objects is only available on macOS")
+def test_inspect_objects_not_on_mac():
+    with pytest.raises(CondaBuildUserError):
+        inspect_objects([])
