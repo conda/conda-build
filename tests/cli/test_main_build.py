@@ -16,7 +16,7 @@ from conda_build.config import (
     Config,
     zstd_compression_level_default,
 )
-from conda_build.exceptions import DependencyNeedsBuildingError
+from conda_build.exceptions import CondaBuildUserError, DependencyNeedsBuildingError
 from conda_build.os_utils.external import find_executable
 from conda_build.utils import get_build_folders, on_win, package_has_file
 
@@ -165,7 +165,7 @@ def test_build_long_test_prefix_default_enabled(mocker, testing_workdir):
     main_build.execute(args)
 
     args.append("--no-long-test-prefix")
-    with pytest.raises(SystemExit):
+    with pytest.raises(CondaBuildUserError):
         main_build.execute(args)
 
 
@@ -483,7 +483,7 @@ def test_test_extra_dep(testing_metadata):
     main_build.execute(args)
 
     # missing click dep will fail tests
-    with pytest.raises(SystemExit):
+    with pytest.raises(CondaBuildUserError):
         args = [output, "-t"]
         # extra_deps will add it in
         main_build.execute(args)

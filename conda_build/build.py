@@ -1753,13 +1753,16 @@ def bundle_conda(
                     output["script"],
                     args[0],
                 )
-            if "system32" in args[0] and "bash" in args[0]:
-                print(
-                    "ERROR :: WSL bash.exe detected, this will not work (PRs welcome!). Please\n"
-                    "         use MSYS2 packages. Add `m2-base` and more (depending on what your"
-                    "         script needs) to `requirements/build` instead."
+            if (
+                # WSL bash is always the same path, it is an alias to the default
+                # distribution as configured by the user
+                on_win and Path("C:\\Windows\\System32\\bash.exe").samefile(args[0])
+            ):
+                raise CondaBuildUserError(
+                    "WSL bash.exe is not supported. Please use MSYS2 packages. Add "
+                    "`m2-base` and more (depending on what your script needs) to "
+                    "`requirements/build` instead."
                 )
-                sys.exit(1)
         else:
             args = interpreter.split(" ")
 
@@ -1772,6 +1775,7 @@ def bundle_conda(
         env_output["RECIPE_DIR"] = metadata.path
         env_output["MSYS2_PATH_TYPE"] = "inherit"
         env_output["CHERE_INVOKING"] = "1"
+        _set_env_variables_for_build(metadata, env_output)
         for var in utils.ensure_list(metadata.get_value("build/script_env")):
             if "=" in var:
                 val = var.split("=", 1)[1]
@@ -3057,13 +3061,7 @@ def construct_metadata_for_test(recipedir_or_package, config):
     return m, hash_input
 
 
-def write_build_scripts(m, script, build_file):
-    # TODO: Prepending the prefixes here should probably be guarded by
-    #         if not m.activate_build_script:
-    #       Leaving it as is, for now, since we need a quick, non-disruptive patch release.
-    with utils.path_prepended(m.config.host_prefix, False):
-        with utils.path_prepended(m.config.build_prefix, False):
-            env = environ.get_dict(m=m)
+def _set_env_variables_for_build(m, env):
     env["CONDA_BUILD_STATE"] = "BUILD"
 
     # hard-code this because we never want pip's build isolation
@@ -3094,6 +3092,17 @@ def write_build_scripts(m, script, build_file):
     # The stuff in replacements is not parsable in a shell script (or we need to escape it)
     if "replacements" in env:
         del env["replacements"]
+
+
+def write_build_scripts(m, script, build_file):
+    # TODO: Prepending the prefixes here should probably be guarded by
+    #         if not m.activate_build_script:
+    #       Leaving it as is, for now, since we need a quick, non-disruptive patch release.
+    with utils.path_prepended(m.config.host_prefix, False):
+        with utils.path_prepended(m.config.build_prefix, False):
+            env = environ.get_dict(m=m)
+
+    _set_env_variables_for_build(m, env)
 
     work_file = join(m.config.work_dir, "conda_build.sh")
     env_file = join(m.config.work_dir, "build_env_setup.sh")
@@ -3550,7 +3559,12 @@ def test(
     return True
 
 
-def tests_failed(package_or_metadata, move_broken, broken_dir, config):
+def tests_failed(
+    package_or_metadata: str | os.PathLike | Path | MetaData,
+    move_broken: bool,
+    broken_dir: str | os.PathLike | Path,
+    config: Config,
+) -> None:
     """
     Causes conda to exit if any of the given package's tests failed.
 
@@ -3578,7 +3592,7 @@ def tests_failed(package_or_metadata, move_broken, broken_dir, config):
         _delegated_update_index(
             os.path.dirname(os.path.dirname(pkg)), verbose=config.debug, threads=1
         )
-    sys.exit("TESTS FAILED: " + os.path.basename(pkg))
+    raise CondaBuildUserError("TESTS FAILED: " + os.path.basename(pkg))
 
 
 @deprecated(
@@ -3974,7 +3988,10 @@ def build_tree(
     return list(built_packages.keys())
 
 
-def handle_anaconda_upload(paths, config):
+def handle_anaconda_upload(
+    paths: Iterable[str | os.PathLike | Path],
+    config: Config,
+) -> None:
     from .os_utils.external import find_executable
 
     paths = utils.ensure_list(paths)
@@ -4008,7 +4025,7 @@ def handle_anaconda_upload(paths, config):
             "# To have conda build upload to anaconda.org automatically, use\n"
             f"# {prompter}conda config --set anaconda_upload yes\n"
         )
-        no_upload_message += f"anaconda upload{joiner}" + joiner.join(paths)
+        no_upload_message += f"anaconda upload{joiner}" + joiner.join(map(str, paths))
 
     if not upload:
         print(no_upload_message)
@@ -4016,7 +4033,7 @@ def handle_anaconda_upload(paths, config):
 
     if not anaconda:
         print(no_upload_message)
-        sys.exit(
+        raise CondaBuildUserError(
             "Error: cannot locate anaconda command (required for upload)\n"
             "# Try:\n"
             f"# {prompter}conda install anaconda-client"
@@ -4073,11 +4090,11 @@ def handle_pypi_upload(wheels, config):
             try:
                 utils.check_call_env(args + [f])
             except:
-                utils.get_logger(__name__).warn(
+                utils.get_logger(__name__).warning(
                     "wheel upload failed - is twine installed?"
                     "  Is this package registered?"
                 )
-                utils.get_logger(__name__).warn(f"Wheel file left in {f}")
+                utils.get_logger(__name__).warning(f"Wheel file left in {f}")
 
     else:
         print(f"anaconda_upload is not set.  Not uploading wheels: {wheels}")
