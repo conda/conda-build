@@ -21,7 +21,7 @@ import time
 import urllib.parse as urlparse
 import urllib.request as urllib
 from collections import OrderedDict, defaultdict
-from functools import lru_cache
+from functools import lru_cache, partial
 from glob import glob
 from io import StringIO
 from itertools import filterfalse
@@ -1983,6 +1983,39 @@ def sha256_checksum(filename, buffersize=65536):
         for block in iter(lambda: f.read(buffersize), b""):
             sha256.update(block)
     return sha256.hexdigest()
+
+
+def compute_content_hash(directory: str, algorithm="sha256"):
+    """
+    Compute the hash of the recursively traversed and sorted contents of a directory.
+    The hash will include these elements, in this order:
+    - Relative path to 'directory', normalized (backslash as forward slashes).
+    - Empty string, as a separator.
+    - "Contents" of the path:
+        - If the path is directory or symlink, use the bytes for "directory" and "symlink",
+          respectively.
+        - If the path is a file cand can be read, the contents of the file.
+    - Single dash string, as a separator.
+    """
+    log = get_logger(__name__)
+    hasher = hashlib.new(algorithm)
+    for entry in sorted(os.scandir(directory), key=lambda f: f.name):
+        # encode the relative path to directory, for files, dirs and others
+        hasher.update(entry.name.replace("\\", "/").encode("utf-8"))
+        hasher.update(b"-")
+        if entry.is_dir(follow_symlinks=False):
+            hasher.update(b"directory")
+        elif entry.is_symlink():
+            hasher.update(b"symlink")
+        elif entry.is_file():
+            try:
+                with open(entry.path, "rb") as fh:
+                    for chunk in iter(partial(fh.read, 8192), b""):
+                        hasher.update(chunk)
+            except OSError as exc:
+                log.debug("Skipping %s for hashing", entry.name, exc_info=exc)
+        hasher.update(b"-")
+    return hasher.hexdigest()
 
 
 def write_bat_activation_text(file_handle, m):
