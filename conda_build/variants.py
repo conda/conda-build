@@ -700,7 +700,10 @@ def get_package_variants(recipedir_or_metadata, config=None, variants=None):
     return filter_combined_spec_to_used_keys(combined_spec, specs=specs)
 
 
-def get_vars(variants: Iterable[dict[str, Any]]) -> set[str]:
+def get_vars(
+    variants: Iterable[dict[str, Any]],
+    subset: set[str] | None = None,
+) -> set[str]:
     """For purposes of naming/identifying, provide a way of identifying which variables contribute
     to the matrix dimensionality"""
     first, *others = variants
@@ -710,10 +713,12 @@ def get_vars(variants: Iterable[dict[str, Any]]) -> set[str]:
         "ignore_version",
         *ensure_list(first.get("extend_keys")),
     }
+    to_consider = set(first)
+    if subset is not None:
+        to_consider.intersection_update(subset)
+    to_consider.difference_update(special_keys)
     return {
-        var
-        for var in set(first) - special_keys
-        if any(first[var] != other[var] for other in others)
+        var for var in to_consider if any(first[var] != other[var] for other in others)
     }
 
 
