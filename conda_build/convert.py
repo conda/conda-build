@@ -18,6 +18,8 @@ import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from conda_package_handling.api import extract
+
 from .utils import ensure_list, filter_info_files, walk
 
 if TYPE_CHECKING:
@@ -129,13 +131,9 @@ def extract_temporary_directory(file_path):
     Positional arguments:
     file_path (str) -- the file path to the source package tar file
     """
-    temporary_directory = tempfile.mkdtemp()
-
-    source = tarfile.open(file_path)
-    source.extractall(temporary_directory)
-    source.close()
-
-    return temporary_directory
+    tmp = tempfile.mkdtemp()
+    extract(file_path, dest_dir=tmp)
+    return tmp
 
 
 def update_dependencies(new_dependencies, existing_dependencies):
