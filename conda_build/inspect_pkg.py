@@ -20,6 +20,7 @@ from conda.core.index import get_index
 from conda.core.prefix_data import PrefixData
 from conda.models.records import PrefixRecord
 
+from .exceptions import CondaBuildUserError
 from .os_utils.ldd import (
     get_linkages,
     get_package_obj_files,
@@ -219,9 +220,13 @@ def inspect_linkages(
     sysroot: str = "",
 ) -> str:
     if not packages and not untracked and not all_packages:
-        sys.exit("At least one package or --untracked or --all must be provided")
+        raise CondaBuildUserError(
+            "At least one package or --untracked or --all must be provided"
+        )
     elif on_win:
-        sys.exit("Error: conda inspect linkages is only implemented in Linux and OS X")
+        raise CondaBuildUserError(
+            "`conda inspect linkages` is only implemented on Linux and macOS"
+        )
 
     prefix = Path(prefix)
     installed = {prec.name: prec for prec in PrefixData(str(prefix)).iter_records()}
@@ -237,7 +242,7 @@ def inspect_linkages(
         if name == untracked_package:
             obj_files = get_untracked_obj_files(prefix)
         elif name not in installed:
-            sys.exit(f"Package {name} is not installed in {prefix}")
+            raise CondaBuildUserError(f"Package {name} is not installed in {prefix}")
         else:
             obj_files = get_package_obj_files(installed[name], prefix)
 
@@ -308,7 +313,9 @@ def inspect_objects(
     groupby: str = "package",
 ):
     if not on_mac:
-        sys.exit("Error: conda inspect objects is only implemented in OS X")
+        raise CondaBuildUserError(
+            "`conda inspect objects` is only implemented on macOS"
+        )
 
     prefix = Path(prefix)
     installed = {prec.name: prec for prec in PrefixData(str(prefix)).iter_records()}

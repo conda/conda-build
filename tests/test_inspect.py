@@ -6,11 +6,12 @@ import sys
 import pytest
 
 from conda_build import api
+from conda_build.exceptions import CondaBuildUserError
 
 
 def test_inspect_linkages():
     if sys.platform == "win32":
-        with pytest.raises(SystemExit) as exc:
+        with pytest.raises(CondaBuildUserError) as exc:
             out_string = api.inspect_linkages("python")
             assert "conda inspect linkages is only implemented in Linux and OS X" in exc
     else:
@@ -20,7 +21,7 @@ def test_inspect_linkages():
 
 def test_inspect_objects():
     if sys.platform != "darwin":
-        with pytest.raises(SystemExit) as exc:
+        with pytest.raises(CondaBuildUserError) as exc:
             out_string = api.inspect_objects("python")
             assert "conda inspect objects is only implemented in OS X" in exc
     else:
