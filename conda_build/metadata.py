@@ -2394,7 +2394,6 @@ class MetaData:
     def copy(self: Self) -> MetaData:
         new = copy.copy(self)
         new.config = self.config.copy()
-        new.config.variant = copy.deepcopy(self.config.variant)
         new.meta = copy.deepcopy(self.meta)
         new.type = getattr(
             self, "type", "conda_v2" if self.config.conda_pkg_format == "2" else "conda"
