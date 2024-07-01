@@ -180,3 +180,106 @@ Error: environment does not exist: {prefix}
         # they use the conda environment for loading libraries at runtime
         relink_sharedobjects(pkg_path, prefix)
         print("completed operation for: " + pkg_path)
+
+
+def execute(
+    recipe_dirs: list[str],
+    prefix: str = sys.prefix,
+    no_pth_file: bool = False,
+    build_ext: bool = False,
+    clean: bool = False,
+    uninstall: bool = False,
+) -> None:
+    """
+    Use pypa/build to develop.
+    """
+    if not isdir(prefix):
+        sys.exit(
+            f"""\
+Error: environment does not exist: {prefix}
+#
+# Use 'conda create' to create the environment first.
+#"""
+        )
+
+    python_executable = find_executable("python", prefix=prefix)
+    assert python_executable
+
+    # current environment's site-packages directory
+    sp_dir = get_site_packages(
+        prefix, ".".join((str(sys.version_info.major), str(sys.version_info.minor)))
+    )
+
+    if isinstance(recipe_dirs, str):
+        recipe_dirs = [recipe_dirs]
+
+    for path in recipe_dirs:
+        pkg_path = abspath(expanduser(path))
+
+        if uninstall:
+            raise NotImplementedError("nope")
+            # uninstall then exit - does not do any other operations
+            _uninstall(sp_dir, pkg_path)
+            return
+
+        if clean or build_ext:
+            raise NotImplementedError("nope")
+            setup_py = get_setup_py(pkg_path)
+            if clean:
+                _clean(setup_py)
+                if not build_ext:
+                    return
+
+            # build extensions before adding to conda.pth
+            if build_ext:
+                _build_ext(setup_py)
+
+        build_pypa(path, prefix, python_executable)
+
+        # go through the source looking for compiled extensions and make sure
+        # they use the conda environment for loading libraries at runtime
+        relink_sharedobjects(pkg_path, prefix)
+        print("completed operation for: " + pkg_path)
+
+
+import subprocess
+import tempfile
+from pathlib import Path
+
+from build import ProjectBuilder
+
+
+def ensure_requirements(requirements, prefix, python_executable):
+    # XXX use conda instead; we need to parse environment markers e.g. "tomli;
+    # python_version < '3.11'" see pyproject-hooks
+    with tempfile.NamedTemporaryFile(suffix=".txt") as req:
+        req.write(("\n".join(requirements)).encode())
+        command = [python_executable, "-m", "pip", "install", "-r", req.name]
+        print("Command", command)
+        req.seek(0)
+        print(f"Requirements:\n{req.read().decode()}")
+        subprocess.run(command, check=True)
+
+
+def build_pypa(path: Path | str, prefix, python_executable):
+    path = Path(path)
+    builder = ProjectBuilder(path, python_executable=python_executable)
+    print("Installing requirements for build system:", builder.build_system_requires)
+    ensure_requirements(builder.build_system_requires, prefix, python_executable)
+    # builder.check_dependencies() uses pypa packaging.requirements; or lways
+    # install or use conda check.
+
+    # builder calls hook with f'get_requires_for_build_{distribution}', andß
+    # the editable hooks follow the same convention.
+    editable_requirements = builder.get_requires_for_build("editable")
+    print("Additional requirements for build_editable?", editable_requirements or "N/A")
+
+    with tempfile.TemporaryDirectory(
+        prefix="conda-develop-editable"
+    ) as output_directory:
+        editable_file = builder.build("editable", output_directory)
+        # XXX parse dependencies from editable_file, use desired installer to
+        # install, add --no-index to final pip install <wheel> command.
+        command = [python_executable, "-m", "pip", "install", editable_file]
+        print("Install editable wheel:", command)
+        subprocess.run(command, check=True)
