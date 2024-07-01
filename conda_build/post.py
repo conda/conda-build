@@ -603,7 +603,21 @@ def mk_relative_linux(f, prefix, rpaths=("lib",), method=None):
             existing_pe = existing_pe.split(os.pathsep)
     existing = existing_pe
     if have_lief:
-        existing2, _, _ = get_rpaths_raw(elf)
+        existing2 = None
+        try:
+            existing2, _, _ = get_rpaths_raw(elf)
+        except Exception as e:
+            log = utils.get_logger(__name__)
+            if method == "LIEF":
+                log.error(
+                    f"get_rpaths_raw({elf!r}) with LIEF failed: {e}, but LIEF was specified",
+                    exc_info=True,
+                )
+            else:
+                log.warning(
+                    f"get_rpaths_raw({elf!r}) with LIEF failed: {e}, will proceed with patchelf"
+                )
+            method = "patchelf"
         if existing_pe and existing_pe != existing2:
             print(
                 f"WARNING :: get_rpaths_raw()={existing2} and patchelf={existing_pe} disagree for {elf} :: "
