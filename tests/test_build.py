@@ -20,7 +20,10 @@ from conda.common.compat import on_win
 from conda_build import api, build
 from conda_build.exceptions import CondaBuildUserError
 
-from .utils import get_noarch_python_meta, metadata_dir
+from .utils import get_noarch_python_meta, metadata_dir, metadata_path
+
+if TYPE_CHECKING:
+    from conda_build.config import Config
 
 if TYPE_CHECKING:
     from pytest_mock import MockerFixture
@@ -349,6 +352,14 @@ def test_copy_readme(testing_metadata: MetaData, readme: str):
     Path(testing_metadata.config.work_dir, readme).touch()
     build.copy_readme(testing_metadata)
     assert Path(testing_metadata.config.info_dir, readme).exists()
+
+
+def test_construct_metadata_for_test_from_recipe(testing_config: Config) -> None:
+    with pytest.warns(FutureWarning):
+        build._construct_metadata_for_test_from_recipe(
+            str(metadata_path / "test_source_files"),
+            testing_config,
+        )
 
 
 @pytest.mark.skipif(not on_win, reason="WSL is only on Windows")
