@@ -252,6 +252,7 @@ from build import ProjectBuilder
 def ensure_requirements(requirements, prefix, python_executable):
     # XXX use conda instead; we need to parse environment markers e.g. "tomli;
     # python_version < '3.11'" see pyproject-hooks
+    # https://packaging.pypa.io/en/stable/markers.html#markers
     with tempfile.NamedTemporaryFile(suffix=".txt") as req:
         req.write(("\n".join(requirements)).encode())
         command = [python_executable, "-m", "pip", "install", "-r", req.name]
