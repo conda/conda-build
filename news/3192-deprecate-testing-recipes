@@ -8,7 +8,7 @@
 
 ### Deprecations
 
-* Mark `conda_build.build._construct_metadata_for_test_from_recipe` as deprecated. Test built packages instead, not recipes (e.g., `conda build --test package` instead of `conda build --test recipe/`). (#3192)
+* Mark `conda_build.build._construct_metadata_for_test_from_recipe` as deprecated. Test built packages instead, not recipes (e.g., `conda build --test package` instead of `conda build --test recipe/`). (#3192 via #5352)
 
 ### Docs
 
