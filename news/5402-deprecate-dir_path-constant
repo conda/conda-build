@@ -1,0 +1,19 @@
+### Enhancements
+
+* <news item>
+
+### Bug fixes
+
+* <news item>
+
+### Deprecations
+
+* Mark `conda_build.os_utils.dir_paths` constant for deprecation. Use `_DIR_PATHS` instead. (#5402)
+
+### Docs
+
+* <news item>
+
+### Other
+
+* <news item>
