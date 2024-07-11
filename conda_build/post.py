@@ -73,6 +73,12 @@ filetypes_for_platform = {
     "linux": (elffile,),
 }
 
+GNU_ARCH_MAP = {
+    "ppc64le": "powerpc64le",
+    "32": "i686",
+    "64": "x86_64",
+}
+
 
 def fix_shebang(f, prefix, build_python, osx_is_app=False):
     path = join(prefix, f)
@@ -1406,8 +1412,19 @@ def check_overlinking_impl(
                     list(diffs)[1:3],
                 )
                 sysroots_files[srs] = sysroot_files
+
+    def sysroot_matches_subdir(path):
+        if path.endswith("/"):
+            path = os.path.dirname(path)
+        triplet = os.path.basename(os.path.dirname(path))
+        subdir_arch = subdir.split("-")[-1]
+        return triplet.split("-")[0] == GNU_ARCH_MAP.get(subdir_arch, subdir_arch)
+
     sysroots_files = OrderedDict(
-        sorted(sysroots_files.items(), key=lambda x: -len(x[1]))
+        sorted(
+            sysroots_files.items(),
+            key=lambda x: (not sysroot_matches_subdir(x[0]), -len(x[1])),
+        )
     )
 
     all_needed_dsos, needed_dsos_for_file = _collect_needed_dsos(
