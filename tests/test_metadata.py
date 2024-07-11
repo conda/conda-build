@@ -165,14 +165,6 @@ def test_select_lines_battery():
             assert select_lines(lines, namespace, variants_in_place=True) == selection
 
 
-def test_select_lines_invalid():
-    with pytest.raises(
-        CondaBuildUserError,
-        match=r"Invalid selector in meta\.yaml",
-    ):
-        select_lines("text # [{bad]", {}, variants_in_place=True)
-
-
 def test_disallow_leading_period_in_version(testing_metadata):
     testing_metadata.meta["package"]["version"] = ".ste.ve"
     testing_metadata.final = True
@@ -565,6 +557,14 @@ def test_get_section(testing_metadata: MetaData):
             assert isinstance(section, list)
         else:
             assert isinstance(section, dict)
+
+
+def test_select_lines_invalid():
+    with pytest.raises(
+        CondaBuildUserError,
+        match=r"Invalid selector in meta\.yaml",
+    ):
+        select_lines("text # [{bad]", {}, variants_in_place=True)
 
 
 @pytest.mark.parametrize(

@@ -363,7 +363,7 @@ def test_guess_interpreter(
         assert build.guess_interpreter(script) == interpreter
 
 
-def test_check_external():
+def test_check_external_deprecated() -> None:
     with pytest.deprecated_call():
         build.check_external()
 
@@ -429,7 +429,7 @@ def test_handle_anaconda_upload(testing_config: Config, mocker: MockerFixture):
         build.handle_anaconda_upload((), testing_config)
 
 
-def test_tests_failed(testing_metadata: MetaData, tmp_path: Path):
+def test_tests_failed(testing_metadata: MetaData, tmp_path: Path) -> None:
     with pytest.raises(CondaBuildUserError):
         build.tests_failed(
             package_or_metadata=testing_metadata,
@@ -448,13 +448,3 @@ def test_handle_anaconda_upload(testing_config: Config, mocker: MockerFixture):
 
     with pytest.raises(CondaBuildUserError):
         build.handle_anaconda_upload((), testing_config)
-
-
-@pytest.mark.skipif(not on_linux, reason="pathelf is only available on Linux")
-def test_check_external(mocker: MockerFixture):
-    mocker.patch(
-        "conda_build.os_utils.external.find_executable",
-        return_value=None,
-    )
-    with pytest.raises(CondaBuildUserError):
-        build.check_external()
