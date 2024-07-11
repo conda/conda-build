@@ -1647,7 +1647,6 @@ def post_process_files(m: MetaData, initial_prefix_files):
     # The post processing may have deleted some files (like easy-install.pth)
     current_prefix_files = utils.prefix_files(prefix=host_prefix)
     new_files = sorted(current_prefix_files - initial_prefix_files)
-
     """
     if m.noarch == 'python' and m.config.subdir == 'win-32':
         # Delete any PIP-created .exe launchers and fix entry_points.txt
