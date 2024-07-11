@@ -1648,8 +1648,27 @@ def post_process_files(m: MetaData, initial_prefix_files):
     current_prefix_files = utils.prefix_files(prefix=host_prefix)
     new_files = sorted(current_prefix_files - initial_prefix_files)
 
-    # filter_files will remove .git, trash directories, and conda-meta directories
+    """
+    if m.noarch == 'python' and m.config.subdir == 'win-32':
+        # Delete any PIP-created .exe launchers and fix entry_points.txt
+        # .. but we need to provide scripts instead here.
+        from .post import caseless_sepless_fnmatch
+        exes = caseless_sepless_fnmatch(new_files, 'Scripts/*.exe')
+        for ff in exes:
+            os.unlink(os.path.join(m.config.host_prefix, ff))
+            new_files.remove(ff)
+    """
     new_files = utils.filter_files(new_files, prefix=host_prefix)
+    meta_dir = m.config.meta_dir
+    if any(meta_dir in join(host_prefix, f) for f in new_files):
+        meta_files = (
+            tuple(f for f in new_files if m.config.meta_dir in join(host_prefix, f)),
+        )
+        sys.exit(
+            f"Error: Untracked file(s) {meta_files} found in conda-meta directory. This error usually comes "
+            "from using conda in the build script. Avoid doing this, as it can lead to packages "
+            "that include their dependencies."
+        )
     post_build(m, new_files, build_python=python)
 
     entry_point_script_names = get_entry_point_script_names(
@@ -3564,11 +3583,12 @@ def check_external():
     if on_linux:
         patchelf = external.find_executable("patchelf")
         if patchelf is None:
-            raise CondaBuildUserError(
-                f"Did not find 'patchelf' in: {os.pathsep.join(external._DIR_PATHS)} "
-                f"'patchelf' is necessary for building conda packages on Linux with "
-                f"relocatable ELF libraries.  You can install patchelf using conda install "
-                f"patchelf."
+            sys.exit(
+                "Error:\n"
+                f"    Did not find 'patchelf' in: {os.pathsep.join(external.dir_paths)}\n"
+                "    'patchelf' is necessary for building conda packages on Linux with\n"
+                "    relocatable ELF libraries.  You can install patchelf using conda install\n"
+                "    patchelf.\n"
             )
 
 
