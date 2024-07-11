@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import sys
 import warnings
 from glob import glob
 from itertools import chain
@@ -21,7 +22,6 @@ from ..config import (
     get_or_merge_config,
     zstd_compression_level_default,
 )
-from ..exceptions import CondaBuildUserError
 from ..utils import LoggingContext
 from .actions import KeyValueAction
 from .main_render import get_render_parser
@@ -576,7 +576,7 @@ def execute(args: Sequence[str] | None = None) -> int:
         if failed_recipes:
             print("Failed recipes:")
             dashlist(failed_recipes)
-            raise CondaBuildUserError(len(failed_recipes))
+            sys.exit(len(failed_recipes))
         else:
             print("All tests passed")
     elif parsed.source:
