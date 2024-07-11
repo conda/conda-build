@@ -32,8 +32,6 @@ from conda_build.metadata import MetaData
 from conda_build.utils import check_call_env, copy_into, prepend_bin_path
 from conda_build.variants import get_default_variant
 
-pytest_plugins = ("conda.testing",)
-
 
 @pytest.hookimpl
 def pytest_report_header(config: pytest.Config):

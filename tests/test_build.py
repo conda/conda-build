@@ -363,7 +363,7 @@ def test_guess_interpreter(
         assert build.guess_interpreter(script) == interpreter
 
 
-def test_check_external_deprecated() -> None:
+def test_check_external():
     with pytest.deprecated_call():
         build.check_external()
 
