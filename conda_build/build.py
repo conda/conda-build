@@ -3591,7 +3591,7 @@ def check_external():
         patchelf = external.find_executable("patchelf")
         if patchelf is None:
             raise CondaBuildUserError(
-                f"Did not find 'patchelf' in: {os.pathsep.join(external._DIR_PATHS)} "
+                f"Did not find 'patchelf' in: {os.pathsep.join(external.dir_paths)} "
                 f"'patchelf' is necessary for building conda packages on Linux with "
                 f"relocatable ELF libraries.  You can install patchelf using conda install "
                 f"patchelf."
