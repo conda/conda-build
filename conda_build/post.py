@@ -1414,9 +1414,10 @@ def check_overlinking_impl(
                 sysroots_files[srs] = sysroot_files
 
     def sysroot_matches_subdir(path):
-        if path.endswith("/"):
-            path = os.path.dirname(path)
-        triplet = os.path.basename(os.path.dirname(path))
+        # The path looks like <PREFIX>/aarch64-conda-linux-gnu/sysroot/
+        # We check that the triplet "aarch64-conda-linux-gnu"
+        # matches the subdir for eg: linux-aarch64.
+        triplet = os.path.basename(os.path.dirname(os.path.dirname(path)))
         subdir_arch = subdir.split("-")[-1]
         return triplet.split("-")[0] == GNU_ARCH_MAP.get(subdir_arch, subdir_arch)
 
