@@ -15,6 +15,15 @@ from .utils import metadata_dir
 
 
 @pytest.mark.sanity
+def test_recipe_test(testing_config):
+    """Test calling conda build -t <recipe dir>"""
+    recipe = os.path.join(metadata_dir, "has_prefix_files")
+    metadata = api.render(recipe, config=testing_config)[0][0]
+    api.build(metadata, notest=True, anaconda_upload=False)
+    api.test(recipe, config=metadata.config)
+
+
+@pytest.mark.sanity
 def test_package_test(testing_config):
     """Test calling conda build -t <package file> - rather than <recipe dir>"""
     recipe = os.path.join(metadata_dir, "has_prefix_files")

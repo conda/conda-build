@@ -443,6 +443,35 @@ def test_relative_path_test_artifact(
     main_build.execute(args)
 
 
+def test_relative_path_test_recipe(conda_build_test_recipe_envvar: str):
+    # this test builds a package into (cwd)/relative/path and then calls:
+    # conda-build --test --croot ./relative/path/ /abs/path/to/recipe
+
+    empty_sections = Path(metadata_dir, "empty_with_build_script")
+    croot_rel = Path(".", "relative", "path")
+    croot_abs = croot_rel.resolve()
+
+    # build the package
+    args = [
+        "--no-anaconda-upload",
+        "--no-test",
+        f"--croot={croot_abs}",
+        str(empty_sections),
+    ]
+    main_build.execute(args)
+
+    assert len(list(croot_abs.glob("**/*.tar.bz2"))) == 1
+
+    # run the test stage with relative croot
+    args = [
+        "--no-anaconda-upload",
+        "--test",
+        f"--croot={croot_rel}",
+        str(empty_sections),
+    ]
+    main_build.execute(args)
+
+
 def test_test_extra_dep(testing_metadata):
     testing_metadata.meta["test"]["imports"] = ["imagesize"]
     api.output_yaml(testing_metadata, "meta.yaml")
