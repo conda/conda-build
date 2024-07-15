@@ -2870,7 +2870,7 @@ def warn_on_use_of_SRC_DIR(metadata):
 
 @deprecated(
     "3.16.0",
-    "24.7.0",
+    "24.9.0",
     addendum=(
         "Test built packages instead, not recipes "
         "(e.g., `conda build --test package` instead of `conda build --test recipe/`)."
