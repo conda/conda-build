@@ -1647,27 +1647,9 @@ def post_process_files(m: MetaData, initial_prefix_files):
     # The post processing may have deleted some files (like easy-install.pth)
     current_prefix_files = utils.prefix_files(prefix=host_prefix)
     new_files = sorted(current_prefix_files - initial_prefix_files)
-    """
-    if m.noarch == 'python' and m.config.subdir == 'win-32':
-        # Delete any PIP-created .exe launchers and fix entry_points.txt
-        # .. but we need to provide scripts instead here.
-        from .post import caseless_sepless_fnmatch
-        exes = caseless_sepless_fnmatch(new_files, 'Scripts/*.exe')
-        for ff in exes:
-            os.unlink(os.path.join(m.config.host_prefix, ff))
-            new_files.remove(ff)
-    """
+
+    # filter_files will remove .git, trash directories, and conda-meta directories
     new_files = utils.filter_files(new_files, prefix=host_prefix)
-    meta_dir = m.config.meta_dir
-    if any(meta_dir in join(host_prefix, f) for f in new_files):
-        meta_files = (
-            tuple(f for f in new_files if m.config.meta_dir in join(host_prefix, f)),
-        )
-        sys.exit(
-            f"Error: Untracked file(s) {meta_files} found in conda-meta directory. This error usually comes "
-            "from using conda in the build script. Avoid doing this, as it can lead to packages "
-            "that include their dependencies."
-        )
     post_build(m, new_files, build_python=python)
 
     entry_point_script_names = get_entry_point_script_names(
@@ -2886,6 +2868,15 @@ def warn_on_use_of_SRC_DIR(metadata):
             )
 
 
+@deprecated(
+    "3.16.0",
+    "24.9.0",
+    addendum=(
+        "Test built packages instead, not recipes "
+        "(e.g., `conda build --test package` instead of `conda build --test recipe/`)."
+    ),
+    deprecation_type=FutureWarning,  # we need to warn users, not developers
+)
 def _construct_metadata_for_test_from_recipe(recipe_dir, config):
     config.need_cleanup = False
     config.recipe_dir = None
@@ -2893,11 +2884,6 @@ def _construct_metadata_for_test_from_recipe(recipe_dir, config):
     metadata = expand_outputs(
         render_recipe(recipe_dir, config=config, reset_build_id=False)
     )[0][1]
-    log = utils.get_logger(__name__)
-    log.warning(
-        "Testing based on recipes is deprecated as of conda-build 3.16.0.  Please adjust "
-        "your code to pass your desired conda package to test instead."
-    )
 
     utils.rm_rf(metadata.config.test_dir)
 
@@ -3604,12 +3590,11 @@ def check_external():
     if on_linux:
         patchelf = external.find_executable("patchelf")
         if patchelf is None:
-            sys.exit(
-                "Error:\n"
-                f"    Did not find 'patchelf' in: {os.pathsep.join(external.dir_paths)}\n"
-                "    'patchelf' is necessary for building conda packages on Linux with\n"
-                "    relocatable ELF libraries.  You can install patchelf using conda install\n"
-                "    patchelf.\n"
+            raise CondaBuildUserError(
+                f"Did not find 'patchelf' in: {os.pathsep.join(external.dir_paths)} "
+                f"'patchelf' is necessary for building conda packages on Linux with "
+                f"relocatable ELF libraries.  You can install patchelf using conda install "
+                f"patchelf."
             )
 
 
