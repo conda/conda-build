@@ -130,7 +130,7 @@ info/paths.json
 
 Combines information from ``info/files``, ``info/has_prefix``, and
 ``info/no_link`` into a single file. The older files are ignored by
-conda when paths.json is present. Introduced in 2016.
+conda when ``paths.json`` is present. Introduced in 2016.
 
 info/files
 ----------
