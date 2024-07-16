@@ -1,0 +1,3 @@
+### Bug fixes
+
+* Error handling when `LIEF` fails is now consistent with `patchelf`. (#5176)
