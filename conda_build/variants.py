@@ -328,7 +328,7 @@ def _combine_spec_dictionaries(
                                     ) != len(ensure_list(v)):
                                         break
                                 else:
-                                    values[k] = v.copy()
+                                    values[k] = copy(v)
                                 missing_subvalues = [
                                     subvalue
                                     for subvalue in ensure_list(v)
