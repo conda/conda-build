@@ -7,11 +7,11 @@
 * Skip generating `repodata.json.bz2` for local index; generate `repodata.json`
   only; require `conda-package-handling >=2.2.0` matching conda. (#5231)
 * Add new include/exclude sections for glob expressions in multi-output `outputs/files`. (#4196 via #5216)
-* Increased performance by using pickle instead of deepcopy. (#5281)
+* Increase performance by using `pickle` instead of `copy.deepcopy`. (#5281)
 * Report fully rendered recipe to stdout before the build process starts. (#3798 via #5344)
 * Validate `run_constrained` dependencies to prevent faulty specs reaching final repodata. (#5047 via #5359)
-* PIP_* env variables are set when building outputs in multi-output recipes. (#3993 via #5368)
-* Reduced performance overheads of logging. (#5384)
+* `PIP_*` env variables are set when building outputs in multi-output recipes. (#3993 via #5368)
+* Reduce performance overhead of logging. (#5384)
 
 ### Bug fixes
 
@@ -106,7 +106,7 @@
 
 ### Other
 
-* Long `conda info` error messages for common exceptions. (#5264)
+* Do not generate conda error reports for common exceptions. (#5264)
 * Add `CondaBuildUserError` exception to replace `sys.exit` calls. (#5353)
 * Updated the CI to download the MacOSX 10.15 SDK.
 
