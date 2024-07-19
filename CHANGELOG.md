@@ -108,7 +108,7 @@
 
 * Do not generate conda error reports for common exceptions. (#5264)
 * Add `CondaBuildUserError` exception to replace `sys.exit` calls. (#5353)
-* Updated the CI to download the MacOSX 10.15 SDK.
+* Updated the CI to download the MacOSX 10.15 SDK. (#5387)
 
 ### Contributors
 
