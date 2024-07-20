@@ -1,5 +1,133 @@
 [//]: # (current developments)
 
+## 24.7.0 (2024-07-18)
+
+### Enhancements
+
+* Skip generating `repodata.json.bz2` for local index; generate `repodata.json`
+  only; require `conda-package-handling >=2.2.0` matching conda. (#5231)
+* Add new include/exclude sections for glob expressions in multi-output `outputs/files`. (#4196 via #5216)
+* Increase performance by using `pickle` instead of `copy.deepcopy`. (#5281)
+* Report fully rendered recipe to stdout before the build process starts. (#3798 via #5344)
+* Validate `run_constrained` dependencies to prevent faulty specs reaching final repodata. (#5047 via #5359)
+* `PIP_*` env variables are set when building outputs in multi-output recipes. (#3993 via #5368)
+* Reduce performance overhead of logging. (#5384)
+
+### Bug fixes
+
+* Include file path in addition to the content when generating the file hash to avoid unwanted caching during linkage analysis. (#4821)
+* Error handling when `LIEF` fails is now consistent with `patchelf`. (#5176)
+* Ensure cross-building recipes select the correct noarch package variants. (#5341 via #5350)
+* On Linux platforms, prefer the sysroot matching the target_platform when cross-compiling (#5403).
+
+### Deprecations
+
+* Mark `conda_build.build._construct_metadata_for_test_from_recipe` as deprecated. Test built packages instead, not recipes (e.g., `conda build --test package` instead of `conda build --test recipe/`). (#3192 via #5352)
+* Mark `conda_build.build.check_external` for deprecation. `patchelf` is an explicit conda-build dependency on Linux so it will always be installed. (#5355)
+* Remove the following deprecations:
+  * `conda_build.config.Config.override_channels` (use `conda.base.context.context.channels` instead). (#5333)
+  * `conda_build.config.noarch_python_build_age_default`. (#5333)
+  * `conda_build.conda_interface.add_parser_channels` (use `conda.cli.helpers.add_parser_channels` instead). (#5333)
+  * `conda_build.conda_interface.add_parser_prefix` (use `conda.cli.helpers.add_parser_prefix` instead). (#5333)
+  * `conda_build.conda_interface.ArgumentParser` (use `conda.cli.conda_argparse.ArgumentParser` instead). (#5333)
+  * `conda_build.conda_interface.binstar_upload` (use `conda.base.context.context.binstar_upload` instead). (#5333)
+  * `conda_build.conda_interface.cc_conda_build` (use `conda.base.context.context.conda_build` instead). (#5333)
+  * `conda_build.conda_interface.cc_platform` (use `conda.base.context.context.platform` instead). (#5333)
+  * `conda_build.conda_interface.Channel` (use `conda.models.channel.Channel` instead). (#5333)
+  * `conda_build.conda_interface.Completer`. (#5333)
+  * `conda_build.conda_interface.configparser` (use `configparser` instead). (#5333)
+  * `conda_build.conda_interface.CondaError` (use `conda.exceptions.CondaError` instead). (#5333)
+  * `conda_build.conda_interface.CondaHTTPError` (use `conda.exceptions.CondaHTTPError` instead). (#5333)
+  * `conda_build.conda_interface.CondaSession` (use `conda.gateways.connection.session.CondaSession` instead). (#5333)
+  * `conda_build.conda_interface.CONDA_VERSION` (use `conda.__version__` instead). (#5333)
+  * `conda_build.conda_interface.context` (use `conda.base.context.context` instead). (#5333)
+  * `conda_build.conda_interface.create_default_packages` (use `conda.base.context.context.create_default_packages` instead). (#5333)
+  * `conda_build.conda_interface.default_python` (use `conda.base.context.context.default_python` instead). (#5333)
+  * `conda_build.conda_interface.determine_target_prefix` (use `conda.base.context.determine_target_prefix` instead). (#5333)
+  * `conda_build.conda_interface.download` (use `conda.gateways.connection.download.download` instead). (#5333)
+  * `conda_build.conda_interface.env_path_backup_var_exists`. (#5333)
+  * `conda_build.conda_interface.envs_dirs` (use `conda.base.context.context.envs_dirs` instead). (#5333)
+  * `conda_build.conda_interface.EntityEncoder` (use `conda.auxlib.entity.EntityEncoder` instead). (#5333)
+  * `conda_build.conda_interface.FileMode` (use `conda.models.enums.FileMode` instead). (#5333)
+  * `conda_build.conda_interface.get_conda_build_local_url` (use `conda.models.channel.get_conda_build_local_url` instead). (#5333)
+  * `conda_build.conda_interface.get_conda_channel` (use `conda.models.channel.Channel.from_value` instead). (#5333)
+  * `conda_build.conda_interface.get_prefix` (use `conda.base.context.context.target_prefix` instead). (#5333)
+  * `conda_build.conda_interface.get_rc_urls` (use `conda.base.context.context.channels` instead). (#5333)
+  * `conda_build.conda_interface.human_bytes` (use `conda.utils.human_bytes` instead). (#5333)
+  * `conda_build.conda_interface.import_module` (use `importlib.import_module` instead). (#5333)
+  * `conda_build.conda_interface.input` (use `input` instead). (#5333)
+  * `conda_build.conda_interface.InstalledPackages`. (#5333)
+  * `conda_build.conda_interface.lchmod` (use `conda.gateways.disk.link.lchmod` instead). (#5333)
+  * `conda_build.conda_interface.LinkError` (use `conda.exceptions.LinkError` instead). (#5333)
+  * `conda_build.conda_interface.LockError` (use `conda.exceptions.LockError` instead). (#5333)
+  * `conda_build.conda_interface.MatchSpec` (use `conda.models.match_spec.MatchSpec` instead). (#5333)
+  * `conda_build.conda_interface.non_x86_linux_machines` (use `conda.base.context.non_x86_machines` instead). (#5333)
+  * `conda_build.conda_interface.NoPackagesFound` (use `conda.exceptions.ResolvePackageNotFound` instead). (#5333)
+  * `conda_build.conda_interface.NoPackagesFoundError` (use `conda.exceptions.NoPackagesFoundError` instead). (#5333)
+  * `conda_build.conda_interface.normalized_version` (use `conda.models.version.normalized_version` instead). (#5333)
+  * `conda_build.conda_interface.os` (use `os` instead). (#5333)
+  * `conda_build.conda_interface.PackageRecord` (use `conda.models.records.PackageRecord` instead). (#5333)
+  * `conda_build.conda_interface.PaddingError` (use `conda.exceptions.PaddingError` instead). (#5333)
+  * `conda_build.conda_interface.partial` (use `functools.partial` instead). (#5333)
+  * `conda_build.conda_interface.PathType` (use `conda.models.enums.PathType` instead). (#5333)
+  * `conda_build.conda_interface.pkgs_dirs` (use `conda.base.context.context.pkgs_dirs` instead). (#5333)
+  * `conda_build.conda_interface.prefix_placeholder` (use `conda.base.constants.PREFIX_PLACEHOLDER` instead). (#5333)
+  * `conda_build.conda_interface.ProgressiveFetchExtract` (use `conda.core.package_cache_data.ProgressiveFetchExtract` instead). (#5333)
+  * `conda_build.conda_interface.reset_context` (use `conda.base.context.reset_context` instead). (#5333)
+  * `conda_build.conda_interface.Resolve` (use `conda.resolve.Resolve` instead). (#5333)
+  * `conda_build.conda_interface.rm_rf` (use `conda_build.utils.rm_rf` instead). (#5333)
+  * `conda_build.conda_interface.root_dir` (use `conda.base.context.context.root_prefix` instead). (#5333)
+  * `conda_build.conda_interface.root_writable` (use `conda.base.context.context.root_writable` instead). (#5333)
+  * `conda_build.conda_interface.spec_from_line` (use `conda.cli.common.spec_from_line` instead). (#5333)
+  * `conda_build.conda_interface.specs_from_args` (use `conda.cli.common.specs_from_args` instead). (#5333)
+  * `conda_build.conda_interface.specs_from_url` (use `conda.cli.common.specs_from_url` instead). (#5333)
+  * `conda_build.conda_interface.StringIO` (use `io.StringIO` instead). (#5333)
+  * `conda_build.conda_interface.subdir` (use `conda.base.context.context.subdir` instead). (#5333)
+  * `conda_build.conda_interface.symlink_conda`. (#5333)
+  * `conda_build.conda_interface.TemporaryDirectory` (use `conda.gateways.disk.create.TemporaryDirectory` instead). (#5333)
+  * `conda_build.conda_interface.TmpDownload` (use `conda.gateways.connection.download.TmpDownload` instead). (#5333)
+  * `conda_build.conda_interface._toposort` (use `conda.common.toposort._toposort` instead). (#5333)
+  * `conda_build.conda_interface.unix_path_to_win` (use `conda.utils.unix_path_to_win` instead). (#5333)
+  * `conda_build.conda_interface.untracked` (use `conda.misc.untracked` instead). (#5333)
+  * `conda_build.conda_interface.Unsatisfiable` (use `conda.exceptions.UnsatisfiableError` instead). (#5333)
+  * `conda_build.conda_interface.UnsatisfiableError` (use `conda.exceptions.UnsatisfiableError` instead). (#5333)
+  * `conda_build.conda_interface.url_path` (use `conda.utils.url_path` instead). (#5333)
+  * `conda_build.conda_interface.VersionOrder` (use `conda.models.version.VersionOrder` instead). (#5333)
+  * `conda_build.conda_interface.walk_prefix` (use `conda.misc.walk_prefix` instead). (#5333)
+  * `conda_build.conda_interface.win_path_to_unix` (use `conda.common.path.win_path_to_unix` instead). (#5333)
+  * `conda_build.index.channel_data`; `conda_build.index.get_build_index` return value for `channel_data` is now always `None`. (#5333)
+  * `conda_build.metadata.check_circular_dependencies` (use `conda_build.metadata._check_circular_dependencies` instead). (#5406)
+  * `conda_build.metadata.toposort` (use `conda_build.metadata.toposort_outputs` instead). (#5406)
+  * `conda_build.utils._convert_lists_to_sets` (use `frozendict.deepfreeze` instead). (#5333)
+  * `conda_build.utils.HashableDict` (use `frozendict.deepfreeze` instead). (#5333)
+  * `conda_build.utils.represent_hashabledict` (use `frozendict.deepfreeze` instead). (#5333)
+  * `conda_build.utils.rm_rf(config)`. (#5333)
+  * `conda_build.variants.get_vars(loop_only)`. (#5333)
+
+### Other
+
+* Do not generate conda error reports for common exceptions. (#5264)
+* Add `CondaBuildUserError` exception to replace `sys.exit` calls. (#5353)
+* Updated the CI to download the MacOSX 10.15 SDK. (#5387)
+
+### Contributors
+
+* @beeankha
+* @conda-bot
+* @carterbox made their first contribution in https://github.com/conda/conda-build/pull/5216
+* @dholth
+* @isuruf
+* @jaimergp
+* @kenodegard
+* @zklaus made their first contribution in https://github.com/conda/conda-build/pull/5364
+* @beckermr
+* @minrk
+* @timkpaine made their first contribution in https://github.com/conda/conda-build/pull/4821
+* @dependabot[bot]
+* @pre-commit-ci[bot]
+
+
+
 ## 24.5.1 (2024-05-23)
 
 ### Bug fixes
