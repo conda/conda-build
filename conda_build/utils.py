@@ -1232,7 +1232,7 @@ def islist(
             # StopIteration: list is empty, an empty list is still uniform
             return True
         # check for explicit type match, do not allow the ambiguity of isinstance
-        uniform = lambda e: type(e) == etype  # noqa: E731
+        uniform = lambda e: type(e) == etype  # noqa: E721
 
     try:
         return all(uniform(e) for e in arg)
@@ -1653,7 +1653,8 @@ def get_logger(name, level=logging.INFO, dedupe=True, add_stdout_stderr_handlers
         logging.config.dictConfig(config_dict)
         level = config_dict.get("loggers", {}).get(name, {}).get("level", level)
     log = logging.getLogger(name)
-    log.setLevel(level)
+    if log.level != level:
+        log.setLevel(level)
     if dedupe:
         log.addFilter(dedupe_filter)
 

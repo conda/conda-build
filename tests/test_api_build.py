@@ -38,6 +38,7 @@ from conda_build.config import Config
 from conda_build.exceptions import (
     BuildScriptException,
     CondaBuildException,
+    CondaBuildUserError,
     DependencyNeedsBuildingError,
     OverDependingError,
     OverLinkingError,
@@ -279,7 +280,7 @@ def test_no_include_recipe_meta_yaml(testing_metadata, testing_config):
     )[0]
     assert not package_has_file(output_file, "info/recipe/meta.yaml")
 
-    with pytest.raises(SystemExit):
+    with pytest.raises(CondaBuildUserError):
         # we are testing that even with the recipe excluded, we still get the tests in place
         output_file = api.build(
             os.path.join(metadata_dir, "_no_include_recipe"), config=testing_config
@@ -503,7 +504,7 @@ def test_recursive_fail(testing_config):
 
 @pytest.mark.sanity
 def test_jinja_typo(testing_config):
-    with pytest.raises(SystemExit, match="GIT_DSECRIBE_TAG"):
+    with pytest.raises(CondaBuildUserError, match="GIT_DSECRIBE_TAG"):
         api.build(
             os.path.join(fail_dir, "source_git_jinja2_oops"), config=testing_config
         )
@@ -545,7 +546,7 @@ def test_skip_existing_url(testing_metadata, testing_workdir, capfd):
 
 def test_failed_tests_exit_build(testing_config):
     """https://github.com/conda/conda-build/issues/1112"""
-    with pytest.raises(SystemExit, match="TESTS FAILED"):
+    with pytest.raises(CondaBuildUserError, match="TESTS FAILED"):
         api.build(
             os.path.join(metadata_dir, "_test_failed_test_exits"), config=testing_config
         )
@@ -1775,6 +1776,18 @@ def test_overdepending_detection(testing_config, variants_conda_build_sysroot):
         api.build(recipe, config=testing_config, variants=variants_conda_build_sysroot)
 
 
+@pytest.mark.skipif(not on_linux, reason="cannot compile for linux-ppc64le")
+def test_sysroots_detection(testing_config, variants_conda_build_sysroot):
+    recipe = os.path.join(metadata_dir, "_sysroot_detection")
+    testing_config.activate = True
+    testing_config.error_overlinking = True
+    testing_config.error_overdepending = True
+    testing_config.channel_urls = [
+        "conda-forge",
+    ]
+    api.build(recipe, config=testing_config, variants=variants_conda_build_sysroot)
+
+
 @pytest.mark.skipif(sys.platform != "darwin", reason="macOS-only test (at present)")
 def test_macos_tbd_handling(testing_config, variants_conda_build_sysroot):
     """
@@ -1808,7 +1821,7 @@ def test_downstream_tests(testing_config):
     upstream = os.path.join(metadata_dir, "_test_downstreams/upstream")
     downstream = os.path.join(metadata_dir, "_test_downstreams/downstream")
     api.build(downstream, config=testing_config, notest=True)
-    with pytest.raises(SystemExit):
+    with pytest.raises(CondaBuildUserError):
         api.build(upstream, config=testing_config)
 
 

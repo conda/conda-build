@@ -1647,27 +1647,9 @@ def post_process_files(m: MetaData, initial_prefix_files):
     # The post processing may have deleted some files (like easy-install.pth)
     current_prefix_files = utils.prefix_files(prefix=host_prefix)
     new_files = sorted(current_prefix_files - initial_prefix_files)
-    """
-    if m.noarch == 'python' and m.config.subdir == 'win-32':
-        # Delete any PIP-created .exe launchers and fix entry_points.txt
-        # .. but we need to provide scripts instead here.
-        from .post import caseless_sepless_fnmatch
-        exes = caseless_sepless_fnmatch(new_files, 'Scripts/*.exe')
-        for ff in exes:
-            os.unlink(os.path.join(m.config.host_prefix, ff))
-            new_files.remove(ff)
-    """
+
+    # filter_files will remove .git, trash directories, and conda-meta directories
     new_files = utils.filter_files(new_files, prefix=host_prefix)
-    meta_dir = m.config.meta_dir
-    if any(meta_dir in join(host_prefix, f) for f in new_files):
-        meta_files = (
-            tuple(f for f in new_files if m.config.meta_dir in join(host_prefix, f)),
-        )
-        sys.exit(
-            f"Error: Untracked file(s) {meta_files} found in conda-meta directory. This error usually comes "
-            "from using conda in the build script. Avoid doing this, as it can lead to packages "
-            "that include their dependencies."
-        )
     post_build(m, new_files, build_python=python)
 
     entry_point_script_names = get_entry_point_script_names(
@@ -1775,6 +1757,7 @@ def bundle_conda(
         env_output["RECIPE_DIR"] = metadata.path
         env_output["MSYS2_PATH_TYPE"] = "inherit"
         env_output["CHERE_INVOKING"] = "1"
+        _set_env_variables_for_build(metadata, env_output)
         for var in utils.ensure_list(metadata.get_value("build/script_env")):
             if "=" in var:
                 val = var.split("=", 1)[1]
@@ -2884,6 +2867,15 @@ def warn_on_use_of_SRC_DIR(metadata):
             )
 
 
+@deprecated(
+    "3.16.0",
+    "24.9.0",
+    addendum=(
+        "Test built packages instead, not recipes "
+        "(e.g., `conda build --test package` instead of `conda build --test recipe/`)."
+    ),
+    deprecation_type=FutureWarning,  # we need to warn users, not developers
+)
 def _construct_metadata_for_test_from_recipe(recipe_dir, config):
     config.need_cleanup = False
     config.recipe_dir = None
@@ -2891,11 +2883,6 @@ def _construct_metadata_for_test_from_recipe(recipe_dir, config):
     metadata = expand_outputs(
         render_recipe(recipe_dir, config=config, reset_build_id=False)
     )[0][1]
-    log = utils.get_logger(__name__)
-    log.warning(
-        "Testing based on recipes is deprecated as of conda-build 3.16.0.  Please adjust "
-        "your code to pass your desired conda package to test instead."
-    )
 
     utils.rm_rf(metadata.config.test_dir)
 
@@ -3059,13 +3046,7 @@ def construct_metadata_for_test(recipedir_or_package, config):
     return m, hash_input
 
 
-def write_build_scripts(m, script, build_file):
-    # TODO: Prepending the prefixes here should probably be guarded by
-    #         if not m.activate_build_script:
-    #       Leaving it as is, for now, since we need a quick, non-disruptive patch release.
-    with utils.path_prepended(m.config.host_prefix, False):
-        with utils.path_prepended(m.config.build_prefix, False):
-            env = environ.get_dict(m=m)
+def _set_env_variables_for_build(m, env):
     env["CONDA_BUILD_STATE"] = "BUILD"
 
     # hard-code this because we never want pip's build isolation
@@ -3096,6 +3077,17 @@ def write_build_scripts(m, script, build_file):
     # The stuff in replacements is not parsable in a shell script (or we need to escape it)
     if "replacements" in env:
         del env["replacements"]
+
+
+def write_build_scripts(m, script, build_file):
+    # TODO: Prepending the prefixes here should probably be guarded by
+    #         if not m.activate_build_script:
+    #       Leaving it as is, for now, since we need a quick, non-disruptive patch release.
+    with utils.path_prepended(m.config.host_prefix, False):
+        with utils.path_prepended(m.config.build_prefix, False):
+            env = environ.get_dict(m=m)
+
+    _set_env_variables_for_build(m, env)
 
     work_file = join(m.config.work_dir, "conda_build.sh")
     env_file = join(m.config.work_dir, "build_env_setup.sh")
@@ -3552,7 +3544,12 @@ def test(
     return True
 
 
-def tests_failed(package_or_metadata, move_broken, broken_dir, config):
+def tests_failed(
+    package_or_metadata: str | os.PathLike | Path | MetaData,
+    move_broken: bool,
+    broken_dir: str | os.PathLike | Path,
+    config: Config,
+) -> None:
     """
     Causes conda to exit if any of the given package's tests failed.
 
@@ -3580,7 +3577,7 @@ def tests_failed(package_or_metadata, move_broken, broken_dir, config):
         _delegated_update_index(
             os.path.dirname(os.path.dirname(pkg)), verbose=config.debug, threads=1
         )
-    sys.exit("TESTS FAILED: " + os.path.basename(pkg))
+    raise CondaBuildUserError("TESTS FAILED: " + os.path.basename(pkg))
 
 
 @deprecated(
@@ -3592,12 +3589,11 @@ def check_external():
     if on_linux:
         patchelf = external.find_executable("patchelf")
         if patchelf is None:
-            sys.exit(
-                "Error:\n"
-                f"    Did not find 'patchelf' in: {os.pathsep.join(external.dir_paths)}\n"
-                "    'patchelf' is necessary for building conda packages on Linux with\n"
-                "    relocatable ELF libraries.  You can install patchelf using conda install\n"
-                "    patchelf.\n"
+            raise CondaBuildUserError(
+                f"Did not find 'patchelf' in: {os.pathsep.join(external.dir_paths)} "
+                f"'patchelf' is necessary for building conda packages on Linux with "
+                f"relocatable ELF libraries.  You can install patchelf using conda install "
+                f"patchelf."
             )
 
 
@@ -3976,7 +3972,10 @@ def build_tree(
     return list(built_packages.keys())
 
 
-def handle_anaconda_upload(paths, config):
+def handle_anaconda_upload(
+    paths: Iterable[str | os.PathLike | Path],
+    config: Config,
+) -> None:
     from .os_utils.external import find_executable
 
     paths = utils.ensure_list(paths)
@@ -4010,7 +4009,7 @@ def handle_anaconda_upload(paths, config):
             "# To have conda build upload to anaconda.org automatically, use\n"
             f"# {prompter}conda config --set anaconda_upload yes\n"
         )
-        no_upload_message += f"anaconda upload{joiner}" + joiner.join(paths)
+        no_upload_message += f"anaconda upload{joiner}" + joiner.join(map(str, paths))
 
     if not upload:
         print(no_upload_message)
@@ -4018,7 +4017,7 @@ def handle_anaconda_upload(paths, config):
 
     if not anaconda:
         print(no_upload_message)
-        sys.exit(
+        raise CondaBuildUserError(
             "Error: cannot locate anaconda command (required for upload)\n"
             "# Try:\n"
             f"# {prompter}conda install anaconda-client"
