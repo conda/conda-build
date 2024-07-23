@@ -10,47 +10,43 @@ from os.path import expanduser, isfile, join
 
 from conda.base.context import context
 
-from ..deprecations import deprecated
 from ..utils import on_win
-
-_DIR_PATHS: list[str] = []
-deprecated.constant("24.5", "24.7", "dir_paths", _DIR_PATHS)
 
 
 def find_executable(executable, prefix=None, all_matches=False):
     # dir_paths is referenced as a module-level variable
     #  in other code
-    global _DIR_PATHS
+    global dir_paths
     result = None
     if on_win:
-        _DIR_PATHS = [
+        dir_paths = [
             join(context.root_prefix, "Scripts"),
             join(context.root_prefix, "Library\\mingw-w64\\bin"),
             join(context.root_prefix, "Library\\usr\\bin"),
             join(context.root_prefix, "Library\\bin"),
         ]
         if prefix:
-            _DIR_PATHS[0:0] = [
+            dir_paths[0:0] = [
                 join(prefix, "Scripts"),
                 join(prefix, "Library\\mingw-w64\\bin"),
                 join(prefix, "Library\\usr\\bin"),
                 join(prefix, "Library\\bin"),
             ]
     else:
-        _DIR_PATHS = [
+        dir_paths = [
             join(context.root_prefix, "bin"),
         ]
         if prefix:
-            _DIR_PATHS.insert(0, join(prefix, "bin"))
+            dir_paths.insert(0, join(prefix, "bin"))
 
-    _DIR_PATHS.extend(os.environ["PATH"].split(os.pathsep))
+    dir_paths.extend(os.environ["PATH"].split(os.pathsep))
     if on_win:
         exts = (".exe", ".bat", "")
     else:
         exts = ("",)
 
     all_matches_found = []
-    for dir_path in _DIR_PATHS:
+    for dir_path in dir_paths:
         for ext in exts:
             path = expanduser(join(dir_path, executable + ext))
             if isfile(path):
