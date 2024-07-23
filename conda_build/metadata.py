@@ -33,7 +33,6 @@ from .exceptions import (
     DependencyNeedsBuildingError,
     RecipeError,
     UnableToParse,
-    UnableToParseMissingJinja2,
 )
 from .features import feature_list
 from .license_family import ensure_valid_license_family
