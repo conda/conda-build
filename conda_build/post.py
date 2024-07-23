@@ -1285,7 +1285,7 @@ def _show_linking_messages(
                 )
 
 
-@deprecated.argument("24.5", "24.7", "exception_on_error", addendum="Default to true.")
+@deprecated.argument("24.9", "24.11", "exception_on_error", addendum="Default to true.")
 def check_overlinking_impl(
     pkg_name: str,
     pkg_version: str,
