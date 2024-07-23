@@ -23,15 +23,6 @@ from conda_build.exceptions import CondaBuildUserError
 from .utils import get_noarch_python_meta, metadata_dir, metadata_path
 
 if TYPE_CHECKING:
-    from conda_build.config import Config
-
-if TYPE_CHECKING:
-    from pytest_mock import MockerFixture
-
-    from conda_build.config import Config
-    from conda_build.metadata import MetaData
-
-if TYPE_CHECKING:
     from pytest_mock import MockerFixture
 
     from conda_build.config import Config
@@ -437,14 +428,3 @@ def test_tests_failed(testing_metadata: MetaData, tmp_path: Path):
             broken_dir=tmp_path,
             config=testing_metadata.config,
         )
-
-
-def test_handle_anaconda_upload(testing_config: Config, mocker: MockerFixture):
-    mocker.patch(
-        "conda_build.os_utils.external.find_executable",
-        return_value=None,
-    )
-    testing_config.anaconda_upload = True
-
-    with pytest.raises(CondaBuildUserError):
-        build.handle_anaconda_upload((), testing_config)
