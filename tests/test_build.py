@@ -429,7 +429,7 @@ def test_handle_anaconda_upload(testing_config: Config, mocker: MockerFixture):
         build.handle_anaconda_upload((), testing_config)
 
 
-def test_tests_failed(testing_metadata: MetaData, tmp_path: Path) -> None:
+def test_tests_failed(testing_metadata: MetaData, tmp_path: Path):
     with pytest.raises(CondaBuildUserError):
         build.tests_failed(
             package_or_metadata=testing_metadata,

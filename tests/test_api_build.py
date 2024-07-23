@@ -267,9 +267,7 @@ def test_no_include_recipe_config_arg(testing_metadata):
 
 
 @pytest.mark.slow
-def test_no_include_recipe_meta_yaml(
-    testing_metadata: MetaData, testing_config: Config
-) -> None:
+def test_no_include_recipe_meta_yaml(testing_metadata, testing_config):
     # first, make sure that the recipe is there by default.  This test copied from above, but copied
     # as a sanity check here.
     outputs = api.build(testing_metadata, notest=True)
@@ -1820,7 +1818,7 @@ def test_empty_package_with_python_and_compiler_in_build_barfs(testing_config):
 
 
 @pytest.mark.sanity
-def test_downstream_tests(testing_config: Config) -> None:
+def test_downstream_tests(testing_config):
     upstream = os.path.join(metadata_dir, "_test_downstreams/upstream")
     downstream = os.path.join(metadata_dir, "_test_downstreams/downstream")
     api.build(downstream, config=testing_config, notest=True)
