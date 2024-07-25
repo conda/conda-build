@@ -1580,12 +1580,12 @@ def filter_info_files(files_list, prefix):
     )
 
 
-def rm_rf(path):
+def rm_rf(path: str | os.PathLike) -> None:
     from conda.core.prefix_data import delete_prefix_from_linked_data
     from conda.gateways.disk.delete import rm_rf
 
-    rm_rf(path)
-    delete_prefix_from_linked_data(path)
+    rm_rf(str(path))
+    delete_prefix_from_linked_data(str(path))
 
 
 # https://stackoverflow.com/a/31459386/1170370
