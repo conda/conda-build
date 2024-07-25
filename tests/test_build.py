@@ -28,25 +28,6 @@ if TYPE_CHECKING:
     from conda_build.config import Config
     from conda_build.metadata import MetaData
 
-PREFIX_TESTS = {"normal": os.path.sep}
-if on_win:
-    PREFIX_TESTS.update({"double_backslash": "\\\\", "forward_slash": "/"})
-
-
-def test_find_prefix_files(testing_workdir):
-    """
-    Write test output that has the prefix to be found, then verify that the prefix finding
-    identified the correct number of files.
-    """
-    # create text files to be replaced
-    files = []
-    for style, replacement in PREFIX_TESTS.items():
-        filename = Path(testing_workdir, f"{style}.txt")
-        filename.write_text(testing_workdir.replace(os.path.sep, replacement))
-        files.append(str(filename))
-
-    assert len(list(build.have_prefix_files(files, testing_workdir))) == len(files)
-
 
 def test_build_preserves_PATH(testing_config):
     metadata = api.render(
