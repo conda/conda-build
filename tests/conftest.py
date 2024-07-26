@@ -28,9 +28,15 @@ from conda_build.config import (
     ignore_verify_codes_default,
     no_rewrite_stdout_env_default,
 )
+from conda_build.deprecations import deprecated
 from conda_build.metadata import MetaData
 from conda_build.utils import check_call_env, copy_into, prepend_bin_path
 from conda_build.variants import get_default_variant
+
+pytest_plugins = (
+    # Add testing fixtures and internal pytest plugins here
+    "conda.testing",
+)
 
 
 @pytest.hookimpl
@@ -173,6 +179,7 @@ def testing_metadata(request, testing_config):
 
 
 @pytest.fixture(scope="function")
+@deprecated("24.9", "24.11", addendum="Use `tmp_env` fixture instead.")
 def testing_env(testing_workdir, request, monkeypatch):
     env_path = os.path.join(testing_workdir, "env")
 
