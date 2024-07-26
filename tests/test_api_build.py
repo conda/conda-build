@@ -69,6 +69,8 @@ from .utils import (
 )
 
 if TYPE_CHECKING:
+    from typing import Literal
+
     from pytest import FixtureRequest, MonkeyPatch
     from pytest_mock import MockerFixture
 
@@ -1963,8 +1965,12 @@ def test_activated_prefixes_in_actual_path(testing_metadata):
 
 @pytest.mark.parametrize("add_pip_as_python_dependency", [False, True])
 def test_add_pip_as_python_dependency_from_condarc_file(
-    testing_metadata, testing_workdir, add_pip_as_python_dependency, monkeypatch
-):
+    parametrized_solver_fixture: Literal["libmamba", "classic"],
+    testing_metadata: MetaData,
+    testing_workdir: str | os.PathLike,
+    add_pip_as_python_dependency: bool,
+    monkeypatch: MonkeyPatch,
+) -> None:
     """
     Test whether settings from .condarc files are needed.
     ref: https://github.com/conda/conda-libmamba-solver/issues/393
