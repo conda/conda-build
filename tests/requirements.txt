@@ -2,7 +2,7 @@ beautifulsoup4
 chardet
 conda >=23.7.0
 conda-index >=0.4.0
-conda-libmamba-solver  # ensure we use libmamba
+conda-libmamba-solver <24.7  # ensure we use libmamba
 conda-package-handling >=2.2.0
 filelock
 frozendict >=2.4.2
