@@ -109,7 +109,6 @@ def get_build_index(
                     prepend=not omit_defaults,
                     platform=subdir,
                     use_local=False,
-                    use_cache=context.offline,
                 )
             # HACK: defaults does not have the many subfolders we support.  Omit it and
             #          try again.
@@ -121,7 +120,6 @@ def get_build_index(
                     prepend=not omit_defaults,
                     platform=subdir,
                     use_local=False,
-                    use_cache=context.offline,
                 )
 
         local_index_timestamp = os.path.getmtime(index_file)
