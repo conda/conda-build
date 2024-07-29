@@ -131,6 +131,8 @@ filterwarnings = [
   "ignore::PendingDeprecationWarning:conda_index",
   "ignore::DeprecationWarning:conda_index",
   "ignore:Python 3.14 will, by default, filter extracted tar archives and reject files or modify their metadata:DeprecationWarning",
+  "ignore:conda.core.index._supplement_index_with_system is pending deprecation:PendingDeprecationWarning:conda",
+  "ignore:conda.core.index._make_virtual_package is pending deprecation:PendingDeprecationWarning:conda",
 ]
 markers = [
   "serial: execute test serially (to avoid race conditions)",
