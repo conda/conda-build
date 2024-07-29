@@ -1762,15 +1762,14 @@ def bundle_conda(
             if "=" in var:
                 val = var.split("=", 1)[1]
                 var = var.split("=", 1)[0]
+                env_output[var] = val
             elif var not in os.environ:
                 warnings.warn(
                     f"The environment variable '{var}' specified in script_env is undefined.",
                     UserWarning,
                 )
-                val = ""
             else:
-                val = os.environ[var]
-            env_output[var] = val
+                env_output[var] = os.environ[var]
         dest_file = os.path.join(metadata.config.work_dir, output["script"])
         utils.copy_into(os.path.join(metadata.path, output["script"]), dest_file)
         from os import stat
