@@ -1963,8 +1963,13 @@ def test_activated_prefixes_in_actual_path(testing_metadata):
 
 @pytest.mark.parametrize("add_pip_as_python_dependency", [False, True])
 def test_add_pip_as_python_dependency_from_condarc_file(
-    testing_metadata, testing_workdir, add_pip_as_python_dependency, monkeypatch
-):
+    testing_metadata: MetaData,
+    testing_workdir: str | os.PathLike,
+    add_pip_as_python_dependency: bool,
+    monkeypatch: MonkeyPatch,
+    mocker: MockerFixture,
+    tmp_path: Path,
+) -> None:
     """
     Test whether settings from .condarc files are needed.
     ref: https://github.com/conda/conda-libmamba-solver/issues/393
@@ -1975,6 +1980,10 @@ def test_add_pip_as_python_dependency_from_condarc_file(
 
     # SubdirData's cache doesn't distinguish on add_pip_as_python_dependency.
     SubdirData._cache_.clear()
+
+    # clear cache
+    mocker.patch("conda.base.context.Context.pkgs_dirs", pkgs_dirs := (str(tmp_path),))
+    assert context.pkgs_dirs == pkgs_dirs
 
     testing_metadata.meta["build"]["script"] = ['python -c "import pip"']
     testing_metadata.meta["requirements"]["host"] = ["python"]
