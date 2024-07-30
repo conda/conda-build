@@ -1738,7 +1738,10 @@ def bundle_conda(
             if (
                 # WSL bash is always the same path, it is an alias to the default
                 # distribution as configured by the user
-                on_win and Path("C:\\Windows\\System32\\bash.exe").samefile(args[0])
+                on_win
+                # check if WSL is installed before calling Path.samefile/os.stat
+                and (wsl_bash := Path("C:\\Windows\\System32\\bash.exe")).exists()
+                and wsl_bash.samefile(args[0])
             ):
                 raise CondaBuildUserError(
                     "WSL bash.exe is not supported. Please use MSYS2 packages. Add "
