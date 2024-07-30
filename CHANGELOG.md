@@ -1,5 +1,17 @@
 [//]: # (current developments)
 
+## 24.7.1 (2024-07-30)
+
+### Bug fixes
+
+* Check for WSL existence before calling `os.stat`. (#5433 via #5434)
+
+### Contributors
+
+* @kenodegard
+
+
+
 ## 24.7.0 (2024-07-18)
 
 ### Enhancements
