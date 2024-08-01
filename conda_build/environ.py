@@ -541,13 +541,6 @@ def meta_vars(meta: MetaData, skip_build_id=False):
             )
         else:
             d[var_name] = value
-            warnings.warn(
-                f"The environment variable '{var_name}' is being passed through with value "
-                f"'{'<hidden>' if meta.config.suppress_variables else value}'.  "
-                "If you are splitting build and test phases with --no-test, please ensure "
-                "that this value is also set similarly at test time.",
-                UserWarning,
-            )
 
     folder = meta.get_value("source/0/folder", "")
     repo_dir = join(meta.config.work_dir, folder)
