@@ -1202,7 +1202,7 @@
   alternate_emails:
   - clee@anaconda.com
 - name: Ken Odegard
-  num_commits: 212
+  num_commits: 213
   email: kodegard@anaconda.com
   first_commit: 2020-09-08 19:53:41
   github: kenodegard
@@ -1251,7 +1251,7 @@
   github: beeankha
   alternate_emails:
   - beeankha@gmail.com
-  num_commits: 36
+  num_commits: 34
   first_commit: 2022-01-19 16:40:06
 - name: Conda Bot
   email: 18747875+conda-bot@users.noreply.github.com
