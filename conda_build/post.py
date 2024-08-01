@@ -8,7 +8,6 @@ import os
 import re
 import shutil
 import stat
-import sys
 import traceback
 from collections import OrderedDict, defaultdict
 from copy import copy
@@ -43,7 +42,13 @@ from conda.misc import walk_prefix
 from conda.models.records import PrefixRecord
 
 from . import utils
-from .exceptions import OverDependingError, OverLinkingError, RunPathError
+from .deprecations import deprecated
+from .exceptions import (
+    CondaBuildUserError,
+    OverDependingError,
+    OverLinkingError,
+    RunPathError,
+)
 from .inspect_pkg import which_package
 from .os_utils import external, macho
 from .os_utils.liefldd import (
@@ -64,7 +69,7 @@ from .os_utils.pyldd import (
 from .utils import on_mac, on_win, prefix_files
 
 if TYPE_CHECKING:
-    from typing import Literal
+    from typing import Iterable, Literal
 
     from .metadata import MetaData
 
@@ -329,20 +334,26 @@ def compile_missing_pyc(files, cwd, python_exe, skip_compile_pyc=()):
                 call(args + group, cwd=cwd)
 
 
-def check_dist_info_version(name, version, files):
-    for f in files:
-        if f.endswith(".dist-info" + os.sep + "METADATA"):
-            f_lower = basename(dirname(f).lower())
-            if f_lower.startswith(name + "-"):
-                f_lower, _, _ = f_lower.rpartition(".dist-info")
-                _, distname, f_lower = f_lower.rpartition(name + "-")
-                if distname == name and version != f_lower:
-                    print(
-                        f"ERROR: Top level dist-info version incorrect (is {f_lower}, should be {version})"
-                    )
-                    sys.exit(1)
-                else:
-                    return
+def check_dist_info_version(
+    name: str,
+    version: str,
+    files: Iterable[str | os.PathLike | Path],
+) -> None:
+    for file in map(Path, files):
+        if file.name != "METADATA":
+            continue
+
+        dist = file.parent.name.lower()
+        if not (dist.startswith(f"{name}-") and dist.endswith(".dist-info")):
+            continue
+
+        distversion = dist[len(name) + 1 : -10]  # remove prefix & suffix
+        if version != distversion:
+            raise CondaBuildUserError(
+                f"Top level dist-info version incorrect (is {distversion}, should be {version})"
+            )
+        else:
+            return
 
 
 def post_process(
@@ -371,25 +382,35 @@ def post_process(
     check_dist_info_version(name, version, files)
 
 
-def find_lib(link, prefix, files, path=None):
+def find_lib(
+    link: str | os.PathLike | Path,
+    prefix: str | os.PathLike | Path,
+    files: Iterable[str | os.PathLike | Path],
+    path: str | os.PathLike | Path | None = None,
+) -> str | None:
+    link = str(link)
+    prefix = str(prefix)
+    files = map(str, utils.ensure_list(files))
+    path = str(path) if path else None
+
     if link.startswith(prefix):
         link = normpath(link[len(prefix) + 1 :])
         if not any(link == normpath(w) for w in files):
-            sys.exit(f"Error: Could not find {link}")
+            raise CondaBuildUserError(f"Could not find {link!r}")
         return link
     if link.startswith("/"):  # but doesn't start with the build prefix
-        return
+        return None
     if link.startswith("@rpath/"):
         # Assume the rpath already points to lib, so there is no need to
         # change it.
-        return
+        return None
     if "/" not in link or link.startswith("@executable_path/"):
         link = basename(link)
         file_names = defaultdict(list)
-        for f in files:
-            file_names[basename(f)].append(f)
+        for file in files:
+            file_names[basename(file)].append(file)
         if link not in file_names:
-            sys.exit(f"Error: Could not find {link}")
+            raise CondaBuildUserError(f"Could not find {link!r}")
         if len(file_names[link]) > 1:
             if path and basename(path) == link:
                 # The link is for the file itself, just use it
@@ -397,20 +418,22 @@ def find_lib(link, prefix, files, path=None):
             # Allow for the possibility of the same library appearing in
             # multiple places.
             md5s = set()
-            for f in file_names[link]:
-                md5s.add(compute_sum(join(prefix, f), "md5"))
+            for file in file_names[link]:
+                md5s.add(compute_sum(join(prefix, file), "md5"))
             if len(md5s) > 1:
-                sys.exit(
-                    f"Error: Found multiple instances of {link}: {file_names[link]}"
+                raise CondaBuildUserError(
+                    f"Found multiple instances of {link!r}: {file_names[link]!r}"
                 )
             else:
                 file_names[link].sort()
                 print(
-                    f"Found multiple instances of {link} ({file_names[link]}).  "
-                    "Choosing the first one."
+                    f"Found multiple instances of {link!r}: {file_names[link]!r}. "
+                    f"Choosing the first one."
                 )
         return file_names[link][0]
-    print(f"Don't know how to find {link}, skipping")
+
+    print(f"Don't know how to find {link!r}, skipping")
+    return None
 
 
 def osx_ch_link(path, link_dict, host_prefix, build_prefix, files):
@@ -423,8 +446,8 @@ def osx_ch_link(path, link_dict, host_prefix, build_prefix, files):
             "host prefix and"
         )
         if not codefile_class(link, skip_symlinks=True):
-            sys.exit(
-                f"Error: Compiler runtime library in build prefix not found in host prefix {link}"
+            raise CondaBuildUserError(
+                f"Compiler runtime library in build prefix not found in host prefix {link}"
             )
         else:
             print(f".. fixing linking of {link} in {path} instead")
@@ -1262,6 +1285,7 @@ def _show_linking_messages(
                 )
 
 
+@deprecated.argument("24.9", "24.11", "exception_on_error", addendum="Default to true.")
 def check_overlinking_impl(
     pkg_name: str,
     pkg_version: str,
@@ -1279,7 +1303,6 @@ def check_overlinking_impl(
     error_overlinking,
     error_overdepending,
     verbose,
-    exception_on_error,
     files,
     bldpkgs_dirs,
     output_folder,
@@ -1547,26 +1570,22 @@ def check_overlinking_impl(
                     verbose=verbose,
                 )
     if len(errors):
-        if exception_on_error:
-            runpaths_errors = [
-                error for error in errors if re.match(r".*runpaths.*found in.*", error)
-            ]
-            if len(runpaths_errors):
-                raise RunPathError(runpaths_errors)
-            overlinking_errors = [
-                error
-                for error in errors
-                if re.match(r".*(overlinking|not found in|did not find).*", error)
-            ]
-            if len(overlinking_errors):
-                raise OverLinkingError(overlinking_errors)
-            overdepending_errors = [
-                error for error in errors if "overdepending" in error
-            ]
-            if len(overdepending_errors):
-                raise OverDependingError(overdepending_errors)
-        else:
-            sys.exit(1)
+        if runpaths_errors := [
+            error for error in errors if re.match(r".*runpaths.*found in.*", error)
+        ]:
+            raise RunPathError(runpaths_errors)
+
+        if overlinking_errors := [
+            error
+            for error in errors
+            if re.match(r".*(overlinking|not found in|did not find).*", error)
+        ]:
+            raise OverLinkingError(overlinking_errors)
+
+        if overdepending_errors := [
+            error for error in errors if "overdepending" in error
+        ]:
+            raise OverDependingError(overdepending_errors)
 
     if pkg_vendoring_key in vendoring_record:
         imports = vendoring_record[pkg_vendoring_key]
@@ -1599,7 +1618,6 @@ def check_overlinking(m: MetaData, files, host_prefix=None):
         m.config.error_overlinking,
         m.config.error_overdepending,
         m.config.verbose,
-        True,
         files,
         m.config.bldpkgs_dir,
         m.config.output_folder,
@@ -1762,7 +1780,7 @@ def post_build(m, files, build_python, host_prefix=None, is_already_linked=False
 
 
 def check_symlinks(files, prefix, croot):
-    msgs = []
+    bad_symlinks = []
     real_build_prefix = realpath(prefix)
     for f in files:
         path = join(real_build_prefix, f)
@@ -1794,15 +1812,13 @@ def check_symlinks(files, prefix, croot):
             else:
                 # Symlinks to absolute paths on the system (like /usr) are fine.
                 if real_link_path.startswith(croot):
-                    msgs.append(
-                        f"{f} is a symlink to a path that may not "
-                        f"exist after the build is completed ({link_path})"
-                    )
+                    bad_symlinks.append(f"  {f} → {link_path}")
 
-    if msgs:
-        for msg in msgs:
-            print(f"Error: {msg}", file=sys.stderr)
-        sys.exit(1)
+    if bad_symlinks:
+        raise CondaBuildUserError(
+            "Found symlinks to paths that may not exist after the build is completed:\n"
+            + "\n".join(bad_symlinks)
+        )
 
 
 def make_hardlink_copy(path, prefix):

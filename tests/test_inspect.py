@@ -1,30 +1,29 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
 import re
-import sys
+from contextlib import nullcontext
 
 import pytest
+from conda.common.compat import on_mac, on_win
 
 from conda_build import api
 from conda_build.exceptions import CondaBuildUserError
 
 
 def test_inspect_linkages():
-    if sys.platform == "win32":
-        with pytest.raises(CondaBuildUserError) as exc:
-            out_string = api.inspect_linkages("python")
-            assert "conda inspect linkages is only implemented in Linux and OS X" in exc
-    else:
+    with pytest.raises(
+        CondaBuildUserError,
+        match=r"`conda inspect linkages` is only implemented on Linux and macOS",
+    ) if on_win else nullcontext():
         out_string = api.inspect_linkages("python")
         assert "libncursesw" in out_string
 
 
 def test_inspect_objects():
-    if sys.platform != "darwin":
-        with pytest.raises(CondaBuildUserError) as exc:
-            out_string = api.inspect_objects("python")
-            assert "conda inspect objects is only implemented in OS X" in exc
-    else:
+    with pytest.raises(
+        CondaBuildUserError,
+        match=r"`conda inspect objects` is only implemented on macOS",
+    ) if not on_mac else nullcontext():
         out_string = api.inspect_objects("python")
         assert re.search("rpath:.*@loader_path", out_string)
 

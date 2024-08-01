@@ -23,9 +23,6 @@ from conda_build.exceptions import CondaBuildUserError
 from .utils import get_noarch_python_meta, metadata_dir, metadata_path
 
 if TYPE_CHECKING:
-    from conda_build.config import Config
-
-if TYPE_CHECKING:
     from pytest_mock import MockerFixture
 
     from conda_build.config import Config

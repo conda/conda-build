@@ -15,9 +15,11 @@ from functools import lru_cache
 from os.path import isdir, isfile, join
 from typing import TYPE_CHECKING, NamedTuple, overload
 
+import jinja2
 import yaml
 from bs4 import UnicodeDammit
 from conda.base.context import locate_prefix_by_name
+from conda.core.prefix_data import PrefixData
 from conda.gateways.disk.read import compute_sum
 from conda.models.match_spec import MatchSpec
 from frozendict import deepfreeze
@@ -31,7 +33,6 @@ from .exceptions import (
     DependencyNeedsBuildingError,
     RecipeError,
     UnableToParse,
-    UnableToParseMissingJinja2,
 )
 from .features import feature_list
 from .license_family import ensure_valid_license_family
@@ -40,7 +41,6 @@ from .utils import (
     ensure_list,
     expand_globs,
     find_recipe,
-    get_installed_packages,
     insert_variant_versions,
     on_win,
 )
@@ -60,14 +60,6 @@ if TYPE_CHECKING:
 
     OutputDict = dict[str, Any]
     OutputTuple = tuple[OutputDict, "MetaData"]
-
-try:
-    import yaml
-except ImportError:
-    sys.exit(
-        "Error: could not import yaml (required to read meta.yaml "
-        "files of conda recipes)"
-    )
 
 try:
     Loader = yaml.CLoader
@@ -360,13 +352,6 @@ def yamlize(data):
     try:
         return yaml.load(data, Loader=StringifyNumbersLoader)
     except yaml.error.YAMLError as e:
-        if "{{" in data:
-            try:
-                import jinja2
-
-                jinja2  # Avoid pyflakes failure: 'jinja2' imported but unused
-            except ImportError:
-                raise UnableToParseMissingJinja2(original=e)
         print("Problematic recipe:", file=sys.stderr)
         print(data, file=sys.stderr)
         raise UnableToParse(original=e)
@@ -739,12 +724,7 @@ def _git_clean(source_meta):
     If more than one field is used to specified, exit
     and complain.
     """
-    git_rev_tags_old = ("git_branch", "git_tag")
     git_rev = "git_rev"
-
-    git_rev_tags = (git_rev,) + git_rev_tags_old
-    has_rev_tags = tuple(bool(source_meta.get(tag, "")) for tag in git_rev_tags)
-
     keys = [key for key in (git_rev, "git_branch", "git_tag") if key in source_meta]
     if not keys:
         # git_branch, git_tag, nor git_rev specified, return as-is
@@ -754,14 +734,7 @@ def _git_clean(source_meta):
 
     # make a copy of the input so we have no side-effects
     ret_meta = source_meta.copy()
-    # loop over the old versions
-    for key, has in zip(git_rev_tags[1:], has_rev_tags[1:]):
-        # update if needed
-        if has:
-            ret_meta[git_rev_tags[0]] = ret_meta[key]
-        # and remove
-        ret_meta.pop(key, None)
-
+    ret_meta[git_rev] = ret_meta.pop(keys[0])
     return ret_meta
 
 
@@ -868,17 +841,24 @@ def _get_env_path(
     )
 
 
-def _get_dependencies_from_environment(env_name_or_path):
-    path = _get_env_path(env_name_or_path)
+def _get_dependencies_from_environment(
+    env_name_or_path: str | os.PathLike | Path,
+) -> dict[str, dict[str, list[str]]]:
     # construct build requirements that replicate the given bootstrap environment
     # and concatenate them to the build requirements from the recipe
-    bootstrap_metadata = get_installed_packages(path)
-    bootstrap_requirements = []
-    for package, data in bootstrap_metadata.items():
-        bootstrap_requirements.append(
-            "{} {} {}".format(package, data["version"], data["build"])
-        )
-    return {"requirements": {"build": bootstrap_requirements}}
+    prefix = (
+        env_name_or_path
+        if isdir(env_name_or_path)
+        else locate_prefix_by_name(env_name_or_path)
+    )
+    return {
+        "requirements": {
+            "build": [
+                f"{prec.name} {prec.version} {prec.build}"
+                for prec in PrefixData(prefix).iter_records()
+            ]
+        }
+    }
 
 
 def _toposort_outputs(output_tuples: list[OutputTuple]) -> list[OutputTuple]:
@@ -1925,17 +1905,6 @@ class MetaData:
         permit_undefined_jinja: If True, *any* use of undefined jinja variables will
                                 evaluate to an emtpy string, without emitting an error.
         """
-        try:
-            import jinja2
-        except ImportError:
-            print("There was an error importing jinja2.", file=sys.stderr)
-            print(
-                "Please run `conda install jinja2` to enable jinja template support",
-                file=sys.stderr,
-            )  # noqa
-            with open(self.meta_path) as fd:
-                return fd.read()
-
         from .jinja_context import (
             FilteredLoader,
             UndefinedNeverFail,

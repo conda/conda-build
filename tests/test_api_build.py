@@ -476,9 +476,9 @@ def test_cmake_generator(platform, target_compiler, testing_config):
     api.build(os.path.join(metadata_dir, "_cmake_generator"), config=testing_config)
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="No windows symlinks")
-def test_symlink_fail(testing_config):
-    with pytest.raises((SystemExit, FileNotFoundError)):
+@pytest.mark.skipif(on_win, reason="No windows symlinks")
+def test_symlink_fail(testing_config: MetaData) -> None:
+    with pytest.raises(CondaBuildUserError):
         api.build(os.path.join(fail_dir, "symlinks"), config=testing_config)
 
 
@@ -544,11 +544,12 @@ def test_skip_existing_url(testing_metadata, testing_workdir, capfd):
     assert "are already built" in output
 
 
-def test_failed_tests_exit_build(testing_config):
-    """https://github.com/conda/conda-build/issues/1112"""
-    with pytest.raises(CondaBuildUserError, match="TESTS FAILED"):
+def test_failed_tests_exit_build(testing_config: Config) -> None:
+    # https://github.com/conda/conda-build/issues/1112
+    with pytest.raises(CondaBuildUserError, match=r"TESTS FAILED"):
         api.build(
-            os.path.join(metadata_dir, "_test_failed_test_exits"), config=testing_config
+            os.path.join(metadata_dir, "_test_failed_test_exits"),
+            config=testing_config,
         )
 
 

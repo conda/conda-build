@@ -89,6 +89,9 @@ from .variants import (
     set_language_env_vars,
 )
 
+if TYPE_CHECKING:
+    from typing import Iterable
+
 if on_win:
     from . import windows
 
@@ -3474,10 +3477,11 @@ def test(
         env["CONDA_BUILD_STATE"] = "TEST"
 
     if config.test_run_post:
-        from .utils import get_installed_packages
-
-        installed = get_installed_packages(metadata.config.test_prefix)
-        files = installed[metadata.meta["package"]["name"]]["files"]
+        files = (
+            PrefixData(metadata.config.test_prefix)
+            .get(metadata.meta["package"]["name"])
+            .files
+        )
         replacements = get_all_replacements(metadata.config)
         try_download(metadata, False, True)
         create_info_files(metadata, replacements, files, metadata.config.test_prefix)
@@ -3580,7 +3584,7 @@ def tests_failed(
         _delegated_update_index(
             os.path.dirname(os.path.dirname(pkg)), verbose=config.debug, threads=1
         )
-    raise CondaBuildUserError("TESTS FAILED: " + os.path.basename(pkg))
+    raise CondaBuildUserError(f"TESTS FAILED: {os.path.basename(pkg)}")
 
 
 @deprecated(
