@@ -125,6 +125,13 @@ conda package is composed of the first 3 values, as in:
 
        See :ref:`repo-si`.
 
+info/paths.json
+---------------
+
+Combines information from ``info/files``, ``info/has_prefix``, and
+``info/no_link`` into a single file. The older files are ignored by
+conda when ``paths.json`` is present. Introduced in 2016.
+
 info/files
 ----------
 
@@ -178,17 +185,17 @@ EXAMPLE: On macOS or Linux::
    delimiter. On Windows, the placeholder and path always appear
    in quotes to support paths with spaces.
 
-info/license.txt
-----------------
-
-Optional file. The software license for the package.
-
 info/no_link
 ------------
 
 Optional file. Lists all files that cannot be linked---either
 soft-linked or hard-linked---into environments and are copied
 instead.
+
+info/license.txt
+----------------
+
+Optional file. The software license for the package.
 
 info/about.json
 ---------------
