@@ -3074,6 +3074,9 @@ def _set_env_variables_for_build(m, env):
     # locally, and if we don't, it's a problem.
     env["PIP_NO_INDEX"] = True
 
+    # Opt into building in-tree without copying to a temp dir
+    env["PIP_USE_FEATURE"] = "in-tree-build"
+
     if m.noarch == "python":
         env["PYTHONDONTWRITEBYTECODE"] = True
 
