@@ -11,6 +11,7 @@ import pytest
 from conda.base.context import context
 
 from conda_build import api, utils
+from conda_build.exceptions import BuildScriptException, CondaBuildUserError
 from conda_build.metadata import MetaDataTuple
 from conda_build.render import finalize_metadata
 
@@ -292,7 +293,7 @@ def test_per_output_tests(testing_config):
 @pytest.mark.sanity
 def test_per_output_tests_script(testing_config):
     recipe_dir = os.path.join(subpackage_dir, "_output_test_script")
-    with pytest.raises(SystemExit):
+    with pytest.raises(CondaBuildUserError):
         api.build(recipe_dir, config=testing_config)
 
 
@@ -351,6 +352,18 @@ def test_build_script_and_script_env_warn_empty_script_env(testing_config):
         match="The environment variable 'TEST_FN_DOESNT_EXIST' specified in script_env is undefined",
     ):
         api.build(recipe, config=testing_config)
+
+
+@pytest.mark.sanity
+def test_build_script_does_not_set_env_from_script_env_if_missing(
+    testing_config, capfd, monkeypatch
+):
+    monkeypatch.delenv("TEST_FN_DOESNT_EXIST", raising=False)
+    recipe = os.path.join(subpackage_dir, "_build_script_relying_on_missing_var")
+    with pytest.raises(BuildScriptException):
+        api.build(recipe, config=testing_config)
+    captured = capfd.readouterr()
+    assert "KeyError: 'TEST_FN_DOESNT_EXIST'" in captured.err
 
 
 @pytest.mark.sanity
