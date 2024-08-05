@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
-from conda.common.compat import on_linux, on_win
+from conda.common.compat import on_win
 
 from conda_build import api, build
 from conda_build.exceptions import CondaBuildUserError
@@ -336,21 +336,6 @@ def test_guess_interpreter(
 ):
     with pytest.raises(error) if error else nullcontext():
         assert build.guess_interpreter(script) == interpreter
-
-
-def test_check_external():
-    with pytest.deprecated_call():
-        build.check_external()
-
-
-@pytest.mark.skipif(not on_linux, reason="pathelf is only available on Linux")
-def test_check_external_user_error(mocker: MockerFixture) -> None:
-    mocker.patch(
-        "conda_build.os_utils.external.find_executable",
-        return_value=None,
-    )
-    with pytest.raises(CondaBuildUserError):
-        build.check_external()
 
 
 @pytest.mark.parametrize("readme", ["README.md", "README.rst", "README"])
