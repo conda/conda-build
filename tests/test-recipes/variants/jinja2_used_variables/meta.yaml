@@ -29,13 +29,13 @@ outputs:
       run:
         - clang {{ CLANG_VERSION }}.*
 
-    tests:
+    test:
       commands:
         {% for var in FOO.split() %}
         - echo {{ var }}
         {% endfor %}
 
-tests:
+test:
   commands:
     {% for var in FOOBAR.split() %}
     - echo {{ var }}

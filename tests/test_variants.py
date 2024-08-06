@@ -452,6 +452,7 @@ def test_get_used_loop_vars_jinja2():
             "CL_VERSION",
             "VCVER",
             "FOO",
+            "FOOBAR",
             "target_platform",
         }
 
