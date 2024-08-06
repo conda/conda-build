@@ -748,7 +748,7 @@ def find_used_variables_in_text(variant, recipe_text, selectors_only=False):
         # NOTE: why use a regex instead of the jinja2 parser/AST?
         # One can ask the jinj2 parser for undefined variables, but conda-build moves whole
         # blocks of text around when searching for variables and applies selectors to the text.
-        # So the text  reaches this function is not necessarily valid jinja2 syntax. :/
+        # So the text that reaches this function is not necessarily valid jinja2 syntax. :/
         conditional_regex = (
             r"(?:^|[^\{])\{%\s*(?:el)?if\s*.*" + v_regex + r"\s*(?:[^%]*?)?%\}"
         )
