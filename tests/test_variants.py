@@ -426,6 +426,36 @@ def test_get_used_loop_vars():
     }
 
 
+def test_get_used_loop_vars_jinja2():
+    metadata = api.render(
+        os.path.join(variants_dir, "jinja2_used_variables"),
+        finalize=False,
+        bypass_env_check=True,
+    )
+    # 4 CLANG_VERSION values x 2 VCVER values - one skipped because of jinja2 conditionals
+    assert len(metadata) == 7
+    for m, _, _ in metadata:
+        assert m.get_used_loop_vars(force_top_level=False) == {"CLANG_VERSION", "VCVER"}
+        assert m.get_used_loop_vars(force_top_level=True) == {
+            "CL_VERSION",
+            "CLANG_VERSION",
+            "VCVER",
+        }
+        assert m.get_used_vars(force_top_level=False) == {
+            "CLANG_VERSION",
+            "VCVER",
+            "FOO",
+            "target_platform",
+        }
+        assert m.get_used_vars(force_top_level=True) == {
+            "CLANG_VERSION",
+            "CL_VERSION",
+            "VCVER",
+            "FOO",
+            "target_platform",
+        }
+
+
 def test_reprovisioning_source():
     api.render(os.path.join(variants_dir, "20_reprovision_source"))
 

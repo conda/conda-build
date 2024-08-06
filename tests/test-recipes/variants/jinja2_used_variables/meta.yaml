@@ -1,0 +1,42 @@
+{% if CLANG_VERSION is not defined %}
+{% set CLANG_VERSION = "16.0.6" %}
+{% set CL_VERSION = "19.29" %}
+{% set VCVER = "" %}
+{% set FOO = "" %}
+{% set FOOBAR = "" %}
+{% endif %}
+{% set clang_major = CLANG_VERSION.split(".")[0] %}
+{% set cl_minor = CL_VERSION.split(".")[1] %}
+{% set vc_major = VCVER.split(".")[0] %}
+
+package:
+  name: clang-win-activation
+  version: {{ CLANG_VERSION }}
+
+build:
+  number: 0
+  {% if clang_major|int == 16 and cl_minor|int >= 40 %}
+  skip: true
+  {% endif %}
+
+outputs:
+  - name: clang_win-64
+    build:
+      run_exports:
+        strong:
+          - vc >={{ VCVER }}
+    requirements:
+      run:
+        - clang {{ CLANG_VERSION }}.*
+
+    tests:
+      commands:
+        {% for var in FOO.split() %}
+        - echo {{ var }}
+        {% endfor %}
+
+tests:
+  commands:
+    {% for var in FOOBAR.split() %}
+    - echo {{ var }}
+    {% endfor %}
