@@ -745,9 +745,15 @@ def find_used_variables_in_text(variant, recipe_text, selectors_only=False):
         v_req_regex = "[-_]".join(map(re.escape, v.split("_")))
         variant_regex = rf"\{{\s*(?:pin_[a-z]+\(\s*?['\"])?{v_regex}[^'\"]*?\}}\}}"
         selector_regex = rf"^[^#\[]*?\#?\s\[[^\]]*?(?<![_\w\d]){v_regex}[=\s<>!\]]"
+        # NOTE: why use a regex instead of the jinja2 parser/AST?
+        # Once can ask the jinj2 parser for undefined variables, but conda-build moves whole
+        # blocks of text around when searching for variables and applies selectors to the text.
+        # So the text  reaches this function is not necessarily valid jinja2 syntax. :/
         conditional_regex = (
             r"(?:^|[^\{])\{%\s*(?:el)?if\s*.*" + v_regex + r"\s*(?:[^%]*?)?%\}"
         )
+        # TODO: this `for` regex won't catch some common cases like lists pof vars or multiline
+        # jinja2 blocks.
         for_regex = r"(?:^|[^\{])\{%\s*for\s*.*\s*in\s*" + v_regex + r"(?:[^%]*?)?%\}"
         set_regex = r"(?:^|[^\{])\{%\s*set\s*.*\s*=\s*.*" + v_regex + r"(?:[^%]*?)?%\}"
         # plain req name, no version spec.  Look for end of line after name, or comment or selector
