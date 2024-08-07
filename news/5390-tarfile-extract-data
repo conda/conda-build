@@ -1,0 +1,19 @@
+### Enhancements
+
+* Use `tarfile.TarFile.extract[all](filter='data')` for improved tarball extraction security (e.g., disallow paths outside of or linking outside of the destination, remove group & other write/executable permissions, etc.). (#5390)
+
+### Bug fixes
+
+* <news item>
+
+### Deprecations
+
+* <news item>
+
+### Docs
+
+* <news item>
+
+### Other
+
+* <news item>
