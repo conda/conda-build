@@ -76,7 +76,6 @@ from .utils import (
     CONDA_PACKAGE_EXTENSIONS,
     env_var,
     glob,
-    on_linux,
     on_mac,
     on_win,
     shutil_move_more_retrying,
@@ -3581,23 +3580,6 @@ def tests_failed(
             os.path.dirname(os.path.dirname(pkg)), verbose=config.debug, threads=1
         )
     raise CondaBuildUserError("TESTS FAILED: " + os.path.basename(pkg))
-
-
-@deprecated(
-    "24.7",
-    "24.9",
-    addendum="`patchelf` is an explicit conda-build dependency on Linux so it will always be installed.",
-)
-def check_external():
-    if on_linux:
-        patchelf = external.find_executable("patchelf")
-        if patchelf is None:
-            raise CondaBuildUserError(
-                f"Did not find 'patchelf' in: {os.pathsep.join(external.dir_paths)} "
-                f"'patchelf' is necessary for building conda packages on Linux with "
-                f"relocatable ELF libraries.  You can install patchelf using conda install "
-                f"patchelf."
-            )
 
 
 def build_tree(

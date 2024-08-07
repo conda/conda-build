@@ -24,7 +24,6 @@ from frozendict import deepfreeze
 
 from . import utils
 from .config import Config, get_or_merge_config
-from .deprecations import deprecated
 from .exceptions import (
     CondaBuildException,
     CondaBuildUserError,
@@ -55,7 +54,6 @@ from .variants import (
 )
 
 if TYPE_CHECKING:
-    from pathlib import Path
     from typing import Any, Literal, Self
 
     OutputDict = dict[str, Any]
@@ -855,21 +853,12 @@ def build_string_from_metadata(metadata):
     return build_str
 
 
-@deprecated(
-    "24.7", "24.9", addendum="Use `conda.base.context.locate_prefix_by_name` instead."
-)
-def _get_env_path(
-    env_name_or_path: str | os.PathLike | Path,
-) -> str | os.PathLike | Path:
-    return (
+def _get_dependencies_from_environment(env_name_or_path):
+    path = (
         env_name_or_path
         if isdir(env_name_or_path)
         else locate_prefix_by_name(env_name_or_path)
     )
-
-
-def _get_dependencies_from_environment(env_name_or_path):
-    path = _get_env_path(env_name_or_path)
     # construct build requirements that replicate the given bootstrap environment
     # and concatenate them to the build requirements from the recipe
     bootstrap_metadata = get_installed_packages(path)
