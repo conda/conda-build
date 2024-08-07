@@ -4,7 +4,7 @@
 
 ### Bug fixes
 
-* Variables used in single-line jinja2 ``for`` and ``set`` statements are now properly included in the variant
+* Variables used in single-line jinja2 `for` and `set` statements are now properly included in the variant
   matrix for some edge cases. (#5447)
 
 ### Deprecations

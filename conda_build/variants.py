@@ -746,7 +746,7 @@ def find_used_variables_in_text(variant, recipe_text, selectors_only=False):
         variant_regex = rf"\{{\s*(?:pin_[a-z]+\(\s*?['\"])?{v_regex}[^'\"]*?\}}\}}"
         selector_regex = rf"^[^#\[]*?\#?\s\[[^\]]*?(?<![_\w\d]){v_regex}[=\s<>!\]]"
         # NOTE: why use a regex instead of the jinja2 parser/AST?
-        # One can ask the jinj2 parser for undefined variables, but conda-build moves whole
+        # One can ask the jinja2 parser for undefined variables, but conda-build moves whole
         # blocks of text around when searching for variables and applies selectors to the text.
         # So the text that reaches this function is not necessarily valid jinja2 syntax. :/
         conditional_regex = (
