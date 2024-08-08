@@ -9,7 +9,8 @@ from typing import Generator
 
 import pytest
 
-from conda_build.develop import _uninstall, write_to_conda_pth
+from conda_build.develop import _uninstall, execute, get_setup_py, write_to_conda_pth
+from conda_build.exceptions import CondaBuildUserError
 from conda_build.utils import rm_rf
 
 from .utils import thisdir
@@ -99,3 +100,15 @@ def test_uninstall(site_packages: Path, conda_pth: Path):
         _uninstall(site_packages, path)
 
         assert list(filter(None, conda_pth.read_text().split("\n"))) == develop_paths
+
+
+def test_get_setup_py(conda_pth: Path):
+    with pytest.raises(CondaBuildUserError, match="No setup.py found in "):
+        get_setup_py("/path/to/non-existent")
+
+
+def test_execute_error_nonexistent_prefix():
+    with pytest.raises(
+        CondaBuildUserError, match="Error: environment does not exist: "
+    ):
+        execute("/path/to/non-existent/prefix", "python", "setup.py", "install")
