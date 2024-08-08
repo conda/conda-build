@@ -2,6 +2,10 @@ conda/governance:
   # [required] community files
   - CODE_OF_CONDUCT.md
 
+conda/conda:
+  # issue template details for templates/issues/bug.yml template
+  - .github/template-files/templates/issue_template_details.yml
+
 conda/infrastructure:
   # [required] general workflows
   - .github/workflows/cla.yml
