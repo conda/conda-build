@@ -10,6 +10,7 @@ import pytest
 from conda.gateways.connection.download import download
 
 from conda_build import api
+from conda_build.exceptions import CondaBuildUserError
 from conda_build.utils import on_win, package_has_file
 
 from .utils import assert_package_consistency, metadata_dir
@@ -96,12 +97,11 @@ def test_no_platform(base_platform, package):
     fn = f"{package_name}-py36_0.tar.bz2"
     download(f, fn)
 
-    with pytest.raises(SystemExit) as e:
+    with pytest.raises(
+        CondaBuildUserError,
+        match="Error: --platform option required for conda package conversion.",
+    ):
         api.convert(fn, platforms=None)
-
-    assert "Error: --platform option required for conda package conversion." in str(
-        e.value
-    )
 
 
 @pytest.mark.parametrize("base_platform", ["linux", "win", "osx"])
@@ -121,7 +121,7 @@ def test_c_extension_error(base_platform, package):
     download(f, fn)
 
     for platform in platforms:
-        with pytest.raises(SystemExit) as e:
+        with pytest.raises(CondaBuildUserError) as e:
             api.convert(fn, platforms=platform)
 
     assert (
