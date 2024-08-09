@@ -4,7 +4,9 @@
 Simple tests for testing functions in develop module - lower level than going through API.
 """
 
+from os.path import join
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Generator
 
 import pytest
@@ -103,6 +105,13 @@ def test_uninstall(site_packages: Path, conda_pth: Path):
 
 
 def test_get_setup_py(conda_pth: Path):
+    with TemporaryDirectory() as tmpdir:
+        conda_pth = Path(tmpdir)
+        setup_py_path = join(conda_pth, "setup.py")
+        open(setup_py_path, "x").close()
+        result = get_setup_py(str(conda_pth))
+        assert "setup.py" in result
+
     with pytest.raises(CondaBuildUserError, match="No setup.py found in "):
         get_setup_py("/path/to/non-existent")
 
