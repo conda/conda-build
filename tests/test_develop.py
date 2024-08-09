@@ -4,9 +4,7 @@
 Simple tests for testing functions in develop module - lower level than going through API.
 """
 
-from os.path import join
 from pathlib import Path
-from tempfile import TemporaryDirectory
 from typing import Generator
 
 import pytest
