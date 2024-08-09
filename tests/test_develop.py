@@ -104,13 +104,11 @@ def test_uninstall(site_packages: Path, conda_pth: Path):
         assert list(filter(None, conda_pth.read_text().split("\n"))) == develop_paths
 
 
-def test_get_setup_py(conda_pth: Path):
-    with TemporaryDirectory() as tmpdir:
-        conda_pth = Path(tmpdir)
-        setup_py_path = join(conda_pth, "setup.py")
-        open(setup_py_path, "x").close()
-        result = get_setup_py(str(conda_pth))
-        assert "setup.py" in result
+def test_get_setup_py(tmp_path: Path):
+    setup_py_path = tmp_path / "setup.py"
+    setup_py_path.touch()
+    result = get_setup_py(str(tmp_path))
+    assert "setup.py" in result
 
     with pytest.raises(CondaBuildUserError, match="No setup.py found in "):
         get_setup_py("/path/to/non-existent")

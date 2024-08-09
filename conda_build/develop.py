@@ -143,10 +143,9 @@ def execute(
 ) -> None:
     if not isdir(prefix):
         raise CondaBuildUserError(
-            f"""Error: environment does not exist: {prefix}
-            \n
-            Use 'conda create' to create the environment first.
-            """
+            f"Error: environment does not exist: {prefix}\n"
+            f"\n"
+            f"Use 'conda create' to create the environment first."
         )
 
     assert find_executable("python", prefix=prefix)
