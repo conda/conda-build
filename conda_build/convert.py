@@ -12,7 +12,6 @@ import json
 import os
 import re
 import shutil
-import sys
 import tarfile
 import tempfile
 from pathlib import Path
@@ -819,7 +818,7 @@ def conda_convert(
         else:
             for c_extension in imports:
                 print(c_extension)
-        sys.exit()
+        return
 
     if not show_imports and len(platforms) == 0:
         raise CondaBuildUserError(

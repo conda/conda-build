@@ -61,8 +61,7 @@ def test_show_imports(base_platform, package, capfd):
     download(f, fn)
 
     for platform in platforms:
-        with pytest.raises(SystemExit):
-            api.convert(fn, platforms=platform, show_imports=True)
+        api.convert(fn, platforms=platform, show_imports=True)
 
         output, error = capfd.readouterr()
 
@@ -81,8 +80,7 @@ def test_no_imports_found(base_platform, package, capfd):
     fn = f"{package_name}-py36_0.tar.bz2"
     download(f, fn)
 
-    with pytest.raises(SystemExit):
-        api.convert(fn, platforms=None, show_imports=True)
+    api.convert(fn, platforms=None, show_imports=True)
 
     output, error = capfd.readouterr()
     assert "No imports found." in output
