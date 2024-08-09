@@ -121,13 +121,12 @@ def test_c_extension_error(base_platform, package):
     download(f, fn)
 
     for platform in platforms:
-        with pytest.raises(CondaBuildUserError) as e:
+        with pytest.raises(
+            CondaBuildUserError,
+            match=f"WARNING: Package {fn} contains C extensions; skipping conversion. "
+            "Use -f to force conversion.",
+        ):
             api.convert(fn, platforms=platform)
-
-    assert (
-        f"WARNING: Package {fn} contains C extensions; skipping conversion. "
-        "Use -f to force conversion."
-    ) in str(e.value)
 
 
 @pytest.mark.parametrize("base_platform", ["linux", "win", "osx"])
