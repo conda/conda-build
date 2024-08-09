@@ -18,6 +18,7 @@ import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from .exceptions import CondaBuildUserError
 from .utils import ensure_list, filter_info_files, walk
 
 if TYPE_CHECKING:
@@ -821,10 +822,12 @@ def conda_convert(
         sys.exit()
 
     if not show_imports and len(platforms) == 0:
-        sys.exit("Error: --platform option required for conda package conversion.")
+        raise CondaBuildUserError(
+            "Error: --platform option required for conda package conversion."
+        )
 
     if len(retrieve_c_extensions(file_path)) > 0 and not force:
-        sys.exit(
+        raise CondaBuildUserError(
             f"WARNING: Package {os.path.basename(file_path)} contains C extensions; skipping conversion. "
             "Use -f to force conversion."
         )
