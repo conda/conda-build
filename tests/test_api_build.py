@@ -1826,7 +1826,7 @@ def test_downstream_tests(testing_config):
 
 
 @pytest.mark.sanity
-def test_warning_on_file_clobbering(testing_config, capfd):
+def test_warning_on_file_clobbering(testing_config, caplog):
     recipe_dir = os.path.join(metadata_dir, "_overlapping_files_warning")
 
     api.build(
@@ -1844,8 +1844,11 @@ def test_warning_on_file_clobbering(testing_config, capfd):
         config=testing_config,
     )
     # The clobber warning here is raised when creating the test environment for b
-    out, err = capfd.readouterr()
-    assert "ClobberWarning" in err
+    clobber_warning_found = False
+    for record in caplog.records:
+        if "ClobberWarning:" in record.message:
+            clobber_warning_found = True
+    assert clobber_warning_found
     with pytest.raises((ClobberError, CondaMultiError)):
         with env_var("CONDA_PATH_CONFLICT", "prevent", reset_context):
             api.build(os.path.join(recipe_dir, "b"), config=testing_config)
