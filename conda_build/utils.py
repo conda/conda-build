@@ -1060,6 +1060,7 @@ def iter_entry_points(items):
 
 
 def create_entry_point(path, module, func, config):
+    """Creates an entry point for legacy noarch_python builds"""
     import_name = func.split(".")[0]
     pyscript = PY_TMPL % {"module": module, "func": func, "import_name": import_name}
     if on_win:
@@ -1083,6 +1084,7 @@ def create_entry_point(path, module, func, config):
 
 
 def create_entry_points(items, config):
+    """Creates entry points for legacy noarch_python builds"""
     if not items:
         return
     bin_dir = join(config.host_prefix, bin_dirname)
