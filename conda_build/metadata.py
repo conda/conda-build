@@ -605,6 +605,7 @@ FIELDS = {
         "script": list,
         "noarch": str,
         "noarch_python": bool,
+        "python_version_independent": bool,
         "has_prefix_files": None,
         "binary_has_prefix_files": None,
         "ignore_prefix_files": None,
@@ -1811,6 +1812,10 @@ class MetaData:
             build_noarch = self.get_value("build/noarch")
             if build_noarch:
                 d["noarch"] = build_noarch
+        elif self.python_version_independent:
+            # This is a hack to make conda/mamba/micromamba compile the pure python files
+            # and for micromamba to move the files in site-packages to the correct dir.
+            d["noarch"] = "python"
         if self.is_app():
             d.update(self.app_meta())
         return d
@@ -2292,6 +2297,14 @@ class MetaData:
         return new
 
     @property
+    def python_version_independent(self):
+        return (
+            self.get_value("build/python_version_independent")
+            or self.get_value("build/noarch") == "python"
+            or self.noarch_python
+        )
+
+    @property
     def noarch(self):
         return self.get_value("build/noarch")
 
@@ -2442,6 +2455,10 @@ class MetaData:
             output_metadata.final = False
             output_metadata.noarch = output.get("noarch", False)
             output_metadata.noarch_python = output.get("noarch_python", False)
+            output_metadata.python_version_independent = (
+                output.get("python_version_independent")
+                or output_metadata.noarch == "python"
+            )
             # primarily for tests - make sure that we keep the platform consistent (setting noarch
             #      would reset it)
             if (

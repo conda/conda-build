@@ -246,7 +246,7 @@ def msvc_env_cmd(bits, config, override=None):
 
 def write_build_scripts(m, env, bld_bat):
     env_script = join(m.config.work_dir, "build_env_setup.bat")
-    if m.noarch == "python":
+    if m.python_version_independent:
         env["PYTHONDONTWRITEBYTECODE"] = True
     import codecs
 
