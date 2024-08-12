@@ -1247,8 +1247,11 @@ def write_info_files_file(m, files):
 def write_link_json(m):
     package_metadata = OrderedDict()
     noarch_type = m.get_value("build/noarch")
-    if noarch_type:
-        noarch_type_str = str(noarch_type)
+    if noarch_type or m.python_version_independent:
+        if noarch_type:
+            noarch_type_str = str(noarch_type)
+        elif m.python_version_independent:
+            noarch_type_str = "python"
         noarch_dict = OrderedDict(type=noarch_type_str)
         if noarch_type_str.lower() == "python":
             entry_points = m.get_value("build/entry_points")
