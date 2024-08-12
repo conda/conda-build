@@ -2334,6 +2334,10 @@ class MetaData:
             or self.noarch_python
         )
 
+    @python_version_independent.setter
+    def python_version_independent(self, value: bool) -> None:
+        self.meta.setdefault("build", {})["python_version_independent"] = value
+
     @property
     def noarch(self):
         return self.get_value("build/noarch")
