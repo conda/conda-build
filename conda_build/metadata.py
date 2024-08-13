@@ -1338,6 +1338,10 @@ class MetaData:
         )
         self.final = final
 
+        if self.skip():
+            self.final = True
+            return
+
         # recursively parse again so long as each iteration has fewer undefined jinja variables
         undefined_jinja_vars = ()
         while set(undefined_jinja_vars) != set(self.undefined_jinja_vars):
