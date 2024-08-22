@@ -4,7 +4,7 @@
 
 ### Bug fixes
 
-* Allow undefined jinja variables when a particular metadata block evaluates as skipped
+* Allow undefined jinja variables when a particular metadata block evaluates as skipped. (#5458)
 
 ### Deprecations
 
