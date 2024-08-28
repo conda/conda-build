@@ -1,6 +1,6 @@
-[codecov-badge]: https://img.shields.io/codecov/c/github/conda/conda-build/main.svg?label=coverage
 [release-badge]: https://img.shields.io/github/release/conda/conda-build.svg
 [tests-badge]: https://img.shields.io/github/actions/workflow/status/conda/conda-build/tests.yml?branch=main&event=schedule&logo=github
+[codecov-badge]: https://img.shields.io/codecov/c/github/conda/conda-build/main?logo=codecov
 
 # `conda-build`
 
