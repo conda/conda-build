@@ -126,6 +126,7 @@ jobs:
         run: >
           conda install
           --yes
+          --strict-channel-priority
           --file tests/requirements.txt
           --file tests/requirements-${{ runner.os }}.txt
           --file tests/requirements-ci.txt
@@ -206,6 +207,7 @@ jobs:
         run: >
           conda install
           --yes
+          --strict-channel-priority
           --file tests/requirements.txt
           --file tests/requirements-${{ runner.os }}.txt
           --file tests/requirements-ci.txt
@@ -290,6 +292,7 @@ jobs:
         run: >
           conda install
           --yes
+          --strict-channel-priority
           --file tests\requirements.txt
           --file tests\requirements-${{ runner.os }}.txt
           --file tests\requirements-ci.txt
@@ -409,6 +412,7 @@ jobs:
         run: >
           conda install
           --yes
+          --strict-channel-priority
           --file tests/requirements.txt
           --file tests/requirements-${{ runner.os }}.txt
           --file tests/requirements-ci.txt
