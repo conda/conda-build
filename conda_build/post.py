@@ -1325,7 +1325,11 @@ def check_overlinking_impl(
     precs.append(pkg_vendored_dist)
     ignore_list = utils.ensure_list(ignore_run_exports)
     if subdir.startswith("linux"):
+        # libgcc-ng is the defaults & old conda-forge package name
         ignore_list.append("libgcc-ng")
+        # conda-forge::libgcc-ng was renamed 08/27/2024
+        # see https://github.com/conda-forge/ctng-compilers-feedstock/pull/148
+        ignore_list.append("libgcc")
 
     package_nature = {prec: library_nature(prec, run_prefix) for prec in precs}
     lib_packages = {
