@@ -9,6 +9,7 @@ import re
 import shutil
 import stat
 import sys
+import traceback
 from collections import OrderedDict, defaultdict
 from copy import copy
 from fnmatch import filter as fnmatch_filter
@@ -71,6 +72,12 @@ filetypes_for_platform = {
     "win": (DLLfile, EXEfile),
     "osx": (machofile,),
     "linux": (elffile,),
+}
+
+GNU_ARCH_MAP = {
+    "ppc64le": "powerpc64le",
+    "32": "i686",
+    "64": "x86_64",
 }
 
 
@@ -603,7 +610,20 @@ def mk_relative_linux(f, prefix, rpaths=("lib",), method=None):
             existing_pe = existing_pe.split(os.pathsep)
     existing = existing_pe
     if have_lief:
-        existing2, _, _ = get_rpaths_raw(elf)
+        existing2 = None
+        try:
+            existing2, _, _ = get_rpaths_raw(elf)
+        except Exception as e:
+            if method == "LIEF":
+                print(
+                    f"ERROR :: get_rpaths_raw({elf!r}) with LIEF failed: {e}, but LIEF was specified"
+                )
+                traceback.print_tb(e.__traceback__)
+            else:
+                print(
+                    f"WARNING :: get_rpaths_raw({elf!r}) with LIEF failed: {e}, will proceed with patchelf"
+                )
+            method = "patchelf"
         if existing_pe and existing_pe != existing2:
             print(
                 f"WARNING :: get_rpaths_raw()={existing2} and patchelf={existing_pe} disagree for {elf} :: "
@@ -1406,8 +1426,20 @@ def check_overlinking_impl(
                     list(diffs)[1:3],
                 )
                 sysroots_files[srs] = sysroot_files
+
+    def sysroot_matches_subdir(path):
+        # The path looks like <PREFIX>/aarch64-conda-linux-gnu/sysroot/
+        # We check that the triplet "aarch64-conda-linux-gnu"
+        # matches the subdir for eg: linux-aarch64.
+        sysroot_arch = Path(path).parent.name.split("-")[0]
+        subdir_arch = subdir.split("-")[-1]
+        return sysroot_arch == GNU_ARCH_MAP.get(subdir_arch, subdir_arch)
+
     sysroots_files = OrderedDict(
-        sorted(sysroots_files.items(), key=lambda x: -len(x[1]))
+        sorted(
+            sysroots_files.items(),
+            key=lambda x: (not sysroot_matches_subdir(x[0]), -len(x[1])),
+        )
     )
 
     all_needed_dsos, needed_dsos_for_file = _collect_needed_dsos(
@@ -1595,7 +1627,7 @@ def post_process_shared_lib(m, f, files, host_prefix=None):
     elif codefile == machofile:
         if m.config.host_platform != "osx":
             log = utils.get_logger(__name__)
-            log.warn(
+            log.warning(
                 "Found Mach-O file but patching is only supported on macOS, skipping: %s",
                 path,
             )
@@ -1631,7 +1663,7 @@ def fix_permissions(files, prefix):
                 lchmod(path, new_mode)
             except (OSError, utils.PermissionError) as e:
                 log = utils.get_logger(__name__)
-                log.warn(str(e))
+                log.warning(str(e))
 
 
 def check_menuinst_json(files, prefix) -> None:

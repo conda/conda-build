@@ -12,17 +12,26 @@ import time
 import warnings
 from collections import OrderedDict
 from functools import lru_cache
-from os.path import isfile, join
+from os.path import isdir, isfile, join
 from typing import TYPE_CHECKING, NamedTuple, overload
 
+import yaml
 from bs4 import UnicodeDammit
-from conda.base.context import context
+from conda.base.context import locate_prefix_by_name
 from conda.gateways.disk.read import compute_sum
 from conda.models.match_spec import MatchSpec
 from frozendict import deepfreeze
 
-from . import exceptions, utils
+from . import utils
 from .config import Config, get_or_merge_config
+from .exceptions import (
+    CondaBuildException,
+    CondaBuildUserError,
+    DependencyNeedsBuildingError,
+    RecipeError,
+    UnableToParse,
+    UnableToParseMissingJinja2,
+)
 from .features import feature_list
 from .license_family import ensure_valid_license_family
 from .utils import (
@@ -45,7 +54,10 @@ from .variants import (
 )
 
 if TYPE_CHECKING:
-    from typing import Any, Literal
+    from typing import Any, Literal, Self
+
+    OutputDict = dict[str, Any]
+    OutputTuple = tuple[OutputDict, "MetaData"]
 
 try:
     import yaml
@@ -195,7 +207,7 @@ def get_selectors(config: Config) -> dict[str, bool]:
     if not np:
         np = defaults["numpy"]
         if config.verbose:
-            utils.get_logger(__name__).warn(
+            utils.get_logger(__name__).warning(
                 "No numpy version specified in conda_build_config.yaml.  "
                 "Falling back to default numpy value of {}".format(defaults["numpy"])
             )
@@ -332,12 +344,12 @@ def select_lines(text: str, namespace: dict[str, Any], variants_in_place: bool) 
                     if value:
                         lines.append(line)
                 except Exception as e:
-                    sys.exit(
-                        f"Error: Invalid selector in meta.yaml line {i + 1}:\n"
-                        f"offending line:\n"
-                        f"{line}\n"
+                    raise CondaBuildUserError(
+                        f"Invalid selector in meta.yaml line {i + 1}:\n"
+                        f"offending selector:\n"
+                        f"  [{selector}]\n"
                         f"exception:\n"
-                        f"{e.__class__.__name__}: {e}\n"
+                        f"  {e.__class__.__name__}: {e}\n"
                     )
     return "\n".join(lines) + "\n"
 
@@ -352,10 +364,10 @@ def yamlize(data):
 
                 jinja2  # Avoid pyflakes failure: 'jinja2' imported but unused
             except ImportError:
-                raise exceptions.UnableToParseMissingJinja2(original=e)
+                raise UnableToParseMissingJinja2(original=e)
         print("Problematic recipe:", file=sys.stderr)
         print(data, file=sys.stderr)
-        raise exceptions.UnableToParse(original=e)
+        raise UnableToParse(original=e)
 
 
 def ensure_valid_fields(meta):
@@ -396,9 +408,7 @@ def _trim_None_strings(meta_dict):
 def ensure_valid_noarch_value(meta):
     build_noarch = meta.get("build", {}).get("noarch")
     if build_noarch and build_noarch not in NOARCH_TYPES:
-        raise exceptions.CondaBuildException(
-            f"Invalid value for noarch: {build_noarch}"
-        )
+        raise CondaBuildException(f"Invalid value for noarch: {build_noarch}")
 
 
 def _get_all_dependencies(metadata, envs=("host", "build", "run")):
@@ -408,29 +418,55 @@ def _get_all_dependencies(metadata, envs=("host", "build", "run")):
     return reqs
 
 
-def check_circular_dependencies(render_order, config=None):
+def _check_circular_dependencies(
+    render_order: list[OutputTuple],
+    config: Config | None = None,
+) -> None:
+    envs: tuple[str, ...]
     if config and config.host_subdir != config.build_subdir:
         # When cross compiling build dependencies are already built
         # and cannot come from the recipe as subpackages
         envs = ("host", "run")
     else:
         envs = ("build", "host", "run")
-    pairs = []
-    for idx, m in enumerate(render_order.values()):
-        for other_m in list(render_order.values())[idx + 1 :]:
+
+    pairs: list[tuple[str, str]] = []
+    for idx, (_, metadata) in enumerate(render_order):
+        name = metadata.name()
+        for _, other_metadata in render_order[idx + 1 :]:
+            other_name = other_metadata.name()
             if any(
-                m.name() == dep or dep.startswith(m.name() + " ")
-                for dep in _get_all_dependencies(other_m, envs=envs)
+                name == dep.split(" ")[0]
+                for dep in _get_all_dependencies(other_metadata, envs=envs)
             ) and any(
-                other_m.name() == dep or dep.startswith(other_m.name() + " ")
-                for dep in _get_all_dependencies(m, envs=envs)
+                other_name == dep.split(" ")[0]
+                for dep in _get_all_dependencies(metadata, envs=envs)
             ):
-                pairs.append((m.name(), other_m.name()))
+                pairs.append((name, other_name))
+
     if pairs:
         error = "Circular dependencies in recipe: \n"
         for pair in pairs:
             error += "    {} <-> {}\n".format(*pair)
-        raise exceptions.RecipeError(error)
+        raise RecipeError(error)
+
+
+def _check_run_constrained(metadata_tuples):
+    errors = []
+    for _, metadata in metadata_tuples:
+        for dep in _get_all_dependencies(metadata, envs=("run_constrained",)):
+            if "{{" in dep:
+                # skip Jinja content; it might have not been rendered yet; we'll get it next call
+                continue
+            try:
+                MatchSpec(dep)
+            except ValueError as exc:
+                errors.append(
+                    f"- Output '{metadata.name()}' has invalid run_constrained item: {dep}. "
+                    f"Reason: {exc}"
+                )
+    if errors:
+        raise RecipeError("\n".join(["", *errors]))
 
 
 def _variants_equal(metadata, output_metadata):
@@ -474,7 +510,7 @@ def ensure_matching_hashes(output_metadata):
             error += "Mismatching package: {} (id {}); dep: {}; consumer package: {}\n".format(
                 *prob
             )
-        raise exceptions.RecipeError(
+        raise RecipeError(
             "Mismatching hashes in recipe. Exact pins in dependencies "
             "that contribute to the hash often cause this. Can you "
             "change one or more exact pins to version bound constraints?\n"
@@ -701,19 +737,18 @@ def _git_clean(source_meta):
     If more than one field is used to specified, exit
     and complain.
     """
-
     git_rev_tags_old = ("git_branch", "git_tag")
     git_rev = "git_rev"
 
     git_rev_tags = (git_rev,) + git_rev_tags_old
-
     has_rev_tags = tuple(bool(source_meta.get(tag, "")) for tag in git_rev_tags)
-    if sum(has_rev_tags) > 1:
-        msg = "Error: multiple git_revs:"
-        msg += ", ".join(
-            f"{key}" for key, has in zip(git_rev_tags, has_rev_tags) if has
-        )
-        sys.exit(msg)
+
+    keys = [key for key in (git_rev, "git_branch", "git_tag") if key in source_meta]
+    if not keys:
+        # git_branch, git_tag, nor git_rev specified, return as-is
+        return source_meta
+    elif len(keys) > 1:
+        raise CondaBuildUserError(f"Multiple git_revs: {', '.join(keys)}")
 
     # make a copy of the input so we have no side-effects
     ret_meta = source_meta.copy()
@@ -736,15 +771,16 @@ def _str_version(package_meta):
     return package_meta
 
 
-def check_bad_chrs(s, field):
-    bad_chrs = "=@#$%^&*:;\"'\\|<>?/ "
+def check_bad_chrs(value: str, field: str) -> None:
+    bad_chrs = set("=@#$%^&*:;\"'\\|<>?/ ")
     if field in ("package/version", "build/string"):
-        bad_chrs += "-"
+        bad_chrs.add("-")
     if field != "package/version":
-        bad_chrs += "!"
-    for c in bad_chrs:
-        if c in s:
-            sys.exit(f"Error: bad character '{c}' in {field}: {s}")
+        bad_chrs.add("!")
+    if invalid := bad_chrs.intersection(value):
+        raise CondaBuildUserError(
+            f"Bad character(s) ({''.join(sorted(invalid))}) in {field}: {value}."
+        )
 
 
 def get_package_version_pin(build_reqs, name):
@@ -817,24 +853,12 @@ def build_string_from_metadata(metadata):
     return build_str
 
 
-# This really belongs in conda, and it is int conda.cli.common,
-#   but we don't presently have an API there.
-def _get_env_path(env_name_or_path):
-    if not os.path.isdir(env_name_or_path):
-        for envs_dir in list(context.envs_dirs) + [os.getcwd()]:
-            path = os.path.join(envs_dir, env_name_or_path)
-            if os.path.isdir(path):
-                env_name_or_path = path
-                break
-    bootstrap_metadir = os.path.join(env_name_or_path, "conda-meta")
-    if not os.path.isdir(bootstrap_metadir):
-        print(f"Bootstrap environment '{env_name_or_path}' not found")
-        sys.exit(1)
-    return env_name_or_path
-
-
 def _get_dependencies_from_environment(env_name_or_path):
-    path = _get_env_path(env_name_or_path)
+    path = (
+        env_name_or_path
+        if isdir(env_name_or_path)
+        else locate_prefix_by_name(env_name_or_path)
+    )
     # construct build requirements that replicate the given bootstrap environment
     # and concatenate them to the build requirements from the recipe
     bootstrap_metadata = get_installed_packages(path)
@@ -846,7 +870,7 @@ def _get_dependencies_from_environment(env_name_or_path):
     return {"requirements": {"build": bootstrap_requirements}}
 
 
-def toposort(output_metadata_map):
+def _toposort_outputs(output_tuples: list[OutputTuple]) -> list[OutputTuple]:
     """This function is used to work out the order to run the install scripts
     for split packages based on any interdependencies. The result is just
     a re-ordering of outputs such that we can run them in that order and
@@ -858,53 +882,51 @@ def toposort(output_metadata_map):
 
     # We only care about the conda packages built by this recipe. Non-conda
     # packages get sorted to the end.
-    these_packages = [
-        output_d["name"]
-        for output_d in output_metadata_map
-        if output_d.get("type", "conda").startswith("conda")
-    ]
-    topodict = dict()
-    order = dict()
-    endorder = set()
-
-    for idx, (output_d, output_m) in enumerate(output_metadata_map.items()):
+    conda_outputs: dict[str, list[OutputTuple]] = {}
+    non_conda_outputs: list[OutputTuple] = []
+    for output_tuple in output_tuples:
+        output_d, _ = output_tuple
         if output_d.get("type", "conda").startswith("conda"):
-            deps = output_m.get_value("requirements/run", []) + output_m.get_value(
-                "requirements/host", []
-            )
-            if not output_m.is_cross:
-                deps.extend(output_m.get_value("requirements/build", []))
-            name = output_d["name"]
-            order[name] = idx
-            topodict[name] = set()
-            for dep in deps:
-                dep = dep.split(" ")[0]
-                if dep in these_packages:
-                    topodict[name].update((dep,))
+            # conda packages must have a name
+            # the same package name may be seen multiple times (variants)
+            conda_outputs.setdefault(output_d["name"], []).append(output_tuple)
+        elif "name" in output_d:
+            non_conda_outputs.append(output_tuple)
         else:
-            endorder.add(idx)
+            # TODO: is it even possible to get here? and if so should we silently ignore or error?
+            utils.get_logger(__name__).warning(
+                "Found an output without a name, skipping"
+            )
 
-    topo_order = list(_toposort(topodict))
-    keys = [
-        k
-        for pkgname in topo_order
-        for k in output_metadata_map.keys()
-        if "name" in k and k["name"] == pkgname
+    # Iterate over conda packages, creating a mapping of package names to their
+    # dependencies to be used in toposort
+    name_to_dependencies: dict[str, set[str]] = {}
+    for name, same_name_outputs in conda_outputs.items():
+        for output_d, output_metadata in same_name_outputs:
+            # dependencies for all of the variants
+            dependencies = (
+                *output_metadata.get_value("requirements/run", []),
+                *output_metadata.get_value("requirements/host", []),
+                *(
+                    output_metadata.get_value("requirements/build", [])
+                    if not output_metadata.is_cross
+                    else []
+                ),
+            )
+            name_to_dependencies.setdefault(name, set()).update(
+                dependency_name
+                for dependency in dependencies
+                if (dependency_name := dependency.split(" ")[0]) in conda_outputs
+            )
+
+    return [
+        *(
+            output
+            for name in _toposort(name_to_dependencies)
+            for output in conda_outputs[name]
+        ),
+        *non_conda_outputs,
     ]
-    # not sure that this is working...  not everything has 'name', and not sure how this pans out
-    #    may end up excluding packages without the 'name' field
-    keys.extend(
-        [
-            k
-            for pkgname in endorder
-            for k in output_metadata_map.keys()
-            if ("name" in k and k["name"] == pkgname) or "name" not in k
-        ]
-    )
-    result = OrderedDict()
-    for key in keys:
-        result[key] = output_metadata_map[key]
-    return result
 
 
 def get_output_dicts_from_metadata(
@@ -1001,12 +1023,12 @@ def finalize_outputs_pass(
                     fm.name(),
                     deepfreeze({k: fm.config.variant[k] for k in fm.get_used_vars()}),
                 ] = (output_d, fm)
-        except exceptions.DependencyNeedsBuildingError as e:
+        except DependencyNeedsBuildingError as e:
             if not permit_unsatisfiable_variants:
                 raise
             else:
                 log = utils.get_logger(__name__)
-                log.warn(
+                log.warning(
                     "Could not finalize metadata due to missing dependencies: "
                     f"{e.packages}"
                 )
@@ -1227,7 +1249,7 @@ class MetaData:
 
         log = utils.get_logger(__name__)
         if kw:
-            log.warn(
+            log.warning(
                 "using unsupported internal conda-build function `parse_again`.  Please use "
                 "conda_build.api.render instead."
             )
@@ -1304,12 +1326,11 @@ class MetaData:
     ):
         """variant contains key-value mapping for additional functions and values
         for jinja2 variables"""
-        # undefined_jinja_vars is refreshed by self.parse again
-        undefined_jinja_vars = ()
         # store the "final" state that we think we're in.  reloading the meta.yaml file
         #   can reset it (to True)
         final = self.final
-        # always parse again at least once.
+
+        # always parse again at least once
         self.parse_again(
             permit_undefined_jinja=True,
             allow_no_other_outputs=allow_no_other_outputs,
@@ -1317,6 +1338,8 @@ class MetaData:
         )
         self.final = final
 
+        # recursively parse again so long as each iteration has fewer undefined jinja variables
+        undefined_jinja_vars = ()
         while set(undefined_jinja_vars) != set(self.undefined_jinja_vars):
             undefined_jinja_vars = self.undefined_jinja_vars
             self.parse_again(
@@ -1325,18 +1348,8 @@ class MetaData:
                 bypass_env_check=bypass_env_check,
             )
             self.final = final
-        if undefined_jinja_vars:
-            self.parse_again(
-                permit_undefined_jinja=False,
-                allow_no_other_outputs=allow_no_other_outputs,
-                bypass_env_check=bypass_env_check,
-            )
-            sys.exit(
-                f"Undefined Jinja2 variables remain ({self.undefined_jinja_vars}).  Please enable "
-                "source downloading and try again."
-            )
 
-        # always parse again at the end, too.
+        # always parse again at the end without permit_undefined_jinja
         self.parse_again(
             permit_undefined_jinja=False,
             allow_no_other_outputs=allow_no_other_outputs,
@@ -1441,7 +1454,7 @@ class MetaData:
             # is passed in with an index, e.g. get_value('source/0/git_url')
             if index is None:
                 log = utils.get_logger(__name__)
-                log.warn(
+                log.warning(
                     f"No index specified in get_value('{name}'). Assuming index 0."
                 )
                 index = 0
@@ -1993,8 +2006,8 @@ class MetaData:
         except jinja2.TemplateError as ex:
             if "'None' has not attribute" in str(ex):
                 ex = "Failed to run jinja context function"
-            sys.exit(
-                f"Error: Failed to render jinja template in {self.meta_path}:\n{str(ex)}"
+            raise CondaBuildUserError(
+                f"Failed to render jinja template in {self.meta_path}:\n{str(ex)}"
             )
         finally:
             if "CONDA_BUILD_STATE" in os.environ:
@@ -2205,7 +2218,7 @@ class MetaData:
             output = output_matches[output_index] if output_matches else ""
         except ValueError:
             if not self.path and self.meta.get("extra", {}).get("parent_recipe"):
-                utils.get_logger(__name__).warn(
+                utils.get_logger(__name__).warning(
                     f"Didn't match any output in raw metadata.  Target value was: {output_name}"
                 )
                 output = ""
@@ -2268,7 +2281,7 @@ class MetaData:
                 "character in your recipe."
             )
 
-    def copy(self):
+    def copy(self: Self) -> MetaData:
         new = copy.copy(self)
         new.config = self.config.copy()
         new.config.variant = copy.deepcopy(self.config.variant)
@@ -2520,10 +2533,10 @@ class MetaData:
         permit_undefined_jinja: bool = False,
         permit_unsatisfiable_variants: bool = False,
         bypass_env_check: bool = False,
-    ) -> list[tuple[dict[str, Any], MetaData]]:
+    ) -> list[OutputTuple]:
         from .source import provide
 
-        out_metadata_map = {}
+        output_tuples: list[OutputTuple] = []
         if self.final:
             outputs = get_output_dicts_from_metadata(self)
             output_tuples = [(outputs[0], self)]
@@ -2579,27 +2592,26 @@ class MetaData:
                                 }
                             ),
                         ] = (out, out_metadata)
-                        out_metadata_map[deepfreeze(out)] = out_metadata
+                        output_tuples.append((out, out_metadata))
                         ref_metadata.other_outputs = out_metadata.other_outputs = (
                             all_output_metadata
                         )
                 except SystemExit:
                     if not permit_undefined_jinja:
                         raise
-                    out_metadata_map = {}
+                    output_tuples = []
 
-            assert out_metadata_map, (
+            assert output_tuples, (
                 "Error: output metadata set is empty.  Please file an issue"
                 " on the conda-build tracker at https://github.com/conda/conda-build/issues"
             )
 
-            # format here is {output_dict: metadata_object}
-            render_order = toposort(out_metadata_map)
-            check_circular_dependencies(render_order, config=self.config)
+            render_order: list[OutputTuple] = _toposort_outputs(output_tuples)
+            _check_circular_dependencies(render_order, config=self.config)
             conda_packages = OrderedDict()
             non_conda_packages = []
 
-            for output_d, m in render_order.items():
+            for output_d, m in render_order:
                 if not output_d.get("type") or output_d["type"] in (
                     "conda",
                     "conda_v2",
@@ -2653,6 +2665,7 @@ class MetaData:
                 m.final = True
                 final_conda_packages.append((out_d, m))
             output_tuples = final_conda_packages + non_conda_packages
+        _check_run_constrained(output_tuples)
         return output_tuples
 
     def get_loop_vars(self):
@@ -2898,7 +2911,7 @@ class MetaData:
                 )
             else:
                 log = utils.get_logger(__name__)
-                log.warn(
+                log.warning(
                     f"Not detecting used variables in output script {script}; conda-build only knows "
                     "how to search .sh and .bat files right now."
                 )

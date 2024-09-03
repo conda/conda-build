@@ -36,10 +36,13 @@ from conda_index.api import update_index
 from conda_build import __version__, api, exceptions
 from conda_build.config import Config
 from conda_build.exceptions import (
+    BuildScriptException,
     CondaBuildException,
+    CondaBuildUserError,
     DependencyNeedsBuildingError,
     OverDependingError,
     OverLinkingError,
+    RecipeError,
 )
 from conda_build.os_utils.external import find_executable
 from conda_build.render import finalize_metadata
@@ -277,7 +280,7 @@ def test_no_include_recipe_meta_yaml(testing_metadata, testing_config):
     )[0]
     assert not package_has_file(output_file, "info/recipe/meta.yaml")
 
-    with pytest.raises(SystemExit):
+    with pytest.raises(CondaBuildUserError):
         # we are testing that even with the recipe excluded, we still get the tests in place
         output_file = api.build(
             os.path.join(metadata_dir, "_no_include_recipe"), config=testing_config
@@ -383,7 +386,7 @@ def test_dirty_variable_available_in_build_scripts(testing_config):
     testing_config.dirty = True
     api.build(recipe, config=testing_config)
 
-    with pytest.raises(subprocess.CalledProcessError):
+    with pytest.raises(BuildScriptException):
         testing_config.dirty = False
         api.build(recipe, config=testing_config)
 
@@ -501,7 +504,7 @@ def test_recursive_fail(testing_config):
 
 @pytest.mark.sanity
 def test_jinja_typo(testing_config):
-    with pytest.raises(SystemExit, match="GIT_DSECRIBE_TAG"):
+    with pytest.raises(CondaBuildUserError, match="GIT_DSECRIBE_TAG"):
         api.build(
             os.path.join(fail_dir, "source_git_jinja2_oops"), config=testing_config
         )
@@ -543,7 +546,7 @@ def test_skip_existing_url(testing_metadata, testing_workdir, capfd):
 
 def test_failed_tests_exit_build(testing_config):
     """https://github.com/conda/conda-build/issues/1112"""
-    with pytest.raises(SystemExit, match="TESTS FAILED"):
+    with pytest.raises(CondaBuildUserError, match="TESTS FAILED"):
         api.build(
             os.path.join(metadata_dir, "_test_failed_test_exits"), config=testing_config
         )
@@ -816,13 +819,13 @@ def test_disable_pip(testing_metadata):
     testing_metadata.meta["build"]["script"] = (
         'python -c "import pip; print(pip.__version__)"'
     )
-    with pytest.raises(subprocess.CalledProcessError):
+    with pytest.raises(BuildScriptException):
         api.build(testing_metadata)
 
     testing_metadata.meta["build"]["script"] = (
         'python -c "import setuptools; print(setuptools.__version__)"'
     )
-    with pytest.raises(subprocess.CalledProcessError):
+    with pytest.raises(BuildScriptException):
         api.build(testing_metadata)
 
 
@@ -1463,6 +1466,12 @@ def test_run_constrained_stores_constrains_info(testing_config):
     assert info_contents["constrains"][0] == "bzip2  1.*"
 
 
+def test_run_constrained_is_validated(testing_config: Config):
+    recipe = os.path.join(metadata_dir, "_run_constrained_error")
+    with pytest.raises(RecipeError):
+        api.build(recipe, config=testing_config)
+
+
 @pytest.mark.sanity
 def test_no_locking(testing_config):
     recipe = os.path.join(metadata_dir, "source_git_jinja2")
@@ -1539,7 +1548,7 @@ def test_setup_py_data_in_env(testing_config):
     # should pass with any modern python (just not 3.5)
     api.build(recipe, config=testing_config)
     # make sure it fails with our special python logic
-    with pytest.raises(subprocess.CalledProcessError):
+    with pytest.raises((BuildScriptException, CondaBuildException)):
         api.build(recipe, config=testing_config, python="3.5")
 
 
@@ -1767,6 +1776,18 @@ def test_overdepending_detection(testing_config, variants_conda_build_sysroot):
         api.build(recipe, config=testing_config, variants=variants_conda_build_sysroot)
 
 
+@pytest.mark.skipif(not on_linux, reason="cannot compile for linux-ppc64le")
+def test_sysroots_detection(testing_config, variants_conda_build_sysroot):
+    recipe = os.path.join(metadata_dir, "_sysroot_detection")
+    testing_config.activate = True
+    testing_config.error_overlinking = True
+    testing_config.error_overdepending = True
+    testing_config.channel_urls = [
+        "conda-forge",
+    ]
+    api.build(recipe, config=testing_config, variants=variants_conda_build_sysroot)
+
+
 @pytest.mark.skipif(sys.platform != "darwin", reason="macOS-only test (at present)")
 def test_macos_tbd_handling(testing_config, variants_conda_build_sysroot):
     """
@@ -1800,7 +1821,7 @@ def test_downstream_tests(testing_config):
     upstream = os.path.join(metadata_dir, "_test_downstreams/upstream")
     downstream = os.path.join(metadata_dir, "_test_downstreams/downstream")
     api.build(downstream, config=testing_config, notest=True)
-    with pytest.raises(SystemExit):
+    with pytest.raises(CondaBuildUserError):
         api.build(upstream, config=testing_config)
 
 
@@ -1942,10 +1963,15 @@ def test_activated_prefixes_in_actual_path(testing_metadata):
 
 @pytest.mark.parametrize("add_pip_as_python_dependency", [False, True])
 def test_add_pip_as_python_dependency_from_condarc_file(
-    testing_metadata, testing_workdir, add_pip_as_python_dependency, monkeypatch
-):
+    testing_metadata: MetaData,
+    testing_workdir: str | os.PathLike,
+    add_pip_as_python_dependency: bool,
+    monkeypatch: MonkeyPatch,
+    mocker: MockerFixture,
+    tmp_path: Path,
+) -> None:
     """
-    Test whether settings from .condarc files are heeded.
+    Test whether settings from .condarc files are needed.
     ref: https://github.com/conda/conda-libmamba-solver/issues/393
     """
     # TODO: SubdirData._cache_ clearing might not be needed for future conda versions.
@@ -1955,16 +1981,74 @@ def test_add_pip_as_python_dependency_from_condarc_file(
     # SubdirData's cache doesn't distinguish on add_pip_as_python_dependency.
     SubdirData._cache_.clear()
 
+    # clear cache
+    mocker.patch("conda.base.context.Context.pkgs_dirs", pkgs_dirs := (str(tmp_path),))
+    assert context.pkgs_dirs == pkgs_dirs
+
     testing_metadata.meta["build"]["script"] = ['python -c "import pip"']
     testing_metadata.meta["requirements"]["host"] = ["python"]
     del testing_metadata.meta["test"]
     if add_pip_as_python_dependency:
         check_build_fails = nullcontext()
     else:
-        check_build_fails = pytest.raises(subprocess.CalledProcessError)
+        check_build_fails = pytest.raises(BuildScriptException)
 
     conda_rc = Path(testing_workdir, ".condarc")
     conda_rc.write_text(f"add_pip_as_python_dependency: {add_pip_as_python_dependency}")
     with env_var("CONDARC", conda_rc, reset_context):
         with check_build_fails:
             api.build(testing_metadata)
+
+
+def test_rendered_is_reported(testing_config, capsys):
+    recipe_dir = os.path.join(metadata_dir, "outputs_overwrite_base_file")
+    api.build(recipe_dir, config=testing_config)
+
+    captured = capsys.readouterr()
+    assert "Rendered as:" in captured.out
+    assert "name: base-outputs_overwrite_base_file" in captured.out
+    assert "- name: base-outputs_overwrite_base_file" in captured.out
+    assert "- base-outputs_overwrite_base_file >=1.0,<2.0a0" in captured.out
+
+
+@pytest.mark.skipif(on_win, reason="Tests cross-compilation targeting Windows")
+def test_cross_unix_windows_mingw(testing_config):
+    recipe = os.path.join(metadata_dir, "_cross_unix_windows_mingw")
+    testing_config.channel_urls = [
+        "conda-forge",
+    ]
+    api.build(recipe, config=testing_config)
+
+
+@pytest.mark.parametrize(
+    "recipe", sorted(Path(metadata_dir, "_build_script_errors").glob("*"))
+)
+@pytest.mark.parametrize("debug", (False, True))
+def test_conda_build_script_errors_without_conda_info_handlers(tmp_path, recipe, debug):
+    env = os.environ.copy()
+    if debug:
+        env["CONDA_VERBOSITY"] = "3"
+    process = subprocess.run(
+        ["conda", "build", recipe],
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+        cwd=tmp_path,
+    )
+    assert process.returncode > 0
+    all_output = process.stdout + "\n" + process.stderr
+
+    # These should NOT appear in the output
+    assert ">>> ERROR REPORT <<<" not in all_output
+    assert "An unexpected error has occurred." not in all_output
+    assert "Conda has prepared the above report." not in all_output
+
+    # These should appear
+    assert "returned non-zero exit status 1" in all_output
+
+    # With verbose mode, we should actually see the traceback
+    if debug:
+        assert "Traceback" in all_output
+        assert "CalledProcessError" in all_output
+        assert "returned non-zero exit status 1" in all_output

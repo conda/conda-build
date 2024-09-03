@@ -51,6 +51,7 @@ Authors are sorted alphabetically.
 * Dan Blanchard
 * Dan Lovell
 * Daniel Bast
+* Daniel Ching
 * Daniel Damiani
 * Daniel Holth
 * Daniel Petry
@@ -120,12 +121,14 @@ Authors are sorted alphabetically.
 * Juan Lasheras
 * Julian Rüth
 * Julien Schueller
+* Justin Wood (Callek)
 * Jürgen Gmach
 * Jędrzej Nowak
 * Kai Tietz
 * Kale Franz
 * Katherine Kinnaman
 * Ken Odegard
+* Klaus Zimmermann
 * Korijn van Golen
 * Kurt Schelfthout
 * Kyle Leaders
@@ -216,7 +219,9 @@ Authors are sorted alphabetically.
 * Thomas A Caswell
 * Thomas Holder
 * Thomas Kluyver
+* Tim Paine
 * Tim Snyder
+* Tobias Fischer
 * Todd Tomashek
 * Tom Davidson
 * Tom Pollard
@@ -235,6 +240,7 @@ Authors are sorted alphabetically.
 * Wolf Vollprecht
 * Wolfgang Ulmer
 * Yann
+* Yannik Tausch
 * Yoav Ram
 * Yu Feng
 * Zane Dufour

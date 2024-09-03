@@ -9,6 +9,7 @@ from __future__ import annotations
 import copy
 import math
 import os
+import pickle
 import re
 import shutil
 import time
@@ -19,7 +20,6 @@ from typing import TYPE_CHECKING
 from conda.base.context import context
 from conda.utils import url_path
 
-from .deprecations import deprecated
 from .utils import (
     get_build_folders,
     get_conda_operation_locks,
@@ -54,7 +54,6 @@ filename_hashing_default = "true"
 _src_cache_root_default = None
 error_overlinking_default = "false"
 error_overdepending_default = "false"
-deprecated.constant("24.5", "24.7", "noarch_python_build_age_default", 0)
 enable_static_default = "false"
 no_rewrite_stdout_env_default = "false"
 ignore_verify_codes_default = []
@@ -326,7 +325,7 @@ class Config:
     @arch.setter
     def arch(self, value):
         log = get_logger(__name__)
-        log.warn(
+        log.warning(
             "Setting build arch. This is only useful when pretending to be on another "
             "arch, such as for rendering necessary dependencies on a non-native arch. "
             "I trust that you know what you're doing."
@@ -342,7 +341,7 @@ class Config:
     @platform.setter
     def platform(self, value):
         log = get_logger(__name__)
-        log.warn(
+        log.warning(
             "Setting build platform. This is only useful when "
             "pretending to be on another platform, such as "
             "for rendering necessary dependencies on a non-native "
@@ -777,15 +776,6 @@ class Config:
     def subdirs_same(self):
         return self.host_subdir == self.build_subdir
 
-    @property
-    @deprecated(
-        "24.5",
-        "24.7",
-        addendum="Use `conda.base.context.context.override_channels` instead.",
-    )
-    def override_channels(self):
-        return context.override_channels
-
     def clean(self, remove_folders=True):
         # build folder is the whole burrito containing envs and source folders
         #   It will only exist if we download source, or create a build or test environment
@@ -831,9 +821,12 @@ class Config:
 
     def copy(self) -> Config:
         new = copy.copy(self)
-        new.variant = copy.deepcopy(self.variant)
+        # Use picke.loads(pickle.dumps(...) as a faster copy.deepcopy alternative.
+        new.variant = pickle.loads(pickle.dumps(self.variant, pickle.HIGHEST_PROTOCOL))
         if hasattr(self, "variants"):
-            new.variants = copy.deepcopy(self.variants)
+            new.variants = pickle.loads(
+                pickle.dumps(self.variants, pickle.HIGHEST_PROTOCOL)
+            )
         return new
 
     # context management - automatic cleanup if self.dirty or self.keep_old_work is not True

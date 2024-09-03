@@ -66,7 +66,6 @@ from conda.models.records import PackageRecord
 from conda.models.version import VersionOrder
 from conda.utils import unix_path_to_win
 
-from .deprecations import deprecated
 from .exceptions import BuildLockError
 
 if TYPE_CHECKING:
@@ -258,8 +257,8 @@ class PopenWrapper:
             psutil = None
             psutil_exceptions = (OSError, ValueError)
             log = get_logger(__name__)
-            log.warn(f"psutil import failed.  Error was {e}")
-            log.warn(
+            log.warning(f"psutil import failed.  Error was {e}")
+            log.warning(
                 "only disk usage and time statistics will be available.  Install psutil to "
                 "get CPU time and memory usage statistics."
             )
@@ -595,7 +594,7 @@ def copy_into(
                 src_folder = os.getcwd()
 
         if os.path.islink(src) and not os.path.exists(os.path.realpath(src)):
-            log.warn("path %s is a broken symlink - ignoring copy", src)
+            log.warning("path %s is a broken symlink - ignoring copy", src)
             return
 
         if not lock and locking:
@@ -1233,7 +1232,7 @@ def islist(
             # StopIteration: list is empty, an empty list is still uniform
             return True
         # check for explicit type match, do not allow the ambiguity of isinstance
-        uniform = lambda e: type(e) == etype  # noqa: E731
+        uniform = lambda e: type(e) == etype  # noqa: E721
 
     try:
         return all(uniform(e) for e in arg)
@@ -1319,7 +1318,7 @@ def find_recipe(path: str) -> str:
 
     metas = [m for m in VALID_METAS if os.path.isfile(os.path.join(path, m))]
     if len(metas) == 1:
-        get_logger(__name__).warn(
+        get_logger(__name__).warning(
             "Multiple meta files found. "
             f"The {metas[0]} file in the base directory ({path}) "
             "will be used."
@@ -1407,47 +1406,6 @@ def get_installed_packages(path):
             data = json.load(file)
             installed[data["name"]] = data
     return installed
-
-
-@deprecated("24.5", "24.7", addendum="Use `frozendict.deepfreeze` instead.")
-def _convert_lists_to_sets(_dict):
-    for k, v in _dict.items():
-        if hasattr(v, "keys"):
-            _dict[k] = HashableDict(_convert_lists_to_sets(v))
-        elif hasattr(v, "__iter__") and not isinstance(v, str):
-            try:
-                _dict[k] = sorted(list(set(v)))
-            except TypeError:
-                _dict[k] = sorted(list({tuple(_) for _ in v}))
-    return _dict
-
-
-@deprecated("24.5", "24.7", addendum="Use `frozendict.deepfreeze` instead.")
-class HashableDict(dict):
-    """use hashable frozen dictionaries for resources and resource types so that they can be in sets"""
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self = _convert_lists_to_sets(self)
-
-    def __hash__(self):
-        return hash(json.dumps(self, sort_keys=True))
-
-
-@deprecated("24.5", "24.7", addendum="Use `frozendict.deepfreeze` instead.")
-def represent_hashabledict(dumper, data):
-    value = []
-
-    for item_key, item_value in data.items():
-        node_key = dumper.represent_data(item_key)
-        node_value = dumper.represent_data(item_value)
-
-        value.append((node_key, node_value))
-
-    return yaml.nodes.MappingNode("tag:yaml.org,2002:map", value)
-
-
-yaml.add_representer(HashableDict, represent_hashabledict)
 
 
 # http://stackoverflow.com/a/10743550/1170370
@@ -1622,13 +1580,12 @@ def filter_info_files(files_list, prefix):
     )
 
 
-@deprecated.argument("24.5", "24.7", "config")
-def rm_rf(path):
+def rm_rf(path: str | os.PathLike) -> None:
     from conda.core.prefix_data import delete_prefix_from_linked_data
-    from conda.gateways.disk.delete import rm_rf as rm_rf
+    from conda.gateways.disk.delete import rm_rf
 
-    rm_rf(path)
-    delete_prefix_from_linked_data(path)
+    rm_rf(str(path))
+    delete_prefix_from_linked_data(str(path))
 
 
 # https://stackoverflow.com/a/31459386/1170370
@@ -1696,7 +1653,8 @@ def get_logger(name, level=logging.INFO, dedupe=True, add_stdout_stderr_handlers
         logging.config.dictConfig(config_dict)
         level = config_dict.get("loggers", {}).get(name, {}).get("level", level)
     log = logging.getLogger(name)
-    log.setLevel(level)
+    if log.level != level:
+        log.setLevel(level)
     if dedupe:
         log.addFilter(dedupe_filter)
 
@@ -1933,7 +1891,7 @@ def ensure_valid_spec(spec: str | MatchSpec, warn: bool = False) -> str | MatchS
                 if "*" not in spec:
                     if match.group(1) not in ("python", "vc") and warn:
                         log = get_logger(__name__)
-                        log.warn(
+                        log.warning(
                             f"Adding .* to spec '{spec}' to ensure satisfiability.  Please "
                             "consider putting {{{{ var_name }}}}.* or some relational "
                             "operator (>/</>=/<=) on this spec in meta.yaml, or if req is "
