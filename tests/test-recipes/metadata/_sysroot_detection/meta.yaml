@@ -9,8 +9,6 @@ source:
 
 build:
   number: 0
-  ignore_run_exports_from:
-    - {{ compiler('c') }}
 
 requirements:
   build:
