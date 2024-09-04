@@ -42,7 +42,6 @@ from . import __version__ as conda_build_version
 from . import environ, noarch_python, source, tarcheck, utils
 from .config import Config
 from .create_test import create_all_test_files
-from .deprecations import deprecated
 from .exceptions import (
     BuildScriptException,
     CondaBuildException,
@@ -2869,32 +2868,6 @@ def warn_on_use_of_SRC_DIR(metadata):
             )
 
 
-@deprecated(
-    "3.16.0",
-    "24.9.0",
-    addendum=(
-        "Test built packages instead, not recipes "
-        "(e.g., `conda build --test package` instead of `conda build --test recipe/`)."
-    ),
-    deprecation_type=FutureWarning,  # we need to warn users, not developers
-)
-def _construct_metadata_for_test_from_recipe(recipe_dir, config):
-    config.need_cleanup = False
-    config.recipe_dir = None
-    hash_input = {}
-    metadata = expand_outputs(
-        render_recipe(recipe_dir, config=config, reset_build_id=False)
-    )[0][1]
-
-    utils.rm_rf(metadata.config.test_dir)
-
-    if metadata.meta.get("test", {}).get("source_files"):
-        if not metadata.source_provided:
-            try_download(metadata, no_download_source=False)
-
-    return metadata, hash_input
-
-
 def _construct_metadata_for_test_from_package(package, config):
     recipe_dir, need_cleanup = utils.get_recipe_abspath(package)
     config.need_cleanup = need_cleanup
@@ -3034,18 +3007,7 @@ def _extract_test_files_from_package(metadata):
 
 
 def construct_metadata_for_test(recipedir_or_package, config):
-    if (
-        os.path.isdir(recipedir_or_package)
-        or os.path.basename(recipedir_or_package) == "meta.yaml"
-    ):
-        m, hash_input = _construct_metadata_for_test_from_recipe(
-            recipedir_or_package, config
-        )
-    else:
-        m, hash_input = _construct_metadata_for_test_from_package(
-            recipedir_or_package, config
-        )
-    return m, hash_input
+    return _construct_metadata_for_test_from_package(recipedir_or_package, config)
 
 
 def _set_env_variables_for_build(m, env):
