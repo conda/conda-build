@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING
 from conda.base.context import context
 
 from .. import api
-from ..conda_interface import ArgumentParser
 from .logging import init_logging
 
 if TYPE_CHECKING:

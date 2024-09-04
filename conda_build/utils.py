@@ -69,17 +69,6 @@ from conda.utils import unix_path_to_win
 from .cli.logging import DuplicateFilter as _DuplicateFilter
 from .cli.logging import GreaterThanFilter as _GreaterThanFilter
 from .cli.logging import LessThanFilter as _LessThanFilter
-from .conda_interface import (
-    PackageRecord,
-    StringIO,
-    TemporaryDirectory,
-    VersionOrder,
-    cc_conda_build,
-    download,
-    unix_path_to_win,
-    win_path_to_unix,
-)
-from .conda_interface import rm_rf as _rm_rf
 from .deprecations import deprecated
 from .exceptions import BuildLockError
 
