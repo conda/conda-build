@@ -1,7 +1,7 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
-import os
 import logging
+import os
 from os.path import dirname
 
 from conda.base.context import context

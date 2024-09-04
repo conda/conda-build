@@ -11,9 +11,9 @@ import pytest
 from conda.base.context import context
 
 from conda_build import api, utils
+from conda_build.cli.logging import DuplicateFilter
 from conda_build.exceptions import BuildScriptException, CondaBuildUserError
 from conda_build.metadata import MetaDataTuple
-from conda_build.cli.logging import DuplicateFilter
 from conda_build.render import finalize_metadata
 
 from .utils import get_valid_recipes, subpackage_dir
