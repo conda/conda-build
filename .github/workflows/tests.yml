@@ -560,20 +560,11 @@ jobs:
               # and not relative to the current release branch, if this is the case we need
               # to override the version with a derivative of the branch name
 
-              # drop x suffix
-              prefix = "${{ github.ref_name }}"[:-1]
-
               # override the version if `git describe --tag` does not start with the prefix
               last_release = check_output(["git", "describe", "--tag"])
-              if not last_release.startswith(prefix):
-                  # number of commits on this branch
-                  commits = check_output(["git", "rev-list", "--count", "HEAD", "^main"]).strip()
-
-                  # short hash for current commit
-                  short_hash = check_output(["git", "rev-parse", "--short", "HEAD"]).strip()
-
+              if not last_release.startswith("${{ github.ref_name }}"[:-1]):
                   # override the version using the branch name, commit count, and short hash
-                  envs["VERSION_OVERRIDE"] = f"{prefix}0.{commits}_g{short_hash}"
+                  envs["VERSION_OVERRIDE"] = "${{ github.ref_name }}"
 
           Path(environ["GITHUB_ENV"]).write_text("\n".join(f"{name}={value}" for name, value in envs.items()))
 
