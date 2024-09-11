@@ -573,7 +573,7 @@ jobs:
                   short_hash = check_output(["git", "rev-parse", "--short", "HEAD"]).strip()
 
                   # override the version using the branch name, commit count, and short hash
-                  envs["VERSION_OVERRIDE"] = f"{prefix}0.{commits}_g{hash_}"
+                  envs["VERSION_OVERRIDE"] = f"{prefix}0.{commits}_g{short_hash}"
 
           Path(environ["GITHUB_ENV"]).write_text("\n".join(f"{name}={value}" for name, value in envs.items()))
 
