@@ -4,8 +4,8 @@
 
 ### Bug fixes
 
-* Ensures that variables mentioned in `script_env` are undefined in multi-output build environment
-  if undefined in the environment `conda-build` is invoked from.
+* Ensures that variables mentioned in `script_env` are undefined in the multi-output build environment
+  if they are undefined in the environment that `conda-build` is invoked from. (#5322)
 
 ### Deprecations
 
