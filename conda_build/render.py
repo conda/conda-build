@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import os
-import pickle
 import random
 import re
 import string
@@ -871,9 +870,7 @@ def distribute_variants(
             )
         # copy variants before we start modifying them,
         # but after we've reduced the list via the conform_dict filter
-        mv.config.variants = pickle.loads(
-            pickle.dumps(mv.config.variants, pickle.HIGHEST_PROTOCOL)
-        )
+        mv.config.variants = mv.config.copy_variants()
         get_all_replacements(mv.config.variants)
         pin_run_as_build = variant.get("pin_run_as_build", {})
         if mv.numpy_xx and "numpy" not in pin_run_as_build:
