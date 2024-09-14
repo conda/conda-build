@@ -1232,7 +1232,7 @@ def islist(
             # StopIteration: list is empty, an empty list is still uniform
             return True
         # check for explicit type match, do not allow the ambiguity of isinstance
-        uniform = lambda e: type(e) == etype  # noqa: E731
+        uniform = lambda e: type(e) == etype  # noqa: E721
 
     try:
         return all(uniform(e) for e in arg)
@@ -1580,12 +1580,12 @@ def filter_info_files(files_list, prefix):
     )
 
 
-def rm_rf(path):
+def rm_rf(path: str | os.PathLike) -> None:
     from conda.core.prefix_data import delete_prefix_from_linked_data
-    from conda.gateways.disk.delete import rm_rf as rm_rf
+    from conda.gateways.disk.delete import rm_rf
 
-    rm_rf(path)
-    delete_prefix_from_linked_data(path)
+    rm_rf(str(path))
+    delete_prefix_from_linked_data(str(path))
 
 
 # https://stackoverflow.com/a/31459386/1170370

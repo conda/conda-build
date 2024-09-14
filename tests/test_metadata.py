@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+from contextlib import nullcontext
 from itertools import product
 from typing import TYPE_CHECKING
 
@@ -15,12 +16,15 @@ from packaging.version import Version
 
 from conda_build import api
 from conda_build.config import Config
+from conda_build.exceptions import CondaBuildUserError
 from conda_build.metadata import (
     FIELDS,
     OPTIONALLY_ITERABLE_FIELDS,
     MetaData,
     _hash_dependencies,
+    check_bad_chrs,
     get_selectors,
+    sanitize,
     select_lines,
     yamlize,
 )
@@ -30,6 +34,8 @@ from conda_build.variants import DEFAULT_VARIANTS
 from .utils import metadata_dir, metadata_path, thisdir
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from pytest import MonkeyPatch
 
 
@@ -200,6 +206,7 @@ def test_clobber_section_data(testing_metadata):
 
 
 @pytest.mark.serial
+@pytest.mark.filterwarnings("ignore", category=PendingDeprecationWarning)
 def test_build_bootstrap_env_by_name(testing_metadata):
     assert not any(
         "git" in pkg for pkg in testing_metadata.meta["requirements"].get("build", [])
@@ -218,6 +225,7 @@ def test_build_bootstrap_env_by_name(testing_metadata):
         subprocess.check_call(cmd.split())
 
 
+@pytest.mark.filterwarnings("ignore", category=PendingDeprecationWarning)
 def test_build_bootstrap_env_by_path(testing_metadata):
     assert not any(
         "git" in pkg for pkg in testing_metadata.meta["requirements"].get("build", [])
@@ -549,3 +557,93 @@ def test_get_section(testing_metadata: MetaData):
             assert isinstance(section, list)
         else:
             assert isinstance(section, dict)
+
+
+def test_select_lines_invalid():
+    with pytest.raises(
+        CondaBuildUserError,
+        match=r"Invalid selector in meta\.yaml",
+    ):
+        select_lines("text # [{bad]", {}, variants_in_place=True)
+
+
+@pytest.mark.parametrize(
+    "keys,expected",
+    [
+        pytest.param([], {}, id="git_tag"),
+        pytest.param(["git_tag"], {"git_rev": "rev"}, id="git_tag"),
+        pytest.param(["git_branch"], {"git_rev": "rev"}, id="git_branch"),
+        pytest.param(["git_rev"], {"git_rev": "rev"}, id="git_rev"),
+        pytest.param(["git_tag", "git_branch"], None, id="git_tag + git_branch"),
+        pytest.param(["git_tag", "git_rev"], None, id="git_tag + git_rev"),
+        pytest.param(["git_branch", "git_rev"], None, id="git_branch + git_rev"),
+        pytest.param(
+            ["git_tag", "git_branch", "git_rev"],
+            None,
+            id="git_tag + git_branch + git_rev",
+        ),
+    ],
+)
+def test_sanitize_source(keys: list[str], expected: dict[str, str] | None) -> None:
+    with pytest.raises(
+        CondaBuildUserError,
+        match=r"Multiple git_revs:",
+    ) if expected is None else nullcontext():
+        assert sanitize({"source": {key: "rev" for key in keys}}) == {
+            "source": expected
+        }
+
+
+@pytest.mark.parametrize(
+    "value,field,invalid",
+    [
+        pytest.param("good", "field", None, id="valid field"),
+        pytest.param("!@d&;-", "field", "!&;@", id="invalid field"),
+        pytest.param("good", "package/version", None, id="valid package/version"),
+        pytest.param("!@d&;-", "package/version", "&-;@", id="invalid package/version"),
+        pytest.param("good", "build/string", None, id="valid build/string"),
+        pytest.param("!@d&;-", "build/string", "!&-;@", id="invalid build/string"),
+    ],
+)
+def test_check_bad_chrs(value: str, field: str, invalid: str) -> None:
+    with pytest.raises(
+        CondaBuildUserError,
+        match=rf"Bad character\(s\) \({invalid}\) in {field}: {value}\.",
+    ) if invalid else nullcontext():
+        check_bad_chrs(value, field)
+
+
+def test_parse_until_resolved(testing_metadata: MetaData, tmp_path: Path) -> None:
+    (recipe := tmp_path / (name := "meta.yaml")).write_text("{{ UNDEFINED[:2] }}")
+    testing_metadata._meta_path = recipe
+    testing_metadata._meta_name = name
+
+    with pytest.raises(
+        CondaBuildUserError,
+        match=("Failed to render jinja template"),
+    ):
+        testing_metadata.parse_until_resolved()
+
+
+def test_parse_until_resolved_skip_avoids_undefined_jinja(
+    testing_metadata: MetaData, tmp_path: Path
+) -> None:
+    (recipe := tmp_path / (name := "meta.yaml")).write_text(
+        """
+package:
+    name: dummy
+    version: {{version}}
+build:
+    skip: True
+"""
+    )
+    testing_metadata._meta_path = recipe
+    testing_metadata._meta_name = name
+
+    # because skip is True, we should not error out here - so no exception should be raised
+    try:
+        testing_metadata.parse_until_resolved()
+    except CondaBuildUserError:
+        pytest.fail(
+            "Undefined variable caused error, even though this build is skipped"
+        )

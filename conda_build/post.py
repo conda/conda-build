@@ -9,6 +9,7 @@ import re
 import shutil
 import stat
 import sys
+import traceback
 from collections import OrderedDict, defaultdict
 from copy import copy
 from fnmatch import filter as fnmatch_filter
@@ -71,6 +72,12 @@ filetypes_for_platform = {
     "win": (DLLfile, EXEfile),
     "osx": (machofile,),
     "linux": (elffile,),
+}
+
+GNU_ARCH_MAP = {
+    "ppc64le": "powerpc64le",
+    "32": "i686",
+    "64": "x86_64",
 }
 
 
@@ -603,7 +610,20 @@ def mk_relative_linux(f, prefix, rpaths=("lib",), method=None):
             existing_pe = existing_pe.split(os.pathsep)
     existing = existing_pe
     if have_lief:
-        existing2, _, _ = get_rpaths_raw(elf)
+        existing2 = None
+        try:
+            existing2, _, _ = get_rpaths_raw(elf)
+        except Exception as e:
+            if method == "LIEF":
+                print(
+                    f"ERROR :: get_rpaths_raw({elf!r}) with LIEF failed: {e}, but LIEF was specified"
+                )
+                traceback.print_tb(e.__traceback__)
+            else:
+                print(
+                    f"WARNING :: get_rpaths_raw({elf!r}) with LIEF failed: {e}, will proceed with patchelf"
+                )
+            method = "patchelf"
         if existing_pe and existing_pe != existing2:
             print(
                 f"WARNING :: get_rpaths_raw()={existing2} and patchelf={existing_pe} disagree for {elf} :: "
@@ -1305,7 +1325,11 @@ def check_overlinking_impl(
     precs.append(pkg_vendored_dist)
     ignore_list = utils.ensure_list(ignore_run_exports)
     if subdir.startswith("linux"):
+        # libgcc-ng is the defaults & old conda-forge package name
         ignore_list.append("libgcc-ng")
+        # conda-forge::libgcc-ng was renamed 08/27/2024
+        # see https://github.com/conda-forge/ctng-compilers-feedstock/pull/148
+        ignore_list.append("libgcc")
 
     package_nature = {prec: library_nature(prec, run_prefix) for prec in precs}
     lib_packages = {
@@ -1406,8 +1430,20 @@ def check_overlinking_impl(
                     list(diffs)[1:3],
                 )
                 sysroots_files[srs] = sysroot_files
+
+    def sysroot_matches_subdir(path):
+        # The path looks like <PREFIX>/aarch64-conda-linux-gnu/sysroot/
+        # We check that the triplet "aarch64-conda-linux-gnu"
+        # matches the subdir for eg: linux-aarch64.
+        sysroot_arch = Path(path).parent.name.split("-")[0]
+        subdir_arch = subdir.split("-")[-1]
+        return sysroot_arch == GNU_ARCH_MAP.get(subdir_arch, subdir_arch)
+
     sysroots_files = OrderedDict(
-        sorted(sysroots_files.items(), key=lambda x: -len(x[1]))
+        sorted(
+            sysroots_files.items(),
+            key=lambda x: (not sysroot_matches_subdir(x[0]), -len(x[1])),
+        )
     )
 
     all_needed_dsos, needed_dsos_for_file = _collect_needed_dsos(

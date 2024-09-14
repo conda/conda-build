@@ -504,7 +504,7 @@ def test_recursive_fail(testing_config):
 
 @pytest.mark.sanity
 def test_jinja_typo(testing_config):
-    with pytest.raises(SystemExit, match="GIT_DSECRIBE_TAG"):
+    with pytest.raises(CondaBuildUserError, match="GIT_DSECRIBE_TAG"):
         api.build(
             os.path.join(fail_dir, "source_git_jinja2_oops"), config=testing_config
         )
@@ -1776,6 +1776,18 @@ def test_overdepending_detection(testing_config, variants_conda_build_sysroot):
         api.build(recipe, config=testing_config, variants=variants_conda_build_sysroot)
 
 
+@pytest.mark.skipif(not on_linux, reason="cannot compile for linux-ppc64le")
+def test_sysroots_detection(testing_config, variants_conda_build_sysroot):
+    recipe = os.path.join(metadata_dir, "_sysroot_detection")
+    testing_config.activate = True
+    testing_config.error_overlinking = True
+    testing_config.error_overdepending = True
+    testing_config.channel_urls = [
+        "conda-forge",
+    ]
+    api.build(recipe, config=testing_config, variants=variants_conda_build_sysroot)
+
+
 @pytest.mark.skipif(sys.platform != "darwin", reason="macOS-only test (at present)")
 def test_macos_tbd_handling(testing_config, variants_conda_build_sysroot):
     """
@@ -1951,8 +1963,13 @@ def test_activated_prefixes_in_actual_path(testing_metadata):
 
 @pytest.mark.parametrize("add_pip_as_python_dependency", [False, True])
 def test_add_pip_as_python_dependency_from_condarc_file(
-    testing_metadata, testing_workdir, add_pip_as_python_dependency, monkeypatch
-):
+    testing_metadata: MetaData,
+    testing_workdir: str | os.PathLike,
+    add_pip_as_python_dependency: bool,
+    monkeypatch: MonkeyPatch,
+    mocker: MockerFixture,
+    tmp_path: Path,
+) -> None:
     """
     Test whether settings from .condarc files are needed.
     ref: https://github.com/conda/conda-libmamba-solver/issues/393
@@ -1963,6 +1980,10 @@ def test_add_pip_as_python_dependency_from_condarc_file(
 
     # SubdirData's cache doesn't distinguish on add_pip_as_python_dependency.
     SubdirData._cache_.clear()
+
+    # clear cache
+    mocker.patch("conda.base.context.Context.pkgs_dirs", pkgs_dirs := (str(tmp_path),))
+    assert context.pkgs_dirs == pkgs_dirs
 
     testing_metadata.meta["build"]["script"] = ['python -c "import pip"']
     testing_metadata.meta["requirements"]["host"] = ["python"]

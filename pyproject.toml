@@ -27,7 +27,7 @@ dependencies = [
   "chardet",
   "conda >=23.7.0",
   "conda-index >=0.4.0",
-  "conda-package-handling >=1.3",
+  "conda-package-handling >=2.2.0",
   "filelock",
   "frozendict >=2.4.2",
   "jinja2",
@@ -107,8 +107,6 @@ addopts = [
   # "--store-durations",  # not available yet
   "--strict-markers",
   "--tb=native",
-  "--xdoctest-modules",
-  "--xdoctest-style=google",
   "-vv",
 ]
 doctest_optionflags = [

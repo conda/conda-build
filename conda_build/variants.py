@@ -750,15 +750,31 @@ def find_used_variables_in_text(variant, recipe_text, selectors_only=False):
         v_req_regex = "[-_]".join(map(re.escape, v.split("_")))
         variant_regex = rf"\{{\s*(?:pin_[a-z]+\(\s*?['\"])?{v_regex}[^'\"]*?\}}\}}"
         selector_regex = rf"^[^#\[]*?\#?\s\[[^\]]*?(?<![_\w\d]){v_regex}[=\s<>!\]]"
+        # NOTE: why use a regex instead of the jinja2 parser/AST?
+        # One can ask the jinja2 parser for undefined variables, but conda-build moves whole
+        # blocks of text around when searching for variables and applies selectors to the text.
+        # So the text that reaches this function is not necessarily valid jinja2 syntax. :/
         conditional_regex = (
             r"(?:^|[^\{])\{%\s*(?:el)?if\s*.*" + v_regex + r"\s*(?:[^%]*?)?%\}"
         )
+        # TODO: this `for` regex won't catch some common cases like lists of vars, multiline
+        # jinja2 blocks, if filters on the for loop, etc.
+        for_regex = r"(?:^|[^\{])\{%\s*for\s*.*\s*in\s*" + v_regex + r"(?:[^%]*?)?%\}"
+        set_regex = r"(?:^|[^\{])\{%\s*set\s*.*\s*=\s*.*" + v_regex + r"(?:[^%]*?)?%\}"
         # plain req name, no version spec.  Look for end of line after name, or comment or selector
         requirement_regex = rf"^\s+\-\s+{v_req_regex}\s*(?:\s[\[#]|$)"
         if selectors_only:
             all_res.insert(0, selector_regex)
         else:
-            all_res.extend([variant_regex, requirement_regex, conditional_regex])
+            all_res.extend(
+                [
+                    variant_regex,
+                    requirement_regex,
+                    conditional_regex,
+                    for_regex,
+                    set_regex,
+                ]
+            )
         # consolidate all re's into one big one for speedup
         all_res = r"|".join(all_res)
         if any(re.search(all_res, line) for line in variant_lines):

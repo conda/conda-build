@@ -23,6 +23,9 @@ from conda_build.exceptions import CondaBuildUserError
 from .utils import get_noarch_python_meta, metadata_dir
 
 if TYPE_CHECKING:
+    from conda_build.config import Config
+
+if TYPE_CHECKING:
     from pytest_mock import MockerFixture
 
     from conda_build.config import Config
@@ -333,11 +336,6 @@ def test_guess_interpreter(
 ):
     with pytest.raises(error) if error else nullcontext():
         assert build.guess_interpreter(script) == interpreter
-
-
-def test_check_external():
-    with pytest.deprecated_call():
-        build.check_external()
 
 
 @pytest.mark.parametrize("readme", ["README.md", "README.rst", "README"])

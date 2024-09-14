@@ -4,7 +4,7 @@
 
 ### Bug fixes
 
-* Ensure cross-building recipes select the correct noarch package variants. (#5341 via #5350)
+* Allow undefined jinja variables when a particular metadata block evaluates as skipped. (#5458)
 
 ### Deprecations
 
