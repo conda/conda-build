@@ -4,7 +4,7 @@
 
 ### Bug fixes
 
-* Ensures that variables mentioned in `script_env` are undefined in the multi-output build environment
+* Ensure variables mentioned in `script_env` are undefined in the multi-output build environment
   if they are undefined in the environment that `conda-build` is invoked from. (#5322)
 * Variables used in single-line jinja2 `for` and `set` statements are now properly included in the variant
   matrix for some edge cases. (#5447)
