@@ -12,7 +12,7 @@
 
 ### Deprecations
 
-* Remove `conda_build.build.check_external`. `patchelf` is an explicit conda-build dependency on Linux so it will always be installed. (#5441)
+* Remove `conda_build.build.check_external`. `patchelf` is an explicit conda-build dependency on Linux, so it will always be installed. (#5441)
 * Remove `conda_build.metadata._get_env_path`. Use `conda.base.context.locate_prefix_by_name` instead. (#5441)
 * Remove `conda_build.build._construct_metadata_for_test_from_recipe`. Test built packages instead, not recipes (e.g., `conda build --test package` instead of `conda build --test recipe/`). (#5478)
 
