@@ -162,7 +162,7 @@
   aliases:
   - MinRK
   github: minrk
-  num_commits: 17
+  num_commits: 18
   first_commit: 2014-02-13 19:43:59
 - name: Matty G
   email: meawoppl@gmail.com
@@ -1251,7 +1251,7 @@
   github: beeankha
   alternate_emails:
   - beeankha@gmail.com
-  num_commits: 38
+  num_commits: 42
   first_commit: 2022-01-19 16:40:06
 - name: Conda Bot
   email: 18747875+conda-bot@users.noreply.github.com
