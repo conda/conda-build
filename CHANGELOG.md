@@ -1,5 +1,25 @@
 [//]: # (current developments)
 
+## 24.9.0 (2024-09-18)
+
+### Enhancements
+
+* Reduce render time when there is a large number of unused variants. (#5392)
+
+### Contributors
+
+* @beeankha
+* @conda-bot
+* @jameslamb
+* @kenodegard
+* @beckermr
+* @msarahan
+* @minrk
+* @dependabot[bot]
+* @pre-commit-ci[bot]
+
+
+
 ## 24.9.0 (2024-09-13)
 
 ### Bug fixes

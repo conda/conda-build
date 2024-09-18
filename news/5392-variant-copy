@@ -1,3 +1,0 @@
-### Enhancements
-
-* Reduce render time when there is a large number of unused variants. (#5392)
