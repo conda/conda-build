@@ -16,12 +16,16 @@ from conda_build.render import (
     find_pkg_dir_or_file_in_pkgs_dirs,
     get_pin_from_build,
     open_recipe,
+    render_recipe,
 )
-from conda_build.utils import CONDA_PACKAGE_EXTENSION_V1
+from conda_build.utils import CONDA_PACKAGE_EXTENSION_V1, on_linux
+
+from .utils import metadata_path
 
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from conda_build.config import Config
     from conda_build.metadata import MetaData
 
 
@@ -134,3 +138,13 @@ def test_open_recipe(tmp_path: Path):
     ):
         with open_recipe(path):
             pass
+
+
+@pytest.mark.benchmark
+def test_render_recipe(testing_config: Config) -> None:
+    recipes = render_recipe(metadata_path / "_render_recipe", config=testing_config)
+
+    if on_linux:
+        assert len(recipes) == 48
+    else:
+        assert len(recipes) == 16
