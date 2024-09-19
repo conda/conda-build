@@ -1,0 +1,72 @@
+# from https://github.com/conda-forge/petsc4py-feedstock/blob/ccb2a3aed8e07d554b5f8e1dee47508a8d81cac4/recipe/meta.yaml
+{% set name = "petsc4py" %}
+{% set version = "3.21.5" %}
+{% set sha256 = "70e6fa795e9abd8014faec0203cd0cc3efd79f4647c97cafc33776421c9ab1e8" %}
+{% set build = 1 %}
+
+{% set version_xy = version.rsplit('.', 1)[0] %}
+
+package:
+  name: petsc4py
+  version: {{ version }}
+
+source:
+  url: https://pypi.io/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz
+  sha256: {{ sha256 }}
+
+build:
+  number: {{ build }}
+  script:
+    - {{ PYTHON }} conf/cythonize.py
+    - export PETSC_DIR=$PREFIX
+    - {{ PYTHON }} -m pip -v install --no-deps .
+  skip: true  # [win]
+  track_features:
+    - petsc4py_complex  # [scalar == "complex"]
+    - petsc4py_cuda     # [device != "host"]
+
+requirements:
+  build:
+    - {{ compiler('fortran') }}
+    - {{ compiler('c') }}
+    - {{ stdlib("c") }}
+    - python                              # [build_platform != target_platform]
+    - cython                      # [build_platform != target_platform]
+    - cross-python_{{ target_platform }}  # [build_platform != target_platform]
+    - numpy                               # [build_platform != target_platform]
+    - {{ mpi }}  # [mpi == 'openmpi' and build_platform != target_platform]
+  host:
+    - python
+    - cython
+    - pip
+    - setuptools
+    - numpy
+    - {{ mpi }}
+    - petsc {{ version_xy }}.* {{ scalar }}_*               # [device == 'host']
+    - petsc {{ version_xy }}.* {{ device }}_{{ scalar }}_*  # [device != 'host']
+  run:
+    - python
+    - {{ mpi }}
+    - petsc  # pinned by petsc run_exports
+  run_constrained:
+    - mpi4py >=3.0.1
+
+test:
+  requires:
+    - pip
+  commands:
+    - pip check
+
+about:
+  home: https://bitbucket.org/petsc/petsc4py
+  summary: Python bindings for PETSc
+  license: BSD-2-Clause
+  license_file: LICENSE.rst
+
+extra:
+  recipe-maintainers:
+    - dalcinl
+    - minrk
+    - davidbrochart
+    - SylvainCorlay
+    - stefanozampini
