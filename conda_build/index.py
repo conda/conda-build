@@ -1,9 +1,12 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
+
 import logging
 import os
 from functools import partial
 from os.path import dirname
+from typing import TYPE_CHECKING
 
 from conda.base.context import context
 from conda.core.index import Index
@@ -15,6 +18,19 @@ from . import utils
 from .utils import (
     get_logger,
 )
+
+if TYPE_CHECKING:
+    from conda.models.channels import Channel
+
+try:
+    from conda.core.index import Index
+except ImportError:
+    # FUTURE: remove for `conda >=24.9`
+    from conda.core.index import get_index
+
+    def Index(channels: tuple[str | Channel, ...] = (), *args, **kwargs) -> dict:  # type: ignore[no-redef]
+        return get_index(channel_urls=channels, *args, **kwargs)
+
 
 log = get_logger(__name__)
 
