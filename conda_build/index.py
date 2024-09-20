@@ -9,7 +9,6 @@ from os.path import dirname
 from typing import TYPE_CHECKING
 
 from conda.base.context import context
-from conda.core.index import Index
 from conda.exceptions import CondaHTTPError
 from conda.utils import url_path
 from conda_index.index import update_index as _update_index
