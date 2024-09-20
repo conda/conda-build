@@ -1,0 +1,19 @@
+### Enhancements
+
+* The location of the site-packages directory can be specified in `python_site_packages_path` in the build section of a recipe (#5502).
+
+### Bug fixes
+
+* <news item>
+
+### Deprecations
+
+* <news item>
+
+### Docs
+
+* <news item>
+
+### Other
+
+* <news item>
