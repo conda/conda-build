@@ -1,0 +1,19 @@
+### Enhancements
+
+* <news item>
+
+### Bug fixes
+
+* <news item>
+
+### Deprecations
+
+* Remove broken `$CONDA_DEFAULT_ENV` templating engine. (#5495)
+
+### Docs
+
+* <news item>
+
+### Other
+
+* <news item>
