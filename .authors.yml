@@ -8,7 +8,7 @@
   aliases:
   - Mike Sarahan
   - Michael Sarahan
-  num_commits: 2001
+  num_commits: 2002
   first_commit: 2015-09-04 21:31:08
 - name: Jonathan J. Helmus
   email: jjhelmus@gmail.com
@@ -162,7 +162,7 @@
   aliases:
   - MinRK
   github: minrk
-  num_commits: 17
+  num_commits: 18
   first_commit: 2014-02-13 19:43:59
 - name: Matty G
   email: meawoppl@gmail.com
@@ -1121,7 +1121,7 @@
   alternate_emails:
   - becker.mr@gmail.com
   - beckermr@users.noreply.github.com
-  num_commits: 21
+  num_commits: 22
   first_commit: 2019-10-17 23:05:16
   github: beckermr
 - name: Jinzhe Zeng
@@ -1171,7 +1171,7 @@
   github: pradghos
 - name: James Lamb
   email: jaylamb20@gmail.com
-  num_commits: 1
+  num_commits: 2
   first_commit: 2020-04-26 13:41:22
   github: jameslamb
 - name: Oleg Alexandrov
@@ -1202,7 +1202,7 @@
   alternate_emails:
   - clee@anaconda.com
 - name: Ken Odegard
-  num_commits: 213
+  num_commits: 220
   email: kodegard@anaconda.com
   first_commit: 2020-09-08 19:53:41
   github: kenodegard
@@ -1240,7 +1240,7 @@
   github: pre-commit-ci[bot]
   aliases:
   - pre-commit-ci[bot]
-  num_commits: 79
+  num_commits: 86
   first_commit: 2021-11-20 01:47:17
 - name: Jacob Walls
   email: jacobtylerwalls@gmail.com
@@ -1251,7 +1251,7 @@
   github: beeankha
   alternate_emails:
   - beeankha@gmail.com
-  num_commits: 34
+  num_commits: 43
   first_commit: 2022-01-19 16:40:06
 - name: Conda Bot
   email: 18747875+conda-bot@users.noreply.github.com
@@ -1262,7 +1262,7 @@
   alternate_emails:
   - ad-team+condabot@anaconda.com
   - 18747875+conda-bot@users.noreply.github.com
-  num_commits: 58
+  num_commits: 62
   first_commit: 2022-01-17 18:09:22
 - name: Uwe L. Korn
   email: xhochy@users.noreply.github.com
@@ -1310,7 +1310,7 @@
 - name: dependabot[bot]
   email: 49699333+dependabot[bot]@users.noreply.github.com
   github: dependabot[bot]
-  num_commits: 34
+  num_commits: 35
   first_commit: 2022-05-31 04:34:40
 - name: Serhii Kupriienko
   email: 79282962+skupr-anaconda@users.noreply.github.com
