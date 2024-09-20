@@ -278,7 +278,7 @@ jobs:
           --file tests/requirements-${{ runner.os }}.txt
           --file tests/requirements-ci.txt
           python=${{ matrix.python-version }}
-          pytest-memray
+          conda-forge::pytest-memray
 
       # TODO: how can we remove this step?
       - name: Install Self
