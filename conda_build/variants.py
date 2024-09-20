@@ -24,6 +24,8 @@ from .version import _parse as parse_version
 if TYPE_CHECKING:
     from typing import Any, Iterable
 
+    from .config import Config
+
 DEFAULT_VARIANTS = {
     "python": f"{sys.version_info.major}.{sys.version_info.minor}",
     "numpy": {
@@ -136,13 +138,14 @@ def get_default_variant(config):
     return base
 
 
-def parse_config_file(path, config):
-    from .metadata import get_selectors, select_lines
+def parse_config_file(
+    path: str | os.PathLike[str] | Path, config: Config
+) -> dict[str, Any]:
+    from .selectors import get_selectors, select_lines
 
-    with open(path) as f:
-        contents = f.read()
-    contents = select_lines(contents, get_selectors(config), variants_in_place=False)
-    content = yaml.load(contents, Loader=yaml.loader.BaseLoader) or {}
+    text = Path(path).read_text()
+    text = select_lines(text, get_selectors(config), variants_in_place=False)
+    content = yaml.load(text, Loader=yaml.loader.BaseLoader) or {}
     trim_empty_keys(content)
     return content
 

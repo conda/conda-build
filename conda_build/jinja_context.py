@@ -19,6 +19,7 @@ import yaml
 from frozendict import deepfreeze
 
 from . import _load_setup_py_data
+from .deprecations import deprecated
 from .environ import get_dict as get_environ
 from .exceptions import CondaBuildException
 from .render import get_env_dependencies
@@ -39,7 +40,11 @@ except:
     import tomli as tomllib
 
 if TYPE_CHECKING:
-    from typing import IO, Any
+    from typing import IO, Any, Callable, Sequence
+
+    from jinja2 import BaseLoader, Environment
+
+    from .config import Config
 
 log = get_logger(__name__)
 
@@ -113,6 +118,11 @@ class UndefinedNeverFail(jinja2.Undefined):
         return value
 
 
+@deprecated(
+    "24.11",
+    "25.1",
+    addendum="Use `conda_build.jinja_context.FilteredChoiceLoader` instead.",
+)
 class FilteredLoader(jinja2.BaseLoader):
     """
     A pass-through for the given loader, except that the loaded source is
@@ -131,6 +141,29 @@ class FilteredLoader(jinja2.BaseLoader):
         contents, filename, uptodate = self._unfiltered_loader.get_source(
             environment, template
         )
+        return (
+            select_lines(
+                contents,
+                get_selectors(self.config),
+                variants_in_place=bool(self.config.variant),
+            ),
+            filename,
+            uptodate,
+        )
+
+
+class FilteredChoiceLoader(jinja2.ChoiceLoader):
+    def __init__(self, loaders: Sequence[BaseLoader], config: Config) -> None:
+        super().__init__(loaders)
+        self.config = config
+
+    def get_source(
+        self, environment: Environment, template: str
+    ) -> tuple[str, str | None, Callable[[], bool] | None]:
+        # we have circular imports here.  Do a local import
+        from .metadata import get_selectors, select_lines
+
+        contents, filename, uptodate = super().get_source(environment, template)
         return (
             select_lines(
                 contents,

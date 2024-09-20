@@ -9,7 +9,6 @@ import os
 import re
 import sys
 import time
-import warnings
 from collections import OrderedDict
 from functools import lru_cache
 from os.path import isdir, isfile, join
@@ -24,6 +23,7 @@ from frozendict import deepfreeze
 
 from . import utils
 from .config import Config, get_or_merge_config
+from .deprecations import deprecated
 from .exceptions import (
     CondaBuildException,
     CondaBuildUserError,
@@ -32,10 +32,13 @@ from .exceptions import (
     UnableToParse,
     UnableToParseMissingJinja2,
 )
-from .features import feature_list
 from .license_family import ensure_valid_license_family
+from .selectors import RE_SELECTOR, _split_line_selector, parse_NameError
+from .selectors import eval_selector as _eval_selector
+from .selectors import get_selectors as _get_selectors
+from .selectors import select_lines as _select_lines
+from .utils import ARCH_MAP as _ARCH_MAP
 from .utils import (
-    DEFAULT_SUBDIRS,
     ensure_list,
     expand_globs,
     find_recipe,
@@ -48,7 +51,6 @@ from .variants import (
     find_used_variables_in_batch_script,
     find_used_variables_in_shell_script,
     find_used_variables_in_text,
-    get_default_variant,
     get_vars,
     list_of_dicts_to_dict_of_lists,
 )
@@ -100,8 +102,13 @@ StringifyNumbersLoader.remove_implicit_resolver("tag:yaml.org,2002:int")
 StringifyNumbersLoader.remove_constructor("tag:yaml.org,2002:float")
 StringifyNumbersLoader.remove_constructor("tag:yaml.org,2002:int")
 
-# arches that don't follow exact names in the subdir need to be mapped here
-ARCH_MAP = {"32": "x86", "64": "x86_64"}
+deprecated.constant(
+    "24.11",
+    "25.1",
+    "ARCH_MAP",
+    _ARCH_MAP,
+    addendum="Use `conda_build.utils.ARCH_MAP` instead.",
+)
 
 NOARCH_TYPES = ("python", "generic", True)
 
@@ -131,227 +138,58 @@ numpy_compatible_re = re.compile(r"pin_\w+\([\'\"]numpy[\'\"]")
 # used to avoid recomputing/rescanning recipe contents for used variables
 used_vars_cache = {}
 
-
-def get_selectors(config: Config) -> dict[str, bool]:
-    """Aggregates selectors for use in recipe templating.
-
-    Derives selectors from the config and variants to be injected
-    into the Jinja environment prior to templating.
-
-    Args:
-        config (Config): The config object
-
-    Returns:
-        dict[str, bool]: Dictionary of on/off selectors for Jinja
-    """
-    # Remember to update the docs of any of this changes
-    plat = config.host_subdir
-    d = dict(
-        linux32=bool(plat == "linux-32"),
-        linux64=bool(plat == "linux-64"),
-        arm=plat.startswith("linux-arm"),
-        unix=plat.startswith(("linux-", "osx-", "emscripten-")),
-        win32=bool(plat == "win-32"),
-        win64=bool(plat == "win-64"),
-        os=os,
-        environ=os.environ,
-        nomkl=bool(int(os.environ.get("FEATURE_NOMKL", False))),
-    )
-
-    # Add the current platform to the list of subdirs to enable conda-build
-    # to bootstrap new platforms without a new conda release.
-    subdirs = list(DEFAULT_SUBDIRS) + [plat]
-
-    # filter out noarch and other weird subdirs
-    subdirs = [subdir for subdir in subdirs if "-" in subdir]
-
-    subdir_oses = {subdir.split("-")[0] for subdir in subdirs}
-    subdir_archs = {subdir.split("-")[1] for subdir in subdirs}
-
-    for subdir_os in subdir_oses:
-        d[subdir_os] = plat.startswith(f"{subdir_os}-")
-
-    for arch in subdir_archs:
-        arch_full = ARCH_MAP.get(arch, arch)
-        d[arch_full] = plat.endswith(f"-{arch}")
-        if arch == "32":
-            d["x86"] = plat.endswith(("-32", "-64"))
-
-    defaults = get_default_variant(config)
-    py = config.variant.get("python", defaults["python"])
-    # there are times when python comes in as a tuple
-    if not hasattr(py, "split"):
-        py = py[0]
-    # go from "3.6 *_cython" -> "36"
-    # or from "3.6.9" -> "36"
-    py_major, py_minor, *_ = py.split(" ")[0].split(".")
-    py = int(f"{py_major}{py_minor}")
-
-    d["build_platform"] = config.build_subdir
-
-    d.update(
-        dict(
-            py=py,
-            py3k=bool(py_major == "3"),
-            py2k=bool(py_major == "2"),
-            py26=bool(py == 26),
-            py27=bool(py == 27),
-            py33=bool(py == 33),
-            py34=bool(py == 34),
-            py35=bool(py == 35),
-            py36=bool(py == 36),
-        )
-    )
-
-    np = config.variant.get("numpy")
-    if not np:
-        np = defaults["numpy"]
-        if config.verbose:
-            utils.get_logger(__name__).warning(
-                "No numpy version specified in conda_build_config.yaml.  "
-                "Falling back to default numpy value of {}".format(defaults["numpy"])
-            )
-    d["np"] = int("".join(np.split(".")[:2]))
-
-    pl = config.variant.get("perl", defaults["perl"])
-    d["pl"] = pl
-
-    lua = config.variant.get("lua", defaults["lua"])
-    d["lua"] = lua
-    d["luajit"] = bool(lua[0] == "2")
-
-    for feature, value in feature_list:
-        d[feature] = value
-    d.update(os.environ)
-
-    # here we try to do some type conversion for more intuitive usage.  Otherwise,
-    #    values like 35 are strings by default, making relational operations confusing.
-    # We also convert "True" and things like that to booleans.
-    for k, v in config.variant.items():
-        if k not in d:
-            try:
-                d[k] = int(v)
-            except (TypeError, ValueError):
-                if isinstance(v, str) and v.lower() in ("false", "true"):
-                    v = v.lower() == "true"
-                d[k] = v
-    return d
-
-
-def ns_cfg(config: Config) -> dict[str, bool]:
-    warnings.warn(
-        "`conda_build.metadata.ns_cfg` is pending deprecation and will be removed in a "
-        "future release. Please use `conda_build.metadata.get_selectors` instead.",
-        PendingDeprecationWarning,
-    )
-    return get_selectors(config)
-
-
-# Selectors must be either:
-# - at end of the line
-# - embedded (anywhere) within a comment
-#
-# Notes:
-# - [([^\[\]]+)\] means "find a pair of brackets containing any
-#                 NON-bracket chars, and capture the contents"
-# - (?(2)[^\(\)]*)$ means "allow trailing characters iff group 2 (#.*) was found."
-#                 Skip markdown link syntax.
-sel_pat = re.compile(r"(.+?)\s*(#.*)?\[([^\[\]]+)\](?(2)[^\(\)]*)$")
-
-
-# this function extracts the variable name from a NameError exception, it has the form of:
-# "NameError: name 'var' is not defined", where var is the variable that is not defined. This gets
-#    returned
-def parseNameNotFound(error):
-    m = re.search("'(.+?)'", str(error))
-    if len(m.groups()) == 1:
-        return m.group(1)
-    else:
-        return ""
-
-
-# We evaluate the selector and return True (keep this line) or False (drop this line)
-# If we encounter a NameError (unknown variable in selector), then we replace it by False and
-#     re-run the evaluation
-def eval_selector(selector_string, namespace, variants_in_place):
-    try:
-        # TODO: is there a way to do this without eval?  Eval allows arbitrary
-        #    code execution.
-        return eval(selector_string, namespace, {})
-    except NameError as e:
-        missing_var = parseNameNotFound(e)
-        if variants_in_place:
-            log = utils.get_logger(__name__)
-            log.debug(
-                "Treating unknown selector '" + missing_var + "' as if it was False."
-            )
-        next_string = selector_string.replace(missing_var, "False")
-        return eval_selector(next_string, namespace, variants_in_place)
-
-
-@lru_cache(maxsize=None)
-def _split_line_selector(text: str) -> tuple[tuple[str | None, str], ...]:
-    lines: list[tuple[str | None, str]] = []
-    for line in text.splitlines():
-        line = line.rstrip()
-
-        # skip comment lines, include a blank line as a placeholder
-        if line.lstrip().startswith("#"):
-            lines.append((None, ""))
-            continue
-
-        # include blank lines
-        if not line:
-            lines.append((None, ""))
-            continue
-
-        # user may have quoted entire line to make YAML happy
-        trailing_quote = ""
-        if line and line[-1] in ("'", '"'):
-            trailing_quote = line[-1]
-
-        # Checking for "[" and "]" before regex matching every line is a bit faster.
-        if (
-            ("[" in line and "]" in line)
-            and (match := sel_pat.match(line))
-            and (selector := match.group(3))
-        ):
-            # found a selector
-            lines.append((selector, (match.group(1) + trailing_quote).rstrip()))
-        else:
-            # no selector found
-            lines.append((None, line))
-    return tuple(lines)
-
-
-def select_lines(text: str, namespace: dict[str, Any], variants_in_place: bool) -> str:
-    lines = []
-    selector_cache: dict[str, bool] = {}
-    for i, (selector, line) in enumerate(_split_line_selector(text)):
-        if not selector:
-            # no selector? include line as is
-            lines.append(line)
-        else:
-            # include lines with a selector that evaluates to True
-            try:
-                if selector_cache[selector]:
-                    lines.append(line)
-            except KeyError:
-                # KeyError: cache miss
-                try:
-                    value = bool(eval_selector(selector, namespace, variants_in_place))
-                    selector_cache[selector] = value
-                    if value:
-                        lines.append(line)
-                except Exception as e:
-                    raise CondaBuildUserError(
-                        f"Invalid selector in meta.yaml line {i + 1}:\n"
-                        f"offending selector:\n"
-                        f"  [{selector}]\n"
-                        f"exception:\n"
-                        f"  {e.__class__.__name__}: {e}\n"
-                    )
-    return "\n".join(lines) + "\n"
+deprecated.constant(
+    "24.11",
+    "25.1",
+    "get_selectors",
+    _get_selectors,
+    addendum="Use `conda_build.selectors.get_selectors` instead.",
+)
+deprecated.constant(
+    "24.11",
+    "25.1",
+    "ns_cfg",
+    _get_selectors,
+    addendum="Use `conda_build.selectors.get_selectors` instead.",
+)
+deprecated.constant(
+    "24.11",
+    "25.1",
+    "sel_pat",
+    RE_SELECTOR,
+    addendum="Use `conda_build.selectors.RE_SELECTOR` instead.",
+)
+del RE_SELECTOR
+deprecated.constant(
+    "24.11",
+    "25.1",
+    "parseNameNotFound",
+    parse_NameError,
+    addendum="Use `conda_build.selectors.parse_NameError` instead.",
+)
+del parse_NameError
+deprecated.constant(
+    "24.11",
+    "25.1",
+    "eval_selector",
+    _eval_selector,
+    addendum="Use `conda_build.selectors.eval_selector` instead.",
+)
+deprecated.constant(
+    "24.11",
+    "25.1",
+    "_split_line_selector",
+    _split_line_selector,
+    addendum="Use `conda_build.selectors._split_line_selector` instead.",
+)
+del _split_line_selector
+deprecated.constant(
+    "24.11",
+    "25.1",
+    "select_lines",
+    _select_lines,
+    addendum="Use `conda_build.selectors.select_lines` instead.",
+)
 
 
 def yamlize(data):
@@ -519,9 +357,9 @@ def ensure_matching_hashes(output_metadata):
 
 
 def parse(data, config, path=None):
-    data = select_lines(
+    data = _select_lines(
         data,
-        get_selectors(config),
+        _get_selectors(config),
         variants_in_place=bool(config.variant),
     )
     res = yamlize(data)
@@ -1778,7 +1616,7 @@ class MetaData:
             platform=self.config.host_platform
             if (self.config.host_platform != "noarch" and arch != "noarch")
             else None,
-            arch=ARCH_MAP.get(arch, arch),
+            arch=_ARCH_MAP.get(arch, arch),
             subdir=self.config.target_subdir,
             depends=sorted(" ".join(ms.spec.split()) for ms in self.ms_depends()),
             timestamp=int(time.time() * 1000),
@@ -1930,13 +1768,14 @@ class MetaData:
                 return fd.read()
 
         from .jinja_context import (
-            FilteredLoader,
+            FilteredChoiceLoader,
             UndefinedNeverFail,
             context_processor,
         )
 
         path, filename = os.path.split(self.meta_path)
-        loaders = [  # search relative to '<conda_root>/Lib/site-packages/conda_build/templates'
+        loaders = [
+            # search relative to '<conda_root>/Lib/site-packages/conda_build/templates'
             jinja2.PackageLoader("conda_build"),
             # search relative to RECIPE_DIR
             jinja2.FileSystemLoader(path),
@@ -1959,12 +1798,12 @@ class MetaData:
             UndefinedNeverFail.all_undefined_names = []
             undefined_type = UndefinedNeverFail
 
-        loader = FilteredLoader(jinja2.ChoiceLoader(loaders), config=self.config)
+        loader = FilteredChoiceLoader(loaders, config=self.config)
         env = jinja2.Environment(loader=loader, undefined=undefined_type)
 
         from .environ import get_dict
 
-        env.globals.update(get_selectors(self.config))
+        env.globals.update(_get_selectors(self.config))
         env.globals.update(get_dict(m=self, skip_build_id=skip_build_id))
         env.globals.update({"CONDA_BUILD_STATE": "RENDER"})
         env.globals.update(
@@ -2151,9 +1990,9 @@ class MetaData:
             recipe_text = output_yaml(self)
         recipe_text = _filter_recipe_text(recipe_text, extract_pattern)
         if apply_selectors:
-            recipe_text = select_lines(
+            recipe_text = _select_lines(
                 recipe_text,
-                get_selectors(self.config),
+                _get_selectors(self.config),
                 variants_in_place=bool(self.config.variant),
             )
         return recipe_text.rstrip()
