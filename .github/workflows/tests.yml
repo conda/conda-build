@@ -209,7 +209,6 @@ jobs:
           --file tests/requirements-${{ runner.os }}.txt
           --file tests/requirements-ci.txt
           python=${{ matrix.python-version }}
-          ${{ env.CONDA_CHANNEL_LABEL }}${{ env.CONDA_VERSION }}
 
       - name: Install CodSpeed
         run: pip install git+https://github.com/kenodegard/pytest-codspeed.git@fix-outerr-redirects#egg=pytest-codspeed
@@ -279,11 +278,7 @@ jobs:
           --file tests/requirements-${{ runner.os }}.txt
           --file tests/requirements-ci.txt
           python=${{ matrix.python-version }}
-          ${{ env.CONDA_CHANNEL_LABEL }}${{ env.CONDA_VERSION }}
           pytest-memray
-
-      - name: Install CodSpeed
-        run: pip install git+https://github.com/kenodegard/pytest-codspeed.git@fix-outerr-redirects#egg=pytest-codspeed
 
       # TODO: how can we remove this step?
       - name: Install Self
