@@ -623,3 +623,27 @@ def test_parse_until_resolved(testing_metadata: MetaData, tmp_path: Path) -> Non
         match=("Failed to render jinja template"),
     ):
         testing_metadata.parse_until_resolved()
+
+
+def test_parse_until_resolved_skip_avoids_undefined_jinja(
+    testing_metadata: MetaData, tmp_path: Path
+) -> None:
+    (recipe := tmp_path / (name := "meta.yaml")).write_text(
+        """
+package:
+    name: dummy
+    version: {{version}}
+build:
+    skip: True
+"""
+    )
+    testing_metadata._meta_path = recipe
+    testing_metadata._meta_name = name
+
+    # because skip is True, we should not error out here - so no exception should be raised
+    try:
+        testing_metadata.parse_until_resolved()
+    except CondaBuildUserError:
+        pytest.fail(
+            "Undefined variable caused error, even though this build is skipped"
+        )

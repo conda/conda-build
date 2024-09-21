@@ -1,5 +1,51 @@
 [//]: # (current developments)
 
+## 24.9.0 (2024-09-18)
+
+### Enhancements
+
+* Reduce render time when there is a large number of unused variants. (#5392)
+
+### Bug fixes
+
+* Ensure variables mentioned in `script_env` are undefined in the multi-output build environment
+  if they are undefined in the environment that `conda-build` is invoked from. (#5322)
+* Variables used in single-line jinja2 `for` and `set` statements are now properly included in the variant
+  matrix for some edge cases. (#5447)
+* Allow undefined jinja variables when a particular metadata block evaluates as skipped. (#5458)
+
+### Deprecations
+
+* Remove `conda_build.build.check_external`. `patchelf` is an explicit conda-build dependency on Linux, so it will always be installed. (#5441)
+* Remove `conda_build.metadata._get_env_path`. Use `conda.base.context.locate_prefix_by_name` instead. (#5441)
+* Remove `conda_build.build._construct_metadata_for_test_from_recipe`. Test built packages instead, not recipes (e.g., `conda build --test package` instead of `conda build --test recipe/`). (#5478)
+
+### Contributors
+
+* @beeankha
+* @conda-bot
+* @jameslamb
+* @kenodegard
+* @beckermr
+* @msarahan
+* @minrk
+* @dependabot[bot]
+* @pre-commit-ci[bot]
+
+
+
+## 24.7.1 (2024-07-30)
+
+### Bug fixes
+
+* Check for WSL existence before calling `os.stat`. (#5433 via #5434)
+
+### Contributors
+
+* @kenodegard
+
+
+
 ## 24.7.0 (2024-07-18)
 
 ### Enhancements

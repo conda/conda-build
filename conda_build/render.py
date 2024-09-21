@@ -835,12 +835,20 @@ def distribute_variants(
     used_variables = metadata.get_used_loop_vars(force_global=False)
     top_loop = metadata.get_reduced_variant_set(used_variables)
 
+    # defer potentially expensive copy of input variants list
+    # until after reduction of the list for each variant
+    # since the initial list can be very long
+    all_variants = metadata.config.variants
+    metadata.config.variants = []
+
     for variant in top_loop:
         from .build import get_all_replacements
 
         get_all_replacements(variant)
         mv = metadata.copy()
         mv.config.variant = variant
+        # start with shared list:
+        mv.config.variants = all_variants
 
         pin_run_as_build = variant.get("pin_run_as_build", {})
         if mv.numpy_xx and "numpy" not in pin_run_as_build:
@@ -860,6 +868,9 @@ def distribute_variants(
                 )
                 or mv.config.variants
             )
+        # copy variants before we start modifying them,
+        # but after we've reduced the list via the conform_dict filter
+        mv.config.variants = mv.config.copy_variants()
         get_all_replacements(mv.config.variants)
         pin_run_as_build = variant.get("pin_run_as_build", {})
         if mv.numpy_xx and "numpy" not in pin_run_as_build:

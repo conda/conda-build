@@ -24,7 +24,6 @@ from frozendict import deepfreeze
 
 from . import utils
 from .config import Config, get_or_merge_config
-from .deprecations import deprecated
 from .exceptions import (
     CondaBuildException,
     CondaBuildUserError,
@@ -55,7 +54,6 @@ from .variants import (
 )
 
 if TYPE_CHECKING:
-    from pathlib import Path
     from typing import Any, Literal, Self
 
     OutputDict = dict[str, Any]
@@ -855,21 +853,12 @@ def build_string_from_metadata(metadata):
     return build_str
 
 
-@deprecated(
-    "24.7", "24.9", addendum="Use `conda.base.context.locate_prefix_by_name` instead."
-)
-def _get_env_path(
-    env_name_or_path: str | os.PathLike | Path,
-) -> str | os.PathLike | Path:
-    return (
+def _get_dependencies_from_environment(env_name_or_path):
+    path = (
         env_name_or_path
         if isdir(env_name_or_path)
         else locate_prefix_by_name(env_name_or_path)
     )
-
-
-def _get_dependencies_from_environment(env_name_or_path):
-    path = _get_env_path(env_name_or_path)
     # construct build requirements that replicate the given bootstrap environment
     # and concatenate them to the build requirements from the recipe
     bootstrap_metadata = get_installed_packages(path)
@@ -1348,6 +1337,10 @@ class MetaData:
             bypass_env_check=bypass_env_check,
         )
         self.final = final
+
+        if self.skip():
+            self.final = True
+            return
 
         # recursively parse again so long as each iteration has fewer undefined jinja variables
         undefined_jinja_vars = ()
@@ -2295,7 +2288,6 @@ class MetaData:
     def copy(self: Self) -> MetaData:
         new = copy.copy(self)
         new.config = self.config.copy()
-        new.config.variant = copy.deepcopy(self.config.variant)
         new.meta = copy.deepcopy(self.meta)
         new.type = getattr(
             self, "type", "conda_v2" if self.config.conda_pkg_format == "2" else "conda"
@@ -2679,15 +2671,16 @@ class MetaData:
         _check_run_constrained(output_tuples)
         return output_tuples
 
-    def get_loop_vars(self):
-        return get_vars(getattr(self.config, "input_variants", self.config.variants))
+    def get_loop_vars(self, subset=None):
+        return get_vars(
+            getattr(self.config, "input_variants", self.config.variants), subset=subset
+        )
 
     def get_used_loop_vars(self, force_top_level=False, force_global=False):
-        loop_vars = self.get_loop_vars()
         used_vars = self.get_used_vars(
             force_top_level=force_top_level, force_global=force_global
         )
-        return set(loop_vars).intersection(used_vars)
+        return self.get_loop_vars(subset=used_vars)
 
     def get_rendered_recipe_text(
         self, permit_undefined_jinja=False, extract_pattern=None
