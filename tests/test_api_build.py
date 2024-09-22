@@ -27,11 +27,13 @@ import pytest
 import yaml
 from binstar_client.commands import remove, show
 from binstar_client.errors import NotFound
+from conda import __version__ as conda_version
 from conda.base.context import context, reset_context
 from conda.common.compat import on_linux, on_mac, on_win
 from conda.exceptions import ClobberError, CondaError, CondaMultiError, LinkError
 from conda.utils import url_path
 from conda_index.api import update_index
+from packaging import Version
 
 from conda_build import __version__, api, exceptions
 from conda_build.config import Config
@@ -69,7 +71,7 @@ from .utils import (
 )
 
 if TYPE_CHECKING:
-    from pytest import FixtureRequest, MonkeyPatch
+    from pytest import CaptureFixture, FixtureRequest, LogCaptureFixture, MonkeyPatch
     from pytest_mock import MockerFixture
 
     from conda_build.metadata import MetaData
@@ -1826,7 +1828,11 @@ def test_downstream_tests(testing_config):
 
 
 @pytest.mark.sanity
-def test_warning_on_file_clobbering(testing_config, capfd):
+def test_warning_on_file_clobbering(
+    testing_config: Config,
+    capfd: CaptureFixture,
+    caplog: LogCaptureFixture,
+) -> None:
     recipe_dir = os.path.join(metadata_dir, "_overlapping_files_warning")
 
     api.build(
@@ -1844,8 +1850,19 @@ def test_warning_on_file_clobbering(testing_config, capfd):
         config=testing_config,
     )
     # The clobber warning here is raised when creating the test environment for b
-    out, err = capfd.readouterr()
-    assert "ClobberWarning" in err
+    if Version(conda_version) >= Version("24.7.2.dev91"):
+        # conda >=24.9.0
+        clobber_warning_found = False
+        for record in caplog.records:
+            if "ClobberWarning:" in record.message:
+                clobber_warning_found = True
+        assert clobber_warning_found
+    else:
+        # before the new lazy index added in conda 24.9.0
+        # see https://github.com/conda/conda/commit/1984b287548a1a526e8258802a6f1fec2a11ecc3
+        out, err = capfd.readouterr()
+        assert "ClobberWarning" in err
+
     with pytest.raises((ClobberError, CondaMultiError)):
         with env_var("CONDA_PATH_CONFLICT", "prevent", reset_context):
             api.build(os.path.join(recipe_dir, "b"), config=testing_config)
