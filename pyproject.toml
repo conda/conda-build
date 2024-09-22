@@ -122,13 +122,14 @@ filterwarnings = [
   # elevate conda-build's deprecated warning to an error
   "error::PendingDeprecationWarning:conda_build",
   "error::DeprecationWarning:conda_build",
-  "ignore:Python 3.14 will, by default, filter extracted tar archives:DeprecationWarning:conda_package_streaming",
   # ignore numpy.distutils error
   'ignore:\s+`numpy.distutils` is deprecated:DeprecationWarning:conda_build._load_setup_py_data',
   # ignore conda-index error
   "ignore::PendingDeprecationWarning:conda_index",
   "ignore::DeprecationWarning:conda_index",
-  "ignore:Python 3.14 will, by default, filter extracted tar archives and reject files or modify their metadata:DeprecationWarning",
+  "ignore:Python 3.14 will, by default, filter extracted tar archives:DeprecationWarning:conda_index",
+  # ignore conda-package-streaming error
+  "ignore:Python 3.14 will, by default, filter extracted tar archives:DeprecationWarning:conda_package_streaming",
   "ignore:conda.core.index._supplement_index_with_system is pending deprecation:PendingDeprecationWarning:conda",
   "ignore:conda.core.index._make_virtual_package is pending deprecation:PendingDeprecationWarning:conda",
 ]
