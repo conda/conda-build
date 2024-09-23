@@ -8,7 +8,7 @@
 
 ### Deprecations
 
-* <news item>
+* Deprecate `conda_build.exceptions.UnableToParseMissingJinja2`. (#5497)
 
 ### Docs
 
