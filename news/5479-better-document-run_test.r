@@ -12,7 +12,7 @@
 
 ### Docs
 
-* Better document `run_test.r` (#5479)
+* Better document `run_test.r`. (#5479)
 
 ### Other
 
