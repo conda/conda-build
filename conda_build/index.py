@@ -12,6 +12,7 @@ from conda.utils import url_path
 from conda_index.index import update_index as _update_index
 
 from . import utils
+from .deprecations import deprecated
 from .utils import (
     get_logger,
 )
@@ -29,6 +30,8 @@ cached_channels = []
 # os.environ['CONDA_ADD_ANACONDA_TOKEN'] = "false"
 
 
+@deprecated.argument("24.11", "25.1", "locking")
+@deprecated.argument("24.11", "25.1", "timeout")
 def get_build_index(
     subdir,
     bldpkgs_dir,
@@ -38,8 +41,6 @@ def get_build_index(
     channel_urls=None,
     debug=False,
     verbose=True,
-    locking=None,
-    timeout=None,
 ):
     """
     Used during package builds to create/get a channel including any local or
