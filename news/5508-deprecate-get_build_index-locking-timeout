@@ -1,0 +1,20 @@
+### Enhancements
+
+* <news item>
+
+### Bug fixes
+
+* <news item>
+
+### Deprecations
+
+* Deprecate `conda_build.index.get_build_index(locking)`. (#5508)
+* Deprecate `conda_build.index.get_build_index(timeout)`. (#5508)
+
+### Docs
+
+* <news item>
+
+### Other
+
+* <news item>
