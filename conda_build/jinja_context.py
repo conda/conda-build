@@ -4,15 +4,16 @@ from __future__ import annotations
 
 import datetime
 import json
+import logging
 import os
 import pathlib
 import re
 import time
+import warnings
 from functools import partial
 from io import StringIO, TextIOBase
 from subprocess import CalledProcessError
 from typing import TYPE_CHECKING
-from warnings import warn
 
 import jinja2
 import yaml
@@ -28,7 +29,6 @@ from .utils import (
     copy_into,
     ensure_valid_spec,
     get_installed_packages,
-    get_logger,
     rm_rf,
 )
 from .variants import DEFAULT_COMPILERS
@@ -41,7 +41,7 @@ except:
 if TYPE_CHECKING:
     from typing import IO, Any
 
-log = get_logger(__name__)
+log = logging.getLogger(__name__)
 
 
 class UndefinedNeverFail(jinja2.Undefined):
@@ -213,7 +213,7 @@ def load_setuptools(
     recipe_dir=None,
     permit_undefined_jinja=True,
 ):
-    warn(
+    warnings.warn(
         "conda_build.jinja_context.load_setuptools is pending deprecation in a future release. "
         "Use conda_build.jinja_context.load_setup_py_data instead.",
         PendingDeprecationWarning,

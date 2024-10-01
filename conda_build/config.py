@@ -7,6 +7,7 @@ Module to store conda build settings.
 from __future__ import annotations
 
 import copy
+import logging
 import math
 import os
 import pickle
@@ -23,7 +24,6 @@ from conda.utils import url_path
 from .utils import (
     get_build_folders,
     get_conda_operation_locks,
-    get_logger,
     on_win,
     rm_rf,
 )
@@ -34,6 +34,8 @@ if TYPE_CHECKING:
     from typing import Any, TypeVar
 
     T = TypeVar("T")
+
+log = logging.getLogger(__name__)
 
 invocation_time = ""
 
@@ -326,7 +328,6 @@ class Config:
 
     @arch.setter
     def arch(self, value):
-        log = get_logger(__name__)
         log.warning(
             "Setting build arch. This is only useful when pretending to be on another "
             "arch, such as for rendering necessary dependencies on a non-native arch. "
@@ -342,7 +343,6 @@ class Config:
 
     @platform.setter
     def platform(self, value):
-        log = get_logger(__name__)
         log.warning(
             "Setting build platform. This is only useful when "
             "pretending to be on another platform, such as "
@@ -850,7 +850,7 @@ class Config:
             and e_type is None
             and not getattr(self, "keep_old_work")
         ):
-            get_logger(__name__).info(
+            log.info(
                 "--dirty flag and --keep-old-work not specified. "
                 "Removing build/test folder after successful build/test.\n"
             )

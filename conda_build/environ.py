@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from __future__ import annotations
 
-import contextlib
 import logging
 import multiprocessing
 import os
@@ -12,9 +11,9 @@ import subprocess
 import sys
 import warnings
 from collections import defaultdict
+from contextlib import nullcontext
 from functools import lru_cache
 from glob import glob
-from logging import getLogger
 from os.path import join, normpath
 from typing import TYPE_CHECKING
 
@@ -69,7 +68,7 @@ if TYPE_CHECKING:
         LINK: list[PackageRecord]
 
 
-log = getLogger(__name__)
+log = logging.getLogger(__name__)
 
 # these are things that we provide env vars for more explicitly.  This list disables the
 #    pass-through of variant values to env vars for these keys.
@@ -125,7 +124,6 @@ def verify_git_repo(
     git_exe, git_dir, git_url, git_commits_since_tag, debug=False, expected_rev="HEAD"
 ):
     env = os.environ.copy()
-    log = utils.get_logger(__name__)
 
     stderr = None if debug else subprocess.DEVNULL
 
@@ -240,7 +238,6 @@ def get_git_info(git_exe, repo, debug):
     :return:
     """
     d = {}
-    log = utils.get_logger(__name__)
 
     stderr = None if debug else subprocess.DEVNULL
 
@@ -841,17 +838,9 @@ def get_install_actions(
     global cached_precs
     global last_index_ts
 
-    log = utils.get_logger(__name__)
-    conda_log_level = logging.WARN
     specs = list(specs)
     if specs:
         specs.extend(context.create_default_packages)
-    if verbose or debug:
-        capture = contextlib.nullcontext
-        if debug:
-            conda_log_level = logging.DEBUG
-    else:
-        capture = utils.capture
     for feature, value in feature_list:
         if value:
             specs.append(f"{feature}@")
@@ -885,8 +874,8 @@ def get_install_actions(
         # this is hiding output like:
         #    Fetching package metadata ...........
         #    Solving package specifications: ..........
-        with utils.LoggingContext(conda_log_level):
-            with capture():
+        with utils.LoggingContext(logging.DEBUG if debug else logging.WARNING):
+            with nullcontext() if verbose or debug else utils.capture():
                 try:
                     _actions = _install_actions(prefix, index, specs, subdir=subdir)
                     precs = _actions["LINK"]
@@ -988,18 +977,11 @@ def create_env(
     """
     Create a conda envrionment for the given prefix and specs.
     """
-    if config.debug:
-        external_logger_context = utils.LoggingContext(logging.DEBUG)
-    else:
-        external_logger_context = utils.LoggingContext(logging.WARN)
-
     if os.path.exists(prefix):
         for entry in glob(os.path.join(prefix, "*")):
             utils.rm_rf(entry)
 
-    with external_logger_context:
-        log = utils.get_logger(__name__)
-
+    with utils.LoggingContext(logging.DEBUG if config.debug else logging.WARNING):
         # if os.path.isdir(prefix):
         #     utils.rm_rf(prefix)
 
@@ -1195,7 +1177,7 @@ def get_pkg_dirs_locks(dirs, config):
 
 
 def clean_pkg_cache(dist: str, config: Config) -> None:
-    with utils.LoggingContext(logging.DEBUG if config.debug else logging.WARN):
+    with utils.LoggingContext(logging.DEBUG if config.debug else logging.WARNING):
         locks = get_pkg_dirs_locks((config.bldpkgs_dir, *context.pkgs_dirs), config)
         with utils.try_acquire_locks(locks, timeout=config.timeout):
             for pkgs_dir in context.pkgs_dirs:

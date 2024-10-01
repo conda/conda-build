@@ -9,12 +9,13 @@ from typing import TYPE_CHECKING
 from conda.base.context import context
 
 from .. import api
+from .logging import init_logging
 
 if TYPE_CHECKING:
     from argparse import ArgumentParser, Namespace
     from typing import Sequence
 
-logging.basicConfig(level=logging.INFO)
+log = logging.getLogger(__name__)
 
 epilog = """
 
@@ -127,6 +128,8 @@ all.""",
 
 
 def execute(args: Sequence[str] | None = None) -> int:
+    init_logging()
+
     _, parsed = parse_args(args)
     context.__init__(argparse_args=parsed)
 

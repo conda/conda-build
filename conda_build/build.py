@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import fnmatch
 import json
+import logging
 import os
 import random
 import re
@@ -92,6 +93,8 @@ if on_win:
 
 if TYPE_CHECKING:
     from typing import Any, Iterable
+
+log = logging.getLogger(__name__)
 
 if "bsd" in sys.platform:
     shell_path = "/bin/sh"
@@ -923,7 +926,6 @@ def copy_test_source_files(m, destination):
                             clobber=True,
                         )
                     except OSError as e:
-                        log = utils.get_logger(__name__)
                         log.warning(
                             f"Failed to copy {f} into test files.  Error was: {str(e)}"
                         )
@@ -1303,7 +1305,6 @@ def write_about_json(m):
         extra = m.get_section("extra")
         # Add burn-in information to extra
         if m.config.extra_meta:
-            log = utils.get_logger(__name__)
             log.info(
                 "Adding the following extra-meta data to about.json: %s",
                 m.config.extra_meta,
@@ -1610,7 +1611,6 @@ def post_process_files(m: MetaData, initial_prefix_files):
         if not os.path.exists(os.path.join(host_prefix, f)):
             missing.append(f)
     if len(missing):
-        log = utils.get_logger(__name__)
         log.warning(
             f"The install/build script(s) for {package_name} deleted the following "
             f"files (from dependencies) from the prefix:\n{missing}\n"
@@ -1682,7 +1682,6 @@ def bundle_conda(
     new_prefix_files: set[str] = set(),
     **kw,
 ):
-    log = utils.get_logger(__name__)
     log.info("Packaging %s", metadata.dist())
     get_all_replacements(metadata.config)
     files = output.get("files", [])
@@ -2175,7 +2174,6 @@ def _write_activation_text(script_path, m):
         elif os.path.splitext(script_path)[1].lower() == ".sh":
             _write_sh_activation_text(fh, m)
         else:
-            log = utils.get_logger(__name__)
             log.warning(
                 f"not adding activation to {script_path} - I don't know how to do so for "
                 "this file type"
@@ -2316,7 +2314,6 @@ def build(
         print(utils.get_skip_message(m))
         return default_return
 
-    log = utils.get_logger(__name__)
     host_precs = []
     build_precs = []
     output_metas = []
@@ -2891,8 +2888,6 @@ def _construct_metadata_for_test_from_package(package, config):
     #    This is still necessary for computing the hash correctly though
     config.variant = hash_input
 
-    log = utils.get_logger(__name__)
-
     # get absolute file location
     local_pkg_location = os.path.normpath(os.path.abspath(os.path.dirname(package)))
 
@@ -3087,7 +3082,6 @@ def _write_test_run_script(
     shell_files,
     trace,
 ):
-    log = utils.get_logger(__name__)
     with open(test_run_script, "w") as tf:
         tf.write(
             '{source} "{test_env_script}"\n'.format(
@@ -3246,7 +3240,6 @@ def test(
     :param m: Package's metadata.
     :type m: Metadata
     """
-    log = utils.get_logger(__name__)
     # we want to know if we're dealing with package input.  If so, we can move the input on success.
     hash_input = {}
 
@@ -3530,7 +3523,6 @@ def tests_failed(
     dest = join(broken_dir, os.path.basename(pkg))
 
     if move_broken:
-        log = utils.get_logger(__name__)
         try:
             shutil.move(pkg, dest)
             log.warning(
@@ -3681,7 +3673,6 @@ def build_tree(
                                     )
                                 ]
                             )
-                            log = utils.get_logger(__name__)
                             # downstreams can be a dict, for adding capability for worker labels
                             if hasattr(downstreams, "keys"):
                                 downstreams = list(downstreams.keys())
@@ -4021,11 +4012,11 @@ def handle_pypi_upload(wheels, config):
             try:
                 utils.check_call_env(args + [f])
             except:
-                utils.get_logger(__name__).warning(
+                log.warning(
                     "wheel upload failed - is twine installed?"
                     "  Is this package registered?"
                 )
-                utils.get_logger(__name__).warning(f"Wheel file left in {f}")
+                log.warning(f"Wheel file left in {f}")
 
     else:
         print(f"anaconda_upload is not set.  Not uploading wheels: {wheels}")

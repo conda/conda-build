@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import random
 import re
@@ -52,6 +53,8 @@ if TYPE_CHECKING:
     from typing import Any, Iterable, Iterator
 
     from .config import Config
+
+log = logging.getLogger(__name__)
 
 
 def odict_representer(dumper, data):
@@ -738,7 +741,6 @@ def finalize_metadata(
 
         if build_unsat or host_unsat:
             m.final = False
-            log = utils.get_logger(__name__)
             log.warning(
                 f"Returning non-final recipe for {m.dist()}; one or more dependencies "
                 "was unsatisfiable:"
