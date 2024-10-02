@@ -127,7 +127,11 @@ filterwarnings = [
   # ignore conda-index error
   "ignore::PendingDeprecationWarning:conda_index",
   "ignore::DeprecationWarning:conda_index",
-  "ignore:Python 3.14 will, by default, filter extracted tar archives and reject files or modify their metadata:DeprecationWarning",
+  # ignore conda-package-streaming error
+  "ignore:conda.core.index._supplement_index_with_system is pending deprecation:PendingDeprecationWarning:conda",
+  "ignore:conda.core.index._make_virtual_package is pending deprecation:PendingDeprecationWarning:conda",
+  # ignore tarfile
+  "ignore:Python 3.14 will, by default, filter extracted tar archives:DeprecationWarning",
 ]
 markers = [
   "serial: execute test serially (to avoid race conditions)",
@@ -135,6 +139,7 @@ markers = [
   "sanity: execute the sanity tests",
   "no_default_testing_config: used internally to disable monkeypatching for testing_config",
   "benchmark: execute the benchmark tests",
+  "memray: memory use tests",
 ]
 minversion = 3.0
 norecursedirs = ["tests/test-recipes/*"]

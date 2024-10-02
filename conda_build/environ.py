@@ -865,8 +865,6 @@ def get_install_actions(
         channel_urls=channel_urls,
         debug=debug,
         verbose=verbose,
-        locking=locking,
-        timeout=timeout,
     )
     specs = tuple(
         utils.ensure_valid_spec(spec) for spec in specs if not str(spec).endswith("@")
@@ -1038,8 +1036,6 @@ def create_env(
                         channel_urls=config.channel_urls,
                         debug=config.debug,
                         verbose=config.verbose,
-                        locking=config.locking,
-                        timeout=config.timeout,
                     )
                     _display_actions(prefix, precs)
                     if utils.on_win:
