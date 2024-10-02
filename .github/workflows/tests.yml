@@ -210,7 +210,7 @@ jobs:
           --file tests/requirements-${{ runner.os }}.txt
           --file tests/requirements-ci.txt
           python=${{ matrix.python-version }}
-          ${{ env.CONDA_CHANNEL_LABEL }}${{ env.CONDA_VERSION }}
+          conda=24.7
 
       - name: Install CodSpeed
         run: pip install git+https://github.com/kenodegard/pytest-codspeed.git@fix-outerr-redirects#egg=pytest-codspeed
