@@ -334,8 +334,6 @@ def execute_download_actions(m, precs, env, package_subset=None, require_files=F
         channel_urls=m.config.channel_urls,
         debug=m.config.debug,
         verbose=m.config.verbose,
-        locking=m.config.locking,
-        timeout=m.config.timeout,
     )
 
     # this should be just downloading packages.  We don't need to extract them -
