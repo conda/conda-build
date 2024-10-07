@@ -88,6 +88,8 @@ mmap_PROT_READ = 0 if on_win else mmap.PROT_READ
 mmap_PROT_WRITE = 0 if on_win else mmap.PROT_WRITE
 
 DEFAULT_SUBDIRS = set(KNOWN_SUBDIRS)
+# arches that don't follow exact names in the subdir need to be mapped here
+ARCH_MAP = {"32": "x86", "64": "x86_64"}
 
 RUN_EXPORTS_TYPES = {
     "weak",

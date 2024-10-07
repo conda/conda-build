@@ -1,0 +1,26 @@
+### Enhancements
+
+* Split selector logic from `conda_build.metadata` into a dedicated `conda_build.selectors` module. (#5500)
+
+### Bug fixes
+
+* <news item>
+
+### Deprecations
+
+* Deprecate `conda_build.metadata.ARCH_MAP`. Use `conda_build.utils.ARCH_MAP` instead. (#5500)
+* Deprecate `conda_build.metadata.get_selectors`. Use `conda_build.selectors.get_selectors` instead. (#5500)
+* Deprecate `conda_build.metadata.ns_cfg`. Use `conda_build.selectors.get_selectors` instead. (#5500)
+* Deprecate `conda_build.metadata.sel_pat`. Use `conda_build.selectors.RE_SELECTOR` instead. (#5500)
+* Deprecate `conda_build.metadata.parseNameNotFound`. Use `conda_build.selectors.parse_NameError` instead. (#5500)
+* Deprecate `conda_build.metadata.eval_selector`. Use `conda_build.selectors.eval_selector` instead. (#5500)
+* Deprecate `conda_build.metadata._split_line_selector`. Use `conda_build.selectors._split_line_selector` instead. (#5500)
+* Deprecate `conda_build.metadata.select_lines`. Use `conda_build.selectors.select_lines` instead. (#5500)
+
+### Docs
+
+* <news item>
+
+### Other
+
+* <news item>
