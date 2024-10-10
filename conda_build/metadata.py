@@ -628,6 +628,7 @@ FIELDS = {
         "error_overdepending": None,
         "error_overlinking": None,
         "overlinking_ignore_patterns": [],
+        "activate_in_script": bool,
     },
     "outputs": {
         "name": None,
