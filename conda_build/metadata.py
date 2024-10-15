@@ -628,6 +628,7 @@ FIELDS = {
         "error_overdepending": None,
         "error_overlinking": None,
         "overlinking_ignore_patterns": [],
+        "python_site_packages_path": str,
     },
     "outputs": {
         "name": None,
@@ -1800,6 +1801,8 @@ class MetaData:
             d["provides_features"] = self.get_value("build/provides_features")
         if self.get_value("build/requires_features"):
             d["requires_features"] = self.get_value("build/requires_features")
+        if self.get_value("build/python_site_packages_path"):
+            d["python_site_packages_path"] = self.get_value("build/python_site_packages_path")
         if self.noarch:
             d["platform"] = d["arch"] = None
             d["subdir"] = "noarch"
