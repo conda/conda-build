@@ -1248,8 +1248,11 @@ def write_info_files_file(m, files):
 def write_link_json(m):
     package_metadata = OrderedDict()
     noarch_type = m.get_value("build/noarch")
-    if noarch_type:
-        noarch_type_str = str(noarch_type)
+    if noarch_type or m.python_version_independent:
+        if noarch_type:
+            noarch_type_str = str(noarch_type)
+        elif m.python_version_independent:
+            noarch_type_str = "python"
         noarch_dict = OrderedDict(type=noarch_type_str)
         if noarch_type_str.lower() == "python":
             entry_points = m.get_value("build/entry_points")
@@ -1442,13 +1445,14 @@ def create_info_files(m, replacements, files, prefix):
 
 
 def get_short_path(m, target_file):
+    if m.python_version_independent:
+        if target_file.find("site-packages") >= 0:
+            return target_file[target_file.find("site-packages") :]
     if m.noarch == "python":
         entry_point_script_names = get_entry_point_script_names(
             m.get_value("build/entry_points")
         )
-        if target_file.find("site-packages") >= 0:
-            return target_file[target_file.find("site-packages") :]
-        elif target_file.startswith("bin") and (
+        if target_file.startswith("bin") and (
             target_file not in entry_point_script_names
         ):
             return target_file.replace("bin", "python-scripts")
@@ -1666,6 +1670,9 @@ def post_process_files(m: MetaData, initial_prefix_files):
         noarch_python.populate_files(
             m, pkg_files, host_prefix, entry_point_script_names
         )
+    elif m.python_version_independent:
+        # For non noarch: python ones, we don't need to handle entry points in a special way.
+        noarch_python.populate_files(m, pkg_files, host_prefix, [])
 
     current_prefix_files = utils.prefix_files(prefix=host_prefix)
     new_files = current_prefix_files - initial_prefix_files
@@ -3031,7 +3038,7 @@ def _set_env_variables_for_build(m, env):
     # locally, and if we don't, it's a problem.
     env["PIP_NO_INDEX"] = True
 
-    if m.noarch == "python":
+    if m.python_version_independent:
         env["PYTHONDONTWRITEBYTECODE"] = True
 
     # The stuff in replacements is not parsable in a shell script (or we need to escape it)
