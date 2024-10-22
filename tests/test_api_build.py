@@ -1705,6 +1705,15 @@ def test_provides_features_metadata(testing_config):
     assert index["provides_features"] == {"test2": "also_ok"}
 
 
+@pytest.mark.sanity
+def test_python_site_packages_path(testing_config):
+    recipe = os.path.join(metadata_dir, "_python_site_packages_path")
+    out = api.build(recipe, config=testing_config)[0]
+    index = json.loads(package_has_file(out, "info/index.json"))
+    assert "python_site_packages_path" in index
+    assert index["python_site_packages_path"] == "some/path"
+
+
 def test_overlinking_detection(
     testing_config, testing_workdir, variants_conda_build_sysroot
 ):
