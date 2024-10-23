@@ -4,7 +4,7 @@
 
 ### Bug fixes
 
-* Fixed regex for jinja2 set statements to be more specific. (#5514)
+* Fixed regex for jinja2 set/for statements to be more specific. (#5514)
 
 ### Deprecations
 
