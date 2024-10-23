@@ -760,7 +760,11 @@ def find_used_variables_in_text(variant, recipe_text, selectors_only=False):
         # TODO: this `for` regex won't catch some common cases like lists of vars, multiline
         # jinja2 blocks, if filters on the for loop, etc.
         for_regex = r"(?:^|[^\{])\{%\s*for\s*.*\s*in\s*" + v_regex + r"(?:[^%]*?)?%\}"
-        set_regex = r"(?:^|[^\{])\{%\s*set\s*.*\s*=\s*.*" + v_regex + r"(?![a-zA-Z_0-9])(?:[^%]*?)?%\}"
+        set_regex = (
+            r"(?:^|[^\{])\{%\s*set\s*.*\s*=\s*.*"
+            + v_regex
+            + r"(?![a-zA-Z_0-9])(?:[^%]*?)?%\}"
+        )
         # plain req name, no version spec.  Look for end of line after name, or comment or selector
         requirement_regex = rf"^\s+\-\s+{v_req_regex}\s*(?:\s[\[#]|$)"
         if selectors_only:
