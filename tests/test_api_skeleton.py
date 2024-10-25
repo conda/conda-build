@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 import ruamel.yaml
+
 from conda_build import api
 from conda_build.skeletons.pypi import (
     clean_license_name,
