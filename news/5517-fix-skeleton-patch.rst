@@ -4,7 +4,7 @@
 
 ### Bug fixes
 
-* Fixed bug in distutils patch for pypi skeletons. (#5517)
+* Fixed ruamel.yaml usage to use supported APIs. (#5517)
 
 ### Deprecations
 
