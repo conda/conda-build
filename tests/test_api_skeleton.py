@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
-
+import ruamel.yaml
 from conda_build import api
 from conda_build.skeletons.pypi import (
     clean_license_name,
@@ -484,7 +484,7 @@ def test_pypi_section_order_preserved(tmp_path: Path):
     ]
 
     # The loader below preserves the order of entries...
-    _yaml = YAML(typ="rt")
+    _yaml = ruamel.yaml.YAML(typ="rt")
     recipe = _yaml.load("\n".join(lines))
 
     major_sections = list(recipe.keys())
