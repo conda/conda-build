@@ -4,7 +4,7 @@
 
 ### Bug fixes
 
-* Fixed bug in docs build by pinning pydata_sphinx_theme top 0.15.4. (#5518)
+* Fixed bug in docs build by pinning conda-sphinx-theme to 0.2.2. (#5518)
 
 ### Deprecations
 
