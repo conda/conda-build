@@ -12,7 +12,7 @@ import sys
 import tarfile
 from collections import OrderedDict, defaultdict
 from contextlib import contextmanager
-from functools import lru_cache
+from functools import cache
 from os.path import (
     isabs,
     isdir,
@@ -49,7 +49,8 @@ from .variants import (
 
 if TYPE_CHECKING:
     import os
-    from typing import Any, Iterable, Iterator
+    from collections.abc import Iterable, Iterator
+    from typing import Any
 
     from .config import Config
 
@@ -281,7 +282,7 @@ def find_pkg_dir_or_file_in_pkgs_dirs(
     return None
 
 
-@lru_cache(maxsize=None)
+@cache
 def _read_specs_from_package(pkg_loc, pkg_dist):
     specs = {}
     if pkg_loc and isdir(pkg_loc):

@@ -11,7 +11,7 @@ import sys
 import time
 import warnings
 from collections import OrderedDict
-from functools import lru_cache
+from functools import cache, lru_cache
 from os.path import isdir, isfile, join
 from typing import TYPE_CHECKING, NamedTuple, overload
 
@@ -289,7 +289,7 @@ def eval_selector(selector_string, namespace, variants_in_place):
         return eval_selector(next_string, namespace, variants_in_place)
 
 
-@lru_cache(maxsize=None)
+@cache
 def _split_line_selector(text: str) -> tuple[tuple[str | None, str], ...]:
     lines: list[tuple[str | None, str]] = []
     for line in text.splitlines():
@@ -1069,7 +1069,7 @@ def _filter_recipe_text(text, extract_pattern=None):
     return text
 
 
-@lru_cache(maxsize=None)
+@cache
 def read_meta_file(meta_path):
     with open(meta_path, "rb") as f:
         recipe_text = UnicodeDammit(f.read()).unicode_markup
