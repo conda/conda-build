@@ -145,7 +145,7 @@ norecursedirs = ["tests/test-recipes/*"]
 testpaths = ["tests"]
 
 [tool.ruff]
-target-version = "py38"
+target-version = "py39"
 
 [tool.ruff.lint]
 flake8-type-checking = {exempt-modules = [], strict = true}
