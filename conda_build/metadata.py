@@ -1800,9 +1800,7 @@ class MetaData:
         if self.get_value("build/provides_features"):
             d["provides_features"] = self.get_value("build/provides_features")
         if self.get_value("build/requires_features"):
-            d["requires_features"] = self.get_value(
-                "build/requires_features"
-            )
+            d["requires_features"] = self.get_value("build/requires_features")
         if self.get_value("build/python_site_packages_path"):
             d["python_site_packages_path"] = self.get_value(
                 "build/python_site_packages_path"
