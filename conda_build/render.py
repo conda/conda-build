@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from __future__ import annotations
 
+import functools
 import json
 import os
 import random
@@ -12,7 +13,6 @@ import sys
 import tarfile
 from collections import OrderedDict, defaultdict
 from contextlib import contextmanager
-from functools import cache
 from os.path import (
     isabs,
     isdir,
@@ -282,7 +282,7 @@ def find_pkg_dir_or_file_in_pkgs_dirs(
     return None
 
 
-@cache
+@functools.cache
 def _read_specs_from_package(pkg_loc, pkg_dist):
     specs = {}
     if pkg_loc and isdir(pkg_loc):
