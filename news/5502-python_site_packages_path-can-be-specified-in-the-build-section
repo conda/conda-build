@@ -1,6 +1,6 @@
 ### Enhancements
 
-* The location of the site-packages directory can be specified in `python_site_packages_path` in the build section of a recipe (#5502).
+* Add  support for CEP-17 that allows specifying the location of the site-packages directory with the `python_site_packages_path` build option for any packages named `python`. (#5502)
 
 ### Bug fixes
 
