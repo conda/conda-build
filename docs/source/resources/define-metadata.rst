@@ -373,6 +373,19 @@ Python in macOS. The default is ``False``.
    build:
      osx_is_app: True
 
+python_site_packages_path
+-------------------------
+
+Packages with a name of ``python`` can optionally specify the location of the
+site-packages directory relative to the root of the environment with
+``python_site_packages_path``. This should only be used in ``python`` packages
+and only when the path is not the CPython default.
+
+.. code-block:: yaml
+
+   build:
+     python_site_packages_path: lib/python3.13t/site-packages
+
 
 Track features
 --------------
