@@ -50,7 +50,7 @@ from ..utils import (
 from ..version import _parse as parse_version
 
 if TYPE_CHECKING:
-    from typing import Iterable
+    from collections.abc import Iterable
 
 pypi_example = """
 Examples:
