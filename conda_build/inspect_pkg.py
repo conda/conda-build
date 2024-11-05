@@ -44,7 +44,8 @@ except ImportError:
     from conda_build.index import Index
 
 if TYPE_CHECKING:
-    from typing import Iterable, Literal
+    from collections.abc import Iterable
+    from typing import Literal
 
 log = get_logger(__name__)
 

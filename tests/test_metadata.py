@@ -585,10 +585,14 @@ def test_select_lines_invalid():
     ],
 )
 def test_sanitize_source(keys: list[str], expected: dict[str, str] | None) -> None:
-    with pytest.raises(
-        CondaBuildUserError,
-        match=r"Multiple git_revs:",
-    ) if expected is None else nullcontext():
+    with (
+        pytest.raises(
+            CondaBuildUserError,
+            match=r"Multiple git_revs:",
+        )
+        if expected is None
+        else nullcontext()
+    ):
         assert sanitize({"source": {key: "rev" for key in keys}}) == {
             "source": expected
         }
@@ -606,10 +610,14 @@ def test_sanitize_source(keys: list[str], expected: dict[str, str] | None) -> No
     ],
 )
 def test_check_bad_chrs(value: str, field: str, invalid: str) -> None:
-    with pytest.raises(
-        CondaBuildUserError,
-        match=rf"Bad character\(s\) \({invalid}\) in {field}: {value}\.",
-    ) if invalid else nullcontext():
+    with (
+        pytest.raises(
+            CondaBuildUserError,
+            match=rf"Bad character\(s\) \({invalid}\) in {field}: {value}\.",
+        )
+        if invalid
+        else nullcontext()
+    ):
         check_bad_chrs(value, field)
 
 

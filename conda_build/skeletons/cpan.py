@@ -15,7 +15,7 @@ import pickle
 import subprocess
 import sys
 import tempfile
-from functools import lru_cache, partial
+from functools import cache, partial
 from glob import glob
 from os import makedirs
 from os.path import basename, dirname, exists, join
@@ -639,7 +639,7 @@ def skeletonize(
                 f.write(CPAN_BLD_BAT.format(**d))
 
 
-@lru_cache(maxsize=None)
+@cache
 def is_core_version(core_version, version):
     if core_version is None:
         return False
@@ -695,7 +695,7 @@ def add_parser(repos):
     )
 
 
-@lru_cache(maxsize=None)
+@cache
 def latest_pkg_version(pkg):
     """
     :returns: the latest version of the specified conda package available
@@ -1037,7 +1037,7 @@ def core_module_dict(core_modules, module):
     return None
 
 
-@lru_cache(maxsize=None)
+@cache
 def metacpan_api_is_core_version(cpan_url, module):
     if "FindBin" in module:
         print("debug")

@@ -34,7 +34,7 @@ except ImportError:
 
 if TYPE_CHECKING:
     from argparse import ArgumentParser, Namespace
-    from typing import Sequence
+    from collections.abc import Sequence
 
 
 def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:

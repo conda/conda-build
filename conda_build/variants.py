@@ -10,7 +10,7 @@ import re
 import sys
 from collections import OrderedDict
 from copy import copy
-from functools import lru_cache
+from functools import cache
 from itertools import product
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -22,7 +22,8 @@ from .utils import ensure_list, get_logger, islist, on_win, trim_empty_keys
 from .version import _parse as parse_version
 
 if TYPE_CHECKING:
-    from typing import Any, Iterable
+    from collections.abc import Iterable
+    from typing import Any
 
 DEFAULT_VARIANTS = {
     "python": f"{sys.version_info.major}.{sys.version_info.minor}",
@@ -103,7 +104,7 @@ SUFFIX_MAP = {
 }
 
 
-@lru_cache(maxsize=None)
+@cache
 def _get_default_compilers(platform, py_ver):
     compilers = DEFAULT_COMPILERS[platform].copy()
     if platform == "win":
@@ -504,7 +505,7 @@ def filter_by_key_value(variants, key, values, source_name):
     return reduced_variants
 
 
-@lru_cache(maxsize=None)
+@cache
 def _split_str(string, char):
     return string.split(char)
 
@@ -722,7 +723,7 @@ def get_vars(
     }
 
 
-@lru_cache(maxsize=None)
+@cache
 def find_used_variables_in_text(variant, recipe_text, selectors_only=False):
     used_variables = set()
     recipe_lines = recipe_text.splitlines()
