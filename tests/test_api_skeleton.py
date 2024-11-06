@@ -485,7 +485,8 @@ def test_pypi_section_order_preserved(tmp_path: Path):
     ]
 
     # The loader below preserves the order of entries...
-    recipe = ruamel.yaml.load("\n".join(lines), Loader=ruamel.yaml.RoundTripLoader)
+    _yaml = ruamel.yaml.YAML(typ="rt")
+    recipe = _yaml.load("\n".join(lines))
 
     major_sections = list(recipe.keys())
     # Blank fields are omitted when skeletonizing, so prune any missing ones

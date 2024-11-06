@@ -4,6 +4,8 @@ import textwrap
 
 from conda import CondaError
 
+from .deprecations import deprecated
+
 SEPARATOR = "-" * 70
 
 indent = lambda s: textwrap.fill(textwrap.dedent(s))
@@ -44,6 +46,7 @@ class UnableToParse(YamlParsingError):
         return f"Error Message:\n--> {indent(orig)}\n\n"
 
 
+@deprecated("24.11", "25.1")
 class UnableToParseMissingJinja2(UnableToParse):
     def error_body(self):
         return "\n".join(

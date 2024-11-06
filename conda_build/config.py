@@ -36,7 +36,9 @@ from .variants import get_default_variant
 
 if TYPE_CHECKING:
     from pathlib import Path
-    from typing import Any
+    from typing import Any, TypeVar
+
+    T = TypeVar("T")
 
 invocation_time = ""
 
@@ -863,13 +865,22 @@ class Config:
 
     def copy(self) -> Config:
         new = copy.copy(self)
-        # Use picke.loads(pickle.dumps(...) as a faster copy.deepcopy alternative.
-        new.variant = pickle.loads(pickle.dumps(self.variant, pickle.HIGHEST_PROTOCOL))
+        new.variant = self._copy_variants(self.variant)
         if hasattr(self, "variants"):
-            new.variants = pickle.loads(
-                pickle.dumps(self.variants, pickle.HIGHEST_PROTOCOL)
-            )
+            new.variants = self.copy_variants()
         return new
+
+    def _copy_variants(self, variant_or_list: T) -> T:
+        """Efficient deep copy used for variant dicts and lists"""
+        # Use pickle.loads(pickle.dumps(...) as a faster copy.deepcopy alternative.
+        return pickle.loads(pickle.dumps(variant_or_list, pickle.HIGHEST_PROTOCOL))
+
+    def copy_variants(self) -> list[dict] | None:
+        """Return deep copy of the variants list, if any"""
+        if getattr(self, "variants", None) is not None:
+            return self._copy_variants(self.variants)
+        else:
+            return None
 
     # context management - automatic cleanup if self.dirty or self.keep_old_work is not True
     def __enter__(self):

@@ -15,9 +15,10 @@ from __future__ import annotations
 #    to conda-build's functionality.
 import os
 import sys
+from collections.abc import Iterable
 from os.path import dirname, expanduser, join
 from pathlib import Path
-from typing import TYPE_CHECKING, Iterable
+from typing import TYPE_CHECKING
 
 # make the Config class available in the api namespace
 from .config import DEFAULT_PREFIX_LENGTH as _prefix_length

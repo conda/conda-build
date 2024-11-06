@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from __future__ import annotations
 
+import functools
 import json
 import os
 import random
@@ -12,7 +13,6 @@ import sys
 import tarfile
 from collections import OrderedDict, defaultdict
 from contextlib import contextmanager
-from functools import lru_cache
 from os.path import (
     isabs,
     isdir,
@@ -49,7 +49,8 @@ from .variants import (
 
 if TYPE_CHECKING:
     import os
-    from typing import Any, Iterable, Iterator
+    from collections.abc import Iterable, Iterator
+    from typing import Any
 
     from .config import Config
 
@@ -281,7 +282,7 @@ def find_pkg_dir_or_file_in_pkgs_dirs(
     return None
 
 
-@lru_cache(maxsize=None)
+@functools.cache
 def _read_specs_from_package(pkg_loc, pkg_dist):
     specs = {}
     if pkg_loc and isdir(pkg_loc):
@@ -334,8 +335,6 @@ def execute_download_actions(m, precs, env, package_subset=None, require_files=F
         channel_urls=m.config.channel_urls,
         debug=m.config.debug,
         verbose=m.config.verbose,
-        locking=m.config.locking,
-        timeout=m.config.timeout,
     )
 
     # this should be just downloading packages.  We don't need to extract them -
@@ -835,12 +834,20 @@ def distribute_variants(
     used_variables = metadata.get_used_loop_vars(force_global=False)
     top_loop = metadata.get_reduced_variant_set(used_variables)
 
+    # defer potentially expensive copy of input variants list
+    # until after reduction of the list for each variant
+    # since the initial list can be very long
+    all_variants = metadata.config.variants
+    metadata.config.variants = []
+
     for variant in top_loop:
         from .build import get_all_replacements
 
         get_all_replacements(variant)
         mv = metadata.copy()
         mv.config.variant = variant
+        # start with shared list:
+        mv.config.variants = all_variants
 
         pin_run_as_build = variant.get("pin_run_as_build", {})
         if mv.numpy_xx and "numpy" not in pin_run_as_build:
@@ -860,6 +867,9 @@ def distribute_variants(
                 )
                 or mv.config.variants
             )
+        # copy variants before we start modifying them,
+        # but after we've reduced the list via the conform_dict filter
+        mv.config.variants = mv.config.copy_variants()
         get_all_replacements(mv.config.variants)
         pin_run_as_build = variant.get("pin_run_as_build", {})
         if mv.numpy_xx and "numpy" not in pin_run_as_build:

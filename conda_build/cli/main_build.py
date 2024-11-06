@@ -37,7 +37,7 @@ except ImportError:
 if TYPE_CHECKING:
     import os
     from argparse import ArgumentParser, Namespace
-    from typing import Sequence
+    from collections.abc import Sequence
 
     from ..config import Config
 
