@@ -25,7 +25,6 @@ from frozendict import deepfreeze
 
 from . import utils
 from .config import CondaPkgFormat, Config, get_or_merge_config
-from .deprecations import deprecated
 from .exceptions import (
     CondaBuildException,
     CondaBuildUserError,
