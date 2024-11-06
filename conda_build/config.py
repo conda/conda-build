@@ -60,7 +60,7 @@ enable_static_default = "false"
 no_rewrite_stdout_env_default = "false"
 ignore_verify_codes_default = []
 exit_on_verify_error_default = False
-conda_pkg_format_default = None
+conda_pkg_format_default = "2"  # .conda
 zstd_compression_level_default = 19
 
 
