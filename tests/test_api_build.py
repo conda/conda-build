@@ -2078,3 +2078,12 @@ def test_conda_build_script_errors_without_conda_info_handlers(tmp_path, recipe,
         assert "Traceback" in all_output
         assert "CalledProcessError" in all_output
         assert "returned non-zero exit status 1" in all_output
+
+
+def test_api_build_inject_jinja2_vars_on_first_pass(testing_config):
+    recipe_dir = os.path.join(metadata_dir, "inject_jinja2_vars_on_first_pass")
+    with pytest.raises(RuntimeError):
+        api.build(recipe_dir, config=testing_config)
+
+    testing_config.variant = {"python_min": "3.12"}
+    api.build(recipe_dir, config=testing_config)
