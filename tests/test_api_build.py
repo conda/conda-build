@@ -2081,7 +2081,7 @@ def test_conda_build_script_errors_without_conda_info_handlers(tmp_path, recipe,
 
 
 def test_api_build_inject_jinja2_vars_on_first_pass(testing_config):
-    recipe_dir = os.path.join(metadata_dir, "inject_jinja2_vars_on_first_pass")
+    recipe_dir = os.path.join(metadata_dir, "_inject_jinja2_vars_on_first_pass")
     with pytest.raises(RuntimeError):
         api.build(recipe_dir, config=testing_config)
 
