@@ -503,7 +503,7 @@ def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
 
     parsed = parser.parse_args(args)
     check_recipe(parsed.recipe)
-    return parsed
+    return parser, parsed
 
 
 def check_recipe(path_list):
