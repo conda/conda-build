@@ -49,6 +49,7 @@ from .variants import (
     find_used_variables_in_shell_script,
     find_used_variables_in_text,
     get_default_variant,
+    get_package_variants,
     get_vars,
     list_of_dicts_to_dict_of_lists,
 )
@@ -1167,7 +1168,21 @@ class MetaData:
         # Therefore, undefined jinja variables are permitted here
         # In the second pass, we'll be more strict. See build.build()
         # Primarily for debugging.  Ensure that metadata is not altered after "finalizing"
-        self.parse_again(permit_undefined_jinja=True, allow_no_other_outputs=True)
+
+        try:
+            # For the first pass, we do a simple read of any variants in the recipe and
+            # use them. These are then discarded. Other operations on the metadata
+            # will restore versions of them as needed. This is done to preserve
+            # old behavior.
+            old_config = self.config
+
+            self.config = get_or_merge_config(config, variant=variant)
+            self.config.variants = get_package_variants(self)
+            self.config.variant = self.config.variants[0]
+            self.parse_again(permit_undefined_jinja=True, allow_no_other_outputs=True)
+        finally:
+            self.config = old_config
+
         self.config.disable_pip = self.disable_pip
         # establish whether this recipe should squish build and host together
 
