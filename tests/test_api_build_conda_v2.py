@@ -27,7 +27,7 @@ def test_conda_pkg_format(
 
     # Recipe "entry_points" is used in other test -> add test-specific variant
     # (change build hash) to avoid clashes in package cache from other tests.
-    variants = {"pytest_name": [request.node.name]}
+    variants = {"pytest_name": [request.node.name.replace("[", "").replace("]", "")]}
     (output_file,) = api.get_output_file_paths(
         recipe, config=testing_config, variants=variants
     )
