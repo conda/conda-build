@@ -91,7 +91,7 @@ def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
         "--test",
         action="store_true",
         help="Test package (assumes package is already built).  RECIPE_PATH argument must be a "
-        "path to built package .tar.bz2 file.",
+        "path to built package file.",
     )
     parser.add_argument(
         "--no-test",
@@ -496,7 +496,7 @@ def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
             context.conda_build.get("pkg_format", conda_pkg_format_default)
         ),
         help=(
-            "Choose which package type(s) are outputted. (Accepted inputs tar.bz2 or 1, .conda or 2)"
+            "Choose which package type(s) are outputted. (Accepted inputs .tar.bz2 or 1, .conda or 2)"
         ),
     )
     add_parser_channels(parser)
