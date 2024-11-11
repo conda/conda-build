@@ -3,6 +3,7 @@
 """
 Tools for converting Cran packages to conda recipes.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -28,7 +29,6 @@ from os.path import (
     realpath,
     relpath,
 )
-from typing import Literal
 
 import requests
 import yaml
@@ -39,16 +39,23 @@ try:
 except ImportError:
     from yaml import SafeDumper
 
+from typing import TYPE_CHECKING
+
+from conda.base.context import context
 from conda.common.io import dashlist
+from conda.gateways.disk.create import TemporaryDirectory
 
-from conda_build import source
-from conda_build.conda_interface import TemporaryDirectory, cc_conda_build
-from conda_build.config import get_or_merge_config
-from conda_build.license_family import allowed_license_families, guess_license_family
-from conda_build.utils import ensure_list, rm_rf
-from conda_build.variants import DEFAULT_VARIANTS, get_package_variants
-
+from .. import source
+from ..config import get_or_merge_config
+from ..license_family import allowed_license_families, guess_license_family
 from ..metadata import MetaData
+from ..utils import ensure_list, rm_rf
+from ..variants import DEFAULT_VARIANTS, get_package_variants
+
+if TYPE_CHECKING:
+    from typing import Literal
+
+    from ..config import Config
 
 SOURCE_META = """\
   {archive_keys}
@@ -108,8 +115,8 @@ test:
     - $R -e "library('{cran_packagename}')"           # [not win]
     - "\\"%R%\\" -e \\"library('{cran_packagename}')\\""  # [win]
 
-  # You can also put a file called run_test.py, run_test.sh, or run_test.bat
-  # in the recipe that will be run at test time.
+  # You can also put a file called run_test.r, run_test.py, run_test.sh,
+  # or run_test.bat in the recipe that will be run at test time.
 
   # requires:
     # Put any additional test requirements here.
@@ -450,7 +457,7 @@ def add_parser(repos):
     cran.add_argument(
         "-m",
         "--variant-config-files",
-        default=cc_conda_build.get("skeleton_config_yaml", None),
+        default=context.conda_build.get("skeleton_config_yaml", None),
         help="""Variant config file to add.  These yaml files can contain
         keys such as `cran_mirror`.  Only one can be provided here.""",
     )
@@ -482,7 +489,7 @@ def dict_from_cran_lines(lines):
                 #   - Suggests in corpcor
                 (k, v) = line.split(":", 1)
         except ValueError:
-            sys.exit("Error: Could not parse metadata (%s)" % line)
+            sys.exit(f"Error: Could not parse metadata ({line})")
         d[k] = v
         # if k not in CRAN_KEYS:
         #     print("Warning: Unknown key %s" % k)
@@ -590,7 +597,7 @@ def read_description_contents(fp):
 
 def get_archive_metadata(path, verbose=True):
     if verbose:
-        print("Reading package metadata from %s" % path)
+        print(f"Reading package metadata from {path}")
     if basename(path) == "DESCRIPTION":
         with open(path, "rb") as fp:
             return read_description_contents(fp)
@@ -607,8 +614,8 @@ def get_archive_metadata(path, verbose=True):
                     fp = zf.open(member, "r")
                     return read_description_contents(fp)
     else:
-        sys.exit("Cannot extract a DESCRIPTION from file %s" % path)
-    sys.exit("%s does not seem to be a CRAN package (no DESCRIPTION) file" % path)
+        sys.exit(f"Cannot extract a DESCRIPTION from file {path}")
+    sys.exit(f"{path} does not seem to be a CRAN package (no DESCRIPTION) file")
 
 
 def get_latest_git_tag(config):
@@ -631,12 +638,12 @@ def get_latest_git_tag(config):
     stdout = stdout.decode("utf-8")
     stderr = stderr.decode("utf-8")
     if stderr or p.returncode:
-        sys.exit("Error: git tag failed (%s)" % stderr)
+        sys.exit(f"Error: git tag failed ({stderr})")
     tags = stdout.strip().splitlines()
     if not tags:
         sys.exit("Error: no tags found")
 
-    print("Using tag %s" % tags[-1])
+    print(f"Using tag {tags[-1]}")
     return tags[-1]
 
 
@@ -676,7 +683,7 @@ def get_cran_archive_versions(cran_url, session, package, verbose=True):
         r.raise_for_status()
     except requests.exceptions.HTTPError as e:
         if e.response.status_code == 404:
-            print("No archive directory for package %s" % package)
+            print(f"No archive directory for package {package}")
             return []
         raise
     versions = []
@@ -691,7 +698,7 @@ def get_cran_archive_versions(cran_url, session, package, verbose=True):
 
 def get_cran_index(cran_url, session, verbose=True):
     if verbose:
-        print("Fetching main index from %s" % cran_url)
+        print(f"Fetching main index from {cran_url}")
     r = session.get(cran_url + "/src/contrib/")
     r.raise_for_status()
     records = {}
@@ -768,7 +775,7 @@ def package_to_inputs_dict(
     """
     if isfile(package):
         return None
-    print("Parsing input package %s:" % package)
+    print(f"Parsing input package {package}:")
     package = strip_end(package, "/")
     package = strip_end(package, sep)
     if "github.com" in package:
@@ -790,9 +797,7 @@ def package_to_inputs_dict(
         commp = commonprefix((package, output_dir))
         if commp != output_dir:
             raise RuntimeError(
-                "package {} specified with abs path outside of output-dir {}".format(
-                    package, output_dir
-                )
+                f"package {package} specified with abs path outside of output-dir {output_dir}"
             )
         location = package
         existing_location = existing_recipe_dir(
@@ -860,28 +865,36 @@ def remove_comments(template):
 
 
 def skeletonize(
-    in_packages,
-    output_dir=".",
-    output_suffix="",
-    add_maintainer=None,
-    version=None,
-    git_tag=None,
-    cran_url=None,
-    recursive=False,
-    archive=True,
-    version_compare=False,
-    update_policy="",
-    r_interp="r-base",
-    use_binaries_ver=None,
-    use_noarch_generic=False,
-    use_when_no_binary: Literal["error" | "src" | "old" | "old-src"] = "src",
-    use_rtools_win=False,
-    config=None,
-    variant_config_files=None,
-    allow_archived=False,
-    add_cross_r_base=False,
-    no_comments=False,
-):
+    in_packages: list[str],
+    output_dir: str = ".",
+    output_suffix: str = "",
+    add_maintainer: str | None = None,
+    version: str | None = None,
+    git_tag: str | None = None,
+    cran_url: str | None = None,
+    recursive: bool = False,
+    archive: bool = True,
+    version_compare: bool = False,
+    update_policy: Literal[
+        "error",
+        "skip-up-to-date",
+        "skip-existing",
+        "overwrite",
+        "merge-keep-build-num",
+        "merge-incr-build-num",
+    ]
+    | None = None,
+    r_interp: str = "r-base",
+    use_binaries_ver: str | None = None,
+    use_noarch_generic: bool = False,
+    use_when_no_binary: Literal["error", "src", "old", "old-src"] = "src",
+    use_rtools_win: bool = False,
+    config: Config | None = None,
+    variant_config_files: list[str] | None = None,
+    allow_archived: bool = False,
+    add_cross_r_base: bool = False,
+    no_comments: bool = False,
+) -> None:
     if (
         use_when_no_binary != "error"
         and use_when_no_binary != "src"
@@ -995,8 +1008,8 @@ def skeletonize(
             stderr = stderr.decode("utf-8")
             if p.returncode:
                 sys.exit(
-                    "Error: 'git checkout %s' failed (%s).\nInvalid tag?"
-                    % (new_git_tag, stderr.strip())
+                    f"Error: 'git checkout {new_git_tag}' failed ({stderr.strip()}).\n"
+                    "Invalid tag?"
                 )
             if stdout:
                 print(stdout, file=sys.stdout)
@@ -1014,9 +1027,8 @@ def skeletonize(
                     DESCRIPTION = sub_description_name
                 else:
                     sys.exit(
-                        "%s does not appear to be a valid R package "
-                        "(no DESCRIPTION file in %s, %s)"
-                        % (location, sub_description_pkg, sub_description_name)
+                        f"{location} does not appear to be a valid R package "
+                        f"(no DESCRIPTION file in {sub_description_pkg}, {sub_description_name})"
                     )
             cran_package = get_archive_metadata(DESCRIPTION)
 
@@ -1025,7 +1037,7 @@ def skeletonize(
                 session = get_session(output_dir)
                 cran_index = get_cran_index(cran_url, session)
             if pkg_name.lower() not in cran_index:
-                sys.exit("Package %s not found" % pkg_name)
+                sys.exit(f"Package {pkg_name} not found")
             package, cran_version = cran_index[pkg_name.lower()]
             if cran_version and (not version or version == cran_version):
                 version = cran_version
@@ -1036,8 +1048,7 @@ def skeletonize(
                 sys.exit(1)
             elif not version and not cran_version and not allow_archived:
                 print(
-                    "ERROR: Package %s is archived; to build, use --allow-archived or a --version value"
-                    % pkg_name
+                    f"ERROR: Package {pkg_name} is archived; to build, use --allow-archived or a --version value"
                 )
                 sys.exit(1)
             else:
@@ -1087,7 +1098,11 @@ def skeletonize(
         script_env = []
         extra_recipe_maintainers = []
         build_number = 0
-        if update_policy.startswith("merge") and inputs["old-metadata"]:
+        if (
+            update_policy
+            and update_policy.startswith("merge")
+            and inputs["old-metadata"]
+        ):
             m = inputs["old-metadata"]
             patches = make_array(m, "source/patches")
             script_env = make_array(m, "build/script_env")
@@ -1098,9 +1113,7 @@ def skeletonize(
                 build_number = m.build_number()
                 build_number += 1 if update_policy == "merge-incr-build-num" else 0
         if add_maintainer:
-            new_maintainer = "{indent}{add_maintainer}".format(
-                indent=INDENT, add_maintainer=add_maintainer
-            )
+            new_maintainer = f"{INDENT}{add_maintainer}"
             if new_maintainer not in extra_recipe_maintainers:
                 if not len(extra_recipe_maintainers):
                     # We hit this case when there is no existing recipe.
@@ -1198,9 +1211,7 @@ def skeletonize(
                         )
                     except:
                         print(
-                            "logic error, file {} should exist, we found it in a dir listing earlier.".format(
-                                package_url
-                            )
+                            f"logic error, file {package_url} should exist, we found it in a dir listing earlier."
                         )
                         sys.exit(1)
                     if description_path is None or archive_type == "source":
@@ -1313,7 +1324,7 @@ def skeletonize(
         if cran_package is None:
             cran_package = get_archive_metadata(description_path)
         d["cran_metadata"] = "\n".join(
-            ["# %s" % line for line in cran_package["orig_lines"] if line]
+            [f"# {line}" for line in cran_package["orig_lines"] if line]
         )
 
         # Render the source and binaryN keys
@@ -1365,7 +1376,7 @@ def skeletonize(
             d["summary"] = " " + yaml_quote_string(cran_package["Description"])
 
         if "Suggests" in cran_package and not no_comments:
-            d["suggests"] = "# Suggests: %s" % cran_package["Suggests"]
+            d["suggests"] = "# Suggests: {}".format(cran_package["Suggests"])
         else:
             d["suggests"] = ""
 
@@ -1387,11 +1398,7 @@ def skeletonize(
         for s in list(chain(imports, depends, links)):
             match = VERSION_DEPENDENCY_REGEX.match(s)
             if not match:
-                sys.exit(
-                    "Could not parse version from dependency of {}: {}".format(
-                        package, s
-                    )
-                )
+                sys.exit(f"Could not parse version from dependency of {package}: {s}")
             name = match.group("name")
             if name in seen:
                 continue
@@ -1406,7 +1413,7 @@ def skeletonize(
             if archs:
                 sys.exit(
                     "Don't know how to handle archs from dependency of "
-                    "package %s: %s" % (package, s)
+                    f"package {package}: {s}"
                 )
 
             dep_dict[name] = f"{relop}{ver}"
@@ -1476,44 +1483,28 @@ def skeletonize(
             if dep_type == "build":
                 if need_c:
                     deps.append(
-                        "{indent}{{{{ compiler('c') }}}}            {sel}".format(
-                            indent=INDENT, sel=sel_src_not_win
-                        )
+                        f"{INDENT}{{{{ compiler('c') }}}}            {sel_src_not_win}"
                     )
                     deps.append(
-                        "{indent}{{{{ compiler('m2w64_c') }}}}      {sel}".format(
-                            indent=INDENT, sel=sel_src_and_win
-                        )
+                        f"{INDENT}{{{{ compiler('m2w64_c') }}}}      {sel_src_and_win}"
                     )
                 if need_cxx:
                     deps.append(
-                        "{indent}{{{{ compiler('cxx') }}}}          {sel}".format(
-                            indent=INDENT, sel=sel_src_not_win
-                        )
+                        f"{INDENT}{{{{ compiler('cxx') }}}}          {sel_src_not_win}"
                     )
                     deps.append(
-                        "{indent}{{{{ compiler('m2w64_cxx') }}}}    {sel}".format(
-                            indent=INDENT, sel=sel_src_and_win
-                        )
+                        f"{INDENT}{{{{ compiler('m2w64_cxx') }}}}    {sel_src_and_win}"
                     )
                 if need_f:
                     deps.append(
-                        "{indent}{{{{ compiler('fortran') }}}}      {sel}".format(
-                            indent=INDENT, sel=sel_src_not_win
-                        )
+                        f"{INDENT}{{{{ compiler('fortran') }}}}      {sel_src_not_win}"
                     )
                     deps.append(
-                        "{indent}{{{{ compiler('m2w64_fortran') }}}}{sel}".format(
-                            indent=INDENT, sel=sel_src_and_win
-                        )
+                        f"{INDENT}{{{{ compiler('m2w64_fortran') }}}}{sel_src_and_win}"
                     )
                 if use_rtools_win:
                     need_c = need_cxx = need_f = need_autotools = need_make = False
-                    deps.append(
-                        "{indent}rtools                   {sel}".format(
-                            indent=INDENT, sel=sel_src_and_win
-                        )
-                    )
+                    deps.append(f"{INDENT}rtools                   {sel_src_and_win}")
                     # extsoft is legacy. R packages will download rwinlib subprojects
                     # as necessary according to Jeroen Ooms. (may need to disable that
                     # for non-MRO builds or maybe switch to Jeroen's toolchain?)
@@ -1521,69 +1512,41 @@ def skeletonize(
                     #     indent=INDENT, sel=sel_src_and_win))
                 if need_autotools or need_make or need_git:
                     deps.append(
-                        "{indent}{{{{ posix }}}}filesystem      {sel}".format(
-                            indent=INDENT, sel=sel_src_and_win
-                        )
+                        f"{INDENT}{{{{ posix }}}}filesystem      {sel_src_and_win}"
                     )
                 if need_git:
                     deps.append(f"{INDENT}{{{{ posix }}}}git")
                 if need_autotools:
                     deps.append(
-                        "{indent}{{{{ posix }}}}sed             {sel}".format(
-                            indent=INDENT, sel=sel_src_and_win
-                        )
+                        f"{INDENT}{{{{ posix }}}}sed             {sel_src_and_win}"
                     )
                     deps.append(
-                        "{indent}{{{{ posix }}}}grep            {sel}".format(
-                            indent=INDENT, sel=sel_src_and_win
-                        )
+                        f"{INDENT}{{{{ posix }}}}grep            {sel_src_and_win}"
+                    )
+                    deps.append(f"{INDENT}{{{{ posix }}}}autoconf        {sel_src}")
+                    deps.append(
+                        f"{INDENT}{{{{ posix }}}}automake        {sel_src_not_win}"
                     )
                     deps.append(
-                        "{indent}{{{{ posix }}}}autoconf        {sel}".format(
-                            indent=INDENT, sel=sel_src
-                        )
-                    )
-                    deps.append(
-                        "{indent}{{{{ posix }}}}automake        {sel}".format(
-                            indent=INDENT, sel=sel_src_not_win
-                        )
-                    )
-                    deps.append(
-                        "{indent}{{{{ posix }}}}automake-wrapper{sel}".format(
-                            indent=INDENT, sel=sel_src_and_win
-                        )
+                        f"{INDENT}{{{{ posix }}}}automake-wrapper{sel_src_and_win}"
                     )
                     deps.append(f"{INDENT}{{{{ posix }}}}pkg-config")
                 if need_make:
-                    deps.append(
-                        "{indent}{{{{ posix }}}}make            {sel}".format(
-                            indent=INDENT, sel=sel_src
-                        )
-                    )
+                    deps.append(f"{INDENT}{{{{ posix }}}}make            {sel_src}")
                     if not need_autotools:
                         deps.append(
-                            "{indent}{{{{ posix }}}}sed             {sel}".format(
-                                indent=INDENT, sel=sel_src_and_win
-                            )
+                            f"{INDENT}{{{{ posix }}}}sed             {sel_src_and_win}"
                         )
                     deps.append(
-                        "{indent}{{{{ posix }}}}coreutils       {sel}".format(
-                            indent=INDENT, sel=sel_src_and_win
-                        )
+                        f"{INDENT}{{{{ posix }}}}coreutils       {sel_src_and_win}"
                     )
-                deps.append(
-                    "{indent}{{{{ posix }}}}zip             {sel}".format(
-                        indent=INDENT, sel=sel_src_and_win
-                    )
-                )
+                deps.append(f"{INDENT}{{{{ posix }}}}zip             {sel_src_and_win}")
                 if add_cross_r_base:
                     deps.append(f"{INDENT}cross-r-base {{{{ r_base }}}}  {sel_cross}")
             elif dep_type == "run":
                 if need_c or need_cxx or need_f:
                     deps.append(
-                        "{indent}{{{{native}}}}gcc-libs       {sel}".format(
-                            indent=INDENT, sel=sel_src_and_win
-                        )
+                        f"{INDENT}{{{{native}}}}gcc-libs       {sel_src_and_win}"
                     )
 
             if dep_type == "host" or dep_type == "run":
@@ -1605,13 +1568,7 @@ def skeletonize(
                         conda_name = "r-" + name.lower()
 
                         if dep_dict[name]:
-                            deps.append(
-                                "{indent}{name} {version}".format(
-                                    name=conda_name,
-                                    version=dep_dict[name],
-                                    indent=INDENT,
-                                )
-                            )
+                            deps.append(f"{INDENT}{conda_name} {dep_dict[name]}")
                         else:
                             deps.append(f"{INDENT}{conda_name}")
                         if recursive:
@@ -1631,7 +1588,7 @@ def skeletonize(
                                 )
                                 package_list.append(lower_name)
 
-            d["%s_depends" % dep_type] = "".join(deps)
+            d[f"{dep_type}_depends"] = "".join(deps)
 
     if no_comments:
         global CRAN_BUILD_SH_SOURCE, CRAN_META
@@ -1645,7 +1602,7 @@ def skeletonize(
             if update_policy == "error":
                 raise RuntimeError(
                     "directory already exists "
-                    "(and --update-policy is 'error'): %s" % dir_path
+                    f"(and --update-policy is 'error'): {dir_path}"
                 )
             elif update_policy == "overwrite":
                 rm_rf(dir_path)
@@ -1668,7 +1625,7 @@ def skeletonize(
             makedirs(join(dir_path))
         except:
             pass
-        print("Writing recipe for %s" % package.lower())
+        print(f"Writing recipe for {package.lower()}")
         with open(join(dir_path, "meta.yaml"), "w") as f:
             f.write(clear_whitespace(CRAN_META.format(**d)))
         if not exists(join(dir_path, "build.sh")) or update_policy == "overwrite":
@@ -1725,14 +1682,14 @@ def get_outdated(output_dir, cran_index, packages=()):
             continue
 
         if recipe_name not in cran_index:
-            print("Skipping %s, not found on CRAN" % recipe)
+            print(f"Skipping {recipe}, not found on CRAN")
             continue
 
         version_compare(
             join(output_dir, recipe), cran_index[recipe_name][1].replace("-", "_")
         )
 
-        print("Updating %s" % recipe)
+        print(f"Updating {recipe}")
         to_update.append(recipe_name)
 
     return to_update

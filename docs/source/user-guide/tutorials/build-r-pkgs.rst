@@ -2,10 +2,6 @@
 Building R packages with skeleton CRAN
 ======================================
 
-.. contents::
-   :local:
-   :depth: 1
-
 Overview
 ========
 

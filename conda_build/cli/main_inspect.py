@@ -1,21 +1,34 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
+
 import logging
 import sys
 from os.path import expanduser
 from pprint import pprint
+from typing import TYPE_CHECKING
 
-from conda.base.context import context, determine_target_prefix
+from conda.base.context import context
 
 from .. import api
-from ..conda_interface import ArgumentParser, add_parser_prefix
-from ..deprecations import deprecated
+
+try:
+    from conda.cli.helpers import add_parser_prefix
+except ImportError:
+    # conda<23.11
+    from conda.cli.conda_argparse import add_parser_prefix
+
+if TYPE_CHECKING:
+    from argparse import ArgumentParser, Namespace
+    from collections.abc import Sequence
 
 logging.basicConfig(level=logging.INFO)
 
 
-def parse_args(args):
-    p = ArgumentParser(
+def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
+    from conda.cli.conda_argparse import ArgumentParser
+
+    parser = ArgumentParser(
         prog="conda inspect",
         description="Tools for inspecting conda packages.",
         epilog="""
@@ -23,7 +36,7 @@ Run --help on the subcommands like 'conda inspect linkages --help' to see the
 options available.
         """,
     )
-    subcommand = p.add_subparsers(
+    subcommand = parser.add_subparsers(
         dest="subcommand",
     )
 
@@ -134,8 +147,10 @@ Tools for investigating conda channels.
         "--test-installable",
         "-t",
         action="store_true",
-        help="""Test every package in the channel to see if it is installable
-        by conda.""",
+        help=(
+            "DEPRECATED. This is the default (and only) behavior. "
+            "Test every package in the channel to see if it is installable by conda."
+        ),
     )
     channels.add_argument(
         "channel",
@@ -175,53 +190,47 @@ Tools for investigating conda channels.
         nargs="*",
         help="Conda packages to inspect.",
     )
-    args = p.parse_args(args)
-    return p, args
+
+    return parser, parser.parse_args(args)
 
 
-def execute(args):
-    parser, args = parse_args(args)
+def execute(args: Sequence[str] | None = None) -> int:
+    parser, parsed = parse_args(args)
+    context.__init__(argparse_args=parsed)
 
-    if not args.subcommand:
+    if not parsed.subcommand:
         parser.print_help()
-        exit()
-
-    elif args.subcommand == "channels":
-        if not args.test_installable:
-            parser.error("At least one option (--test-installable) is required.")
-        else:
-            print(api.test_installable(args.channel))
-    elif args.subcommand == "linkages":
+        sys.exit(0)
+    elif parsed.subcommand == "channels":
+        print(api.test_installable(parsed.channel))
+    elif parsed.subcommand == "linkages":
         print(
             api.inspect_linkages(
-                args.packages,
-                prefix=determine_target_prefix(context, args),
-                untracked=args.untracked,
-                all_packages=args.all,
-                show_files=args.show_files,
-                groupby=args.groupby,
-                sysroot=expanduser(args.sysroot),
+                parsed.packages,
+                prefix=context.target_prefix,
+                untracked=parsed.untracked,
+                all_packages=parsed.all,
+                show_files=parsed.show_files,
+                groupby=parsed.groupby,
+                sysroot=expanduser(parsed.sysroot),
             )
         )
-    elif args.subcommand == "objects":
+    elif parsed.subcommand == "objects":
         print(
             api.inspect_objects(
-                args.packages,
-                prefix=determine_target_prefix(context, args),
-                groupby=args.groupby,
+                parsed.packages,
+                prefix=context.target_prefix,
+                groupby=parsed.groupby,
             )
         )
-    elif args.subcommand == "prefix-lengths":
+    elif parsed.subcommand == "prefix-lengths":
         if not api.inspect_prefix_length(
-            args.packages, min_prefix_length=args.min_prefix_length
+            parsed.packages, min_prefix_length=parsed.min_prefix_length
         ):
             sys.exit(1)
-    elif args.subcommand == "hash-inputs":
-        pprint(api.inspect_hash_inputs(args.packages))
+    elif parsed.subcommand == "hash-inputs":
+        pprint(api.inspect_hash_inputs(parsed.packages))
     else:
-        raise ValueError(f"Unrecognized subcommand: {args.subcommand}.")
+        parser.error(f"Unrecognized subcommand: {parsed.subcommand}.")
 
-
-@deprecated("3.26.0", "4.0.0", addendum="Use `conda inspect` instead.")
-def main():
-    return execute(sys.argv[1:])
+    return 0

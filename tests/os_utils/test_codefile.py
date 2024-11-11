@@ -3,13 +3,16 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Callable
+from typing import TYPE_CHECKING
 
 import pytest
 
 from conda_build.os_utils.liefldd import codefile_class as liefldd_codefile_class
 from conda_build.os_utils.pyldd import DLLfile, EXEfile, elffile, machofile
 from conda_build.os_utils.pyldd import codefile_class as pyldd_codefile_class
+
+if TYPE_CHECKING:
+    from typing import Callable
 
 LDD = Path(__file__).parent.parent / "data" / "ldd"
 

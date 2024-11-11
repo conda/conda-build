@@ -51,8 +51,10 @@ Authors are sorted alphabetically.
 * Dan Blanchard
 * Dan Lovell
 * Daniel Bast
+* Daniel Ching
 * Daniel Damiani
 * Daniel Holth
+* Daniel Petry
 * Darren Dale
 * Dave Clements
 * Dave Hirschfeld
@@ -74,6 +76,7 @@ Authors are sorted alphabetically.
 * Felix Kühnl
 * Ferry Firmansjah
 * Filipe Fernandes
+* Finn Womack
 * Floris Bruynooghe
 * Gabriel Reis
 * Gaëtan de Menten
@@ -81,6 +84,7 @@ Authors are sorted alphabetically.
 * Greg Brener
 * Guilherme Quentel Melo
 * Guillaume Baty
+* H. Vetinari
 * Harsh Gupta
 * Harun Reşit Zafer
 * Heather Kelly
@@ -117,12 +121,14 @@ Authors are sorted alphabetically.
 * Juan Lasheras
 * Julian Rüth
 * Julien Schueller
+* Justin Wood (Callek)
 * Jürgen Gmach
 * Jędrzej Nowak
 * Kai Tietz
 * Kale Franz
 * Katherine Kinnaman
 * Ken Odegard
+* Klaus Zimmermann
 * Korijn van Golen
 * Kurt Schelfthout
 * Kyle Leaders
@@ -213,7 +219,9 @@ Authors are sorted alphabetically.
 * Thomas A Caswell
 * Thomas Holder
 * Thomas Kluyver
+* Tim Paine
 * Tim Snyder
+* Tobias Fischer
 * Todd Tomashek
 * Tom Davidson
 * Tom Pollard
@@ -232,6 +240,7 @@ Authors are sorted alphabetically.
 * Wolf Vollprecht
 * Wolfgang Ulmer
 * Yann
+* Yannik Tausch
 * Yoav Ram
 * Yu Feng
 * Zane Dufour

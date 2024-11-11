@@ -9,11 +9,10 @@ import os
 import re
 import struct
 import sys
+from functools import partial
 from pathlib import Path
 
-from conda_build.utils import ensure_list, get_logger
-
-from ..deprecations import deprecated
+from ..utils import ensure_list, get_logger, on_linux, on_mac, on_win
 
 logging.basicConfig(level=logging.INFO)
 
@@ -363,21 +362,6 @@ def do_file(file, lc_operation, off_sz, arch, results, *args):
         results.append(do_macho(file, 64, BIG_ENDIAN, lc_operation, *args))
     elif magic == MH_CIGAM_64 and arch in ("any", "x86_64"):
         results.append(do_macho(file, 64, LITTLE_ENDIAN, lc_operation, *args))
-
-
-@deprecated("3.28.0", "4.0.0")
-def mach_o_change(path, arch, what, value):
-    """
-    Replace a given name (what) in any LC_LOAD_DYLIB command found in
-    the given binary with a new name (value), provided it's shorter.
-    """
-
-    assert len(what) >= len(value)
-
-    results = []
-    with open(path, "r+b") as f:
-        do_file(f, replace_lc_load_dylib, offset_size(), arch, results, what, value)
-    return results
 
 
 def mach_o_find_dylibs(ofile, arch, regex=".*"):
@@ -1064,29 +1048,7 @@ def codefile_class(
         return None
 
 
-@deprecated(
-    "3.28.0",
-    "4.0.0",
-    addendum="Use `conda_build.os_utils.pyldd.codefile_class` instead.",
-)
-def is_codefile(path: str | os.PathLike | Path, skip_symlinks: bool = True) -> bool:
-    return bool(codefile_class(path, skip_symlinks=skip_symlinks))
-
-
-@deprecated(
-    "3.28.0",
-    "4.0.0",
-    addendum="Use `conda_build.os_utils.pyldd.codefile_class` instead.",
-)
-def codefile_type(
-    path: str | os.PathLike | Path,
-    skip_symlinks: bool = True,
-) -> str | None:
-    codefile = codefile_class(path, skip_symlinks=skip_symlinks)
-    return codefile.__name__ if codefile else None
-
-
-def _trim_sysroot(sysroot):
+def _trim_sysroot(sysroot: str) -> str:
     if sysroot:
         while sysroot.endswith("/") or sysroot.endswith("\\"):
             sysroot = sysroot[:-1]
@@ -1095,7 +1057,7 @@ def _trim_sysroot(sysroot):
 
 def _get_arch_if_native(arch):
     if arch == "native":
-        if sys.platform == "win32":
+        if on_win:
             arch = "x86_64" if sys.maxsize > 2**32 else "i686"
         else:
             _, _, _, _, arch = os.uname()
@@ -1104,7 +1066,7 @@ def _get_arch_if_native(arch):
 
 # TODO :: Consider memoizing instead of repeatedly scanning
 # TODO :: libc.so/libSystem.dylib when inspect_linkages(recurse=True)
-def _inspect_linkages_this(filename, sysroot="", arch="native"):
+def _inspect_linkages_this(filename, sysroot: str = "", arch="native"):
     """
 
     :param filename:
@@ -1136,51 +1098,9 @@ def _inspect_linkages_this(filename, sysroot="", arch="native"):
         return cf.uniqueness_key(), orig_names, resolved_names
 
 
-@deprecated("3.28.0", "4.0.0")
-def inspect_rpaths(
-    filename, resolve_dirnames=True, use_os_varnames=True, sysroot="", arch="native"
-):
-    if not os.path.exists(filename):
-        return [], []
-    sysroot = _trim_sysroot(sysroot)
-    arch = _get_arch_if_native(arch)
-    with open(filename, "rb") as f:
-        # TODO :: Problems here:
-        # TODO :: 1. macOS can modify RPATH for children in each .so
-        # TODO :: 2. Linux can identify the program interpreter which can change the initial RPATHs
-        # TODO :: Should '/lib', '/usr/lib' not include (or be?!) `sysroot`(s) instead?
-        cf = codefile(f, arch, ["/lib", "/usr/lib"])
-        if resolve_dirnames:
-            return [
-                _get_resolved_location(
-                    cf,
-                    rpath,
-                    os.path.dirname(filename),
-                    os.path.dirname(filename),
-                    sysroot,
-                )[0]
-                for rpath in cf.rpaths_nontransitive
-            ]
-        else:
-            if use_os_varnames:
-                return [cf.to_os_varnames(rpath) for rpath in cf.rpaths_nontransitive]
-            else:
-                return cf.rpaths_nontransitive
-
-
-@deprecated("3.28.0", "4.0.0")
-def get_runpaths(filename, arch="native"):
-    if not os.path.exists(filename):
-        return []
-    arch = _get_arch_if_native(arch)
-    with open(filename, "rb") as f:
-        cf = codefile(f, arch, ["/lib", "/usr/lib"])
-        return cf.get_runpaths()
-
-
 # TODO :: Consider returning a tree structure or a dict when recurse is True?
 def inspect_linkages(
-    filename, resolve_filenames=True, recurse=True, sysroot="", arch="native"
+    filename, resolve_filenames=True, recurse=True, sysroot: str = "", arch="native"
 ):
     already_seen = set()
     todo = {filename}
@@ -1248,24 +1168,10 @@ def otool(*args):
             args.filename, resolve_filenames=False, recurse=False, arch=args.arch_type
         )
         print(
-            "Shared libs used (non-recursively) by {} are:\n{}".format(
-                args.filename, shared_libs
-            )
+            f"Shared libs used (non-recursively) by {args.filename} are:\n{shared_libs}"
         )
         return 0
     return 1
-
-
-@deprecated("3.28.0", "4.0.0")
-def otool_sys(*args):
-    import subprocess
-
-    return subprocess.check_output("/usr/bin/otool", args).decode(encoding="ascii")
-
-
-@deprecated("3.28.0", "4.0.0")
-def ldd_sys(*args):
-    return []
 
 
 def ldd(*args):
@@ -1280,11 +1186,7 @@ def ldd(*args):
         shared_libs = inspect_linkages(
             args.filename, resolve_filenames=False, recurse=True
         )
-        print(
-            "Shared libs used (recursively) by {} are:\n{}".format(
-                args.filename, shared_libs
-            )
-        )
+        print(f"Shared libs used (recursively) by {args.filename} are:\n{shared_libs}")
         return 0
     return 1
 
@@ -1307,11 +1209,9 @@ def main(argv):
 
 def main_maybe_test():
     if sys.argv[1] == "test":
-        import functools
-
         tool = sys.argv[2]
         if tool != "otool" and tool != "ldd":
-            if sys.platform == "darwin":
+            if on_mac:
                 tool = "otool"
             else:
                 tool = "ldd"
@@ -1327,21 +1227,21 @@ def main_maybe_test():
         else:
             sysroot = ""
         if tool == "otool":
-            test_this = functools.partial(
+            test_this = partial(
                 inspect_linkages,
                 sysroot=sysroot,
                 resolve_filenames=False,
                 recurse=False,
             )
-            if sys.platform == "darwin":
-                test_that = functools.partial(inspect_linkages_otool)
+            if on_mac:
+                test_that = partial(inspect_linkages_otool)
             SOEXT = "dylib"
         elif tool == "ldd":
-            test_this = functools.partial(
+            test_this = partial(
                 inspect_linkages, sysroot=sysroot, resolve_filenames=True, recurse=True
             )
-            if sys.platform.startswith("linux"):
-                test_that = functools.partial(inspect_linkages_ldd)
+            if on_linux:
+                test_that = partial(inspect_linkages_ldd)
             SOEXT = "so"
         # Find a load of dylibs or elfs and compare
         # the output against 'otool -L' or 'ldd'
@@ -1363,11 +1263,9 @@ def main_maybe_test():
             else:
                 that = this
             print("\n".join(this))
-            assert set(this) == set(
-                that
-            ), "py-ldd result incorrect for {}, this:\n{}\nvs that:\n{}".format(
-                codefile, set(this), set(that)
-            )
+            assert (
+                set(this) == set(that)
+            ), f"py-ldd result incorrect for {codefile}, this:\n{set(this)}\nvs that:\n{set(that)}"
     else:
         return main(sys.argv)
 

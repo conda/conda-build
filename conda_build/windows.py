@@ -18,15 +18,15 @@ except:
     # Allow some imports to work for cross or CONDA_SUBDIR usage.
     pass
 
-from conda_build import environ
-from conda_build.utils import (
+from . import environ
+from .utils import (
     check_call_env,
     copy_into,
     get_logger,
     path_prepended,
     write_bat_activation_text,
 )
-from conda_build.variants import get_default_variant, set_language_env_vars
+from .variants import get_default_variant, set_language_env_vars
 
 VS_VERSION_STRING = {
     "8.0": "Visual Studio 8 2005",
@@ -56,16 +56,13 @@ def fix_staged_scripts(scripts_dir, config):
             # If it's a #!python script
             if not (line.startswith(b"#!") and b"python" in line.lower()):
                 continue
-            print(
-                "Adjusting unix-style #! script %s, "
-                "and adding a .bat file for it" % fn
-            )
+            print(f"Adjusting unix-style #! script {fn}, and adding a .bat file for it")
             # copy it with a .py extension (skipping that first #! line)
             with open(join(scripts_dir, fn + "-script.py"), "wb") as fo:
                 fo.write(f.read())
             # now create the .exe file
             copy_into(
-                join(dirname(__file__), "cli-%s.exe" % config.host_arch),
+                join(dirname(__file__), f"cli-{config.host_arch}.exe"),
                 join(scripts_dir, fn + ".exe"),
             )
 
@@ -105,13 +102,16 @@ def msvc_env_cmd(bits, config, override=None):
     # there's clear user demand, it's not clear that we should invest the
     # effort into updating a known deprecated function for a new platform.
     log = get_logger(__name__)
-    log.warn(
+    log.warning(
         "Using legacy MSVC compiler setup.  This will be removed in conda-build 4.0. "
         "If this recipe does not use a compiler, this message is safe to ignore.  "
         "Otherwise, use {{compiler('<language>')}} jinja2 in requirements/build."
     )
+    if bits not in ["64", "32"]:
+        log.warning(f"The legacy MSVC compiler setup does not support {bits} builds. ")
+        return ""
     if override:
-        log.warn(
+        log.warning(
             "msvc_compiler key in meta.yaml is deprecated. Use the new"
             "variant-powered compiler configuration instead. Note that msvc_compiler"
             "is incompatible with the new {{{{compiler('c')}}}} jinja scheme."
@@ -203,9 +203,7 @@ def msvc_env_cmd(bits, config, override=None):
             # If the WindowsSDKDir environment variable has not been successfully
             # set then try activating VS2010
             msvc_env_lines.append(
-                'if not "%WindowsSDKDir%" == "{}" ( {} )'.format(
-                    WIN_SDK_71_PATH, build_vcvarsall_cmd(vcvarsall_vs_path)
-                )
+                f'if not "%WindowsSDKDir%" == "{WIN_SDK_71_PATH}" ( {build_vcvarsall_cmd(vcvarsall_vs_path)} )'
             )
         # sdk is not installed.  Fall back to only trying VS 2010
         except KeyError:
@@ -337,7 +335,7 @@ def build(m, bld_bat, stats, provision_only=False):
             rewrite_env = {
                 k: env[k] for k in ["PREFIX", "BUILD_PREFIX", "SRC_DIR"] if k in env
             }
-            print("Rewriting env in output: %s" % pprint.pformat(rewrite_env))
+            print(f"Rewriting env in output: {pprint.pformat(rewrite_env)}")
         check_call_env(
             cmd, cwd=m.config.work_dir, stats=stats, rewrite_stdout_env=rewrite_env
         )

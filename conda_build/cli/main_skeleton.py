@@ -1,22 +1,31 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
-import importlib
+from __future__ import annotations
+
 import logging
 import os
 import pkgutil
 import sys
+from importlib import import_module
+from typing import TYPE_CHECKING
+
+from conda.base.context import context
 
 from .. import api
-from ..conda_interface import ArgumentParser
 from ..config import Config
-from ..deprecations import deprecated
+
+if TYPE_CHECKING:
+    from argparse import ArgumentParser, Namespace
+    from collections.abc import Sequence
 
 thisdir = os.path.dirname(os.path.abspath(__file__))
 logging.basicConfig(level=logging.INFO)
 
 
-def parse_args(args):
-    p = ArgumentParser(
+def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
+    from conda.cli.conda_argparse import ArgumentParser
+
+    parser = ArgumentParser(
         prog="conda skeleton",
         description="""
 Generates a boilerplate/skeleton recipe, which you can then edit to create a
@@ -28,7 +37,7 @@ options available.
         """,
     )
 
-    repos = p.add_subparsers(dest="repo")
+    repos = parser.add_subparsers(dest="repo")
 
     skeletons = [
         name
@@ -37,35 +46,29 @@ options available.
     for skeleton in skeletons:
         if skeleton.startswith("_"):
             continue
-        module = importlib.import_module("conda_build.skeletons." + skeleton)
+        module = import_module("conda_build.skeletons." + skeleton)
         module.add_parser(repos)
 
-    args = p.parse_args(args)
-    return p, args
+    return parser, parser.parse_args(args)
 
 
-def execute(args):
-    parser, args = parse_args(args)
-    config = Config(**args.__dict__)
+def execute(args: Sequence[str] | None = None) -> int:
+    parser, parsed = parse_args(args)
+    context.__init__(argparse_args=parsed)
 
-    if not args.repo:
+    config = Config(**parsed.__dict__)
+
+    if not parsed.repo:
         parser.print_help()
         sys.exit()
 
     api.skeletonize(
-        args.packages,
-        args.repo,
-        output_dir=args.output_dir,
-        recursive=args.recursive,
-        version=args.version,
+        parsed.packages,
+        parsed.repo,
+        output_dir=parsed.output_dir,
+        recursive=parsed.recursive,
+        version=parsed.version,
         config=config,
     )
 
-
-@deprecated("3.26.0", "4.0.0", addendum="Use `conda skeleton` instead.")
-def main():
-    return execute(sys.argv[1:])
-
-
-if __name__ == "__main__":
-    main()
+    return 0

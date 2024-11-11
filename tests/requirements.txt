@@ -1,35 +1,23 @@
-anaconda-client
 beautifulsoup4
 chardet
-conda >=4.13
-conda-forge::allure-pytest
-conda-index
-conda-package-handling
-conda-verify
-contextlib2
-cytoolz
+conda >=23.7.0
+conda-index >=0.4.0
+conda-libmamba-solver  # ensure we use libmamba
+conda-package-handling >=2.2.0
 filelock
-git
+frozendict >=2.4.2
 jinja2
-numpy
-perl
-pip
+jsonschema >=4.19
+menuinst >=2
+packaging
 pkginfo
 psutil
 py-lief
-pyflakes
-pytest
-pytest-cov
-pytest-forked
-pytest-mock
-pytest-replay
-pytest-rerunfailures
-pytest-xdist
+python >=3.9
 python-libarchive-c
 pytz
+pyyaml
 requests
-ripgrep
-ruamel.yaml
+ripgrep  # for faster grep
 setuptools_scm  # needed for devenv version detection
-tomli
 tqdm

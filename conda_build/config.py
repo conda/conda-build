@@ -3,30 +3,38 @@
 """
 Module to store conda build settings.
 """
+
+from __future__ import annotations
+
 import copy
 import math
 import os
+import pickle
 import re
 import shutil
-import sys
 import time
 from collections import namedtuple
 from os.path import abspath, expanduser, expandvars, join
+from typing import TYPE_CHECKING
 
-from .conda_interface import (
-    binstar_upload,
-    cc_conda_build,
-    cc_platform,
-    root_dir,
-    root_writable,
-    subdir,
-    url_path,
+from conda.base.context import context
+from conda.utils import url_path
+
+from .utils import (
+    get_build_folders,
+    get_conda_operation_locks,
+    get_logger,
+    on_win,
+    rm_rf,
 )
-from .deprecations import deprecated
-from .utils import get_build_folders, get_conda_operation_locks, get_logger, rm_rf
 from .variants import get_default_variant
 
-on_win = sys.platform == "win32"
+if TYPE_CHECKING:
+    from pathlib import Path
+    from typing import Any, TypeVar
+
+    T = TypeVar("T")
+
 invocation_time = ""
 
 
@@ -48,30 +56,12 @@ filename_hashing_default = "true"
 _src_cache_root_default = None
 error_overlinking_default = "false"
 error_overdepending_default = "false"
-noarch_python_build_age_default = 0
 enable_static_default = "false"
 no_rewrite_stdout_env_default = "false"
 ignore_verify_codes_default = []
 exit_on_verify_error_default = False
 conda_pkg_format_default = None
 zstd_compression_level_default = 19
-
-
-@deprecated("3.25.0", "4.0.0")
-def python2_fs_encode(strin):
-    return strin
-
-
-@deprecated(
-    "3.25.0",
-    "4.0.0",
-    addendum=(
-        "Use `pathlib.Path.mkdir(exist_ok=True)` or `os.makedirs(exist_ok=True)` "
-        "instead."
-    ),
-)
-def _ensure_dir(path: os.PathLike):
-    os.makedirs(path, exist_ok=True)
 
 
 # we need this to be accessible to the CLI, so it needs to be more static.
@@ -95,13 +85,12 @@ Setting = namedtuple("ConfigSetting", "name, default")
 def _get_default_settings():
     return [
         Setting("activate", True),
-        Setting("anaconda_upload", binstar_upload),
+        Setting("anaconda_upload", context.binstar_upload),
         Setting("force_upload", True),
         Setting("channel_urls", []),
         Setting("dirty", False),
         Setting("include_recipe", True),
         Setting("no_download_source", False),
-        Setting("override_channels", False),
         Setting("skip_existing", False),
         Setting("token", None),
         Setting("user", None),
@@ -123,14 +112,16 @@ def _get_default_settings():
         Setting("test_run_post", False),
         Setting(
             "filename_hashing",
-            cc_conda_build.get("filename_hashing", filename_hashing_default).lower()
+            context.conda_build.get(
+                "filename_hashing", filename_hashing_default
+            ).lower()
             == "true",
         ),
         Setting("keep_old_work", False),
         Setting(
             "_src_cache_root",
-            abspath(expanduser(expandvars(cc_conda_build.get("cache_dir"))))
-            if cc_conda_build.get("cache_dir")
+            abspath(expanduser(expandvars(cache_dir)))
+            if (cache_dir := context.conda_build.get("cache_dir"))
             else _src_cache_root_default,
         ),
         Setting("copy_test_source_files", True),
@@ -155,30 +146,26 @@ def _get_default_settings():
         #    cli/main_build.py that this default will switch in conda-build 4.0.
         Setting(
             "error_overlinking",
-            cc_conda_build.get("error_overlinking", error_overlinking_default).lower()
+            context.conda_build.get(
+                "error_overlinking", error_overlinking_default
+            ).lower()
             == "true",
         ),
         Setting(
             "error_overdepending",
-            cc_conda_build.get(
+            context.conda_build.get(
                 "error_overdepending", error_overdepending_default
             ).lower()
             == "true",
         ),
         Setting(
-            "noarch_python_build_age",
-            cc_conda_build.get(
-                "noarch_python_build_age", noarch_python_build_age_default
-            ),
-        ),
-        Setting(
             "enable_static",
-            cc_conda_build.get("enable_static", enable_static_default).lower()
+            context.conda_build.get("enable_static", enable_static_default).lower()
             == "true",
         ),
         Setting(
             "no_rewrite_stdout_env",
-            cc_conda_build.get(
+            context.conda_build.get(
                 "no_rewrite_stdout_env", no_rewrite_stdout_env_default
             ).lower()
             == "true",
@@ -217,11 +204,13 @@ def _get_default_settings():
         Setting("verify", True),
         Setting(
             "ignore_verify_codes",
-            cc_conda_build.get("ignore_verify_codes", ignore_verify_codes_default),
+            context.conda_build.get("ignore_verify_codes", ignore_verify_codes_default),
         ),
         Setting(
             "exit_on_verify_error",
-            cc_conda_build.get("exit_on_verify_error", exit_on_verify_error_default),
+            context.conda_build.get(
+                "exit_on_verify_error", exit_on_verify_error_default
+            ),
         ),
         # Recipes that have no host section, only build, should bypass the build/host line.
         # This is to make older recipes still work with cross-compiling.  True cross-compiling
@@ -239,17 +228,17 @@ def _get_default_settings():
         Setting("_pip_cache_dir", None),
         Setting(
             "zstd_compression_level",
-            cc_conda_build.get(
+            context.conda_build.get(
                 "zstd_compression_level", zstd_compression_level_default
             ),
         ),
         # this can be set to different values (currently only 2 means anything) to use package formats
         Setting(
             "conda_pkg_format",
-            cc_conda_build.get("pkg_format", conda_pkg_format_default),
+            context.conda_build.get("pkg_format", conda_pkg_format_default),
         ),
         Setting("suppress_variables", False),
-        Setting("build_id_pat", cc_conda_build.get("build_id_pat", "{n}_{t}")),
+        Setting("build_id_pat", context.conda_build.get("build_id_pat", "{n}_{t}")),
     ]
 
 
@@ -303,6 +292,10 @@ class Config:
         for lang in ("perl", "lua", "python", "numpy", "r_base"):
             set_lang(self.variant, lang)
 
+        # --override-channels is a valid CLI argument but we no longer wish to set it here
+        # use conda.base.context.context.override_channels instead
+        kwargs.pop("override_channels", None)
+
         self._build_id = kwargs.pop("build_id", getattr(self, "_build_id", ""))
         source_cache = kwargs.pop("cache_dir", None)
         croot = kwargs.pop("croot", None)
@@ -329,12 +322,12 @@ class Config:
     def arch(self):
         """Always the native (build system) arch, except when pretending to be some
         other platform"""
-        return self._arch or subdir.rsplit("-", 1)[1]
+        return self._arch or context.subdir.rsplit("-", 1)[1]
 
     @arch.setter
     def arch(self, value):
         log = get_logger(__name__)
-        log.warn(
+        log.warning(
             "Setting build arch. This is only useful when pretending to be on another "
             "arch, such as for rendering necessary dependencies on a non-native arch. "
             "I trust that you know what you're doing."
@@ -345,12 +338,12 @@ class Config:
     def platform(self):
         """Always the native (build system) OS, except when pretending to be some
         other platform"""
-        return self._platform or subdir.rsplit("-", 1)[0]
+        return self._platform or context.subdir.rsplit("-", 1)[0]
 
     @platform.setter
     def platform(self, value):
         log = get_logger(__name__)
-        log.warn(
+        log.warning(
             "Setting build platform. This is only useful when "
             "pretending to be on another platform, such as "
             "for rendering necessary dependencies on a non-native "
@@ -388,8 +381,8 @@ class Config:
         return self.host_platform == "noarch"
 
     def reset_platform(self):
-        if not self.platform == cc_platform:
-            self.platform = cc_platform
+        if not self.platform == context.platform:
+            self.platform = context.platform
 
     @property
     def subdir(self):
@@ -458,25 +451,25 @@ class Config:
         self._src_cache_root = value
 
     @property
-    def croot(self):
+    def croot(self) -> str:
         """This is where source caches and work folders live"""
         if not self._croot:
             _bld_root_env = os.getenv("CONDA_BLD_PATH")
-            _bld_root_rc = cc_conda_build.get("root-dir")
+            _bld_root_rc = context.conda_build.get("root-dir")
             if _bld_root_env:
                 self._croot = abspath(expanduser(_bld_root_env))
             elif _bld_root_rc:
                 self._croot = abspath(expanduser(expandvars(_bld_root_rc)))
-            elif root_writable:
-                self._croot = join(root_dir, "conda-bld")
+            elif context.root_writable:
+                self._croot = join(context.root_prefix, "conda-bld")
             else:
                 self._croot = abspath(expanduser("~/conda-bld"))
         return self._croot
 
     @croot.setter
-    def croot(self, croot):
+    def croot(self, croot: str | os.PathLike | Path) -> None:
         """Set croot - if None is passed, then the default value will be used"""
-        self._croot = croot
+        self._croot = str(croot) if croot else None
 
     @property
     def output_folder(self):
@@ -492,65 +485,8 @@ class Config:
         It has the environments and work directories."""
         return os.path.join(self.croot, self.build_id)
 
-    # back compat for conda-build-all - expects CONDA_* vars to be attributes of the config object
-    @property
-    @deprecated("3.0.28", "4.0.0")
-    def CONDA_LUA(self):
-        return self.variant.get("lua", get_default_variant(self)["lua"])
-
-    @CONDA_LUA.setter
-    @deprecated("3.0.28", "4.0.0")
-    def CONDA_LUA(self, value):
-        self.variant["lua"] = value
-
-    @property
-    @deprecated("3.0.28", "4.0.0")
-    def CONDA_PY(self):
-        value = self.variant.get("python", get_default_variant(self)["python"])
-        return int("".join(value.split(".")))
-
-    @CONDA_PY.setter
-    @deprecated("3.0.28", "4.0.0")
-    def CONDA_PY(self, value):
-        value = str(value)
-        self.variant["python"] = ".".join((value[0], value[1:]))
-
-    @property
-    @deprecated("3.0.28", "4.0.0")
-    def CONDA_NPY(self):
-        value = self.variant.get("numpy", get_default_variant(self)["numpy"])
-        return int("".join(value.split(".")))
-
-    @CONDA_NPY.setter
-    @deprecated("3.0.28", "4.0.0")
-    def CONDA_NPY(self, value):
-        value = str(value)
-        self.variant["numpy"] = ".".join((value[0], value[1:]))
-
-    @property
-    @deprecated("3.0.28", "4.0.0")
-    def CONDA_PERL(self):
-        return self.variant.get("perl", get_default_variant(self)["perl"])
-
-    @CONDA_PERL.setter
-    @deprecated("3.0.28", "4.0.0")
-    def CONDA_PERL(self, value):
-        self.variant["perl"] = value
-
-    @property
-    @deprecated("3.0.28", "4.0.0")
-    def CONDA_R(self):
-        return self.variant.get("r_base", get_default_variant(self)["r_base"])
-
-    @CONDA_R.setter
-    @deprecated("3.0.28", "4.0.0")
-    def CONDA_R(self, value):
-        self.variant["r_base"] = value
-
     def _get_python(self, prefix, platform):
-        if platform.startswith("win") or (
-            platform == "noarch" and sys.platform == "win32"
-        ):
+        if platform.startswith("win") or (platform == "noarch" and on_win):
             if os.path.isfile(os.path.join(prefix, "python_d.exe")):
                 res = join(prefix, "python_d.exe")
             else:
@@ -577,9 +513,7 @@ class Config:
         return res
 
     def _get_r(self, prefix, platform):
-        if platform.startswith("win") or (
-            platform == "noarch" and sys.platform == "win32"
-        ):
+        if platform.startswith("win") or (platform == "noarch" and on_win):
             res = join(prefix, "Scripts", "R.exe")
             # MRO test:
             if not os.path.exists(res):
@@ -784,7 +718,7 @@ class Config:
         #     subdir should be the native platform, while self.subdir would be the host platform.
         return {
             join(self.croot, self.host_subdir),
-            join(self.croot, subdir),
+            join(self.croot, context.subdir),
             join(self.croot, "noarch"),
         }
 
@@ -887,12 +821,24 @@ class Config:
         for folder in self.bldpkgs_dirs:
             rm_rf(folder)
 
-    def copy(self):
+    def copy(self) -> Config:
         new = copy.copy(self)
-        new.variant = copy.deepcopy(self.variant)
+        new.variant = self._copy_variants(self.variant)
         if hasattr(self, "variants"):
-            new.variants = copy.deepcopy(self.variants)
+            new.variants = self.copy_variants()
         return new
+
+    def _copy_variants(self, variant_or_list: T) -> T:
+        """Efficient deep copy used for variant dicts and lists"""
+        # Use pickle.loads(pickle.dumps(...) as a faster copy.deepcopy alternative.
+        return pickle.loads(pickle.dumps(variant_or_list, pickle.HIGHEST_PROTOCOL))
+
+    def copy_variants(self) -> list[dict] | None:
+        """Return deep copy of the variants list, if any"""
+        if getattr(self, "variants", None) is not None:
+            return self._copy_variants(self.variants)
+        else:
+            return None
 
     # context management - automatic cleanup if self.dirty or self.keep_old_work is not True
     def __enter__(self):
@@ -913,7 +859,11 @@ class Config:
             self.clean(remove_folders=False)
 
 
-def _get_or_merge_config(config, variant=None, **kwargs):
+def _get_or_merge_config(
+    config: Config | None,
+    variant: dict[str, Any] | None = None,
+    **kwargs,
+) -> Config:
     # This function should only ever be called via get_or_merge_config.
     # It only exists for us to monkeypatch a default config when running tests.
     if not config:
@@ -929,7 +879,11 @@ def _get_or_merge_config(config, variant=None, **kwargs):
     return config
 
 
-def get_or_merge_config(config, variant=None, **kwargs):
+def get_or_merge_config(
+    config: Config | None,
+    variant: dict[str, Any] | None = None,
+    **kwargs,
+) -> Config:
     """Always returns a new object - never changes the config that might be passed in."""
     return _get_or_merge_config(config, variant=variant, **kwargs)
 

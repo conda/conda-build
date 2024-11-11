@@ -3,18 +3,25 @@
 """
 Tools for converting conda packages
 """
+
+from __future__ import annotations
+
 import glob
 import hashlib
 import json
 import os
 import re
 import shutil
-import sys
 import tarfile
 import tempfile
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-from conda_build.utils import filter_info_files, walk
+from .exceptions import CondaBuildUserError
+from .utils import ensure_list, filter_info_files, walk
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
 
 
 def retrieve_c_extensions(file_path, show_imports=False):
@@ -113,9 +120,7 @@ def retrieve_python_version(file_path):
         )
         build_version = re.sub(r"\A.*py\d\d.*\Z", "python", index["build"])
 
-        return "{}{}.{}".format(
-            build_version, build_version_number[0], build_version_number[1]
-        )
+        return f"{build_version}{build_version_number[0]}.{build_version_number[1]}"
 
 
 def extract_temporary_directory(file_path):
@@ -200,11 +205,7 @@ def update_index_file(temp_dir, target_platform, dependencies, verbose):
     if verbose:
         print("Updating platform from {} to {}".format(index["platform"], platform))
         print("Updating subdir from {} to {}".format(index["subdir"], target_platform))
-        print(
-            "Updating architecture from {} to {}".format(
-                source_architecture, architecture
-            )
-        )
+        print(f"Updating architecture from {source_architecture} to {architecture}")
 
     index["platform"] = platform
     index["subdir"] = target_platform
@@ -719,9 +720,7 @@ def convert_from_unix_to_windows(
                     )
 
                     prefixes.add(
-                        "/opt/anaconda1anaconda2anaconda3 text Scripts/{}-script.py\n".format(
-                            retrieve_executable_name(script)
-                        )
+                        f"/opt/anaconda1anaconda2anaconda3 text Scripts/{retrieve_executable_name(script)}-script.py\n"
                     )
 
             new_bin_path = os.path.join(temp_dir, "Scripts")
@@ -766,9 +765,7 @@ def convert_from_windows_to_unix(
                     remove_executable(directory, script)
 
                     prefixes.add(
-                        "/opt/anaconda1anaconda2anaconda3 text bin/{}\n".format(
-                            retrieve_executable_name(script)
-                        )
+                        f"/opt/anaconda1anaconda2anaconda3 text bin/{retrieve_executable_name(script)}\n"
                     )
 
             new_bin_path = os.path.join(temp_dir, "bin")
@@ -785,31 +782,35 @@ def convert_from_windows_to_unix(
 
 
 def conda_convert(
-    file_path,
-    output_dir=".",
-    show_imports=False,
-    platforms=None,
-    force=False,
-    dependencies=None,
-    verbose=False,
-    quiet=False,
-    dry_run=False,
-):
+    file_path: str,
+    output_dir: str = ".",
+    show_imports: bool = False,
+    platforms: str | Iterable[str] | None = None,
+    force: bool = False,
+    dependencies: str | Iterable[str] | None = None,
+    verbose: bool = False,
+    quiet: bool = False,
+    dry_run: bool = False,
+) -> None:
     """Convert a conda package between different platforms and architectures.
 
     Positional arguments:
     file_path (str) -- the file path to the source package's tar file
     output_dir (str) -- the file path to where to output the converted tar file
     show_imports (bool) -- show all C extensions found in the source package
-    platforms (str) -- the platforms to convert to: 'win-64', 'win-32', 'linux-64',
+    platforms list[str] -- the platforms to convert to: 'win-64', 'win-32', 'linux-64',
         'linux-32', 'osx-64', or 'all'
     force (bool) -- force conversion of packages that contain C extensions
-    dependencies (List[str]) -- the new dependencies to add to the source package's
+    dependencies (list[str]) -- the new dependencies to add to the source package's
         existing dependencies
     verbose (bool) -- show output of items that are updated
     quiet (bool) -- hide all output except warnings and errors
     dry_run (bool) -- show which conversions will take place
     """
+
+    platforms = ensure_list(platforms)
+    dependencies = ensure_list(dependencies)
+
     if show_imports:
         imports = retrieve_c_extensions(file_path)
         if len(imports) == 0:
@@ -817,15 +818,17 @@ def conda_convert(
         else:
             for c_extension in imports:
                 print(c_extension)
-        sys.exit()
+        return
 
     if not show_imports and len(platforms) == 0:
-        sys.exit("Error: --platform option required for conda package conversion.")
+        raise CondaBuildUserError(
+            "Error: --platform option required for conda package conversion."
+        )
 
     if len(retrieve_c_extensions(file_path)) > 0 and not force:
-        sys.exit(
-            "WARNING: Package {} contains C extensions; skipping conversion. "
-            "Use -f to force conversion.".format(os.path.basename(file_path))
+        raise CondaBuildUserError(
+            f"WARNING: Package {os.path.basename(file_path)} contains C extensions; skipping conversion. "
+            "Use -f to force conversion."
         )
 
     conversion_platform, source_platform, architecture = retrieve_package_platform(
@@ -853,16 +856,14 @@ def conda_convert(
     for platform in platforms:
         if platform == source_platform_architecture:
             print(
-                "Source platform '{}' and target platform '{}' are identical. "
-                "Skipping conversion.".format(source_platform_architecture, platform)
+                f"Source platform '{source_platform_architecture}' and target platform '{platform}' are identical. "
+                "Skipping conversion."
             )
             continue
 
         if not quiet:
             print(
-                "Converting {} from {} to {}".format(
-                    os.path.basename(file_path), source_platform_architecture, platform
-                )
+                f"Converting {os.path.basename(file_path)} from {source_platform_architecture} to {platform}"
             )
 
         if platform.startswith(("osx", "linux")) and conversion_platform == "unix":

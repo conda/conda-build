@@ -3,22 +3,15 @@
 """
 This module tests the test API.  These are high-level integration tests.
 """
+
 import os
 
 import pytest
 
 from conda_build import api
+from conda_build.exceptions import CondaBuildUserError
 
 from .utils import metadata_dir
-
-
-@pytest.mark.sanity
-def test_recipe_test(testing_config):
-    """Test calling conda build -t <recipe dir>"""
-    recipe = os.path.join(metadata_dir, "has_prefix_files")
-    metadata = api.render(recipe, config=testing_config)[0][0]
-    api.build(metadata, notest=True, anaconda_upload=False)
-    api.test(recipe, config=metadata.config)
 
 
 @pytest.mark.sanity
@@ -62,5 +55,5 @@ def test_api_extra_dep(testing_metadata):
     api.test(output, config=testing_metadata.config, extra_deps=["click"])
 
     # missing click dep will fail tests
-    with pytest.raises(SystemExit):
+    with pytest.raises(CondaBuildUserError):
         api.test(output, config=testing_metadata.config)

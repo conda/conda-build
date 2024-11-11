@@ -90,6 +90,8 @@ def load_setup_py_data(
         del sys.modules["versioneer"]
 
     try:
+        # numpy.distutils deprecated in Python 3.12+
+        # see https://numpy.org/doc/stable/reference/distutils_status_migration.html
         import numpy.distutils.core
 
         numpy_setup = numpy.distutils.core.setup
@@ -109,7 +111,7 @@ def load_setup_py_data(
             exec(code, ns, ns)
     else:
         if not permit_undefined_jinja:
-            raise TypeError(f"{setup_file} is not a file that can be read")
+            raise TypeError("%s is not a file that can be read" % setup_file)  # noqa: UP031
 
     sys.modules["versioneer"] = versioneer
 

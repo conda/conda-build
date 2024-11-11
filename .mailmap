@@ -68,8 +68,10 @@ Dan Blanchard <dan.blanchard@gmail.com> Dan Blanchard <dblanchard@ets.org>
 Dan Blanchard <dan.blanchard@gmail.com> Dan Blanchard <dan@parsely.com>
 Dan Lovell <dlovell@gmail.com> dlovell <dlovell@gmail.com>
 Daniel Bast <2790401+dbast@users.noreply.github.com>
+Daniel Ching <carterbox@users.noreply.github.com>
 Daniel Damiani <ddamiani@slac.stanford.edu>
 Daniel Holth <dholth@anaconda.com>
+Daniel Petry <dpetry@anaconda.com> danpetry <dpetry@anaconda.com>
 Darren Dale <dsdale24@gmail.com>
 Dave Clements <tnabtaf@gmail.com>
 Dave Hirschfeld <dhirschfeld@users.noreply.github.com> David Hirschfeld <david.hirschfeld@gazprom-mt.com>
@@ -80,7 +82,7 @@ Derek Ludwig <dludwig@continuum.io>
 Devon Ryan <dpryan79@gmail.com> dpryan79 <dpryan79@gmail.com>
 Diogo de Campos <campos@esss.com.br>
 Dougal J. Sutherland <dougal@gmail.com>
-Duncan Macleod <duncan.macleod@ligo.org>
+Duncan Macleod <duncanmmacleod+github@gmail.com> Duncan Macleod <duncan.macleod@ligo.org>
 Ed Campbell <drescampbell@gmail.com>
 Eli Rykoff <erykoff@stanford.edu> erykoff <erykoff@stanford.edu>
 Elliot Hughes <e.hughes@winton.com>
@@ -91,6 +93,7 @@ Evan Klitzke <evan@eklitzke.org>
 Felix Kühnl <xileF1337@users.noreply.github.com>
 Ferry Firmansjah <103191403+ffirmanff@users.noreply.github.com>
 Filipe Fernandes <ocefpaf@gmail.com> ocefpaf <ocefpaf@gmail.com>
+Finn Womack <flan313@gmail.com>
 Floris Bruynooghe <flub@devork.be>
 Gabriel Reis <gabriel.reis@gazprom-mt.com>
 Gaëtan de Menten <gdementen@gmail.com>
@@ -98,6 +101,7 @@ Geir Ove Myhr <Geir.Ove.Myhr@lr.org>
 Greg Brener <gbrener@users.noreply.github.com>
 Guilherme Quentel Melo <gqmelo@gmail.com>
 Guillaume Baty <guillaume.baty@wanadoo.fr>
+H. Vetinari <h.vetinari@gmx.com> h-vetinari <h.vetinari@gmx.com>
 Harsh Gupta <gupta.harsh96@gmail.com>
 Harun Reşit Zafer <harunzafer@gmail.com>
 Heather Kelly <heather999@users.noreply.github.com> heather999 <heather999@users.noreply.github.com>
@@ -130,7 +134,7 @@ John Kirkham <jakirkham@gmail.com> jakirkham <jakirkham@gmail.com>
 John Kirkham <jakirkham@gmail.com> John Kirkham <kirkhamj@janelia.hhmi.org>
 John Kirkham <jakirkham@gmail.com> John Kirkham <jakirkham@gmail.com>
 John Omotani <john.omotani@ukaea.uk>
-Johnny <johnnync13@gmail.com>
+Johnny <johnnync13@gmail.com> Johnny <johnnynuca14@gmail.com>
 Jonathan J. Helmus <jjhelmus@gmail.com> Jonathan Helmus <jjhelmus@gmail.com>
 Jose Diaz-Gonzalez <email@josediazgonzalez.com>
 Joseph Crail <jbcrail@gmail.com>
@@ -138,12 +142,14 @@ Joseph Hunkeler <jhunkeler@gmail.com>
 Juan Lasheras <juan.lasheras@gmail.com> jlas <juan.lasheras@gmail.com>
 Julian Rüth <julian.rueth@fsfe.org>
 Julien Schueller <schueller@phimeca.com>
+Justin Wood (Callek) <callek@gmail.com>
 Jürgen Gmach <juergen.gmach@googlemail.com> Jürgen Gmach <juergen.gmach@canonical.com>
 Jędrzej Nowak <pigmej@gmail.com> Jedrzej Nowak <pigmej@gmail.com>
 Kai Tietz <ktietz@anaconda.com> Kai Tietz <47363620+katietz@users.noreply.github.com>
 Kale Franz <kfranz@continuum.io> Kale Franz <kalefranz@users.noreply.github.com>
 Katherine Kinnaman <kkinnaman@anaconda.com>
 Ken Odegard <kodegard@anaconda.com> Ken Odegard <ken.odegard@gmail.com>
+Klaus Zimmermann <klaus.zimmermann@quansight.com>
 Korijn van Golen <korijn@gmail.com>
 Kurt Schelfthout <kurt.schelfthout@gmail.com>
 Kyle Leaders <remkade@users.noreply.github.com>
@@ -181,8 +187,10 @@ Michael Cormier <u1138933@kingspeak23.wasatch.peaks>
 Michael Maltese <mike@mikemaltese.com>
 Michael Sarahan <msarahan@continuum.io> Mike Sarahan <msarahan@continuum.io>
 Michael Sarahan <msarahan@continuum.io> Mike Sarahan <msarahan@gmail.com>
+Michael Sarahan <msarahan@continuum.io> Mike Sarahan <msarahan@nvidia.com>
 Michael Sarahan <msarahan@continuum.io> Michael Sarahan <msarahan@continuum.io>
 Michael Sarahan <msarahan@continuum.io> Michael Sarahan <msarahan@gmail.com>
+Michael Sarahan <msarahan@continuum.io> Michael Sarahan <msarahan@nvidia.com>
 Min RK <benjaminrk@gmail.com> MinRK <benjaminrk@gmail.com>
 Morten Enemark Lund <mel@anybodytech.com> mel <mel@anybodytech.com>
 Morten Lund <melund@gmail.com>
@@ -253,7 +261,9 @@ Teake Nutma <teake.nutma@gmail.com> Teake Nutma <t.a.nutma@rug.nl>
 Thomas A Caswell <tcaswell@gmail.com> Thomas A Caswell <tcaswell@bnl.gov>
 Thomas Holder <thomas.holder@schrodinger.com>
 Thomas Kluyver <takowl@gmail.com>
+Tim Paine <3105306+timkpaine@users.noreply.github.com>
 Tim Snyder <snyder.tim@gmail.com>
+Tobias Fischer <info@tobiasfischer.info>
 Todd Tomashek <todd.m.tomashek@intel.com> tomashek <todd.m.tomashek@intel.com>
 Todd Tomashek <todd.m.tomashek@intel.com> todd.m.tomashek <todd.m.tomashek@intel.com>
 Tom Davidson <tjd@alum.mit.edu>
@@ -273,6 +283,7 @@ Wim Glenn <wim.glenn@gmail.com> wim glenn <wim.glenn@gmail.com>
 Wolf Vollprecht <w.vollprecht@gmail.com>
 Wolfgang Ulmer <wolfgang.Ulmer@de.bosch.com>
 Yann <yannpaul@bu.edu>
+Yannik Tausch <dev@ytausch.de>
 Yoav Ram <yoavram+github@gmail.com>
 Yu Feng <rainwoodman@gmail.com>
 Zane Dufour <zane.dufour@gmail.com> zdog234 <zane.dufour@gmail.com>

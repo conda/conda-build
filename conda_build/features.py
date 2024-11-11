@@ -16,7 +16,7 @@ for key, value in os.environ.items():
     if key in env_vars:
         if value not in ("0", "1"):
             sys.exit(
-                "Error: did not expect environment variable '%s' "
-                "being set to '%s' (not '0' or '1')" % (key, value)
+                f"Error: did not expect environment variable '{key}' "
+                f"being set to '{value}' (not '0' or '1')"
             )
         feature_list.append((key[8:].lower(), bool(int(value))))

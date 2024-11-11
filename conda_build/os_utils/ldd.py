@@ -2,22 +2,24 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from __future__ import annotations
 
-import os
 import re
 import subprocess
-from functools import lru_cache
+from functools import cache
 from os.path import basename
 from pathlib import Path
-from typing import Iterable
+from typing import TYPE_CHECKING
 
-from conda.models.records import PrefixRecord
+from conda.misc import untracked
 
-from conda_build.conda_interface import untracked
-from conda_build.os_utils.macho import otool
-from conda_build.os_utils.pyldd import codefile_class, inspect_linkages, machofile
-
-from ..deprecations import deprecated
 from ..utils import on_linux, on_mac
+from .macho import otool
+from .pyldd import codefile_class, inspect_linkages, machofile
+
+if TYPE_CHECKING:
+    import os
+    from collections.abc import Iterable
+
+    from conda.models.records import PrefixRecord
 
 LDD_RE = re.compile(r"\s*(.*?)\s*=>\s*(.*?)\s*\(.*\)")
 LDD_NOT_FOUND_RE = re.compile(r"\s*(.*?)\s*=>\s*not found")
@@ -42,7 +44,7 @@ def ldd(path):
             continue
         if "ld-linux" in line:
             continue
-        raise RuntimeError("Unexpected output from ldd: %s" % line)
+        raise RuntimeError(f"Unexpected output from ldd: {line}")
 
     return res
 
@@ -50,16 +52,16 @@ def ldd(path):
 def get_linkages(
     obj_files: Iterable[str],
     prefix: str | os.PathLike | Path,
-    sysroot,
+    sysroot: str,
 ) -> dict[str, list[tuple[str, str]]]:
     return _get_linkages(tuple(obj_files), Path(prefix), sysroot)
 
 
-@lru_cache(maxsize=None)
+@cache
 def _get_linkages(
     obj_files: tuple[str],
     prefix: Path,
-    sysroot,
+    sysroot: str,
 ) -> dict[str, list[tuple[str, str]]]:
     linkages = {}
     for file in obj_files:
@@ -109,23 +111,21 @@ def _get_linkages(
     return linkages
 
 
-@deprecated("3.28.0", "4.0.0")
-@lru_cache(maxsize=None)
-def get_package_files(
-    prec: PrefixRecord, prefix: str | os.PathLike | Path
-) -> list[str]:
-    return prec["files"]
-
-
-@lru_cache(maxsize=None)
+@cache
 def get_package_obj_files(
     prec: PrefixRecord, prefix: str | os.PathLike | Path
 ) -> list[str]:
-    return [file for file in prec["files"] if codefile_class(Path(prefix, file))]
+    return [
+        file
+        for file in prec["files"]
+        if codefile_class(Path(prefix, file), skip_symlinks=True)
+    ]
 
 
-@lru_cache(maxsize=None)
+@cache
 def get_untracked_obj_files(prefix: str | os.PathLike | Path) -> list[str]:
     return [
-        file for file in untracked(str(prefix)) if codefile_class(Path(prefix, file))
+        file
+        for file in untracked(str(prefix))
+        if codefile_class(Path(prefix, file), skip_symlinks=True)
     ]

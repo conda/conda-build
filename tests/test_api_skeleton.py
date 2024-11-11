@@ -6,12 +6,12 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 import ruamel.yaml
 
 from conda_build import api
-from conda_build.exceptions import DependencyNeedsBuildingError
 from conda_build.skeletons.pypi import (
     clean_license_name,
     convert_to_flat_list,
@@ -28,19 +28,21 @@ from conda_build.skeletons.pypi import (
 from conda_build.utils import on_win
 from conda_build.version import _parse as parse_version
 
+if TYPE_CHECKING:
+    from conda_build.config import Config
+
+
 SYMPY_URL = (
     "https://files.pythonhosted.org/packages/7d/23/70fa970c07f0960f7543af982d2554be805e1034b9dcee9cb3082ce80f80/sympy-1.10.tar.gz"
     "#sha256=6cf85a5cfe8fff69553e745b05128de6fc8de8f291965c63871c79701dc6efc9"
 )
 
-PYLINT_VERSION = "2.3.1"
+PYLINT_VERSION = "2.7.4"  # last version to use setup.py without setup.cfg
 PYLINT_HASH_TYPE = "sha256"
-PYLINT_HASH_VALUE = "723e3db49555abaf9bf79dc474c6b9e2935ad82230b10c1138a71ea41ac0fff1"
-PYLINT_HASH_VALUE_BLAKE2 = (
-    "018b538911c0ebc2529f15004f4cb07e3ca562bb9aacea5df89cc25b62e01891"
-)
+PYLINT_SHA256 = "bd38914c7731cdc518634a8d3c5585951302b6e2b6de60fbb3f7a0220e21eeee"
+PYLINT_BLAKE2 = "2d5b491cf9e85288c29759a6535e6009938c2141b137b27a0653e435dcbad6a2"
 PYLINT_FILENAME = f"pylint-{PYLINT_VERSION}.tar.gz"
-PYLINT_URL = f"https://files.pythonhosted.org/packages/{PYLINT_HASH_VALUE_BLAKE2[:2]}/{PYLINT_HASH_VALUE_BLAKE2[2:4]}/{PYLINT_HASH_VALUE_BLAKE2[4:]}/{PYLINT_FILENAME}"
+PYLINT_URL = f"https://files.pythonhosted.org/packages/{PYLINT_BLAKE2[:2]}/{PYLINT_BLAKE2[2:4]}/{PYLINT_BLAKE2[4:]}/{PYLINT_FILENAME}"
 
 
 @pytest.fixture
@@ -54,7 +56,7 @@ def mock_metadata():
         "version": "UNKNOWN",
         "pypiurl": PYLINT_URL,
         "filename": PYLINT_FILENAME,
-        "digest": [PYLINT_HASH_TYPE, PYLINT_HASH_VALUE],
+        "digest": [PYLINT_HASH_TYPE, PYLINT_SHA256],
         "import_tests": "",
         "summary": "",
     }
@@ -94,23 +96,30 @@ def pylint_pkginfo():
         "extras_require": {':sys_platform=="win32"': ["colorama"]},
         "home": "https://github.com/PyCQA/pylint",
         "install_requires": [
-            "astroid>=2.2.0,<3",
-            "isort>=4.2.5,<5",
-            "mccabe>=0.6,<0.7",
+            "astroid >=2.5.2,<2.7",
+            "isort >=4.2.5,<6",
+            "mccabe >=0.6,<0.7",
+            "toml >=0.7.1",
         ],
         "license": "GPL",
         "name": "pylint",
         "packages": [
             "pylint",
             "pylint.checkers",
-            "pylint.pyreverse",
+            "pylint.checkers.refactoring",
+            "pylint.config",
             "pylint.extensions",
+            "pylint.lint",
+            "pylint.message",
+            "pylint.pyreverse",
             "pylint.reporters",
             "pylint.reporters.ureports",
+            "pylint.testutils",
+            "pylint.utils",
         ],
         "setuptools": True,
         "summary": "python code static checker",
-        "tests_require": ["pytest"],
+        "tests_require": ["pytest", "pytest-benchmark"],
         "version": "2.3.1",
     }
 
@@ -118,12 +127,18 @@ def pylint_pkginfo():
 @pytest.fixture
 def pylint_metadata():
     return {
-        "run_depends": ["astroid >=2.2.0,<3", "isort >=4.2.5,<5", "mccabe >=0.6,<0.7"],
+        "run_depends": [
+            "astroid >=2.5.2,<2.7",
+            "isort >=4.2.5,<6",
+            "mccabe >=0.6,<0.7",
+            "toml >=0.7.1",
+        ],
         "build_depends": [
             "pip",
-            "astroid >=2.2.0,<3",
-            "isort >=4.2.5,<5",
+            "astroid >=2.5.2,<2.7",
+            "isort >=4.2.5,<6",
             "mccabe >=0.6,<0.7",
+            "toml >=0.7.1",
         ],
         "entry_points": [
             "pylint = pylint:run_pylint",
@@ -137,18 +152,24 @@ def pylint_metadata():
             "pyreverse --help",
             "symilar --help",
         ],
-        "tests_require": ["pytest"],
+        "tests_require": ["pytest", "pytest-benchmark"],
         "version": PYLINT_VERSION,
         "pypiurl": PYLINT_URL,
         "filename": PYLINT_FILENAME,
-        "digest": [PYLINT_HASH_TYPE, PYLINT_HASH_VALUE],
+        "digest": [PYLINT_HASH_TYPE, PYLINT_SHA256],
         "import_tests": [
             "pylint",
             "pylint.checkers",
+            "pylint.checkers.refactoring",
+            "pylint.config",
             "pylint.extensions",
+            "pylint.lint",
+            "pylint.message",
             "pylint.pyreverse",
             "pylint.reporters",
             "pylint.reporters.ureports",
+            "pylint.testutils",
+            "pylint.utils",
         ],
         "summary": "python code static checker",
         "packagename": "pylint",
@@ -213,8 +234,8 @@ def test_sympy(package: str, version: str | None, tmp_path: Path, testing_config
         config=testing_config,
         output_dir=tmp_path,
     )
-    m = api.render(str(tmp_path / "sympy" / "meta.yaml"))[0][0]
-    assert m.version() == "1.10"
+    metadata = api.render(str(tmp_path / "sympy" / "meta.yaml"))[0][0]
+    assert metadata.version() == "1.10"
 
 
 def test_get_entry_points(pylint_pkginfo, pylint_metadata):
@@ -297,7 +318,7 @@ def test_get_package_metadata(testing_config, mock_metadata, pylint_metadata):
         mock_metadata,
         {},
         ".",
-        "3.7",
+        "3.9",
         False,
         False,
         [PYLINT_URL],
@@ -321,41 +342,43 @@ def test_pypi_with_setup_options(tmp_path: Path, testing_config):
     api.skeletonize(
         packages="photutils",
         repo="pypi",
-        version="0.2.2",
+        version="1.10.0",
         setup_options="--offline",
         config=testing_config,
         output_dir=tmp_path,
+        extra_specs=["extension-helpers"],
     )
 
     # Check that the setup option occurs in bld.bat and build.sh.
-    m = api.render(str(tmp_path / "photutils"))[0][0]
-    assert "--offline" in m.meta["build"]["script"]
+    metadata = api.render(str(tmp_path / "photutils"))[0][0]
+    assert "--offline" in metadata.meta["build"]["script"]
 
 
-def test_pypi_pin_numpy(tmp_path: Path, testing_config):
+def test_pypi_pin_numpy(tmp_path: Path, testing_config: Config):
     # The package used here must have a numpy dependence for pin-numpy to have
     # any effect.
     api.skeletonize(
-        packages="msumastro",
+        packages="fasttext",
         repo="pypi",
-        version="0.9.0",
+        version="0.9.2",
         config=testing_config,
         pin_numpy=True,
         output_dir=tmp_path,
     )
-    assert (tmp_path / "msumastro" / "meta.yaml").read_text().count("numpy x.x") == 2
-    with pytest.raises(DependencyNeedsBuildingError):
-        api.build("msumastro")
+    assert (tmp_path / "fasttext" / "meta.yaml").read_text().count("numpy x.x") == 2
 
 
-def test_pypi_version_sorting(tmp_path: Path, testing_config):
+def test_pypi_version_sorting(tmp_path: Path, testing_config: Config):
     # The package used here must have a numpy dependence for pin-numpy to have
     # any effect.
     api.skeletonize(
-        packages="impyla", repo="pypi", config=testing_config, output_dir=tmp_path
+        packages="fasttext",
+        repo="pypi",
+        config=testing_config,
+        output_dir=tmp_path,
     )
-    m = api.render(str(tmp_path / "impyla"))[0][0]
-    assert parse_version(m.version()) >= parse_version("0.13.8")
+    metadata = api.render(str(tmp_path / "fasttext"))[0][0]
+    assert parse_version(metadata.version()) >= parse_version("0.9.2")
 
 
 def test_list_skeletons():
@@ -371,8 +394,8 @@ def test_pypi_with_entry_points(tmp_path: Path):
 def test_pypi_with_version_arg(tmp_path: Path):
     # regression test for https://github.com/conda/conda-build/issues/1442
     api.skeletonize("PrettyTable", "pypi", version="0.7.2", output_dir=tmp_path)
-    m = api.render(str(tmp_path / "prettytable"))[0][0]
-    assert parse_version(m.version()) == parse_version("0.7.2")
+    metadata = api.render(str(tmp_path / "prettytable"))[0][0]
+    assert parse_version(metadata.version()) == parse_version("0.7.2")
 
 
 @pytest.mark.slow
@@ -392,10 +415,10 @@ def test_pypi_with_extra_specs(tmp_path: Path, testing_config):
         config=testing_config,
         output_dir=tmp_path,
     )
-    m = api.render(str(tmp_path / "bigfile"))[0][0]
-    assert parse_version(m.version()) == parse_version("0.1.24")
-    assert any("cython" in req for req in m.meta["requirements"]["host"])
-    assert any("mpi4py" in req for req in m.meta["requirements"]["host"])
+    metadata = api.render(str(tmp_path / "bigfile"))[0][0]
+    assert parse_version(metadata.version()) == parse_version("0.1.24")
+    assert any("cython" in req for req in metadata.meta["requirements"]["host"])
+    assert any("mpi4py" in req for req in metadata.meta["requirements"]["host"])
 
 
 @pytest.mark.slow
@@ -415,17 +438,17 @@ def test_pypi_with_version_inconsistency(tmp_path: Path, testing_config):
         config=testing_config,
         output_dir=tmp_path,
     )
-    m = api.render(str(tmp_path / "mpi4py_test"))[0][0]
-    assert parse_version(m.version()) == parse_version("0.0.10")
+    metadata = api.render(str(tmp_path / "mpi4py_test"))[0][0]
+    assert parse_version(metadata.version()) == parse_version("0.0.10")
 
 
 def test_pypi_with_basic_environment_markers(tmp_path: Path):
     # regression test for https://github.com/conda/conda-build/issues/1974
     api.skeletonize("coconut", "pypi", version="1.2.2", output_dir=tmp_path)
-    m = api.render(tmp_path / "coconut")[0][0]
+    metadata = api.render(tmp_path / "coconut")[0][0]
 
-    build_reqs = str(m.meta["requirements"]["host"])
-    run_reqs = str(m.meta["requirements"]["run"])
+    build_reqs = str(metadata.meta["requirements"]["host"])
+    run_reqs = str(metadata.meta["requirements"]["run"])
     # should include the right dependencies for the right version
     assert "futures" not in build_reqs
     assert "futures" not in run_reqs
@@ -435,8 +458,8 @@ def test_pypi_with_basic_environment_markers(tmp_path: Path):
 
 def test_setuptools_test_requirements(tmp_path: Path):
     api.skeletonize(packages="hdf5storage", repo="pypi", output_dir=tmp_path)
-    m = api.render(str(tmp_path / "hdf5storage"))[0][0]
-    assert m.meta["test"]["requires"] == ["nose >=1.0"]
+    metadata = api.render(str(tmp_path / "hdf5storage"))[0][0]
+    assert metadata.meta["test"]["requires"] == ["nose >=1.0"]
 
 
 @pytest.mark.skipif(sys.version_info < (3, 8), reason="sympy is python 3.8+")
@@ -462,7 +485,8 @@ def test_pypi_section_order_preserved(tmp_path: Path):
     ]
 
     # The loader below preserves the order of entries...
-    recipe = ruamel.yaml.load("\n".join(lines), Loader=ruamel.yaml.RoundTripLoader)
+    _yaml = ruamel.yaml.YAML(typ="rt")
+    recipe = _yaml.load("\n".join(lines))
 
     major_sections = list(recipe.keys())
     # Blank fields are omitted when skeletonizing, so prune any missing ones

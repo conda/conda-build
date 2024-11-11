@@ -2,12 +2,16 @@
 # SPDX-License-Identifier: BSD-3-Clause
 import textwrap
 
+from conda import CondaError
+
+from .deprecations import deprecated
+
 SEPARATOR = "-" * 70
 
 indent = lambda s: textwrap.fill(textwrap.dedent(s))
 
 
-class CondaBuildException(Exception):
+class CondaBuildException(CondaError):
     pass
 
 
@@ -42,6 +46,7 @@ class UnableToParse(YamlParsingError):
         return f"Error Message:\n--> {indent(orig)}\n\n"
 
 
+@deprecated("24.11", "25.1")
 class UnableToParseMissingJinja2(UnableToParse):
     def error_body(self):
         return "\n".join(
@@ -96,9 +101,7 @@ class DependencyNeedsBuildingError(CondaBuildException):
 
     @property
     def message(self):
-        return "Unsatisfiable dependencies for platform {}: {}".format(
-            self.subdir, set(self.matchspecs)
-        )
+        return f"Unsatisfiable dependencies for platform {self.subdir}: {set(self.matchspecs)}"
 
 
 class RecipeError(CondaBuildException):
@@ -109,22 +112,30 @@ class BuildLockError(CondaBuildException):
     """Raised when we failed to acquire a lock."""
 
 
-class OverLinkingError(RuntimeError):
+class OverLinkingError(RuntimeError, CondaBuildException):
     def __init__(self, error, *args):
         self.error = error
-        self.msg = "overlinking check failed \n%s" % (error)
+        self.msg = f"overlinking check failed \n{error}"
         super().__init__(self.msg)
 
 
-class OverDependingError(RuntimeError):
+class OverDependingError(RuntimeError, CondaBuildException):
     def __init__(self, error, *args):
         self.error = error
-        self.msg = "overdepending check failed \n%s" % (error)
+        self.msg = f"overdepending check failed \n{error}"
         super().__init__(self.msg)
 
 
-class RunPathError(RuntimeError):
+class RunPathError(RuntimeError, CondaBuildException):
     def __init__(self, error, *args):
         self.error = error
-        self.msg = "runpaths check failed \n%s" % (error)
+        self.msg = f"runpaths check failed \n{error}"
         super().__init__(self.msg)
+
+
+class BuildScriptException(CondaBuildException):
+    pass
+
+
+class CondaBuildUserError(CondaBuildException):
+    pass
