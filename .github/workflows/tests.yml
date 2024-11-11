@@ -221,7 +221,7 @@ jobs:
           key: ${{ runner.os }}-conda-${{ env.TIMESTAMP }}
 
       - name: Setup miniconda
-        uses: jezdez/setup-miniconda@configurable-cache
+        uses: conda-incubator/setup-miniconda@v3
         with:
           condarc-file: .\ci\github\.condarc
           python-version: ${{ matrix.python-version }}
