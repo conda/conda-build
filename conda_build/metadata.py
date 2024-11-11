@@ -24,7 +24,7 @@ from conda.models.match_spec import MatchSpec
 from frozendict import deepfreeze
 
 from . import utils
-from .config import Config, get_or_merge_config
+from .config import CondaPkgFormat, Config, get_or_merge_config
 from .exceptions import (
     CondaBuildException,
     CondaBuildUserError,
@@ -2210,9 +2210,9 @@ class MetaData:
                         out.get("name", self.name()),
                         out.get(
                             "type",
-                            "conda_v2"
-                            if self.config.conda_pkg_format == "2"
-                            else "conda",
+                            CondaPkgFormat.V2
+                            if self.config.conda_pkg_format == CondaPkgFormat.V2
+                            else CondaPkgFormat.V1,
                         ),
                     )
                     for out in outputs
@@ -2292,7 +2292,11 @@ class MetaData:
         new.config = self.config.copy()
         new.meta = copy.deepcopy(self.meta)
         new.type = getattr(
-            self, "type", "conda_v2" if self.config.conda_pkg_format == "2" else "conda"
+            self,
+            "type",
+            CondaPkgFormat.V2
+            if self.config.conda_pkg_format == CondaPkgFormat.V2
+            else CondaPkgFormat.V1,
         )
         return new
 
@@ -2382,7 +2386,10 @@ class MetaData:
         if output.get("name") == self.name():
             output_metadata = self.copy()
             output_metadata.type = output.get(
-                "type", "conda_v2" if self.config.conda_pkg_format == "2" else "conda"
+                "type",
+                CondaPkgFormat.V2
+                if self.config.conda_pkg_format == CondaPkgFormat.V2
+                else CondaPkgFormat.V1,
             )
 
         else:
@@ -2408,7 +2415,10 @@ class MetaData:
                 self.reconcile_metadata_with_output_dict(output_metadata, output)
 
             output_metadata.type = output.get(
-                "type", "conda_v2" if self.config.conda_pkg_format == "2" else "conda"
+                "type",
+                CondaPkgFormat.V2
+                if self.config.conda_pkg_format == CondaPkgFormat.V2
+                else CondaPkgFormat.V1,
             )
 
             if "name" in output:
@@ -2618,8 +2628,8 @@ class MetaData:
 
             for output_d, m in render_order:
                 if not output_d.get("type") or output_d["type"] in (
-                    "conda",
-                    "conda_v2",
+                    CondaPkgFormat.V1,
+                    CondaPkgFormat.V2,
                 ):
                     conda_packages[
                         m.name(),
