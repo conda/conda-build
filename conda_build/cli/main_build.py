@@ -514,6 +514,8 @@ def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
     if (
         all(not arg.startswith("--package-format") for arg in args)
         and warn_about_default_pkg_format
+        and "purge" not in parsed.recipe
+        and "purge-all" not in parsed.recipe
     ):
         deprecated.topic(
             "24.11",
