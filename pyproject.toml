@@ -126,6 +126,9 @@ filterwarnings = [
   # ignore conda-index error
   "ignore::PendingDeprecationWarning:conda_index",
   "ignore::DeprecationWarning:conda_index",
+  # ignore conda-libmamba-solver error
+  "ignore::PendingDeprecationWarning:conda_libmamba_solver",
+  "ignore::DeprecationWarning:conda_libmamba_solver",
   # ignore conda-package-streaming error
   "ignore:conda.core.index._supplement_index_with_system is pending deprecation:PendingDeprecationWarning:conda",
   "ignore:conda.core.index._make_virtual_package is pending deprecation:PendingDeprecationWarning:conda",
