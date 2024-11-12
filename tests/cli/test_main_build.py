@@ -543,14 +543,14 @@ def test_user_warning(tmpdir, recwarn):
     recipe = dir_recipe_path.join("meta.yaml")
     recipe.write("")
 
-    main_build.parse_args([str(recipe)])
+    main_build.parse_args([str(recipe), DEFAULT_PACKAGE_FORMAT_FLAG])
     assert (
         f"RECIPE_PATH received is a file ({recipe}).\n"
         "It should be a path to a folder.\n"
         "Forcing conda-build to use the recipe file."
     ) == str(recwarn.pop(UserWarning).message)
 
-    main_build.parse_args([str(dir_recipe_path)])
+    main_build.parse_args([str(dir_recipe_path), DEFAULT_PACKAGE_FORMAT_FLAG])
     assert not recwarn.list
 
 
