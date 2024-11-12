@@ -24,7 +24,7 @@ from conda.models.match_spec import MatchSpec
 from frozendict import deepfreeze
 
 from . import utils
-from .config import Config, get_or_merge_config
+from .config import CondaPkgFormat, Config, get_or_merge_config
 from .exceptions import (
     CondaBuildException,
     CondaBuildUserError,
@@ -49,6 +49,7 @@ from .variants import (
     find_used_variables_in_shell_script,
     find_used_variables_in_text,
     get_default_variant,
+    get_package_variants,
     get_vars,
     list_of_dicts_to_dict_of_lists,
 )
@@ -1167,7 +1168,21 @@ class MetaData:
         # Therefore, undefined jinja variables are permitted here
         # In the second pass, we'll be more strict. See build.build()
         # Primarily for debugging.  Ensure that metadata is not altered after "finalizing"
-        self.parse_again(permit_undefined_jinja=True, allow_no_other_outputs=True)
+
+        try:
+            # For the first pass, we do a simple read of any variants in the recipe and
+            # use them. These are then discarded. Other operations on the metadata
+            # will restore versions of them as needed. This is done to preserve
+            # old behavior.
+            old_config = self.config
+
+            self.config = get_or_merge_config(config, variant=variant)
+            self.config.variants = get_package_variants(self)
+            self.config.variant = self.config.variants[0]
+            self.parse_again(permit_undefined_jinja=True, allow_no_other_outputs=True)
+        finally:
+            self.config = old_config
+
         self.config.disable_pip = self.disable_pip
         # establish whether this recipe should squish build and host together
 
@@ -2195,9 +2210,9 @@ class MetaData:
                         out.get("name", self.name()),
                         out.get(
                             "type",
-                            "conda_v2"
-                            if self.config.conda_pkg_format == "2"
-                            else "conda",
+                            CondaPkgFormat.V2
+                            if self.config.conda_pkg_format == CondaPkgFormat.V2
+                            else CondaPkgFormat.V1,
                         ),
                     )
                     for out in outputs
@@ -2277,7 +2292,11 @@ class MetaData:
         new.config = self.config.copy()
         new.meta = copy.deepcopy(self.meta)
         new.type = getattr(
-            self, "type", "conda_v2" if self.config.conda_pkg_format == "2" else "conda"
+            self,
+            "type",
+            CondaPkgFormat.V2
+            if self.config.conda_pkg_format == CondaPkgFormat.V2
+            else CondaPkgFormat.V1,
         )
         return new
 
@@ -2367,7 +2386,10 @@ class MetaData:
         if output.get("name") == self.name():
             output_metadata = self.copy()
             output_metadata.type = output.get(
-                "type", "conda_v2" if self.config.conda_pkg_format == "2" else "conda"
+                "type",
+                CondaPkgFormat.V2
+                if self.config.conda_pkg_format == CondaPkgFormat.V2
+                else CondaPkgFormat.V1,
             )
 
         else:
@@ -2393,7 +2415,10 @@ class MetaData:
                 self.reconcile_metadata_with_output_dict(output_metadata, output)
 
             output_metadata.type = output.get(
-                "type", "conda_v2" if self.config.conda_pkg_format == "2" else "conda"
+                "type",
+                CondaPkgFormat.V2
+                if self.config.conda_pkg_format == CondaPkgFormat.V2
+                else CondaPkgFormat.V1,
             )
 
             if "name" in output:
@@ -2603,8 +2628,8 @@ class MetaData:
 
             for output_d, m in render_order:
                 if not output_d.get("type") or output_d["type"] in (
-                    "conda",
-                    "conda_v2",
+                    CondaPkgFormat.V1,
+                    CondaPkgFormat.V2,
                 ):
                     conda_packages[
                         m.name(),

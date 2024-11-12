@@ -33,12 +33,12 @@ from conda.models.records import PackageRecord
 from conda.models.version import VersionOrder
 
 from . import environ, exceptions, source, utils
+from .config import CondaPkgFormat
 from .exceptions import DependencyNeedsBuildingError
 from .index import get_build_index
 from .metadata import MetaData, MetaDataTuple, combine_top_level_metadata_with_output
 from .utils import (
     CONDA_PACKAGE_EXTENSION_V1,
-    CONDA_PACKAGE_EXTENSION_V2,
     package_record_to_requirement,
 )
 from .variants import (
@@ -71,21 +71,21 @@ def bldpkg_path(m: MetaData) -> str:
     subdir = "noarch" if m.noarch or m.noarch_python else m.config.host_subdir
 
     if not hasattr(m, "type"):
-        if m.config.conda_pkg_format == "2":
-            pkg_type = "conda_v2"
+        if m.config.conda_pkg_format == CondaPkgFormat.V2:
+            pkg_type = CondaPkgFormat.V2
         else:
-            pkg_type = "conda"
+            pkg_type = CondaPkgFormat.V1
     else:
         pkg_type = m.type
 
     # the default case will switch over to conda_v2 at some point
-    if pkg_type == "conda":
+    if pkg_type == CondaPkgFormat.V1:
         path = join(
-            m.config.output_folder, subdir, f"{m.dist()}{CONDA_PACKAGE_EXTENSION_V1}"
+            m.config.output_folder, subdir, f"{m.dist()}{CondaPkgFormat.V1.ext}"
         )
-    elif pkg_type == "conda_v2":
+    elif pkg_type == CondaPkgFormat.V2:
         path = join(
-            m.config.output_folder, subdir, f"{m.dist()}{CONDA_PACKAGE_EXTENSION_V2}"
+            m.config.output_folder, subdir, f"{m.dist()}{CondaPkgFormat.V2.ext}"
         )
     else:
         path = (
