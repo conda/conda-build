@@ -24,7 +24,7 @@ from ..config import (
     get_or_merge_config,
     zstd_compression_level_default,
 )
-from ..utils import LoggingContext
+from ..utils import LoggingContext, get_logger
 from .actions import KeyValueAction, PackageTypeNormalize
 from .main_render import get_render_parser
 
@@ -487,14 +487,19 @@ def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
             "Do not display value of environment variables specified in build.script_env."
         ),
     )
+    # TODO: Remove in 25.1
+    default_pkg_format = context.conda_build.get("pkg_format")
+    if default_pkg_format is None:
+        warn_about_default_pkg_format = True
+        default_pkg_format = conda_pkg_format_default
+    else:
+        warn_about_default_pkg_format = False
     parser.add_argument(
         "--package-format",
         dest="conda_pkg_format",
         choices=CondaPkgFormat.acceptable(),
         action=PackageTypeNormalize,
-        default=CondaPkgFormat.normalize(
-            context.conda_build.get("pkg_format", conda_pkg_format_default)
-        ),
+        default=CondaPkgFormat.normalize(default_pkg_format),
         help=(
             "Choose which package type(s) are outputted. (Accepted inputs .tar.bz2 or 1, .conda or 2)"
         ),
@@ -503,6 +508,18 @@ def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
 
     parsed = parser.parse_args(args)
     check_recipe(parsed.recipe)
+
+    # TODO: Remove in 25.1
+    if (
+        all(not arg.startswith("--package-format") for arg in args)
+        and warn_about_default_pkg_format
+    ):
+        get_logger(__name__).warning(
+            "The default `pkg_format` value will become '.conda' in 25.1. "
+            "If you want to keep using `.tar.bz2`, consider:\n"
+            "- Setting `conda_build.pkg_format: 'tar.bz2' in your condarc file.\n"
+            "- Using `--pkg-format=tar.bz2` in the CLI.",
+        )
     return parser, parsed
 
 
