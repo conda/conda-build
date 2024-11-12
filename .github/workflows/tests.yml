@@ -113,8 +113,6 @@ jobs:
       - name: Cache Conda
         uses: actions/cache@6849a6489940f00c2f30c0fb92c6274307ccb58a # v4.1.2
         with:
-          # Use faster GNU tar for all runners
-          enableCrossOsArchive: true
           path: ~/conda_pkgs_dir
           key: cache-${{ env.HASH }}
 
@@ -286,6 +284,7 @@ jobs:
           condarc-file: .github\condarc
           run-post: false  # skip post cleanup
           pkgs-dirs: D:\conda_pkgs_dir
+          installation-dir: D:\conda
 
       - name: Choco Install
         run: choco install visualstudio2017-workload-vctools
@@ -380,8 +379,6 @@ jobs:
       - name: Cache Conda
         uses: actions/cache@6849a6489940f00c2f30c0fb92c6274307ccb58a # v4.1.2
         with:
-          # Use faster GNU tar for all runners
-          enableCrossOsArchive: true
           path: |
             ~/conda_pkgs_dir
             ~/macosx_sdks
