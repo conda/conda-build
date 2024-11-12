@@ -524,7 +524,7 @@ def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
                 "The new default `pkg_format` value will be '.conda'. "
                 "If you want to keep using `.tar.bz2`, consider:\n"
                 "- Setting `conda_build.pkg_format: 'tar.bz2' in your condarc file.\n"
-                "- Using `--pkg-format=tar.bz2` in the CLI.\n",
+                "- Using `--pkg-format=tar.bz2` in the CLI.\n"
             ),
             deprecation_type=FutureWarning,
         )
