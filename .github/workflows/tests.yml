@@ -284,6 +284,7 @@ jobs:
           condarc-file: .github\condarc
           run-post: false  # skip post cleanup
           pkgs-dirs: D:\conda_pkgs_dir
+          installation-dir: D:\conda
 
       - name: Choco Install
         run: choco install visualstudio2017-workload-vctools
