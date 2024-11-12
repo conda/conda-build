@@ -24,7 +24,8 @@ from ..config import (
     get_or_merge_config,
     zstd_compression_level_default,
 )
-from ..utils import LoggingContext, get_logger
+from ..deprecations import deprecated
+from ..utils import LoggingContext
 from .actions import KeyValueAction, PackageTypeNormalize
 from .main_render import get_render_parser
 
@@ -514,11 +515,18 @@ def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
         all(not arg.startswith("--package-format") for arg in args)
         and warn_about_default_pkg_format
     ):
-        get_logger(__name__).warning(
-            "The default `pkg_format` value will become '.conda' in 25.1. "
-            "If you want to keep using `.tar.bz2`, consider:\n"
-            "- Setting `conda_build.pkg_format: 'tar.bz2' in your condarc file.\n"
-            "- Using `--pkg-format=tar.bz2` in the CLI.",
+        deprecated.topic(
+            "24.11",
+            "25.1",
+            topic="The default `pkg_format` of '.tar.bz2'",
+            addendum=(
+                "\n\n"
+                "The new default `pkg_format` value will be '.conda'. "
+                "If you want to keep using `.tar.bz2`, consider:\n"
+                "- Setting `conda_build.pkg_format: 'tar.bz2' in your condarc file.\n"
+                "- Using `--pkg-format=tar.bz2` in the CLI.\n",
+            ),
+            deprecation_type=FutureWarning,
         )
     return parser, parsed
 
