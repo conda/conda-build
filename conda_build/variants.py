@@ -750,7 +750,7 @@ def find_used_variables_in_text(variant, recipe_text, selectors_only=False):
         v_regex = re.escape(v)
         v_req_regex = "[-_]".join(map(re.escape, v.split("_")))
         variant_regex = (
-            rf"\{{\s*(?:pin_[a-z]+\(\s*?['\"])?{v_regex}[^_0-9a-zA-Z].*?\}}}}"
+            rf"\{{\s*(?:pin_[a-z]+\(\s*?['\"])?{v_regex}[^_0-9a-zA-Z].*?\}}\}}"
         )
         selector_regex = rf"^[^#\[]*?\#?\s\[[^\]]*?(?<![_\w\d]){v_regex}[=\s<>!\]]"
         # NOTE: why use a regex instead of the jinja2 parser/AST?
