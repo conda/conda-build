@@ -386,7 +386,7 @@ def test_package_test(testing_workdir, testing_metadata):
     """Test calling conda build -t <package file> - rather than <recipe dir>"""
     api.output_yaml(testing_metadata, "recipe/meta.yaml")
     output = api.build(testing_workdir, config=testing_metadata.config, notest=True)[0]
-    args = ["-t", output]
+    args = ["-t", output, DEFAULT_PACKAGE_FORMAT_FLAG]
     main_build.execute(args)
 
 
@@ -470,6 +470,7 @@ def test_relative_path_test_artifact(
             testing_config.subdir,
             "empty_with_build_script-0.0-0.tar.bz2",
         ),
+        DEFAULT_PACKAGE_FORMAT_FLAG,
     ]
     main_build.execute(args)
 
@@ -486,7 +487,7 @@ def test_test_extra_dep(testing_metadata):
 
     # missing click dep will fail tests
     with pytest.raises(CondaBuildUserError):
-        args = [output, "-t"]
+        args = [output, "-t", DEFAULT_PACKAGE_FORMAT_FLAG]
         # extra_deps will add it in
         main_build.execute(args)
 
