@@ -816,6 +816,68 @@ def test_get_vars():
     assert get_vars(variants) == {"nodejs"}
 
 
+@pytest.mark.parametrize(
+    "vars,text,found_vars",
+    [
+        # basic tests
+        (
+            ("python", "python_min"),
+            "{{ python }}",
+            {"python"},
+        ),
+        (
+            ("python", "python_min"),
+            "{{ python_min }}",
+            {"python_min"},
+        ),
+        # filters and other text
+        (
+            ("python", "python_min"),
+            "python {{ python_min }}",
+            {"python_min"},
+        ),
+        (
+            ("python", "python_min"),
+            "python {{ python }}",
+            {"python"},
+        ),
+        (
+            ("python", "python_min"),
+            "python {{ python|lower }}",
+            {"python"},
+        ),
+        (
+            ("python", "python_min"),
+            "{{ python_min|lower }}",
+            {"python_min"},
+        ),
+        # pin_* statements
+        (
+            ("python", "python_min"),
+            "{{ pin_compatible('python') }}",
+            {"python"},
+        ),
+        (
+            ("python", "python_min"),
+            "{{ pin_compatible('python', max_pin='x.x') }}",
+            {"python"},
+        ),
+        (
+            ("python", "python_min"),
+            "{{ pin_compatible('python_min') }}",
+            {"python_min"},
+        ),
+        (
+            ("python", "python_min"),
+            "{{ pin_compatible('python_min', max_pin='x.x') }}",
+            {"python_min"},
+        ),
+    ],
+)
+def test_find_used_variables_in_text(vars, text, found_vars):
+    assert find_used_variables_in_shell_script(vars, text) == found_vars
+
+
 def test_find_used_variables_in_shell_script(tmp_path: Path) -> None:
     variants = ("FOO", "BAR", "BAZ", "QUX")
     (script := tmp_path / "script.sh").write_text(
