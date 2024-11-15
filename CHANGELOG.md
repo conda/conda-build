@@ -8,7 +8,7 @@
   * This takes precedence over default value and `condarc`.
   * Normalization occurs so `1`, `"1"`, `tar.bz2`,`.tar.bz2`, `2`, `"2"`, `conda`, `.conda` are all recognized and mapped appropriately.
   * Other options are rejected.
-* Add  support for CEP-17 that allows specifying the location of the site-packages directory with the `python_site_packages_path` build option for any packages named `python`. (#5502)
+* Add  support for [CEP-17](https://github.com/conda/ceps/blob/main/cep-0017.md) that allows specifying the location of the site-packages directory with the `python_site_packages_path` build option for any packages named `python`. (#5502)
 
 ### Bug fixes
 
