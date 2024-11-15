@@ -4,7 +4,7 @@
 
 ### Enhancements
 
-* Introduce `--package-format` as command line argument. (#4890 via #5209)
+* Introduce `--package-format` as a command line argument. (#4890 via #5209)
   * This takes precedence over default value and `condarc`.
   * Normalization occurs so `1`, `"1"`, `tar.bz2`,`.tar.bz2`, `2`, `"2"`, `conda`, `.conda` are all recognized and mapped appropriately.
   * Other options are rejected.
