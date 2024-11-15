@@ -4,7 +4,7 @@
 
 ### Enhancements
 
-* `--package-format` introduced as command line argument. (#4890 via #5209)
+* Introduce `--package-format` as command line argument. (#4890 via #5209)
   * This takes precedence over default value and `condarc`.
   * Normalization occurs so `1`, `"1"`, `tar.bz2`,`.tar.bz2`, `2`, `"2"`, `conda`, `.conda` are all recognized and mapped appropriately.
   * Other options are rejected.
@@ -12,13 +12,13 @@
 
 ### Bug fixes
 
-* Fixed regex for Jinja2 `set` / `for` statements to be more specific. (#5514)
-* Fixed ruamel.yaml usage to use supported APIs. (#5517)
-* Fixed bug in docs build by pinning conda-sphinx-theme to 0.2.2. (#5518)
-* Fixed bug variant variables were not defined for the first parsing pass of a recipe. (#5528)
-* Fixed a bug where variants were incorrectly found as being used when they matched a leading substring of
+* Fix regex for Jinja2 `set` / `for` statements to be more specific. (#5514)
+* Fix `ruamel.yaml` usage to use supported APIs. (#5517)
+* Fix bug in docs build by pinning `conda-sphinx-theme` version to 0.2.2. (#5518)
+* Fix bug variant variables were not defined for the first parsing pass of a recipe. (#5528)
+* Fix a bug where variants were incorrectly found as being used when they matched a leading substring of
   another variant. (#5535)
-* Fixed a bug where variants were not found when variables were used in ``pin_*`` statements. (#5535)
+* Fix a bug where variants were not found when variables were used in `pin_*` statements. (#5535)
 
 ### Deprecations
 
