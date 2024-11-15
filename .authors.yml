@@ -14,7 +14,7 @@
   email: jjhelmus@gmail.com
   aliases:
   - Jonathan Helmus
-  num_commits: 110
+  num_commits: 111
   first_commit: 2014-06-09 17:25:05
   github: jjhelmus
 - name: Isuru Fernando
@@ -370,7 +370,7 @@
   github: ClinicalGraphics
 - name: John Blischak
   email: jdblischak@gmail.com
-  num_commits: 11
+  num_commits: 12
   first_commit: 2017-08-11 13:23:55
   github: jdblischak
 - name: Floris Bruynooghe
@@ -1121,7 +1121,7 @@
   alternate_emails:
   - becker.mr@gmail.com
   - beckermr@users.noreply.github.com
-  num_commits: 22
+  num_commits: 27
   first_commit: 2019-10-17 23:05:16
   github: beckermr
 - name: Jinzhe Zeng
@@ -1202,7 +1202,7 @@
   alternate_emails:
   - clee@anaconda.com
 - name: Ken Odegard
-  num_commits: 220
+  num_commits: 227
   email: kodegard@anaconda.com
   first_commit: 2020-09-08 19:53:41
   github: kenodegard
@@ -1225,7 +1225,7 @@
   first_commit: 2020-11-19 10:46:41
 - name: Jannis Leidel
   email: jannis@leidel.info
-  num_commits: 32
+  num_commits: 34
   github: jezdez
   first_commit: 2020-11-19 10:46:41
 - name: Christof Kaufmann
@@ -1240,7 +1240,7 @@
   github: pre-commit-ci[bot]
   aliases:
   - pre-commit-ci[bot]
-  num_commits: 86
+  num_commits: 95
   first_commit: 2021-11-20 01:47:17
 - name: Jacob Walls
   email: jacobtylerwalls@gmail.com
@@ -1251,7 +1251,7 @@
   github: beeankha
   alternate_emails:
   - beeankha@gmail.com
-  num_commits: 43
+  num_commits: 38
   first_commit: 2022-01-19 16:40:06
 - name: Conda Bot
   email: 18747875+conda-bot@users.noreply.github.com
@@ -1262,7 +1262,7 @@
   alternate_emails:
   - ad-team+condabot@anaconda.com
   - 18747875+conda-bot@users.noreply.github.com
-  num_commits: 62
+  num_commits: 66
   first_commit: 2022-01-17 18:09:22
 - name: Uwe L. Korn
   email: xhochy@users.noreply.github.com
@@ -1310,7 +1310,7 @@
 - name: dependabot[bot]
   email: 49699333+dependabot[bot]@users.noreply.github.com
   github: dependabot[bot]
-  num_commits: 35
+  num_commits: 37
   first_commit: 2022-05-31 04:34:40
 - name: Serhii Kupriienko
   email: 79282962+skupr-anaconda@users.noreply.github.com
@@ -1327,7 +1327,7 @@
 - name: Jaime Rodríguez-Guerra
   email: jaimergp@users.noreply.github.com
   github: jaimergp
-  num_commits: 17
+  num_commits: 20
   first_commit: 2022-11-02 19:34:51
 - name: Dave Clements
   email: tnabtaf@gmail.com
@@ -1376,7 +1376,7 @@
   aliases:
   - Ryan
   github: ryanskeith
-  num_commits: 6
+  num_commits: 7
   first_commit: 2023-03-22 03:11:02
 - name: Rishabh Singh
   email: 67859818+rishabh11336@users.noreply.github.com
@@ -1461,7 +1461,7 @@
   github: timkpaine
 - name: Klaus Zimmermann
   email: klaus.zimmermann@quansight.com
-  num_commits: 2
+  num_commits: 3
   first_commit: 2024-06-07 10:02:14
   github: zklaus
 - name: Daniel Ching
