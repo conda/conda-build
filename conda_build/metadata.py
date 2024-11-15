@@ -2579,7 +2579,7 @@ class MetaData:
                     ref_metadata.parse_until_resolved(
                         allow_no_other_outputs=True, bypass_env_check=True
                     )
-                except SystemExit:
+                except (SystemExit, CondaBuildUserError):
                     pass
                 outputs = get_output_dicts_from_metadata(ref_metadata)
 
@@ -2611,7 +2611,7 @@ class MetaData:
                         ref_metadata.other_outputs = out_metadata.other_outputs = (
                             all_output_metadata
                         )
-                except SystemExit:
+                except (SystemExit, CondaBuildUserError):
                     if not permit_undefined_jinja:
                         raise
                     output_tuples = []
