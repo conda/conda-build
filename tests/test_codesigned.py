@@ -87,7 +87,8 @@ def signtool_unsupported() -> bool:
 
 @pytest.mark.skipif(signtool_unsupported(), reason=signtool_unsupported_because())
 @pytest.mark.parametrize(
-    "stub_file_name", ["cli-32.exe", "cli-64.exe", "gui-32.exe", "gui-64.exe"]
+    "stub_file_name",
+    ["cli-32.exe", "cli-64.exe", "cli-arm64.exe", "gui-32.exe", "gui-64.exe", "cli-arm64.exe"],
 )
 def test_stub_exe_signatures(stub_file_name: str) -> None:
     """Verify that signtool verifies the signature of the stub exes"""

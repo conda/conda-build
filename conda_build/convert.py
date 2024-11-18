@@ -563,7 +563,8 @@ def create_exe_file(directory, executable, target_platform):
 
     if target_platform.endswith("32"):
         executable_file = os.path.join(exe_directory, "cli-32.exe")
-
+    if target_platform.endswith("arm64"):
+        executable_file = os.path.join(exe_directory, "cli-arm64.exe")
     else:
         executable_file = os.path.join(exe_directory, "cli-64.exe")
 
