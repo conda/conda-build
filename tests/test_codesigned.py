@@ -94,7 +94,7 @@ def signtool_unsupported() -> bool:
         "cli-arm64.exe",
         "gui-32.exe",
         "gui-64.exe",
-        "cli-arm64.exe",
+        "gui-arm64.exe",
     ],
 )
 def test_stub_exe_signatures(stub_file_name: str) -> None:
