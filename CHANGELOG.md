@@ -14,7 +14,6 @@
 
 * Fix regex for Jinja2 `set` / `for` statements to be more specific. (#5514)
 * Fix `ruamel.yaml` usage to use supported APIs. (#5517)
-* Fix bug in docs build by pinning `conda-sphinx-theme` version to 0.2.2. (#5518)
 * Fix bug variant variables were not defined for the first parsing pass of a recipe. (#5528)
 * Fix a bug where variants were incorrectly found as being used when they matched a leading substring of
   another variant. (#5535)
@@ -31,6 +30,7 @@
 ### Docs
 
 * Better document `run_test.r`. (#5479)
+* Fix bug in docs build by pinning `conda-sphinx-theme` version to 0.2.2. (#5518)
 
 ### Contributors
 
