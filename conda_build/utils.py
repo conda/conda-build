@@ -1987,31 +1987,48 @@ def sha256_checksum(filename, buffersize=65536):
     return sha256.hexdigest()
 
 
-def compute_content_hash(directory: str, algorithm="sha256") -> str:
+def compute_content_hash(directory: str, algorithm="sha256", skip: str = "") -> str:
     """
-    Compute the hash of the recursively traversed and sorted contents of a directory.
-    For each path found in 'directory', the hash will include these elements, in this order:
+    Given a directory, recursively scan all its contents (without following symlinks) and sort them
+    by their full path. For each entry in the contents table, compute the hash for the concatenated
+    bytes of:
 
-    - UTF-8 encoded bytes for the relative path to 'directory',
-      normalized (backslash as forward slashes).
-    - Single dash string, as a separator.
-    - "Contents" of the path:
-        - If the path is directory or symlink, use the bytes for "directory" and "symlink",
-          respectively.
-        - If the path is a file and can be read, the byte contents of the file.
-    - Single dash string, as a separator.
+    - UTF-8 encoded path, relative to the input directory. Backslashes are normalized
+      to forward slashes before encoding.
+    - Then, depending on the type:
+        - For regular files, the UTF-8 bytes of an `F` separator, followed by the bytes of its
+          contents.
+        - For a directory, the UTF-8 bytes of a `D` separator, and nothing else.
+        - For a symlink, the UTF-8 bytes of an `L` separator, followed by the UTF-8 encoded bytes
+          for the path it points to. Backslashes MUST be normalized to forward slashes before
+          encoding.
+    - UTF-8 encoded bytes of the string `-`, as separator.
+
+    Parameters
+    ----------
+    directory: The path whose contents will be hashed
+    algorithm: Name of the algorithm to be used, as expected by `hashlib.new()`
+    skip: `fnmatch.fnmatchase`-compatible glob. If matched, that path won't be included in the hash.
+
+    Returns
+    -------
+    str
+        The hexdigest of the computed hash, as described above.
     """
     log = get_logger(__name__)
     hasher = hashlib.new(algorithm)
     for entry in sorted(os.scandir(directory), key=lambda f: f.name):
+        if skip and fnmatch.fnmatchcase(entry.name, skip):
+            continue
         # encode the relative path to directory, for files, dirs and others
         hasher.update(entry.name.replace("\\", "/").encode("utf-8"))
-        hasher.update(b"-")
         if entry.is_dir(follow_symlinks=False):
-            hasher.update(b"directory")
+            hasher.update(b"D")
         elif entry.is_symlink():
-            hasher.update(b"symlink")
+            hasher.update(b"L")
+            hasher.update(os.readlink(entry).replace("\\", "/").encode("utf-8"))
         elif entry.is_file():
+            hasher.update(b"F")
             try:
                 with open(entry.path, "rb") as fh:
                     for chunk in iter(partial(fh.read, 8192), b""):
@@ -2019,7 +2036,7 @@ def compute_content_hash(directory: str, algorithm="sha256") -> str:
             except OSError as exc:
                 log.debug("Skipping %s for hashing", entry.name, exc_info=exc)
         else:
-            log.debug("Can't detect type for path %s", entry)
+            log.debug("Can't detect type for path %s. Skipping...", entry)
         hasher.update(b"-")
     return hasher.hexdigest()
 
