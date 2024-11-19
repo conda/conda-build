@@ -21,7 +21,7 @@ from ..utils import ensure_list
 from .cran import yaml_quote_string
 
 if TYPE_CHECKING:
-    from typing import Iterable
+    from collections.abc import Iterable
 
     from ..config import Config
 

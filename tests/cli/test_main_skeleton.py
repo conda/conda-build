@@ -7,6 +7,9 @@ import pytest
 from conda_build import api
 from conda_build.cli import main_build, main_skeleton
 
+# FUTURE: Remove after 25.1
+DEFAULT_PACKAGE_FORMAT_FLAG = "--package-format=1"
+
 
 @pytest.mark.sanity
 def test_skeleton_pypi(testing_workdir, testing_config):
@@ -15,7 +18,7 @@ def test_skeleton_pypi(testing_workdir, testing_config):
     assert os.path.isdir("peppercorn")
 
     # ensure that recipe generated is buildable
-    main_build.execute(("peppercorn",))
+    main_build.execute(("peppercorn", DEFAULT_PACKAGE_FORMAT_FLAG))
 
 
 @pytest.mark.sanity

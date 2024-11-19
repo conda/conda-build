@@ -41,7 +41,7 @@ from .utils import (
 )
 
 if TYPE_CHECKING:
-    from typing import Iterable
+    from collections.abc import Iterable
 
 log = get_logger(__name__)
 
@@ -816,9 +816,11 @@ def _get_patch_attributes(
     fmts = OrderedDict(native=["--binary"], lf=[], crlf=[])
     if patch_exe:
         # Good, we have a patch executable so we can perform some checks:
-        with noop_context(
-            retained_tmpdir
-        ) if retained_tmpdir else TemporaryDirectory() as tmpdir:
+        with (
+            noop_context(retained_tmpdir)
+            if retained_tmpdir
+            else TemporaryDirectory() as tmpdir
+        ):
             # Make all the fmts.
             result["patches"] = {}
             for fmt, _ in fmts.items():

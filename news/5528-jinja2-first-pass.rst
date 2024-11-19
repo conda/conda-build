@@ -4,7 +4,7 @@
 
 ### Bug fixes
 
-* Ensure cross-building recipes select the correct noarch package variants. (#5341 via #5350)
+* Fixed bug variant variables were not defined for the first parsing pass of a recipe. (#5528)
 
 ### Deprecations
 

@@ -21,7 +21,8 @@ import time
 import urllib.parse as urlparse
 import urllib.request as urllib
 from collections import OrderedDict, defaultdict
-from functools import lru_cache, partial
+from collections.abc import Iterable
+from functools import cache, partial
 from glob import glob
 from io import StringIO
 from itertools import filterfalse
@@ -42,7 +43,7 @@ from os.path import (
 )
 from pathlib import Path
 from threading import Thread
-from typing import TYPE_CHECKING, Iterable, overload
+from typing import TYPE_CHECKING, overload
 
 import conda_package_handling.api
 import filelock
@@ -69,7 +70,8 @@ from conda.utils import unix_path_to_win
 from .exceptions import BuildLockError
 
 if TYPE_CHECKING:
-    from typing import Mapping, TypeVar
+    from collections.abc import Mapping
+    from typing import TypeVar
 
     from .metadata import MetaData
 
@@ -113,7 +115,7 @@ if __name__ == '__main__':
 VALID_METAS = ("meta.yaml", "meta.yml", "conda.yaml", "conda.yml")
 
 
-@lru_cache(maxsize=None)
+@cache
 def stat_file(path):
     return os.stat(path)
 
@@ -1232,7 +1234,7 @@ def islist(
             # StopIteration: list is empty, an empty list is still uniform
             return True
         # check for explicit type match, do not allow the ambiguity of isinstance
-        uniform = lambda e: type(e) == etype  # noqa: E731
+        uniform = lambda e: type(e) == etype  # noqa: E721
 
     try:
         return all(uniform(e) for e in arg)
@@ -1580,12 +1582,12 @@ def filter_info_files(files_list, prefix):
     )
 
 
-def rm_rf(path):
+def rm_rf(path: str | os.PathLike) -> None:
     from conda.core.prefix_data import delete_prefix_from_linked_data
-    from conda.gateways.disk.delete import rm_rf as rm_rf
+    from conda.gateways.disk.delete import rm_rf
 
-    rm_rf(path)
-    delete_prefix_from_linked_data(path)
+    rm_rf(str(path))
+    delete_prefix_from_linked_data(str(path))
 
 
 # https://stackoverflow.com/a/31459386/1170370
@@ -1653,7 +1655,8 @@ def get_logger(name, level=logging.INFO, dedupe=True, add_stdout_stderr_handlers
         logging.config.dictConfig(config_dict)
         level = config_dict.get("loggers", {}).get(name, {}).get("level", level)
     log = logging.getLogger(name)
-    log.setLevel(level)
+    if log.level != level:
+        log.setLevel(level)
     if dedupe:
         log.addFilter(dedupe_filter)
 
@@ -1984,16 +1987,18 @@ def sha256_checksum(filename, buffersize=65536):
     return sha256.hexdigest()
 
 
-def compute_content_hash(directory: str, algorithm="sha256"):
+def compute_content_hash(directory: str, algorithm="sha256") -> str:
     """
     Compute the hash of the recursively traversed and sorted contents of a directory.
-    The hash will include these elements, in this order:
-    - Relative path to 'directory', normalized (backslash as forward slashes).
-    - Empty string, as a separator.
+    For each path found in 'directory', the hash will include these elements, in this order:
+
+    - UTF-8 encoded bytes for the relative path to 'directory',
+      normalized (backslash as forward slashes).
+    - Single dash string, as a separator.
     - "Contents" of the path:
         - If the path is directory or symlink, use the bytes for "directory" and "symlink",
           respectively.
-        - If the path is a file cand can be read, the contents of the file.
+        - If the path is a file and can be read, the byte contents of the file.
     - Single dash string, as a separator.
     """
     log = get_logger(__name__)
@@ -2013,6 +2018,8 @@ def compute_content_hash(directory: str, algorithm="sha256"):
                         hasher.update(chunk)
             except OSError as exc:
                 log.debug("Skipping %s for hashing", entry.name, exc_info=exc)
+        else:
+            log.debug("Can't detect type for path %s", entry)
         hasher.update(b"-")
     return hasher.hexdigest()
 

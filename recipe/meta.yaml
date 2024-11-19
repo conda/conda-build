@@ -1,6 +1,7 @@
 package:
   name: conda-build
-  version: {{ GIT_DESCRIBE_TAG }}.{{ GIT_BUILD_STR }}
+  # VERSION_OVERRIDE is used by the canary release workflow
+  version: {{ os.getenv("VERSION_OVERRIDE") or GIT_DESCRIBE_TAG }}.{{ GIT_BUILD_STR }}
 
 source:
   # git_url only captures committed code
@@ -32,7 +33,7 @@ requirements:
     - chardet
     - conda >=23.7.0
     - conda-index >=0.4.0
-    - conda-package-handling >=1.3
+    - conda-package-handling >=2.2.0
     - filelock
     - frozendict >=2.4.2
     - jinja2

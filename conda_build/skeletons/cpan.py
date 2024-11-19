@@ -15,13 +15,12 @@ import pickle
 import subprocess
 import sys
 import tempfile
-from functools import lru_cache, partial
+from functools import cache, partial
 from glob import glob
 from os import makedirs
 from os.path import basename, dirname, exists, join
 
 import requests
-from conda.core.index import get_index
 from conda.exceptions import CondaError, CondaHTTPError
 from conda.gateways.connection.download import TmpDownload, download
 from conda.gateways.disk.create import TemporaryDirectory
@@ -33,6 +32,12 @@ from ..config import Config, get_or_merge_config
 from ..utils import check_call_env, on_linux, on_win
 from ..variants import get_default_variant
 from ..version import _parse as parse_version
+
+try:
+    from conda.core.index import Index
+except ImportError:
+    # FUTURE: remove for `conda >=24.9`
+    from conda_build.index import Index
 
 CPAN_META = """\
 {{% set name = "{packagename}" %}}
@@ -634,7 +639,7 @@ def skeletonize(
                 f.write(CPAN_BLD_BAT.format(**d))
 
 
-@lru_cache(maxsize=None)
+@cache
 def is_core_version(core_version, version):
     if core_version is None:
         return False
@@ -690,12 +695,12 @@ def add_parser(repos):
     )
 
 
-@lru_cache(maxsize=None)
+@cache
 def latest_pkg_version(pkg):
     """
     :returns: the latest version of the specified conda package available
     """
-    r = Resolve(get_index())
+    r = Resolve(Index())
     try:
         pkg_list = sorted(r.get_pkgs(MatchSpec(pkg)))
     except:
@@ -1032,7 +1037,7 @@ def core_module_dict(core_modules, module):
     return None
 
 
-@lru_cache(maxsize=None)
+@cache
 def metacpan_api_is_core_version(cpan_url, module):
     if "FindBin" in module:
         print("debug")

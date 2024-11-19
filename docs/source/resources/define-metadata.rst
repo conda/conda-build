@@ -373,6 +373,19 @@ Python in macOS. The default is ``False``.
    build:
      osx_is_app: True
 
+python_site_packages_path
+-------------------------
+
+Packages with a name of ``python`` can optionally specify the location of the
+site-packages directory relative to the root of the environment with
+``python_site_packages_path``. This should only be used in ``python`` packages
+and only when the path is not the CPython default.
+
+.. code-block:: yaml
+
+   build:
+     python_site_packages_path: lib/python3.13t/site-packages
+
 
 Track features
 --------------
@@ -1127,7 +1140,7 @@ Test section
 ============
 
 If this section exists or if there is a
-``run_test.[py,pl,sh,bat]`` file in the recipe, the package is
+``run_test.[py,pl,sh,bat,r]`` file in the recipe, the package is
 installed into a test environment after the build is finished
 and the tests are run there.
 
@@ -1212,12 +1225,12 @@ following:
 Run test script
 ---------------
 
-The script ``run_test.sh``---or ``.bat``, ``.py``, or
-``.pl``---is run automatically if it is part of the recipe.
+The script ``run_test.sh``---or ``.bat``, ``.py``, ``.pl``,
+or ``.r``---is run automatically if it is part of the recipe.
 
 .. note::
-   Python .py and Perl .pl scripts are valid only
-   as part of Python and Perl packages, respectively.
+   Python .py, Perl .pl, and R .r scripts are valid only
+   as part of Python, Perl, and R packages, respectively.
 
 
 Downstream tests
@@ -1491,7 +1504,7 @@ You can test subpackages independently of the top-level package.
 Independent test script files for each separate package are
 specified under the subpackage's test section. These files
 support the same formats as the top-level ``run_test.*`` scripts,
-which are .py, .pl, .bat, and .sh. These may be extended to
+which are .py, .pl, .r, .bat, and .sh. These may be extended to
 support other script types in the future.
 
 .. code-block:: yaml

@@ -27,11 +27,13 @@ import pytest
 import yaml
 from binstar_client.commands import remove, show
 from binstar_client.errors import NotFound
+from conda import __version__ as conda_version
 from conda.base.context import context, reset_context
 from conda.common.compat import on_linux, on_mac, on_win
 from conda.exceptions import ClobberError, CondaError, CondaMultiError, LinkError
 from conda.utils import url_path
 from conda_index.api import update_index
+from packaging.version import Version
 
 from conda_build import __version__, api, exceptions
 from conda_build.config import Config
@@ -69,7 +71,7 @@ from .utils import (
 )
 
 if TYPE_CHECKING:
-    from pytest import FixtureRequest, MonkeyPatch
+    from pytest import CaptureFixture, FixtureRequest, LogCaptureFixture, MonkeyPatch
     from pytest_mock import MockerFixture
 
     from conda_build.metadata import MetaData
@@ -504,7 +506,7 @@ def test_recursive_fail(testing_config):
 
 @pytest.mark.sanity
 def test_jinja_typo(testing_config):
-    with pytest.raises(SystemExit, match="GIT_DSECRIBE_TAG"):
+    with pytest.raises(CondaBuildUserError, match="GIT_DSECRIBE_TAG"):
         api.build(
             os.path.join(fail_dir, "source_git_jinja2_oops"), config=testing_config
         )
@@ -1703,6 +1705,15 @@ def test_provides_features_metadata(testing_config):
     assert index["provides_features"] == {"test2": "also_ok"}
 
 
+@pytest.mark.sanity
+def test_python_site_packages_path(testing_config):
+    recipe = os.path.join(metadata_dir, "_python_site_packages_path")
+    out = api.build(recipe, config=testing_config)[0]
+    index = json.loads(package_has_file(out, "info/index.json"))
+    assert "python_site_packages_path" in index
+    assert index["python_site_packages_path"] == "some/path"
+
+
 def test_overlinking_detection(
     testing_config, testing_workdir, variants_conda_build_sysroot
 ):
@@ -1776,6 +1787,18 @@ def test_overdepending_detection(testing_config, variants_conda_build_sysroot):
         api.build(recipe, config=testing_config, variants=variants_conda_build_sysroot)
 
 
+@pytest.mark.skipif(not on_linux, reason="cannot compile for linux-ppc64le")
+def test_sysroots_detection(testing_config, variants_conda_build_sysroot):
+    recipe = os.path.join(metadata_dir, "_sysroot_detection")
+    testing_config.activate = True
+    testing_config.error_overlinking = True
+    testing_config.error_overdepending = True
+    testing_config.channel_urls = [
+        "conda-forge",
+    ]
+    api.build(recipe, config=testing_config, variants=variants_conda_build_sysroot)
+
+
 @pytest.mark.skipif(sys.platform != "darwin", reason="macOS-only test (at present)")
 def test_macos_tbd_handling(testing_config, variants_conda_build_sysroot):
     """
@@ -1814,7 +1837,11 @@ def test_downstream_tests(testing_config):
 
 
 @pytest.mark.sanity
-def test_warning_on_file_clobbering(testing_config, capfd):
+def test_warning_on_file_clobbering(
+    testing_config: Config,
+    capfd: CaptureFixture,
+    caplog: LogCaptureFixture,
+) -> None:
     recipe_dir = os.path.join(metadata_dir, "_overlapping_files_warning")
 
     api.build(
@@ -1832,8 +1859,19 @@ def test_warning_on_file_clobbering(testing_config, capfd):
         config=testing_config,
     )
     # The clobber warning here is raised when creating the test environment for b
-    out, err = capfd.readouterr()
-    assert "ClobberWarning" in err
+    if Version(conda_version) >= Version("24.9.0"):
+        # conda >=24.9.0
+        clobber_warning_found = False
+        for record in caplog.records:
+            if "ClobberWarning:" in record.message:
+                clobber_warning_found = True
+        assert clobber_warning_found
+    else:
+        # before the new lazy index added in conda 24.9.0
+        # see https://github.com/conda/conda/commit/1984b287548a1a526e8258802a6f1fec2a11ecc3
+        out, err = capfd.readouterr()
+        assert "ClobberWarning" in err
+
     with pytest.raises((ClobberError, CondaMultiError)):
         with env_var("CONDA_PATH_CONFLICT", "prevent", reset_context):
             api.build(os.path.join(recipe_dir, "b"), config=testing_config)
@@ -1951,8 +1989,13 @@ def test_activated_prefixes_in_actual_path(testing_metadata):
 
 @pytest.mark.parametrize("add_pip_as_python_dependency", [False, True])
 def test_add_pip_as_python_dependency_from_condarc_file(
-    testing_metadata, testing_workdir, add_pip_as_python_dependency, monkeypatch
-):
+    testing_metadata: MetaData,
+    testing_workdir: str | os.PathLike,
+    add_pip_as_python_dependency: bool,
+    monkeypatch: MonkeyPatch,
+    mocker: MockerFixture,
+    tmp_path: Path,
+) -> None:
     """
     Test whether settings from .condarc files are needed.
     ref: https://github.com/conda/conda-libmamba-solver/issues/393
@@ -1963,6 +2006,10 @@ def test_add_pip_as_python_dependency_from_condarc_file(
 
     # SubdirData's cache doesn't distinguish on add_pip_as_python_dependency.
     SubdirData._cache_.clear()
+
+    # clear cache
+    mocker.patch("conda.base.context.Context.pkgs_dirs", pkgs_dirs := (str(tmp_path),))
+    assert context.pkgs_dirs == pkgs_dirs
 
     testing_metadata.meta["build"]["script"] = ['python -c "import pip"']
     testing_metadata.meta["requirements"]["host"] = ["python"]
@@ -2031,3 +2078,12 @@ def test_conda_build_script_errors_without_conda_info_handlers(tmp_path, recipe,
         assert "Traceback" in all_output
         assert "CalledProcessError" in all_output
         assert "returned non-zero exit status 1" in all_output
+
+
+def test_api_build_inject_jinja2_vars_on_first_pass(testing_config):
+    recipe_dir = os.path.join(metadata_dir, "_inject_jinja2_vars_on_first_pass")
+    with pytest.raises(RuntimeError):
+        api.build(recipe_dir, config=testing_config)
+
+    testing_config.variant = {"python_min": "3.12"}
+    api.build(recipe_dir, config=testing_config)

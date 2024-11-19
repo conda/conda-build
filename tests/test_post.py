@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 
+import conda_build.utils
 from conda_build import api, post
 from conda_build.utils import (
     get_site_packages,
@@ -138,7 +139,7 @@ def test_menuinst_validation_fails_bad_schema(testing_config, caplog, tmp_path):
     assert "ValidationError" in captured_text
 
 
-def test_menuinst_validation_fails_bad_json(testing_config, caplog, tmp_path):
+def test_menuinst_validation_fails_bad_json(testing_config, monkeypatch, tmp_path):
     "3rd check - non-parsable JSON fails validation"
     recipe = Path(metadata_dir, "_menu_json_validation")
     recipe_tmp = tmp_path / "_menu_json_validation"
@@ -147,13 +148,36 @@ def test_menuinst_validation_fails_bad_json(testing_config, caplog, tmp_path):
     menu_json_contents = menu_json.read_text()
     menu_json.write_text(menu_json_contents + "Make this an invalid JSON")
 
-    with caplog.at_level(logging.WARNING):
-        api.build(str(recipe_tmp), config=testing_config, notest=True)
+    # suspect caplog fixture may fail; use monkeypatch instead.
+    records = []
 
-    captured_text = caplog.text
-    assert "Found 'Menu/*.json' files but couldn't validate:" not in captured_text
-    assert "not a valid menuinst JSON document" in captured_text
-    assert "JSONDecodeError" in captured_text
+    class MonkeyLogger:
+        def __getattr__(self, name):
+            return self.warning
+
+        def warning(self, *args, **kwargs):
+            records.append((*args, kwargs))
+
+    monkeylogger = MonkeyLogger()
+
+    def get_monkey_logger(*args, **kwargs):
+        return monkeylogger
+
+    # For some reason it uses get_logger in the individual functions, instead of
+    # a module-level global that we could easily patch.
+    monkeypatch.setattr(conda_build.utils, "get_logger", get_monkey_logger)
+
+    api.build(str(recipe_tmp), config=testing_config, notest=True)
+
+    # without %s substitution
+    messages = [record[0] for record in records]
+
+    assert "Found 'Menu/*.json' files but couldn't validate: %s" not in messages
+    assert "'%s' is not a valid menuinst JSON document!" in messages
+    assert any(
+        isinstance(record[-1].get("exc_info"), json.JSONDecodeError)
+        for record in records
+    )
 
 
 def test_file_hash(testing_config, caplog, tmp_path):

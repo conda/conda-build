@@ -14,7 +14,7 @@ from conda.common.compat import on_mac
 from conda_build.metadata import MetaData
 
 if TYPE_CHECKING:
-    from typing import Generator
+    from collections.abc import Generator
 
 tests_path = Path(__file__).parent
 metadata_path = tests_path / "test-recipes" / "metadata"

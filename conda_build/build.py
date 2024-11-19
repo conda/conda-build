@@ -40,9 +40,8 @@ from conda.utils import url_path
 
 from . import __version__ as conda_build_version
 from . import environ, noarch_python, source, tarcheck, utils
-from .config import Config
+from .config import CondaPkgFormat, Config
 from .create_test import create_all_test_files
-from .deprecations import deprecated
 from .exceptions import (
     BuildScriptException,
     CondaBuildException,
@@ -71,12 +70,9 @@ from .render import (
     try_download,
 )
 from .utils import (
-    CONDA_PACKAGE_EXTENSION_V1,
-    CONDA_PACKAGE_EXTENSION_V2,
     CONDA_PACKAGE_EXTENSIONS,
     env_var,
     glob,
-    on_linux,
     on_mac,
     on_win,
     shutil_move_more_retrying,
@@ -93,7 +89,8 @@ if on_win:
     from . import windows
 
 if TYPE_CHECKING:
-    from typing import Any, Iterable
+    from collections.abc import Iterable
+    from typing import Any
 
 if "bsd" in sys.platform:
     shell_path = "/bin/sh"
@@ -1647,27 +1644,9 @@ def post_process_files(m: MetaData, initial_prefix_files):
     # The post processing may have deleted some files (like easy-install.pth)
     current_prefix_files = utils.prefix_files(prefix=host_prefix)
     new_files = sorted(current_prefix_files - initial_prefix_files)
-    """
-    if m.noarch == 'python' and m.config.subdir == 'win-32':
-        # Delete any PIP-created .exe launchers and fix entry_points.txt
-        # .. but we need to provide scripts instead here.
-        from .post import caseless_sepless_fnmatch
-        exes = caseless_sepless_fnmatch(new_files, 'Scripts/*.exe')
-        for ff in exes:
-            os.unlink(os.path.join(m.config.host_prefix, ff))
-            new_files.remove(ff)
-    """
+
+    # filter_files will remove .git, trash directories, and conda-meta directories
     new_files = utils.filter_files(new_files, prefix=host_prefix)
-    meta_dir = m.config.meta_dir
-    if any(meta_dir in join(host_prefix, f) for f in new_files):
-        meta_files = (
-            tuple(f for f in new_files if m.config.meta_dir in join(host_prefix, f)),
-        )
-        sys.exit(
-            f"Error: Untracked file(s) {meta_files} found in conda-meta directory. This error usually comes "
-            "from using conda in the build script. Avoid doing this, as it can lead to packages "
-            "that include their dependencies."
-        )
     post_build(m, new_files, build_python=python)
 
     entry_point_script_names = get_entry_point_script_names(
@@ -1756,7 +1735,10 @@ def bundle_conda(
             if (
                 # WSL bash is always the same path, it is an alias to the default
                 # distribution as configured by the user
-                on_win and Path("C:\\Windows\\System32\\bash.exe").samefile(args[0])
+                on_win
+                # check if WSL is installed before calling Path.samefile/os.stat
+                and (wsl_bash := Path("C:\\Windows\\System32\\bash.exe")).exists()
+                and wsl_bash.samefile(args[0])
             ):
                 raise CondaBuildUserError(
                     "WSL bash.exe is not supported. Please use MSYS2 packages. Add "
@@ -1775,19 +1757,19 @@ def bundle_conda(
         env_output["RECIPE_DIR"] = metadata.path
         env_output["MSYS2_PATH_TYPE"] = "inherit"
         env_output["CHERE_INVOKING"] = "1"
+        _set_env_variables_for_build(metadata, env_output)
         for var in utils.ensure_list(metadata.get_value("build/script_env")):
             if "=" in var:
                 val = var.split("=", 1)[1]
                 var = var.split("=", 1)[0]
+                env_output[var] = val
             elif var not in os.environ:
                 warnings.warn(
                     f"The environment variable '{var}' specified in script_env is undefined.",
                     UserWarning,
                 )
-                val = ""
             else:
-                val = os.environ[var]
-            env_output[var] = val
+                env_output[var] = os.environ[var]
         dest_file = os.path.join(metadata.config.work_dir, output["script"])
         utils.copy_into(os.path.join(metadata.path, output["script"]), dest_file)
         from os import stat
@@ -1914,9 +1896,12 @@ def bundle_conda(
     tmp_archives = []
     final_outputs = []
     cph_kwargs = {}
-    ext = CONDA_PACKAGE_EXTENSION_V1
-    if output.get("type") == "conda_v2" or metadata.config.conda_pkg_format == "2":
-        ext = CONDA_PACKAGE_EXTENSION_V2
+    ext = CondaPkgFormat.V1.ext
+    if (
+        output.get("type") == CondaPkgFormat.V2
+        or metadata.config.conda_pkg_format == CondaPkgFormat.V2
+    ):
+        ext = CondaPkgFormat.V2.ext
         cph_kwargs["compression_tuple"] = (
             ".tar.zst",
             "zstd",
@@ -1934,7 +1919,7 @@ def bundle_conda(
 
         # we're done building, perform some checks
         for tmp_path in tmp_archives:
-            if tmp_path.endswith(CONDA_PACKAGE_EXTENSION_V1):
+            if tmp_path.endswith(CondaPkgFormat.V1.ext):
                 tarcheck.check_all(tmp_path, metadata.config)
             output_filename = os.path.basename(tmp_path)
 
@@ -2076,8 +2061,8 @@ def scan_metadata(path):
 
 
 bundlers = {
-    "conda": bundle_conda,
-    "conda_v2": bundle_conda,
+    CondaPkgFormat.V1: bundle_conda,
+    CondaPkgFormat.V2: bundle_conda,
     "wheel": bundle_wheel,
 }
 
@@ -2814,8 +2799,6 @@ def build(
                             channel_urls=m.config.channel_urls,
                             debug=m.config.debug,
                             verbose=m.config.verbose,
-                            locking=m.config.locking,
-                            timeout=m.config.timeout,
                             clear_cache=True,
                             omit_defaults=False,
                         )
@@ -2826,8 +2809,6 @@ def build(
                         channel_urls=m.config.channel_urls,
                         debug=m.config.debug,
                         verbose=m.config.verbose,
-                        locking=m.config.locking,
-                        timeout=m.config.timeout,
                         clear_cache=True,
                         omit_defaults=False,
                     )
@@ -2883,28 +2864,6 @@ def warn_on_use_of_SRC_DIR(metadata):
                 " documentation regarding the test/source_files meta.yaml section, "
                 "or pass the --no-remove-work-dir flag."
             )
-
-
-def _construct_metadata_for_test_from_recipe(recipe_dir, config):
-    config.need_cleanup = False
-    config.recipe_dir = None
-    hash_input = {}
-    metadata = expand_outputs(
-        render_recipe(recipe_dir, config=config, reset_build_id=False)
-    )[0][1]
-    log = utils.get_logger(__name__)
-    log.warning(
-        "Testing based on recipes is deprecated as of conda-build 3.16.0.  Please adjust "
-        "your code to pass your desired conda package to test instead."
-    )
-
-    utils.rm_rf(metadata.config.test_dir)
-
-    if metadata.meta.get("test", {}).get("source_files"):
-        if not metadata.source_provided:
-            try_download(metadata, no_download_source=False)
-
-    return metadata, hash_input
 
 
 def _construct_metadata_for_test_from_package(package, config):
@@ -3046,27 +3005,10 @@ def _extract_test_files_from_package(metadata):
 
 
 def construct_metadata_for_test(recipedir_or_package, config):
-    if (
-        os.path.isdir(recipedir_or_package)
-        or os.path.basename(recipedir_or_package) == "meta.yaml"
-    ):
-        m, hash_input = _construct_metadata_for_test_from_recipe(
-            recipedir_or_package, config
-        )
-    else:
-        m, hash_input = _construct_metadata_for_test_from_package(
-            recipedir_or_package, config
-        )
-    return m, hash_input
+    return _construct_metadata_for_test_from_package(recipedir_or_package, config)
 
 
-def write_build_scripts(m, script, build_file):
-    # TODO: Prepending the prefixes here should probably be guarded by
-    #         if not m.activate_build_script:
-    #       Leaving it as is, for now, since we need a quick, non-disruptive patch release.
-    with utils.path_prepended(m.config.host_prefix, False):
-        with utils.path_prepended(m.config.build_prefix, False):
-            env = environ.get_dict(m=m)
+def _set_env_variables_for_build(m, env):
     env["CONDA_BUILD_STATE"] = "BUILD"
 
     # hard-code this because we never want pip's build isolation
@@ -3097,6 +3039,17 @@ def write_build_scripts(m, script, build_file):
     # The stuff in replacements is not parsable in a shell script (or we need to escape it)
     if "replacements" in env:
         del env["replacements"]
+
+
+def write_build_scripts(m, script, build_file):
+    # TODO: Prepending the prefixes here should probably be guarded by
+    #         if not m.activate_build_script:
+    #       Leaving it as is, for now, since we need a quick, non-disruptive patch release.
+    with utils.path_prepended(m.config.host_prefix, False):
+        with utils.path_prepended(m.config.build_prefix, False):
+            env = environ.get_dict(m=m)
+
+    _set_env_variables_for_build(m, env)
 
     work_file = join(m.config.work_dir, "conda_build.sh")
     env_file = join(m.config.work_dir, "build_env_setup.sh")
@@ -3587,24 +3540,6 @@ def tests_failed(
             os.path.dirname(os.path.dirname(pkg)), verbose=config.debug, threads=1
         )
     raise CondaBuildUserError("TESTS FAILED: " + os.path.basename(pkg))
-
-
-@deprecated(
-    "24.7",
-    "24.9",
-    addendum="`patchelf` is an explicit conda-build dependency on Linux so it will always be installed.",
-)
-def check_external():
-    if on_linux:
-        patchelf = external.find_executable("patchelf")
-        if patchelf is None:
-            sys.exit(
-                "Error:\n"
-                f"    Did not find 'patchelf' in: {os.pathsep.join(external.dir_paths)}\n"
-                "    'patchelf' is necessary for building conda packages on Linux with\n"
-                "    relocatable ELF libraries.  You can install patchelf using conda install\n"
-                "    patchelf.\n"
-            )
 
 
 def build_tree(

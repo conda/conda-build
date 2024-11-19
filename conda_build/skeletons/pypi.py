@@ -50,7 +50,7 @@ from ..utils import (
 from ..version import _parse as parse_version
 
 if TYPE_CHECKING:
-    from typing import Iterable
+    from collections.abc import Iterable
 
 pypi_example = """
 Examples:
@@ -121,7 +121,7 @@ DISTUTILS_PATCH = '''\
 diff core.py core.py
 --- core.py
 +++ core.py
-@@ -166,5 +167,40 @@ def setup (**attrs):
+@@ -166,5 +167,42 @@ def setup (**attrs):
  \n
 +# ====== BEGIN CONDA SKELETON PYPI PATCH ======
 +
@@ -154,7 +154,9 @@ diff core.py core.py
 +    data['classifiers'] = kwargs.get('classifiers', None)
 +    data['version'] = kwargs.get('version', '??PACKAGE-VERSION-UNKNOWN??')
 +    with io.open(os.path.join("{}", "pkginfo.yaml"), 'w', encoding='utf-8') as fn:
-+        fn.write(yaml.safe_dump(data, encoding=None))
++        _yaml = yaml.YAML(typ='safe', pure=True)
++        _yaml.encoding = None
++        _yaml.dump(data, fn)
 +
 +
 +# ======= END CONDA SKELETON PYPI PATCH ======

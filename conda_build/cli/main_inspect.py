@@ -20,7 +20,7 @@ except ImportError:
 
 if TYPE_CHECKING:
     from argparse import ArgumentParser, Namespace
-    from typing import Sequence
+    from collections.abc import Sequence
 
 logging.basicConfig(level=logging.INFO)
 
