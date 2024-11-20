@@ -1125,7 +1125,7 @@ def provide(metadata):
                     obtained_content_hash = compute_content_hash(
                         src_dir,
                         algorithm,
-                        skip=ensure_list(source_dict.get("content_hash_skip") or ())
+                        skip=ensure_list(source_dict.get("content_hash_skip") or ()),
                     )
                     if expected_content_hash != obtained_content_hash:
                         raise RuntimeError(
