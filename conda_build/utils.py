@@ -2045,10 +2045,20 @@ def compute_content_hash(
             hasher.update(b"D")
         elif path.is_file():
             hasher.update(b"F")
+            # We need to normalize line endings for Windows-Unix compat
+            # Attempt normalized line-by-line hashing (text mode). If
+            # Python fails to open in text mode, then it's binary and we hash
+            # the raw bytes directly.
             try:
-                with open(path, "rb") as fh:
-                    for chunk in iter(partial(fh.read, 8192), b""):
-                        hasher.update(chunk)
+                try:
+                    with open(path) as fh:
+                        for line in fh:
+                            hasher.update(line.replace("\r\n", "\n").encode("utf-8"))
+                except UnicodeDecodeError:
+                    # file must be binary
+                    with open(path, "rb") as fh:
+                        for chunk in iter(partial(fh.read, 8192), b""):
+                            hasher.update(chunk)
             except OSError as exc:
                 log.debug("Skipping %s for hashing", path.name, exc_info=exc)
         else:
