@@ -1987,7 +1987,9 @@ def sha256_checksum(filename, buffersize=65536):
     return sha256.hexdigest()
 
 
-def compute_content_hash(directory: str, algorithm="sha256", skip: str = "") -> str:
+def compute_content_hash(
+    directory: str | Path, algorithm="sha256", skip: Iterable[str] = ()
+) -> str:
     """
     Given a directory, recursively scan all its contents (without following symlinks) and sort them
     by their full path. For each entry in the contents table, compute the hash for the concatenated
@@ -2008,7 +2010,9 @@ def compute_content_hash(directory: str, algorithm="sha256", skip: str = "") -> 
     ----------
     directory: The path whose contents will be hashed
     algorithm: Name of the algorithm to be used, as expected by `hashlib.new()`
-    skip: `fnmatch.fnmatchase`-compatible glob. If matched, that path won't be included in the hash.
+    skip: iterable of paths that should not be checked. If a path ends with a slash, it's
+          interpreted as a directory that won't be traversed. It matches the relative paths
+          already slashed-normalized.
 
     Returns
     -------
@@ -2017,26 +2021,38 @@ def compute_content_hash(directory: str, algorithm="sha256", skip: str = "") -> 
     """
     log = get_logger(__name__)
     hasher = hashlib.new(algorithm)
-    for entry in sorted(os.scandir(directory), key=lambda f: f.name):
-        if skip and fnmatch.fnmatchcase(entry.name, skip):
+    for path in sorted(Path(directory).rglob("*")):
+        relpath = path.relative_to(directory)
+        relpathstr = str(relpath).replace("\\", "/")
+        if skip and any(
+            (
+                # Skip directories like .git/
+                skip_item.endswith("/")
+                and relpathstr.startswith(skip_item)
+                or f"{relpathstr}/" == skip_item
+            )
+            # Skip full relpath match
+            or relpathstr == skip_item
+            for skip_item in skip
+        ):
             continue
         # encode the relative path to directory, for files, dirs and others
-        hasher.update(entry.name.replace("\\", "/").encode("utf-8"))
-        if entry.is_dir(follow_symlinks=False):
-            hasher.update(b"D")
-        elif entry.is_symlink():
+        hasher.update(relpathstr.encode("utf-8"))
+        if path.is_symlink():
             hasher.update(b"L")
-            hasher.update(os.readlink(entry).replace("\\", "/").encode("utf-8"))
-        elif entry.is_file():
+            hasher.update(str(path.readlink()).replace("\\", "/").encode("utf-8"))
+        elif path.is_dir():
+            hasher.update(b"D")
+        elif path.is_file():
             hasher.update(b"F")
             try:
-                with open(entry.path, "rb") as fh:
+                with open(path, "rb") as fh:
                     for chunk in iter(partial(fh.read, 8192), b""):
                         hasher.update(chunk)
             except OSError as exc:
-                log.debug("Skipping %s for hashing", entry.name, exc_info=exc)
+                log.debug("Skipping %s for hashing", path.name, exc_info=exc)
         else:
-            log.debug("Can't detect type for path %s. Skipping...", entry)
+            log.debug("Can't detect type for path %s. Skipping...", path)
         hasher.update(b"-")
     return hasher.hexdigest()
 

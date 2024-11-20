@@ -1116,7 +1116,6 @@ def provide(metadata):
 
             for hash_type in CONTENT_HASH_KEYS:
                 if hash_type in source_dict:
-                    skip_glob = ".git/*" if "git_url" in source_dict else ""
                     expected_content_hash = source_dict[hash_type]
                     if expected_content_hash in (None, ""):
                         raise ValueError(
@@ -1124,11 +1123,13 @@ def provide(metadata):
                         )
                     algorithm = hash_type[len("content_") :]
                     obtained_content_hash = compute_content_hash(
-                        src_dir, algorithm, skip=skip_glob
+                        src_dir,
+                        algorithm,
+                        skip=ensure_list(source_dict.get("content_hash_skip") or ())
                     )
                     if expected_content_hash != obtained_content_hash:
                         raise RuntimeError(
-                            f"{hash_type} mismatch: "
+                            f"{hash_type} mismatch in source item #{idx}: "
                             f"obtained '{obtained_content_hash}' != "
                             f"expected '{expected_content_hash}'"
                         )
