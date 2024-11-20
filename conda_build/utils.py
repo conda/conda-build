@@ -2051,11 +2051,18 @@ def compute_content_hash(
             # the raw bytes directly.
             try:
                 try:
+                    lines = []
                     with open(path) as fh:
                         for line in fh:
-                            hasher.update(line.replace("\r\n", "\n").encode("utf-8"))
+                            # Accumulate all line-ending normalized lines first
+                            # to make sure the whole file is read. This prevents
+                            # partial updates to the hash with hybrid text/binary
+                            # files (e.g. like the constructor shell installers).
+                            lines.append(line.replace("\r\n", "\n"))
+                    for line in lines:
+                        hasher.update(line.encode("utf-8"))
                 except UnicodeDecodeError:
-                    # file must be binary
+                    # file must be binary, read the bytes directly
                     with open(path, "rb") as fh:
                         for chunk in iter(partial(fh.read, 8192), b""):
                             hasher.update(chunk)
