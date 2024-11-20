@@ -215,7 +215,7 @@ using different hashing algorithms:
 
 - ``md5``, ``sha1`` and ``sha256`` will check the provided
   hexdigest against the downloaded archive, prior to extraction.
-- ``content_md5``, ``content_sha1`` and ``content_sha256`` will 
+- ``content_md5``, ``content_sha1`` and ``content_sha256`` will
   check the provided hexdigest against the contents of the
   (extracted) directory. ``content_hash_skip`` can take a list of
   relative files and directories to be ignored during the check
