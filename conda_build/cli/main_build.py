@@ -512,7 +512,7 @@ def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
 
     # TODO: Remove in 25.1
     if (
-        all(not arg.startswith("--package-format") for arg in args)
+        all(not arg.startswith("--package-format") for arg in (args or []))
         and warn_about_default_pkg_format
         and "purge" not in parsed.recipe
         and "purge-all" not in parsed.recipe
