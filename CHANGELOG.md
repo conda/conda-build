@@ -1,5 +1,18 @@
 [//]: # (current developments)
 
+## 24.11.1 (2024-11-21)
+
+### Bug fixes
+
+* Fix `TypeError` when no CLI arguments are passed. (#5549 via #5550)
+
+### Contributors
+
+* @beeankha
+* @kenodegard
+
+
+
 ## 24.11.0 (2024-11-15)
 
 ### Enhancements
