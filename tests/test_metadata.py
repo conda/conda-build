@@ -585,10 +585,14 @@ def test_select_lines_invalid():
     ],
 )
 def test_sanitize_source(keys: list[str], expected: dict[str, str] | None) -> None:
-    with pytest.raises(
-        CondaBuildUserError,
-        match=r"Multiple git_revs:",
-    ) if expected is None else nullcontext():
+    with (
+        pytest.raises(
+            CondaBuildUserError,
+            match=r"Multiple git_revs:",
+        )
+        if expected is None
+        else nullcontext()
+    ):
         assert sanitize({"source": {key: "rev" for key in keys}}) == {
             "source": expected
         }
@@ -606,10 +610,14 @@ def test_sanitize_source(keys: list[str], expected: dict[str, str] | None) -> No
     ],
 )
 def test_check_bad_chrs(value: str, field: str, invalid: str) -> None:
-    with pytest.raises(
-        CondaBuildUserError,
-        match=rf"Bad character\(s\) \({invalid}\) in {field}: {value}\.",
-    ) if invalid else nullcontext():
+    with (
+        pytest.raises(
+            CondaBuildUserError,
+            match=rf"Bad character\(s\) \({invalid}\) in {field}: {value}\.",
+        )
+        if invalid
+        else nullcontext()
+    ):
         check_bad_chrs(value, field)
 
 
@@ -623,3 +631,27 @@ def test_parse_until_resolved(testing_metadata: MetaData, tmp_path: Path) -> Non
         match=("Failed to render jinja template"),
     ):
         testing_metadata.parse_until_resolved()
+
+
+def test_parse_until_resolved_skip_avoids_undefined_jinja(
+    testing_metadata: MetaData, tmp_path: Path
+) -> None:
+    (recipe := tmp_path / (name := "meta.yaml")).write_text(
+        """
+package:
+    name: dummy
+    version: {{version}}
+build:
+    skip: True
+"""
+    )
+    testing_metadata._meta_path = recipe
+    testing_metadata._meta_name = name
+
+    # because skip is True, we should not error out here - so no exception should be raised
+    try:
+        testing_metadata.parse_until_resolved()
+    except CondaBuildUserError:
+        pytest.fail(
+            "Undefined variable caused error, even though this build is skipped"
+        )

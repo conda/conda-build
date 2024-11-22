@@ -19,6 +19,7 @@ from conda_build.variants import (
     filter_combined_spec_to_used_keys,
     find_used_variables_in_batch_script,
     find_used_variables_in_shell_script,
+    find_used_variables_in_text,
     get_package_variants,
     get_vars,
     validate_spec,
@@ -426,6 +427,37 @@ def test_get_used_loop_vars():
     }
 
 
+def test_get_used_loop_vars_jinja2():
+    metadata = api.render(
+        os.path.join(variants_dir, "jinja2_used_variables"),
+        finalize=False,
+        bypass_env_check=True,
+    )
+    # 4 CLANG_VERSION values x 2 VCVER values - one skipped because of jinja2 conditionals
+    assert len(metadata) == 7
+    for m, _, _ in metadata:
+        assert m.get_used_loop_vars(force_top_level=False) == {"CLANG_VERSION", "VCVER"}
+        assert m.get_used_loop_vars(force_top_level=True) == {
+            "CL_VERSION",
+            "CLANG_VERSION",
+            "VCVER",
+        }
+        assert m.get_used_vars(force_top_level=False) == {
+            "CLANG_VERSION",
+            "VCVER",
+            "FOO",
+            "target_platform",
+        }
+        assert m.get_used_vars(force_top_level=True) == {
+            "CLANG_VERSION",
+            "CL_VERSION",
+            "VCVER",
+            "FOO",
+            "FOOBAR",
+            "target_platform",
+        }
+
+
 def test_reprovisioning_source():
     api.render(os.path.join(variants_dir, "20_reprovision_source"))
 
@@ -783,6 +815,68 @@ def test_get_vars():
     ]
 
     assert get_vars(variants) == {"nodejs"}
+
+
+@pytest.mark.parametrize(
+    "vars,text,found_vars",
+    [
+        # basic tests
+        (
+            ("python", "python_min"),
+            "{{ python }}",
+            {"python"},
+        ),
+        (
+            ("python", "python_min"),
+            "{{ python_min }}",
+            {"python_min"},
+        ),
+        # filters and other text
+        (
+            ("python", "python_min"),
+            "python {{ python_min }}",
+            {"python_min"},
+        ),
+        (
+            ("python", "python_min"),
+            "python {{ python }}",
+            {"python"},
+        ),
+        (
+            ("python", "python_min"),
+            "python {{ python|lower }}",
+            {"python"},
+        ),
+        (
+            ("python", "python_min"),
+            "{{ python_min|lower }}",
+            {"python_min"},
+        ),
+        # pin_* statements
+        (
+            ("python", "python_min"),
+            "{{ pin_compatible('python') }}",
+            {"python"},
+        ),
+        (
+            ("python", "python_min"),
+            "{{ pin_compatible('python', max_pin='x.x') }}",
+            {"python"},
+        ),
+        (
+            ("python", "python_min"),
+            "{{ pin_compatible('python_min') }}",
+            {"python_min"},
+        ),
+        (
+            ("python", "python_min"),
+            "{{ pin_compatible('python_min', max_pin='x.x') }}",
+            {"python_min"},
+        ),
+    ],
+)
+def test_find_used_variables_in_text(vars, text, found_vars):
+    assert find_used_variables_in_text(vars, text) == found_vars
 
 
 def test_find_used_variables_in_shell_script(tmp_path: Path) -> None:

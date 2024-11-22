@@ -1,6 +1,6 @@
 ### Enhancements
 
-* Report fully rendered recipe to stdout before the build process starts. (#3798 via #5344)
+* <news item>
 
 ### Bug fixes
 
@@ -12,7 +12,7 @@
 
 ### Docs
 
-* <news item>
+* Better document `run_test.r`. (#5479)
 
 ### Other
 

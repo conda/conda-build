@@ -4,11 +4,11 @@
 
 ### Bug fixes
 
-* On Linux platforms, prefer the sysroot matching the target_platform when cross-compiling (#5403).
+* <news item>
 
 ### Deprecations
 
-* <news item>
+* Deprecate `conda_build.exceptions.UnableToParseMissingJinja2`. (#5497)
 
 ### Docs
 

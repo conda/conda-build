@@ -5,6 +5,7 @@ import os
 import pytest
 
 from conda_build import api
+from conda_build.config import CondaPkgFormat
 
 from .utils import metadata_dir
 
@@ -21,13 +22,15 @@ def test_conda_pkg_format(
     # These variables are defined solely for testing purposes,
     # so they can be checked within build scripts
     testing_config.activate = True
-    testing_config.conda_pkg_format = pkg_format
+    testing_config.conda_pkg_format = (
+        None if pkg_format is None else CondaPkgFormat.normalize(pkg_format)
+    )
     monkeypatch.setenv("CONDA_TEST_VAR", "conda_test")
     monkeypatch.setenv("CONDA_TEST_VAR_2", "conda_test_2")
 
     # Recipe "entry_points" is used in other test -> add test-specific variant
     # (change build hash) to avoid clashes in package cache from other tests.
-    variants = {"pytest_name": [request.node.name]}
+    variants = {"pytest_name": [request.node.name.replace("[", "").replace("]", "")]}
     (output_file,) = api.get_output_file_paths(
         recipe, config=testing_config, variants=variants
     )
