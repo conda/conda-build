@@ -2021,7 +2021,7 @@ def compute_content_hash(
     """
     log = get_logger(__name__)
     hasher = hashlib.new(algorithm)
-    for path in sorted(Path(directory).rglob("*")):
+    for path in sorted(Path(directory).rglob("*"), key=str):
         relpath = path.relative_to(directory)
         relpathstr = str(relpath).replace("\\", "/")
         if skip and any(
