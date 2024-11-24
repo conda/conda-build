@@ -129,6 +129,7 @@ def test_recipe_builds(
     testing_config,
     monkeypatch: pytest.MonkeyPatch,
     conda_build_test_recipe_envvar: str,
+    tmp_path_factory: pytest.TempPathFactory,
 ):
     # TODO: After we fix #3754 this mark can be removed. This specific test
     #   ``source_setup_py_data_subdir`` reproduces the problem.
@@ -136,6 +137,9 @@ def test_recipe_builds(
         pytest.xfail("Issue related to #3754 on conda-build.")
     elif recipe.name == "unicode_all_over" and context.solver == "libmamba":
         pytest.xfail("Unicode package names not supported in libmamba.")
+    elif recipe.name == "source_url":
+        # Several recipes are cloning conda-build, which causes problems with checkouts
+        testing_config.git_cache = tmp_path_factory.mktemp("git_cache", numbered=False)
 
     # These variables are defined solely for testing purposes,
     # so they can be checked within build scripts

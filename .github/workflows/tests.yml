@@ -147,7 +147,7 @@ jobs:
         run: >
           pytest
           --cov=conda_build
-          -n auto
+          -n ${{ env.PYTEST_MARKER == 'serial' && 1 || 'auto' }}
           -m "${{ env.PYTEST_MARKER }}"
 
       - name: Upload Coverage
@@ -315,7 +315,7 @@ jobs:
           pytest
           --cov=conda_build
           --basetemp=${{ runner.temp }}
-          -n auto
+          -n ${{ env.PYTEST_MARKER == 'serial' && 1 || 'auto' }}
           -m "${{ env.PYTEST_MARKER }}"
 
       - name: Upload Coverage
@@ -431,7 +431,7 @@ jobs:
         run: >
           pytest
           --cov=conda_build
-          -n auto
+          -n ${{ env.PYTEST_MARKER == 'serial' && 1 || 'auto' }}
           -m "${{ env.PYTEST_MARKER }}"
         env:
           CONDA_BUILD_SYSROOT: ${{ env.MACOSX_SDK_ROOT }}
