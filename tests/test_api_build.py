@@ -139,7 +139,9 @@ def test_recipe_builds(
         pytest.xfail("Unicode package names not supported in libmamba.")
     elif recipe.name == "source_url":
         # Several recipes are cloning conda-build, which causes problems with checkouts
-        testing_config.src_cache_root = tmp_path_factory.mktemp("src_cache_root", numbered=False)
+        testing_config.src_cache_root = tmp_path_factory.mktemp(
+            "src_cache_root", numbered=False
+        )
 
     # These variables are defined solely for testing purposes,
     # so they can be checked within build scripts
