@@ -488,19 +488,14 @@ def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
             "Do not display value of environment variables specified in build.script_env."
         ),
     )
-    # TODO: Remove in 25.1
-    default_pkg_format = context.conda_build.get("pkg_format")
-    if default_pkg_format is None:
-        warn_about_default_pkg_format = True
-        default_pkg_format = conda_pkg_format_default
-    else:
-        warn_about_default_pkg_format = False
     parser.add_argument(
         "--package-format",
         dest="conda_pkg_format",
         choices=CondaPkgFormat.acceptable(),
         action=PackageTypeNormalize,
-        default=CondaPkgFormat.normalize(default_pkg_format),
+        default=CondaPkgFormat.normalize(
+            context.conda_build.get("pkg_format", conda_pkg_format_default)
+        ),
         help=(
             "Choose which package type(s) are outputted. (Accepted inputs .tar.bz2 or 1, .conda or 2)"
         ),
@@ -510,26 +505,6 @@ def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
     parsed = parser.parse_args(args)
     check_recipe(parsed.recipe)
 
-    # TODO: Remove in 25.1
-    if (
-        all(not arg.startswith("--package-format") for arg in (args or []))
-        and warn_about_default_pkg_format
-        and "purge" not in parsed.recipe
-        and "purge-all" not in parsed.recipe
-    ):
-        deprecated.topic(
-            "24.11",
-            "25.1",
-            topic="The default `pkg_format` of '.tar.bz2'",
-            addendum=(
-                "\n\n"
-                "The new default `pkg_format` value will be '.conda'. "
-                "If you want to keep using `.tar.bz2`, consider:\n"
-                "- Setting `conda_build.pkg_format: 'tar.bz2' in your condarc file.\n"
-                "- Using `--pkg-format=tar.bz2` in the CLI.\n"
-            ),
-            deprecation_type=FutureWarning,
-        )
     return parser, parsed
 
 
