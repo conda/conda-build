@@ -353,7 +353,7 @@ def git_mirror_checkout_recursive(
             print(f"checkout: {checkout!r}")
         if checkout:
             check_call_env(
-                [git, "checkout", "-f", checkout],  # UNDO
+                [git, "checkout", checkout],
                 cwd=checkout_dir,
                 stdout=stdout,
                 stderr=stderr,
