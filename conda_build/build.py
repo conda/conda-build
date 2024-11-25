@@ -40,9 +40,8 @@ from conda.utils import url_path
 
 from . import __version__ as conda_build_version
 from . import environ, noarch_python, source, tarcheck, utils
-from .config import Config
+from .config import CondaPkgFormat, Config
 from .create_test import create_all_test_files
-from .deprecations import deprecated
 from .exceptions import (
     BuildScriptException,
     CondaBuildException,
@@ -71,8 +70,6 @@ from .render import (
     try_download,
 )
 from .utils import (
-    CONDA_PACKAGE_EXTENSION_V1,
-    CONDA_PACKAGE_EXTENSION_V2,
     CONDA_PACKAGE_EXTENSIONS,
     env_var,
     glob,
@@ -92,7 +89,8 @@ if on_win:
     from . import windows
 
 if TYPE_CHECKING:
-    from typing import Any, Iterable
+    from collections.abc import Iterable
+    from typing import Any
 
 if "bsd" in sys.platform:
     shell_path = "/bin/sh"
@@ -1898,9 +1896,12 @@ def bundle_conda(
     tmp_archives = []
     final_outputs = []
     cph_kwargs = {}
-    ext = CONDA_PACKAGE_EXTENSION_V1
-    if output.get("type") == "conda_v2" or metadata.config.conda_pkg_format == "2":
-        ext = CONDA_PACKAGE_EXTENSION_V2
+    ext = CondaPkgFormat.V1.ext
+    if (
+        output.get("type") == CondaPkgFormat.V2
+        or metadata.config.conda_pkg_format == CondaPkgFormat.V2
+    ):
+        ext = CondaPkgFormat.V2.ext
         cph_kwargs["compression_tuple"] = (
             ".tar.zst",
             "zstd",
@@ -1918,7 +1919,7 @@ def bundle_conda(
 
         # we're done building, perform some checks
         for tmp_path in tmp_archives:
-            if tmp_path.endswith(CONDA_PACKAGE_EXTENSION_V1):
+            if tmp_path.endswith(CondaPkgFormat.V1.ext):
                 tarcheck.check_all(tmp_path, metadata.config)
             output_filename = os.path.basename(tmp_path)
 
@@ -2060,8 +2061,8 @@ def scan_metadata(path):
 
 
 bundlers = {
-    "conda": bundle_conda,
-    "conda_v2": bundle_conda,
+    CondaPkgFormat.V1: bundle_conda,
+    CondaPkgFormat.V2: bundle_conda,
     "wheel": bundle_wheel,
 }
 
@@ -2798,8 +2799,6 @@ def build(
                             channel_urls=m.config.channel_urls,
                             debug=m.config.debug,
                             verbose=m.config.verbose,
-                            locking=m.config.locking,
-                            timeout=m.config.timeout,
                             clear_cache=True,
                             omit_defaults=False,
                         )
@@ -2810,8 +2809,6 @@ def build(
                         channel_urls=m.config.channel_urls,
                         debug=m.config.debug,
                         verbose=m.config.verbose,
-                        locking=m.config.locking,
-                        timeout=m.config.timeout,
                         clear_cache=True,
                         omit_defaults=False,
                     )
@@ -2867,32 +2864,6 @@ def warn_on_use_of_SRC_DIR(metadata):
                 " documentation regarding the test/source_files meta.yaml section, "
                 "or pass the --no-remove-work-dir flag."
             )
-
-
-@deprecated(
-    "3.16.0",
-    "24.9.0",
-    addendum=(
-        "Test built packages instead, not recipes "
-        "(e.g., `conda build --test package` instead of `conda build --test recipe/`)."
-    ),
-    deprecation_type=FutureWarning,  # we need to warn users, not developers
-)
-def _construct_metadata_for_test_from_recipe(recipe_dir, config):
-    config.need_cleanup = False
-    config.recipe_dir = None
-    hash_input = {}
-    metadata = expand_outputs(
-        render_recipe(recipe_dir, config=config, reset_build_id=False)
-    )[0][1]
-
-    utils.rm_rf(metadata.config.test_dir)
-
-    if metadata.meta.get("test", {}).get("source_files"):
-        if not metadata.source_provided:
-            try_download(metadata, no_download_source=False)
-
-    return metadata, hash_input
 
 
 def _construct_metadata_for_test_from_package(package, config):
@@ -3034,18 +3005,7 @@ def _extract_test_files_from_package(metadata):
 
 
 def construct_metadata_for_test(recipedir_or_package, config):
-    if (
-        os.path.isdir(recipedir_or_package)
-        or os.path.basename(recipedir_or_package) == "meta.yaml"
-    ):
-        m, hash_input = _construct_metadata_for_test_from_recipe(
-            recipedir_or_package, config
-        )
-    else:
-        m, hash_input = _construct_metadata_for_test_from_package(
-            recipedir_or_package, config
-        )
-    return m, hash_input
+    return _construct_metadata_for_test_from_package(recipedir_or_package, config)
 
 
 def _set_env_variables_for_build(m, env):

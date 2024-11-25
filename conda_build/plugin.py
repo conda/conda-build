@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 import conda.plugins
 
 if TYPE_CHECKING:
-    from typing import Sequence
+    from collections.abc import Sequence
 
 
 # lazy-import to avoid nasty import-time side effects when not using conda-build

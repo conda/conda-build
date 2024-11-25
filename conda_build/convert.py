@@ -21,7 +21,7 @@ from .exceptions import CondaBuildUserError
 from .utils import ensure_list, filter_info_files, walk
 
 if TYPE_CHECKING:
-    from typing import Iterable
+    from collections.abc import Iterable
 
 
 def retrieve_c_extensions(file_path, show_imports=False):

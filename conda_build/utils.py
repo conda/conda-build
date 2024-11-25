@@ -21,7 +21,8 @@ import time
 import urllib.parse as urlparse
 import urllib.request as urllib
 from collections import OrderedDict, defaultdict
-from functools import lru_cache
+from collections.abc import Iterable
+from functools import cache
 from glob import glob
 from io import StringIO
 from itertools import filterfalse
@@ -42,7 +43,7 @@ from os.path import (
 )
 from pathlib import Path
 from threading import Thread
-from typing import TYPE_CHECKING, Iterable, overload
+from typing import TYPE_CHECKING, overload
 
 import conda_package_handling.api
 import filelock
@@ -69,7 +70,8 @@ from conda.utils import unix_path_to_win
 from .exceptions import BuildLockError
 
 if TYPE_CHECKING:
-    from typing import Mapping, TypeVar
+    from collections.abc import Mapping
+    from typing import TypeVar
 
     from .metadata import MetaData
 
@@ -113,7 +115,7 @@ if __name__ == '__main__':
 VALID_METAS = ("meta.yaml", "meta.yml", "conda.yaml", "conda.yml")
 
 
-@lru_cache(maxsize=None)
+@cache
 def stat_file(path):
     return os.stat(path)
 

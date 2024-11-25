@@ -1,5 +1,101 @@
 [//]: # (current developments)
 
+## 24.11.1 (2024-11-21)
+
+### Bug fixes
+
+* Fix `TypeError` when no CLI arguments are passed. (#5549 via #5550)
+
+### Contributors
+
+* @beeankha
+* @kenodegard
+
+
+
+## 24.11.0 (2024-11-15)
+
+### Enhancements
+
+* Introduce `--package-format` as a command line argument. (#4890 via #5209)
+  * This takes precedence over default value and `condarc`.
+  * Normalization occurs so `1`, `"1"`, `tar.bz2`,`.tar.bz2`, `2`, `"2"`, `conda`, `.conda` are all recognized and mapped appropriately.
+  * Other options are rejected.
+* Add  support for [CEP-17](https://github.com/conda/ceps/blob/main/cep-0017.md) that allows specifying the location of the site-packages directory with the `python_site_packages_path` build option for any packages named `python`. (#5502)
+
+### Bug fixes
+
+* Fix regex for Jinja2 `set` / `for` statements to be more specific. (#5514)
+* Fix `ruamel.yaml` usage to use supported APIs. (#5517)
+* Fix bug variant variables were not defined for the first parsing pass of a recipe. (#5528)
+* Fix a bug where variants were incorrectly found as being used when they matched a leading substring of
+  another variant. (#5535)
+* Fix a bug where variants were not found when variables were used in `pin_*` statements. (#5535)
+
+### Deprecations
+
+* Deprecate `conda_build.exceptions.UnableToParseMissingJinja2`. (#5497)
+* Deprecate `conda_build.index.get_build_index(locking)`. (#5508)
+* Deprecate `conda_build.index.get_build_index(timeout)`. (#5508)
+* Require Python 3.9 or greater. (#5525)
+* The default value for `--package-format` and `conda_pkg_format` will become `.conda` in 25.1. (#5534)
+
+### Docs
+
+* Better document `run_test.r`. (#5479)
+* Fix bug in docs build by pinning `conda-sphinx-theme` version to 0.2.2. (#5518)
+
+### Contributors
+
+* @beeankha
+* @conda-bot
+* @jaimergp
+* @jezdez
+* @jdblischak
+* @jjhelmus
+* @kenodegard
+* @zklaus
+* @beckermr
+* @ryanskeith
+* @dependabot[bot]
+* @pre-commit-ci[bot]
+
+
+
+## 24.9.0 (2024-09-18)
+
+### Enhancements
+
+* Reduce render time when there is a large number of unused variants. (#5392)
+
+### Bug fixes
+
+* Ensure variables mentioned in `script_env` are undefined in the multi-output build environment
+  if they are undefined in the environment that `conda-build` is invoked from. (#5322)
+* Variables used in single-line jinja2 `for` and `set` statements are now properly included in the variant
+  matrix for some edge cases. (#5447)
+* Allow undefined jinja variables when a particular metadata block evaluates as skipped. (#5458)
+
+### Deprecations
+
+* Remove `conda_build.build.check_external`. `patchelf` is an explicit conda-build dependency on Linux, so it will always be installed. (#5441)
+* Remove `conda_build.metadata._get_env_path`. Use `conda.base.context.locate_prefix_by_name` instead. (#5441)
+* Remove `conda_build.build._construct_metadata_for_test_from_recipe`. Test built packages instead, not recipes (e.g., `conda build --test package` instead of `conda build --test recipe/`). (#5478)
+
+### Contributors
+
+* @beeankha
+* @conda-bot
+* @jameslamb
+* @kenodegard
+* @beckermr
+* @msarahan
+* @minrk
+* @dependabot[bot]
+* @pre-commit-ci[bot]
+
+
+
 ## 24.7.1 (2024-07-30)
 
 ### Bug fixes

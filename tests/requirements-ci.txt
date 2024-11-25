@@ -1,5 +1,4 @@
 anaconda-client
-conda-forge::xdoctest
 conda-verify
 contextlib2
 coverage
@@ -16,4 +15,5 @@ pytest-mock
 pytest-rerunfailures
 pytest-xdist
 ruamel.yaml
+setuptools <75.1.0  # temporary, see https://github.com/conda/conda-build/issues/5493
 tomli  # [py<3.11] for coverage pyproject.toml
