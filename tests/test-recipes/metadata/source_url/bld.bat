@@ -1,4 +1,4 @@
-cd conda-build-tar-gz
+cd constructor-tar-gz
 set PYTHONPATH=.
-python -c "import conda_build; assert conda_build.__version__ == 'tag: 1.8.1'"
+python -c "import constructor; assert constructor.__version__ == '3.0.0'"
 if errorlevel 1 exit 1

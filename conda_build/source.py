@@ -128,7 +128,8 @@ def download_to_cache(cache_folder, recipe_path, source_dict, verbose=False):
             if expected_hash != hashed:
                 rm_rf(path)
                 raise RuntimeError(
-                    f"{tp.upper()} mismatch: '{hashed}' != '{expected_hash}'"
+                    f"{tp.upper()} mismatch for {unhashed_fn}: "
+                    f"obtained '{hashed}' != expected '{expected_hash}'"
                 )
             break
 
