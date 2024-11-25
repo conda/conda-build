@@ -1641,9 +1641,7 @@ class MetaData:
                         f"dependency '{ms.name}'"
                     )
                     if len(parts) >= 3:
-                        msg += (
-                            f"\nPerhaps you meant '{ms.name} {parts[1]}{parts[2]}'"
-                        )
+                        msg += f"\nPerhaps you meant '{ms.name} {parts[1]}{parts[2]}'"
                     sys.exit(msg)
             specs[spec] = ms
         return list(specs.values())
