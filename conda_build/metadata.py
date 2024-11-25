@@ -1590,44 +1590,67 @@ class MetaData:
                     ("r-base", self.config.variant["r_base"]),
                 ]
             )
+
+        def _parse_spec(spec, raise_errors=False):
+            # parsing of specs may fail due to undefined jinja2
+            # so we do not raise in that case and try to handle it
+            # by parsing just the name
+            try:
+                return MatchSpec(spec)
+            except AssertionError:
+                if raise_errors:
+                    raise RuntimeError(f"Invalid package specification: {spec!r}")
+                else:
+                    return _parse_spec(spec.split()[0], raise_errors=True)
+            except (AttributeError, ValueError) as e:
+                if raise_errors:
+                    raise RuntimeError(
+                        "Received dictionary as spec.  Note that pip requirements are "
+                        "not supported in conda-build meta.yaml.  Error message: "
+                        + str(e)
+                    )
+                else:
+                    return _parse_spec(spec.split()[0], raise_errors=True)
+
         specs = OrderedDict()
         for spec in ensure_list(self.get_value("requirements/" + typ, [])):
             if not spec:
                 continue
-            try:
-                ms = MatchSpec(spec)
-            except AssertionError:
-                raise RuntimeError(f"Invalid package specification: {spec!r}")
-            except (AttributeError, ValueError) as e:
-                raise RuntimeError(
-                    "Received dictionary as spec.  Note that pip requirements are "
-                    "not supported in conda-build meta.yaml.  Error message: " + str(e)
-                )
+
+            ms = _parse_spec(spec, raise_errors=len(self.undefined_jinja_vars) == 0)
+
             if ms.name == self.name() and not (
                 typ == "build" and self.config.host_subdir != self.config.build_subdir
             ):
                 raise RuntimeError(f"{self.name()} cannot depend on itself")
+
+            # IDK what this does since AFAIK the inner continue applies only
+            # to the inner loop
             for name, ver in name_ver_list:
                 if ms.name == name:
                     if self.noarch:
                         continue
 
-            for c in "=!@#$%^&*:;\"'\\|<>?/":
-                if c in ms.name:
-                    sys.exit(
-                        f"Error: bad character '{c}' in package name "
-                        f"dependency '{ms.name}'"
-                    )
-            parts = spec.split()
-            if len(parts) >= 2:
-                if parts[1] in {">", ">=", "=", "==", "!=", "<", "<="}:
-                    msg = (
-                        f"Error: bad character '{parts[1]}' in package version "
-                        f"dependency '{ms.name}'"
-                    )
-                    if len(parts) >= 3:
-                        msg += f"\nPerhaps you meant '{ms.name} {parts[1]}{parts[2]}'"
-                    sys.exit(msg)
+            # only validate here if we have all jinja2 variables defined
+            if len(self.undefined_jinja_vars) == 0:
+                for c in "=!@#$%^&*:;\"'\\|<>?/":
+                    if c in ms.name:
+                        sys.exit(
+                            f"Error: bad character '{c}' in package name "
+                            f"dependency '{ms.name}'"
+                        )
+                parts = spec.split()
+                if len(parts) >= 2:
+                    if parts[1] in {">", ">=", "=", "==", "!=", "<", "<="}:
+                        msg = (
+                            f"Error: bad character '{parts[1]}' in package version "
+                            f"dependency '{ms.name}'"
+                        )
+                        if len(parts) >= 3:
+                            msg += (
+                                f"\nPerhaps you meant '{ms.name} {parts[1]}{parts[2]}'"
+                            )
+                        sys.exit(msg)
             specs[spec] = ms
         return list(specs.values())
 
