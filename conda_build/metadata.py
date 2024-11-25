@@ -1591,32 +1591,27 @@ class MetaData:
                 ]
             )
 
-        def _parse_spec(spec, raise_errors=False):
+        specs = OrderedDict()
+        for spec in ensure_list(self.get_value("requirements/" + typ, [])):
+            if not spec:
+                continue
+
             try:
-                return MatchSpec(spec)
+                ms = MatchSpec(spec)
             except AssertionError:
-                if raise_errors:
+                if len(self.undefined_jinja_vars) == 0:
                     raise RuntimeError(f"Invalid package specification: {spec!r}")
                 else:
-                    return None
+                    continue
             except (AttributeError, ValueError) as e:
-                if raise_errors:
+                if len(self.undefined_jinja_vars) == 0:
                     raise RuntimeError(
                         "Received dictionary as spec.  Note that pip requirements are "
                         "not supported in conda-build meta.yaml.  Error message: "
                         + str(e)
                     )
                 else:
-                    return None
-
-        specs = OrderedDict()
-        for spec in ensure_list(self.get_value("requirements/" + typ, [])):
-            if not spec:
-                continue
-
-            ms = _parse_spec(spec, raise_errors=len(self.undefined_jinja_vars) == 0)
-            if ms is None:
-                continue
+                    continue
 
             if ms.name == self.name() and not (
                 typ == "build" and self.config.host_subdir != self.config.build_subdir
