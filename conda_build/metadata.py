@@ -1590,12 +1590,10 @@ class MetaData:
                     ("r-base", self.config.variant["r_base"]),
                 ]
             )
-
         specs = OrderedDict()
         for spec in ensure_list(self.get_value("requirements/" + typ, [])):
             if not spec:
                 continue
-
             try:
                 ms = MatchSpec(spec)
             except AssertionError:
