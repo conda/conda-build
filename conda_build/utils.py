@@ -1998,12 +1998,16 @@ def compute_content_hash(
     - UTF-8 encoded path, relative to the input directory. Backslashes are normalized
       to forward slashes before encoding.
     - Then, depending on the type:
-        - For regular files, the UTF-8 bytes of an `F` separator, followed by the bytes of its
-          contents.
+        - For regular files, the UTF-8 bytes of an `F` separator, followed by:
+          - UTF-8 bytes of the line-ending normalized text (`\r\n` to `\n`), if the file is text.
+          - The raw bytes of the file contents, if binary.
+          - Note: If the file can't be opened or read, no contents are hashed;
+            it's treated as empty.
         - For a directory, the UTF-8 bytes of a `D` separator, and nothing else.
         - For a symlink, the UTF-8 bytes of an `L` separator, followed by the UTF-8 encoded bytes
           for the path it points to. Backslashes MUST be normalized to forward slashes before
           encoding.
+        - For any other types, the UTF-8 bytes of a `?` separator, and nothing else.
     - UTF-8 encoded bytes of the string `-`, as separator.
 
     Parameters
@@ -2012,7 +2016,7 @@ def compute_content_hash(
     algorithm: Name of the algorithm to be used, as expected by `hashlib.new()`
     skip: iterable of paths that should not be checked. If a path ends with a slash, it's
           interpreted as a directory that won't be traversed. It matches the relative paths
-          already slashed-normalized.
+          already slashed-normalized (i.e. backwards slashes replaced with forward slashes).
 
     Returns
     -------
@@ -2067,9 +2071,10 @@ def compute_content_hash(
                         for chunk in iter(partial(fh.read, 8192), b""):
                             hasher.update(chunk)
             except OSError as exc:
-                log.debug("Skipping %s for hashing", path.name, exc_info=exc)
+                log.warning("Can't open file %s. Hashing path only...", path.name, exc_info=exc)
         else:
-            log.debug("Can't detect type for path %s. Skipping...", path)
+            log.warning("Can't detect type for path %s. Hashing path only...", path)
+            hasher.update(b"?")
         hasher.update(b"-")
     return hasher.hexdigest()
 
