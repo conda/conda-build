@@ -80,7 +80,7 @@ def test_no_filename_hash(testing_workdir, testing_metadata, capfd):
     args = ["--output", testing_workdir, "--old-build-string"]
     main_render.execute(args)
     output, error = capfd.readouterr()
-    assert not re.search("h[0-9a-f]{%d}" % testing_metadata.config.hash_length, output)
+    assert not re.search("h[0-9a-f]{%d}" % testing_metadata.config.hash_length, output)  # noqa: UP031
 
     args = [
         "--no-anaconda-upload",
@@ -92,11 +92,11 @@ def test_no_filename_hash(testing_workdir, testing_metadata, capfd):
     main_build.execute(args)
     output, error = capfd.readouterr()
     assert not re.search(
-        "test_no_filename_hash.*h[0-9a-f]{%d}" % testing_metadata.config.hash_length,
+        "test_no_filename_hash.*h[0-9a-f]{%d}" % testing_metadata.config.hash_length,  # noqa: UP031
         output,
     )
     assert not re.search(
-        "test_no_filename_hash.*h[0-9a-f]{%d}" % testing_metadata.config.hash_length,
+        "test_no_filename_hash.*h[0-9a-f]{%d}" % testing_metadata.config.hash_length,  # noqa: UP031
         error,
     )
 

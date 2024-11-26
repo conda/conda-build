@@ -473,7 +473,8 @@ def test_reduced_hashing_behavior(testing_config):
         "c_compiler" in metadata.get_hash_contents()
     ), "hash contents should contain c_compiler"
     assert re.search(
-        "h[0-9a-f]{%d}" % testing_config.hash_length, metadata.build_id()
+        "h[0-9a-f]{%d}" % testing_config.hash_length,  # noqa: UP031
+        metadata.build_id(),
     ), "hash should be present when compiler jinja2 function is used"
 
     # recipes that use some variable in conda_build_config.yaml to control what
@@ -486,7 +487,7 @@ def test_reduced_hashing_behavior(testing_config):
         bypass_env_check=True,
     )[0][0]
     assert "zlib" in metadata.get_hash_contents()
-    assert re.search("h[0-9a-f]{%d}" % testing_config.hash_length, metadata.build_id())
+    assert re.search("h[0-9a-f]{%d}" % testing_config.hash_length, metadata.build_id())  # noqa: UP031
 
     # anything else does not get a hash
     metadata = api.render(
@@ -496,7 +497,8 @@ def test_reduced_hashing_behavior(testing_config):
     )[0][0]
     assert not metadata.get_hash_contents()
     assert not re.search(
-        "h[0-9a-f]{%d}" % testing_config.hash_length, metadata.build_id()
+        "h[0-9a-f]{%d}" % testing_config.hash_length,  # noqa: UP031
+        metadata.build_id(),
     )
 
 
