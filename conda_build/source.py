@@ -70,7 +70,7 @@ def download_to_cache(cache_folder, recipe_path, source_dict, verbose=False):
     )
     hash_added = False
 
-    for hash_type in set(source_dict).intersection(ACCEPTED_HASH_TYPES):
+    for hash_type in sorted(set(source_dict).intersection(ACCEPTED_HASH_TYPES)):
         if source_dict[hash_type] in (None, ""):
             raise ValueError(f"Empty {hash_type} hash provided for {fn}")
         fn = append_hash_to_fn(fn, source_dict[hash_type])
