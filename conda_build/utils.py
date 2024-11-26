@@ -2071,7 +2071,9 @@ def compute_content_hash(
                         for chunk in iter(partial(fh.read, 8192), b""):
                             hasher.update(chunk)
             except OSError as exc:
-                log.warning("Can't open file %s. Hashing path only...", path.name, exc_info=exc)
+                log.warning(
+                    "Can't open file %s. Hashing path only...", path.name, exc_info=exc
+                )
         else:
             log.warning("Can't detect type for path %s. Hashing path only...", path)
             hasher.update(b"?")
