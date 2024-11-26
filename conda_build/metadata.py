@@ -1597,34 +1597,21 @@ class MetaData:
             try:
                 ms = MatchSpec(spec)
             except AssertionError:
-                if len(self.undefined_jinja_vars) == 0:
-                    raise RuntimeError(f"Invalid package specification: {spec!r}")
-                else:
-                    continue
+                raise RuntimeError(f"Invalid package specification: {spec!r}")
             except (AttributeError, ValueError) as e:
-                if len(self.undefined_jinja_vars) == 0:
-                    raise RuntimeError(
-                        "Received dictionary as spec.  Note that pip requirements are "
-                        "not supported in conda-build meta.yaml.  Error message: "
-                        + str(e)
-                    )
-                else:
-                    continue
-
+                raise RuntimeError(
+                    "Received dictionary as spec.  Note that pip requirements are "
+                    "not supported in conda-build meta.yaml.  Error message: " + str(e)
+                )
             if ms.name == self.name() and not (
                 typ == "build" and self.config.host_subdir != self.config.build_subdir
             ):
                 raise RuntimeError(f"{self.name()} cannot depend on itself")
-
-            # TODO: IDK what this does since AFAIK the inner continue applies only
-            # to the inner loop
             for name, ver in name_ver_list:
                 if ms.name == name:
                     if self.noarch:
                         continue
 
-            # TODO: the validation here appears to be a waste of time since MatchSpec
-            # appears to validate?
             for c in "=!@#$%^&*:;\"'\\|<>?/":
                 if c in ms.name:
                     sys.exit(
@@ -2592,7 +2579,7 @@ class MetaData:
                     ref_metadata.parse_until_resolved(
                         allow_no_other_outputs=True, bypass_env_check=True
                     )
-                except (SystemExit, CondaBuildUserError):
+                except SystemExit:
                     pass
                 outputs = get_output_dicts_from_metadata(ref_metadata)
 
@@ -2624,7 +2611,7 @@ class MetaData:
                         ref_metadata.other_outputs = out_metadata.other_outputs = (
                             all_output_metadata
                         )
-                except (SystemExit, CondaBuildUserError):
+                except SystemExit:
                     if not permit_undefined_jinja:
                         raise
                     output_tuples = []

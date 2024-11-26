@@ -34,7 +34,7 @@ from conda.models.version import VersionOrder
 
 from . import environ, exceptions, source, utils
 from .config import CondaPkgFormat
-from .exceptions import CondaBuildUserError, DependencyNeedsBuildingError
+from .exceptions import DependencyNeedsBuildingError
 from .index import get_build_index
 from .metadata import MetaData, MetaDataTuple, combine_top_level_metadata_with_output
 from .utils import (
@@ -894,7 +894,7 @@ def distribute_variants(
                 allow_no_other_outputs=allow_no_other_outputs,
                 bypass_env_check=bypass_env_check,
             )
-        except (SystemExit, CondaBuildUserError):
+        except SystemExit:
             pass
         need_source_download = not mv.needs_source_for_render or not mv.source_provided
 
