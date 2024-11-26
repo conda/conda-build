@@ -4,7 +4,7 @@
 
 ### Bug fixes
 
-* Fix bug where ``.copy()`` was used on a string instead of ``copy()`` when processing variants. (#5417)
+* Fix bug where `.copy()` was used on a string instead of `copy()` when processing variants. (#5417)
 
 ### Contributors
 
