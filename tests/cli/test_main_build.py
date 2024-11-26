@@ -105,7 +105,7 @@ def test_build_output_build_path(
     test_path = os.path.join(
         testing_config.croot,
         testing_config.host_subdir,
-        "test_build_output_build_path-1.0-1.tar.bz2",
+        "test_build_output_build_path-1.0-1.conda",
     )
     output, error = capfd.readouterr()
     assert test_path == output.rstrip(), error
@@ -126,7 +126,7 @@ def test_build_output_build_path_multiple_recipes(
         testing_config.croot, testing_config.host_subdir, pkg
     )
     test_paths = [
-        test_path("test_build_output_build_path_multiple_recipes-1.0-1.tar.bz2"),
+        test_path("test_build_output_build_path_multiple_recipes-1.0-1.conda"),
     ]
 
     output, error = capfd.readouterr()
@@ -142,6 +142,7 @@ def test_slash_in_recipe_arg_keeps_build_id(
         "--croot",
         testing_config.croot,
         "--no-anaconda-upload",
+        "--package-format=1"
     ]
     main_build.execute(args)
 
@@ -177,6 +178,7 @@ def test_build_no_build_id(testing_workdir: str, testing_config: Config):
         testing_config.croot,
         "--no-activate",
         "--no-anaconda-upload",
+        "--package-format=1",
     ]
     main_build.execute(args)
 
@@ -420,9 +422,9 @@ def test_relative_path_croot(
     ]
     main_build.execute(args)
 
-    assert len(list(croot.glob("**/*.tar.bz2"))) == 1
+    assert len(list(croot.glob("**/*.conda"))) == 1
     assert (
-        croot / testing_config.subdir / "empty_with_build_script-0.0-0.tar.bz2"
+        croot / testing_config.subdir / "empty_with_build_script-0.0-0.conda"
     ).is_file()
 
 
@@ -430,7 +432,7 @@ def test_relative_path_test_artifact(
     conda_build_test_recipe_envvar: str, testing_config: Config
 ):
     # this test builds a package into (cwd)/relative/path and then calls:
-    # conda-build --test ./relative/path/{platform}/{artifact}.tar.bz2
+    # conda-build --test ./relative/path/{platform}/{artifact}.conda
     empty_sections = Path(metadata_dir, "empty_with_build_script")
     croot_rel = Path(".", "relative", "path")
     croot_abs = croot_rel.resolve()
@@ -444,7 +446,7 @@ def test_relative_path_test_artifact(
     ]
     main_build.execute(args)
 
-    assert len(list(croot_abs.glob("**/*.tar.bz2"))) == 1
+    assert len(list(croot_abs.glob("**/*.conda"))) == 1
 
     # run the test stage with relative path
     args = [
@@ -453,7 +455,7 @@ def test_relative_path_test_artifact(
         os.path.join(
             croot_rel,
             testing_config.subdir,
-            "empty_with_build_script-0.0-0.tar.bz2",
+            "empty_with_build_script-0.0-0.conda",
         ),
     ]
     main_build.execute(args)

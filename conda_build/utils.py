@@ -1141,9 +1141,13 @@ def package_has_file(package_path, file_path, refresh_mode="modified"):
             conda_package_handling.api.extract(
                 package_path, dest_dir=td, components="info"
             )
-        else:
+        elif package_path.endswith(".tar.bz2"):
             conda_package_handling.api.extract(
                 package_path, dest_dir=td, components=file_path
+            )
+        else:
+            conda_package_handling.api.extract(
+                package_path, dest_dir=td, components="pkg"
             )
         resolved_file_path = os.path.join(td, file_path)
         if os.path.exists(resolved_file_path):

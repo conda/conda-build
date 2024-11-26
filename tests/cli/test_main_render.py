@@ -70,7 +70,7 @@ def test_render_output_build_path(
     test_path = os.path.join(
         testing_config.croot,
         testing_metadata.config.host_subdir,
-        "test_render_output_build_path-1.0-1.tar.bz2",
+        "test_render_output_build_path-1.0-1.conda",
     )
     output, error = capfd.readouterr()
     assert output.rstrip() == test_path, error
@@ -87,7 +87,7 @@ def test_render_output_build_path_and_file(
     test_path = os.path.join(
         testing_config.croot,
         testing_metadata.config.host_subdir,
-        "test_render_output_build_path_and_file-1.0-1.tar.bz2",
+        "test_render_output_build_path_and_file-1.0-1.conda",
     )
     output, error = capfd.readouterr()
     assert output.rstrip() == test_path, error
@@ -114,7 +114,7 @@ def test_render_output_build_path_set_python(testing_workdir, testing_metadata, 
 
     _hash = metadata.hash_dependencies()
     test_path = (
-        "test_render_output_build_path_set_python-1.0-py{}{}{}_1.tar.bz2".format(
+        "test_render_output_build_path_set_python-1.0-py{}{}{}_1.conda".format(
             version.split(".")[0], version.split(".")[1], _hash
         )
     )

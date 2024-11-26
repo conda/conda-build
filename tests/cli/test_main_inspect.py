@@ -52,7 +52,7 @@ def test_inspect_prefix_length(testing_workdir, capfd):
 
     # build our own known-length package here
     test_base = os.path.expanduser("~/cbtmp")
-    config = api.Config(croot=test_base, anaconda_upload=False, verbose=True)
+    config = api.Config(croot=test_base, anaconda_upload=False, verbose=True, conda_pkg_format=1)
     recipe_path = os.path.join(metadata_dir, "has_prefix_files")
     config.prefix_length = 80
     outputs = api.build(recipe_path, config=config, notest=True)
