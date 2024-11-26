@@ -113,10 +113,8 @@ def test_render_output_build_path_set_python(testing_workdir, testing_metadata, 
     main_render.execute(args)
 
     _hash = metadata.hash_dependencies()
-    test_path = (
-        "test_render_output_build_path_set_python-1.0-py{}{}{}_1.conda".format(
-            version.split(".")[0], version.split(".")[1], _hash
-        )
+    test_path = "test_render_output_build_path_set_python-1.0-py{}{}{}_1.conda".format(
+        version.split(".")[0], version.split(".")[1], _hash
     )
     output, error = capfd.readouterr()
     assert os.path.basename(output.rstrip()) == test_path, error

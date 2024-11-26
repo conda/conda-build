@@ -142,7 +142,7 @@ def test_slash_in_recipe_arg_keeps_build_id(
         "--croot",
         testing_config.croot,
         "--no-anaconda-upload",
-        "--package-format=1"
+        "--package-format=1",
     ]
     main_build.execute(args)
 
@@ -311,9 +311,7 @@ def test_no_force_upload(
     )
 
     # check for normal upload
-    main_build.execute(
-        ["--no-force-upload", testing_workdir]
-    )
+    main_build.execute(["--no-force-upload", testing_workdir])
     call.assert_called_once_with([anaconda, "upload", *pkg])
     call.reset_mock()
 

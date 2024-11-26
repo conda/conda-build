@@ -24,7 +24,6 @@ from ..config import (
     get_or_merge_config,
     zstd_compression_level_default,
 )
-from ..deprecations import deprecated
 from ..utils import LoggingContext
 from .actions import KeyValueAction, PackageTypeNormalize
 from .main_render import get_render_parser

@@ -469,9 +469,7 @@ def test_loops_do_not_remove_earlier_packages(testing_config):
 
     api.build(recipe, config=testing_config)
     assert len(output_files) == len(
-        glob(
-            os.path.join(testing_config.croot, testing_config.host_subdir, "*.conda")
-        )
+        glob(os.path.join(testing_config.croot, testing_config.host_subdir, "*.conda"))
     )
 
 
