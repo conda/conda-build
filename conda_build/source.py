@@ -51,6 +51,9 @@ HASH_KEYS = ("md5", "sha1", "sha256")
 CONTENT_HASH_KEYS = ("content_md5", "content_sha1", "content_sha256")
 
 
+ACCEPTED_HASH_TYPES = ("md5", "sha1", "sha224", "sha256", "sha384", "sha512")
+
+
 def append_hash_to_fn(fn, hash_value):
     return ext_re.sub(rf"\1_{hash_value[:10]}\2", fn)
 
@@ -69,20 +72,19 @@ def download_to_cache(cache_folder, recipe_path, source_dict, verbose=False):
         source_dict["fn"] if "fn" in source_dict else basename(source_urls[0])
     )
     hash_added = False
-    for hash_type in HASH_KEYS:
-        if hash_type in source_dict:
-            if source_dict[hash_type] in (None, ""):
-                raise ValueError(f"Empty {hash_type} hash provided for {fn}")
-            fn = append_hash_to_fn(fn, source_dict[hash_type])
-            hash_added = True
-            break
+
+    for hash_type in sorted(set(source_dict).intersection(ACCEPTED_HASH_TYPES)):
+        if source_dict[hash_type] in (None, ""):
+            raise ValueError(f"Empty {hash_type} hash provided for {fn}")
+        fn = append_hash_to_fn(fn, source_dict[hash_type])
+        hash_added = True
+        break
     else:
         log.warning(
-            "No hash %s provided for %s. Source download forced. "
-            "Add hash to recipe to use source cache.",
-            HASH_KEYS,
-            unhashed_fn,
+            f"No hash {ACCEPTED_HASH_TYPES} provided for {unhashed_fn}. Source download forced. "
+            "Add hash to recipe to use source cache."
         )
+
     path = join(cache_folder, fn)
     if isfile(path):
         if verbose:
@@ -121,17 +123,16 @@ def download_to_cache(cache_folder, recipe_path, source_dict, verbose=False):
             raise RuntimeError(f"Could not download {url}")
 
     hashed = None
-    for tp in HASH_KEYS:
-        if tp in source_dict:
-            expected_hash = source_dict[tp]
-            hashed = compute_sum(path, tp)
+    for hash_type in set(source_dict).intersection(ACCEPTED_HASH_TYPES):
+        if hash_type in source_dict:
+            expected_hash = source_dict[hash_type]
+            hashed = compute_sum(path, hash_type)
             if expected_hash != hashed:
                 rm_rf(path)
                 raise RuntimeError(
-                    f"{tp.upper()} mismatch for {unhashed_fn}: "
+                    f"{hash_type.upper()} mismatch for {unhashed_fn}: "
                     f"obtained '{hashed}' != expected '{expected_hash}'"
                 )
-            break
 
     # this is really a fallback.  If people don't provide the hash, we still need to prevent
     #    collisions in our source cache, but the end user will get no benefit from the cache.

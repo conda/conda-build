@@ -8,7 +8,7 @@
 
 ### Deprecations
 
-* Deprecate `conda_build.exceptions.UnableToParseMissingJinja2`. (#5497)
+* <news item>
 
 ### Docs
 
@@ -16,4 +16,4 @@
 
 ### Other
 
-* <news item>
+* Demoted logging message about glob finding no matches from error to warning (#5472)

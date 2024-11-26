@@ -326,7 +326,7 @@ def skeletonize(
 
             if pypi_resp.status_code != 200:
                 sys.exit(
-                    "Request to fetch %s failed with status: %d"
+                    "Request to fetch %s failed with status: %d"  # noqa: UP031
                     % (package_pypi_url, pypi_resp.status_code)
                 )
 
@@ -658,7 +658,7 @@ def get_download_data(
         if manual_url:
             for i, url in enumerate(urls):
                 print(
-                    "%d: %s (%s) %s"
+                    "%d: %s (%s) %s"  # noqa: UP031
                     % (i, url["url"], human_bytes(url["size"]), url["comment_text"])
                 )
             n = int(input("which version should i use? "))

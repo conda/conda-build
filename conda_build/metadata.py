@@ -566,7 +566,10 @@ FIELDS = {
         "url": None,
         "md5": str,
         "sha1": None,
+        "sha224": None,
         "sha256": None,
+        "sha384": None,
+        "sha512": None,
         "content_md5": str,
         "content_sha1": None,
         "content_sha256": None,
@@ -1601,21 +1604,34 @@ class MetaData:
             try:
                 ms = MatchSpec(spec)
             except AssertionError:
-                raise RuntimeError(f"Invalid package specification: {spec!r}")
+                if len(self.undefined_jinja_vars) == 0:
+                    raise RuntimeError(f"Invalid package specification: {spec!r}")
+                else:
+                    continue
             except (AttributeError, ValueError) as e:
-                raise RuntimeError(
-                    "Received dictionary as spec.  Note that pip requirements are "
-                    "not supported in conda-build meta.yaml.  Error message: " + str(e)
-                )
+                if len(self.undefined_jinja_vars) == 0:
+                    raise RuntimeError(
+                        "Received dictionary as spec.  Note that pip requirements are "
+                        "not supported in conda-build meta.yaml.  Error message: "
+                        + str(e)
+                    )
+                else:
+                    continue
+
             if ms.name == self.name() and not (
                 typ == "build" and self.config.host_subdir != self.config.build_subdir
             ):
                 raise RuntimeError(f"{self.name()} cannot depend on itself")
+
+            # TODO: IDK what this does since AFAIK the inner continue applies only
+            # to the inner loop
             for name, ver in name_ver_list:
                 if ms.name == name:
                     if self.noarch:
                         continue
 
+            # TODO: the validation here appears to be a waste of time since MatchSpec
+            # appears to validate?
             for c in "=!@#$%^&*:;\"'\\|<>?/":
                 if c in ms.name:
                     sys.exit(

@@ -294,7 +294,7 @@ def add_rpath(path, rpath, build_prefix=None, verbose=False):
     else:
         print(stderr, file=sys.stderr)
         if code:
-            raise RuntimeError("install_name_tool failed with exit status %d" % code)
+            raise RuntimeError("install_name_tool failed with exit status %d" % code)  # noqa: UP031
 
 
 def delete_rpath(path, rpath, build_prefix=None, verbose=False):
@@ -312,7 +312,7 @@ def delete_rpath(path, rpath, build_prefix=None, verbose=False):
     else:
         print(stderr, file=sys.stderr)
         if code:
-            raise RuntimeError("install_name_tool failed with exit status %d" % code)
+            raise RuntimeError("install_name_tool failed with exit status %d" % code)  # noqa: UP031
 
 
 def install_name_change(path, build_prefix, cb_func, dylibs, verbose=False):
@@ -348,7 +348,7 @@ def install_name_change(path, build_prefix, cb_func, dylibs, verbose=False):
             print(stderr, file=sys.stderr)
         if code:
             raise RuntimeError(
-                "install_name_tool failed with exit status %d, stderr of:\n%s"
+                "install_name_tool failed with exit status %d, stderr of:\n%s"  # noqa: UP031
                 % (code, stderr)
             )
     return ret
