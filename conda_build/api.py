@@ -428,14 +428,14 @@ def inspect_prefix_length(packages, min_prefix_length=_prefix_length):
     prefix_lengths = check_prefix_lengths(packages, config)
     if prefix_lengths:
         print(
-            "Packages with binary prefixes shorter than %d characters:"
+            "Packages with binary prefixes shorter than %d characters:"  # noqa: UP031
             % min_prefix_length
         )
         for fn, length in prefix_lengths.items():
             print(f"{fn} ({length} chars)")
     else:
         print(
-            "No packages found with binary prefixes shorter than %d characters."
+            "No packages found with binary prefixes shorter than %d characters."  # noqa: UP031
             % min_prefix_length
         )
     return len(prefix_lengths) == 0
