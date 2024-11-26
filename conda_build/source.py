@@ -75,6 +75,7 @@ def download_to_cache(cache_folder, recipe_path, source_dict, verbose=False):
             raise ValueError(f"Empty {hash_type} hash provided for {fn}")
         fn = append_hash_to_fn(fn, source_dict[hash_type])
         hash_added = True
+        break
     else:
         log.warning(
             f"No hash {ACCEPTED_HASH_TYPES} provided for {unhashed_fn}.  Source download forced.  "
