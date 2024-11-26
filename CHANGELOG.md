@@ -1,5 +1,18 @@
 [//]: # (current developments)
 
+## 24.11.2 (2024-11-26)
+
+### Bug fixes
+
+* Fixed a bug where ``.copy()`` was used on a string instead of ``copy()`` when processing variants. (#5417)
+
+### Contributors
+
+* @corneliusroemer
+* @kenodegard
+
+
+
 ## 24.11.1 (2024-11-21)
 
 ### Bug fixes
