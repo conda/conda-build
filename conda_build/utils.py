@@ -1277,7 +1277,7 @@ def expand_globs(
             glob_files = glob(path, recursive=True)
             if not glob_files:
                 log = get_logger(__name__)
-                log.error(f"Glob {path} did not match in root_dir {root_dir}")
+                log.warning(f"Glob {path} did not match in root_dir {root_dir}")
             # https://docs.python.org/3/library/glob.html#glob.glob states that
             # "whether or not the results are sorted depends on the file system".
             # Avoid this potential ambiguity by sorting. (see #4185)
