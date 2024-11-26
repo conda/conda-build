@@ -47,6 +47,7 @@ Authors are sorted alphabetically.
 * Christopher Whelan
 * Conda Bot
 * Connor Martin
+* Cornelius Roemer
 * Crystal Soja
 * Dan Blanchard
 * Dan Lovell
