@@ -8,7 +8,7 @@
 
 ### Contributors
 
-* @corneliusroemer
+* @corneliusroemer made their first contribution in https://github.com/conda/conda-build/pull/5417
 * @kenodegard
 
 
