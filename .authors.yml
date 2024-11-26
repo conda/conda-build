@@ -1202,7 +1202,7 @@
   alternate_emails:
   - clee@anaconda.com
 - name: Ken Odegard
-  num_commits: 228
+  num_commits: 229
   email: kodegard@anaconda.com
   first_commit: 2020-09-08 19:53:41
   github: kenodegard
@@ -1469,3 +1469,8 @@
   num_commits: 1
   first_commit: 2024-06-07 11:14:31
   github: carterbox
+- name: Cornelius Roemer
+  email: cornelius.roemer@gmail.com
+  github: corneliusroemer
+  num_commits: 1
+  first_commit: 2024-11-26 11:16:47
