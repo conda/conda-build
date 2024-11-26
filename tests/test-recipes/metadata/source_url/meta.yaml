@@ -13,9 +13,9 @@ source:
     sha256: a1932d36ac8ea0dcc3a0b7848a090aedc9247d4bcd75fa75e1771c2b2b01f9ff
     sha384: d366de5e995a4ff6ad9266774e483efb91d9c291c0487c5cf0af055a7b48fd58af205c9455a5b2f654d92d7f3f39ef68
     sha512: 33d2c8f8189f0fe8528bef0c32e62a3acd4362285e447680e7f0af16137df9ab45bf12b6928bdaaf99b5a53e71db4d385a0c1d91bdc0b2ad1d0b1a7bc6d790f1
-    content_md5: 998ccec2e7912f3fd79f53892114053b
-    content_sha1: cb021882f5b1e3418fbf1e7942ce2d41a17121f2
     content_sha256: a884ace5aa3a7e7f5a8b5adeb5cbfa7209f2ae88134d362c8bbca9c82ad2bb06
+    content_sha384: 3644cb7e55fb8f6d7328b19da3ec46be6af1e67291cc48948687cf9493d9b2caea3b5a637d1dfc1a19dd2893ddc38d27
+    content_sha512: 79a0c5edc29f979b599f0b694c3f0f07cc91e590c2c3fcb9c3f965767bf5a22fe634f0f142c626ef0859249d0242f3d8cc93922cf14e7ba527eedc3e8c8b354e
     content_hash_skip:
       - constructor/_version.py
   # This is the same tarball but compressed differently. They should have the same content hashes!
@@ -28,18 +28,18 @@ source:
     sha256: 77406614899f5c2e21e2133a774b8470ba75a86e76dda799c2b39bcbce860955
     sha384: e93d217376c86ab374be93c44fa03b05673e23de78033812a8f0620ce1ca6a4082fedd8b2599341ffd8dcfd201479ff4
     sha512: 23e2ef512e43cb3b75637650901d5c86e0edc812a95fe85b19b45feddabe74bd72d6affac30b133c37a69046b3e27635a84107df5f64e403e1b21dc8f56ceedb
-    content_md5: 998ccec2e7912f3fd79f53892114053b
-    content_sha1: cb021882f5b1e3418fbf1e7942ce2d41a17121f2
     content_sha256: a884ace5aa3a7e7f5a8b5adeb5cbfa7209f2ae88134d362c8bbca9c82ad2bb06
+    content_sha384: 3644cb7e55fb8f6d7328b19da3ec46be6af1e67291cc48948687cf9493d9b2caea3b5a637d1dfc1a19dd2893ddc38d27
+    content_sha512: 79a0c5edc29f979b599f0b694c3f0f07cc91e590c2c3fcb9c3f965767bf5a22fe634f0f142c626ef0859249d0242f3d8cc93922cf14e7ba527eedc3e8c8b354e
     content_hash_skip:
       - constructor/_version.py
   # This is the same tag as above, but cloned directly. They should have the same content hashes!
   - folder: constructor-git
     git_url: https://github.com/conda/constructor.git
     git_rev: "3.0.0"
-    content_md5: 998ccec2e7912f3fd79f53892114053b
-    content_sha1: cb021882f5b1e3418fbf1e7942ce2d41a17121f2
     content_sha256: a884ace5aa3a7e7f5a8b5adeb5cbfa7209f2ae88134d362c8bbca9c82ad2bb06
+    content_sha384: 3644cb7e55fb8f6d7328b19da3ec46be6af1e67291cc48948687cf9493d9b2caea3b5a637d1dfc1a19dd2893ddc38d27
+    content_sha512: 79a0c5edc29f979b599f0b694c3f0f07cc91e590c2c3fcb9c3f965767bf5a22fe634f0f142c626ef0859249d0242f3d8cc93922cf14e7ba527eedc3e8c8b354e
     content_hash_skip:
       - .git/
       - constructor/_version.py

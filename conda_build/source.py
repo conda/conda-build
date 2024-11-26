@@ -47,11 +47,8 @@ log = get_logger(__name__)
 
 git_submod_re = re.compile(r"(?:.+)\.(.+)\.(?:.+)\s(.+)")
 ext_re = re.compile(r"(.*?)(\.(?:tar\.)?[^.]+)$")
-HASH_KEYS = ("md5", "sha1", "sha256")
-CONTENT_HASH_KEYS = ("content_md5", "content_sha1", "content_sha256")
-
-
 ACCEPTED_HASH_TYPES = ("md5", "sha1", "sha224", "sha256", "sha384", "sha512")
+CONTENT_HASH_KEYS = ("content_sha256", "content_sha384", "content_sha512")
 
 
 def append_hash_to_fn(fn, hash_value):
