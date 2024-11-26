@@ -115,8 +115,8 @@ test:
     - $R -e "library('{cran_packagename}')"           # [not win]
     - "\\"%R%\\" -e \\"library('{cran_packagename}')\\""  # [win]
 
-  # You can also put a file called run_test.py, run_test.sh, or run_test.bat
-  # in the recipe that will be run at test time.
+  # You can also put a file called run_test.r, run_test.py, run_test.sh,
+  # or run_test.bat in the recipe that will be run at test time.
 
   # requires:
     # Put any additional test requirements here.

@@ -23,8 +23,12 @@ from conda_build.exceptions import CondaBuildUserError
 from .utils import get_noarch_python_meta, metadata_dir
 
 if TYPE_CHECKING:
+    from conda_build.config import Config
+
+if TYPE_CHECKING:
     from pytest_mock import MockerFixture
 
+    from conda_build.config import Config
     from conda_build.metadata import MetaData
 
 
@@ -334,11 +338,6 @@ def test_guess_interpreter(
         assert build.guess_interpreter(script) == interpreter
 
 
-def test_check_external():
-    with pytest.deprecated_call():
-        build.check_external()
-
-
 @pytest.mark.parametrize("readme", ["README.md", "README.rst", "README"])
 def test_copy_readme(testing_metadata: MetaData, readme: str):
     testing_metadata.meta["about"]["readme"] = readme
@@ -368,4 +367,25 @@ def test_wsl_unsupported(
             metadata=testing_metadata,
             env={},
             stats={},
+        )
+
+
+def test_handle_anaconda_upload(testing_config: Config, mocker: MockerFixture):
+    mocker.patch(
+        "conda_build.os_utils.external.find_executable",
+        return_value=None,
+    )
+    testing_config.anaconda_upload = True
+
+    with pytest.raises(CondaBuildUserError):
+        build.handle_anaconda_upload((), testing_config)
+
+
+def test_tests_failed(testing_metadata: MetaData, tmp_path: Path):
+    with pytest.raises(CondaBuildUserError):
+        build.tests_failed(
+            package_or_metadata=testing_metadata,
+            move_broken=True,
+            broken_dir=tmp_path,
+            config=testing_metadata.config,
         )

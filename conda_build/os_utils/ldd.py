@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 import subprocess
-from functools import lru_cache
+from functools import cache
 from os.path import basename
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -17,7 +17,7 @@ from .pyldd import codefile_class, inspect_linkages, machofile
 
 if TYPE_CHECKING:
     import os
-    from typing import Iterable
+    from collections.abc import Iterable
 
     from conda.models.records import PrefixRecord
 
@@ -57,7 +57,7 @@ def get_linkages(
     return _get_linkages(tuple(obj_files), Path(prefix), sysroot)
 
 
-@lru_cache(maxsize=None)
+@cache
 def _get_linkages(
     obj_files: tuple[str],
     prefix: Path,
@@ -111,7 +111,7 @@ def _get_linkages(
     return linkages
 
 
-@lru_cache(maxsize=None)
+@cache
 def get_package_obj_files(
     prec: PrefixRecord, prefix: str | os.PathLike | Path
 ) -> list[str]:
@@ -122,7 +122,7 @@ def get_package_obj_files(
     ]
 
 
-@lru_cache(maxsize=None)
+@cache
 def get_untracked_obj_files(prefix: str | os.PathLike | Path) -> list[str]:
     return [
         file

@@ -51,6 +51,7 @@ Authors are sorted alphabetically.
 * Dan Blanchard
 * Dan Lovell
 * Daniel Bast
+* Daniel Ching
 * Daniel Damiani
 * Daniel Holth
 * Daniel Petry
@@ -127,6 +128,7 @@ Authors are sorted alphabetically.
 * Kale Franz
 * Katherine Kinnaman
 * Ken Odegard
+* Klaus Zimmermann
 * Korijn van Golen
 * Kurt Schelfthout
 * Kyle Leaders
@@ -217,6 +219,7 @@ Authors are sorted alphabetically.
 * Thomas A Caswell
 * Thomas Holder
 * Thomas Kluyver
+* Tim Paine
 * Tim Snyder
 * Tobias Fischer
 * Todd Tomashek

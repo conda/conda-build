@@ -19,7 +19,7 @@ is a flat directory that contains the following files:
 * ``bld.bat`` — The build script that installs the files for the
   package on Windows. It is executed using ``cmd``.
 
-* ``run_test.[py,pl,sh,bat]`` — An optional Python test file, a
+* ``run_test.[py,pl,sh,bat,r]`` — An optional Python test file, a
   test script that runs automatically if it is part of the recipe.
 
 * Optional patches that are applied to the source.

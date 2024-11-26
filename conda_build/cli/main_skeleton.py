@@ -16,7 +16,7 @@ from ..config import Config
 
 if TYPE_CHECKING:
     from argparse import ArgumentParser, Namespace
-    from typing import Sequence
+    from collections.abc import Sequence
 
 thisdir = os.path.dirname(os.path.abspath(__file__))
 logging.basicConfig(level=logging.INFO)

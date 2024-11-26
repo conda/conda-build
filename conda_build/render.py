@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from __future__ import annotations
 
+import functools
 import json
 import os
 import random
@@ -12,7 +13,6 @@ import sys
 import tarfile
 from collections import OrderedDict, defaultdict
 from contextlib import contextmanager
-from functools import lru_cache
 from os.path import (
     isabs,
     isdir,
@@ -33,12 +33,12 @@ from conda.models.records import PackageRecord
 from conda.models.version import VersionOrder
 
 from . import environ, exceptions, source, utils
-from .exceptions import DependencyNeedsBuildingError
+from .config import CondaPkgFormat
+from .exceptions import CondaBuildUserError, DependencyNeedsBuildingError
 from .index import get_build_index
 from .metadata import MetaData, MetaDataTuple, combine_top_level_metadata_with_output
 from .utils import (
     CONDA_PACKAGE_EXTENSION_V1,
-    CONDA_PACKAGE_EXTENSION_V2,
     package_record_to_requirement,
 )
 from .variants import (
@@ -49,7 +49,8 @@ from .variants import (
 
 if TYPE_CHECKING:
     import os
-    from typing import Any, Iterable, Iterator
+    from collections.abc import Iterable, Iterator
+    from typing import Any
 
     from .config import Config
 
@@ -70,21 +71,21 @@ def bldpkg_path(m: MetaData) -> str:
     subdir = "noarch" if m.noarch or m.noarch_python else m.config.host_subdir
 
     if not hasattr(m, "type"):
-        if m.config.conda_pkg_format == "2":
-            pkg_type = "conda_v2"
+        if m.config.conda_pkg_format == CondaPkgFormat.V2:
+            pkg_type = CondaPkgFormat.V2
         else:
-            pkg_type = "conda"
+            pkg_type = CondaPkgFormat.V1
     else:
         pkg_type = m.type
 
     # the default case will switch over to conda_v2 at some point
-    if pkg_type == "conda":
+    if pkg_type == CondaPkgFormat.V1:
         path = join(
-            m.config.output_folder, subdir, f"{m.dist()}{CONDA_PACKAGE_EXTENSION_V1}"
+            m.config.output_folder, subdir, f"{m.dist()}{CondaPkgFormat.V1.ext}"
         )
-    elif pkg_type == "conda_v2":
+    elif pkg_type == CondaPkgFormat.V2:
         path = join(
-            m.config.output_folder, subdir, f"{m.dist()}{CONDA_PACKAGE_EXTENSION_V2}"
+            m.config.output_folder, subdir, f"{m.dist()}{CondaPkgFormat.V2.ext}"
         )
     else:
         path = (
@@ -281,7 +282,7 @@ def find_pkg_dir_or_file_in_pkgs_dirs(
     return None
 
 
-@lru_cache(maxsize=None)
+@functools.cache
 def _read_specs_from_package(pkg_loc, pkg_dist):
     specs = {}
     if pkg_loc and isdir(pkg_loc):
@@ -334,8 +335,6 @@ def execute_download_actions(m, precs, env, package_subset=None, require_files=F
         channel_urls=m.config.channel_urls,
         debug=m.config.debug,
         verbose=m.config.verbose,
-        locking=m.config.locking,
-        timeout=m.config.timeout,
     )
 
     # this should be just downloading packages.  We don't need to extract them -
@@ -835,12 +834,20 @@ def distribute_variants(
     used_variables = metadata.get_used_loop_vars(force_global=False)
     top_loop = metadata.get_reduced_variant_set(used_variables)
 
+    # defer potentially expensive copy of input variants list
+    # until after reduction of the list for each variant
+    # since the initial list can be very long
+    all_variants = metadata.config.variants
+    metadata.config.variants = []
+
     for variant in top_loop:
         from .build import get_all_replacements
 
         get_all_replacements(variant)
         mv = metadata.copy()
         mv.config.variant = variant
+        # start with shared list:
+        mv.config.variants = all_variants
 
         pin_run_as_build = variant.get("pin_run_as_build", {})
         if mv.numpy_xx and "numpy" not in pin_run_as_build:
@@ -860,6 +867,9 @@ def distribute_variants(
                 )
                 or mv.config.variants
             )
+        # copy variants before we start modifying them,
+        # but after we've reduced the list via the conform_dict filter
+        mv.config.variants = mv.config.copy_variants()
         get_all_replacements(mv.config.variants)
         pin_run_as_build = variant.get("pin_run_as_build", {})
         if mv.numpy_xx and "numpy" not in pin_run_as_build:
@@ -884,7 +894,7 @@ def distribute_variants(
                 allow_no_other_outputs=allow_no_other_outputs,
                 bypass_env_check=bypass_env_check,
             )
-        except SystemExit:
+        except (SystemExit, CondaBuildUserError):
             pass
         need_source_download = not mv.needs_source_for_render or not mv.source_provided
 

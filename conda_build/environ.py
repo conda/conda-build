@@ -12,7 +12,7 @@ import subprocess
 import sys
 import warnings
 from collections import defaultdict
-from functools import lru_cache
+from functools import cache
 from glob import glob
 from logging import getLogger
 from os.path import join, normpath
@@ -58,8 +58,9 @@ from .utils import (
 from .variants import get_default_variant
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
     from pathlib import Path
-    from typing import Any, Iterable, TypedDict
+    from typing import Any, TypedDict
 
     from .config import Config
     from .metadata import MetaData
@@ -120,7 +121,7 @@ def get_lua_include_dir(config):
     return join(config.host_prefix, "include")
 
 
-@lru_cache(maxsize=None)
+@cache
 def verify_git_repo(
     git_exe, git_dir, git_url, git_commits_since_tag, debug=False, expected_rev="HEAD"
 ):
@@ -602,7 +603,7 @@ def meta_vars(meta: MetaData, skip_build_id=False):
     return d
 
 
-@lru_cache(maxsize=None)
+@cache
 def get_cpu_count():
     if on_mac:
         # multiprocessing.cpu_count() is not reliable on OSX
@@ -724,7 +725,7 @@ def osx_vars(m, get_default, prefix):
     get_default("BUILD", BUILD)
 
 
-@lru_cache(maxsize=None)
+@cache
 def _machine_and_architecture():
     return platform.machine(), platform.architecture()
 
@@ -865,8 +866,6 @@ def get_install_actions(
         channel_urls=channel_urls,
         debug=debug,
         verbose=verbose,
-        locking=locking,
-        timeout=timeout,
     )
     specs = tuple(
         utils.ensure_valid_spec(spec) for spec in specs if not str(spec).endswith("@")
@@ -1038,8 +1037,6 @@ def create_env(
                         channel_urls=config.channel_urls,
                         debug=config.debug,
                         verbose=config.verbose,
-                        locking=config.locking,
-                        timeout=config.timeout,
                     )
                     _display_actions(prefix, precs)
                     if utils.on_win:
