@@ -2001,13 +2001,12 @@ def compute_content_hash(
         - For regular files, the UTF-8 bytes of an `F` separator, followed by:
           - UTF-8 bytes of the line-ending normalized text (`\r\n` to `\n`), if the file is text.
           - The raw bytes of the file contents, if binary.
-          - Note: If the file can't be opened or read, no contents are hashed;
-            it's treated as empty.
+          - If it can't be read, error out.
         - For a directory, the UTF-8 bytes of a `D` separator, and nothing else.
         - For a symlink, the UTF-8 bytes of an `L` separator, followed by the UTF-8 encoded bytes
           for the path it points to. Backslashes MUST be normalized to forward slashes before
           encoding.
-        - For any other types, the UTF-8 bytes of a `?` separator, and nothing else.
+        - For any other types, error out.
     - UTF-8 encoded bytes of the string `-`, as separator.
 
     Parameters
@@ -2073,12 +2072,15 @@ def compute_content_hash(
                         for chunk in iter(partial(fh.read, 8192), b""):
                             hasher.update(chunk)
             except OSError as exc:
-                log.warning(
-                    "Can't open file %s. Hashing path only...", path.name, exc_info=exc
+                raise RuntimeError(
+                    f"Could not read file '{relpath}' in directory '{directory}'. "
+                    f"Content hash verification cannot continue. Error: {exc}"
                 )
         else:
-            log.warning("Can't detect type for path %s. Hashing path only...", path)
-            hasher.update(b"?")
+            raise RuntimeError(
+                f"Can't detect type for path '{relpath}' in directory '{directory}'. "
+                "Content hash verification cannot continue."
+            )
         hasher.update(b"-")
     return hasher.hexdigest()
 
