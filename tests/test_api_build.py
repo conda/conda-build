@@ -248,7 +248,7 @@ def test_git_describe_info_on_branch(testing_config):
     test_path = os.path.join(
         testing_config.croot,
         testing_config.host_subdir,
-        "git_describe_number_branch-1.20.2.0-1_g82c6ba6.tar.bz2",
+        "git_describe_number_branch-1.20.2.0-1_g82c6ba6.conda",
     )
     assert test_path == output
 
@@ -307,7 +307,8 @@ def test_output_build_path_git_source(testing_config):
     test_path = os.path.join(
         testing_config.croot,
         testing_config.host_subdir,
-        f"conda-build-test-source-git-jinja2-1.20.2-py{sys.version_info.major}{sys.version_info.minor}{_hash}_0_g262d444.tar.bz2",
+        "conda-build-test-source-git-jinja2-1.20.2-"
+        f"py{sys.version_info.major}{sys.version_info.minor}{_hash}_0_g262d444.conda",
     )
     assert output == test_path
 
@@ -576,6 +577,7 @@ def test_requirements_txt_for_run_reqs(testing_config):
     reason="Python 3.10+, py_compile terminates once it finds an invalid file",
 )
 def test_compileall_compiles_all_good_files(testing_config):
+    testing_config.conda_pkg_format = 1
     output = api.build(
         os.path.join(metadata_dir, "_compile-test"), config=testing_config
     )[0]
@@ -625,7 +627,7 @@ def test_numpy_setup_py_data(testing_config):
     _hash = metadata.hash_dependencies()
     assert (
         os.path.basename(api.get_output_file_paths(metadata)[0])
-        == f"load_setup_py_test-0.1.0-np116py{sys.version_info.major}{sys.version_info.minor}{_hash}_0.tar.bz2"
+        == f"load_setup_py_test-0.1.0-np116py{sys.version_info.major}{sys.version_info.minor}{_hash}_0.conda"
     )
 
 
@@ -879,6 +881,7 @@ def test_about_json_content(testing_metadata):
     "name,field", [("license", "license_file"), ("prelink_message", "prelink_message")]
 )
 def test_about_license_file_and_prelink_message(testing_config, name, field):
+    testing_config.conda_pkg_format = 1
     base_dir = os.path.join(metadata_dir, f"_about_{field}/recipes")
 
     recipe = os.path.join(base_dir, "single")
@@ -945,6 +948,7 @@ def test_noarch_python_1(testing_config):
 
 @pytest.mark.sanity
 def test_skip_compile_pyc(testing_config):
+    testing_config.conda_pkg_format = 1
     outputs = api.build(
         os.path.join(metadata_dir, "skip_compile_pyc"), config=testing_config
     )
@@ -969,6 +973,7 @@ def test_skip_compile_pyc(testing_config):
 
 
 def test_detect_binary_files_with_prefix(testing_config):
+    testing_config.conda_pkg_format = 1
     outputs = api.build(
         os.path.join(metadata_dir, "_detect_binary_files_with_prefix"),
         config=testing_config,
@@ -991,6 +996,7 @@ def test_detect_binary_files_with_prefix(testing_config):
 
 
 def test_skip_detect_binary_files_with_prefix(testing_config):
+    testing_config.conda_pkg_format = 1
     recipe = os.path.join(metadata_dir, "_skip_detect_binary_files_with_prefix")
     outputs = api.build(recipe, config=testing_config)
     matches = []
@@ -1014,6 +1020,7 @@ def test_skip_detect_binary_files_with_prefix(testing_config):
 
 
 def test_fix_permissions(testing_config):
+    testing_config.conda_pkg_format = 1
     recipe = os.path.join(metadata_dir, "fix_permissions")
     outputs = api.build(recipe, config=testing_config)
     with tarfile.open(outputs[0]) as tf:
@@ -1050,6 +1057,7 @@ def test_output_folder_moves_file(testing_metadata, testing_workdir):
     "pkg_dirs to conda_pkgs_dir.",
 )
 def test_info_files_json(testing_config):
+    testing_config.conda_pkg_format = 1
     outputs = api.build(
         os.path.join(metadata_dir, "_ignore_some_prefix_files"), config=testing_config
     )
@@ -1611,6 +1619,7 @@ def test_source_cache_build(testing_workdir):
 
 @pytest.mark.slow
 def test_copy_test_source_files(testing_config):
+    testing_config.conda_pkg_format = 1
     recipe = os.path.join(metadata_dir, "_test_test_source_files")
     filenames = set()
     for copy in (False, True):
@@ -1959,6 +1968,7 @@ def test_activated_prefixes_in_actual_path(testing_metadata):
     """
     file = "env-path-dump"
     testing_metadata.config.activate = True
+    testing_metadata.config.conda_pkg_format = 1
     meta = testing_metadata.meta
     meta["requirements"]["host"] = []
     meta["build"]["script"] = [

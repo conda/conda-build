@@ -101,7 +101,7 @@ enable_static_default = "false"
 no_rewrite_stdout_env_default = "false"
 ignore_verify_codes_default = []
 exit_on_verify_error_default = False
-conda_pkg_format_default = CondaPkgFormat.V1
+conda_pkg_format_default = CondaPkgFormat.V2
 zstd_compression_level_default = 19
 
 

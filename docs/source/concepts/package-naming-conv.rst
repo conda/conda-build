@@ -43,8 +43,8 @@ The following figure compares a canonical name to a filename:
 |
 
 Conda supports both ``.conda`` and ``.tar.bz2`` package extensions. The ``.conda``
-format is generally smaller and more efficient than ``.tar.bz2`` packages.
-Read our `blog post`_ about it to learn more.
+format (default since 25.1) is generally smaller and more efficient than ``.tar.bz2``
+packages. Read our `blog post`_ about it to learn more.
 
 The build string is created as the package is built. Things that
 contribute to it are the variants specified either by the command
