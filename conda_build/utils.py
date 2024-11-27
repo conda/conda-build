@@ -2023,7 +2023,6 @@ def compute_content_hash(
     str
         The hexdigest of the computed hash, as described above.
     """
-    log = get_logger(__name__)
     hasher = hashlib.new(algorithm)
     for path in sorted(Path(directory).rglob("*"), key=str):
         relpath = path.relative_to(directory)
@@ -2055,16 +2054,18 @@ def compute_content_hash(
             # the raw bytes directly.
             try:
                 try:
-                    lines = []
-                    with open(path) as fh:
-                        for line in fh:
-                            # Accumulate all line-ending normalized lines first
-                            # to make sure the whole file is read. This prevents
-                            # partial updates to the hash with hybrid text/binary
-                            # files (e.g. like the constructor shell installers).
-                            lines.append(line.replace("\r\n", "\n"))
-                    for line in lines:
-                        hasher.update(line.encode("utf-8"))
+                    with tempfile.SpooledTemporaryFile(max_size=10*1024*1024) as tmp:
+                        with open(path) as fh:
+                            for line in fh:
+                                # Accumulate all line-ending normalized lines first
+                                # to make sure the whole file is read. This prevents
+                                # partial updates to the hash with hybrid text/binary
+                                # files (e.g. like the constructor shell installers).
+                                tmp.write(line.replace("\r\n", "\n").encode("utf-8"))
+                        tmp.flush()
+                        tmp.seek(0)
+                        for chunk in iter(partial(tmp.read, 8192), b""):
+                            hasher.update(chunk)
                 except UnicodeDecodeError:
                     # file must be binary, read the bytes directly
                     with open(path, "rb") as fh:
@@ -2233,3 +2234,6 @@ def is_conda_pkg(pkg_path: str) -> bool:
 
 def package_record_to_requirement(prec: PackageRecord) -> str:
     return f"{prec.name} {prec.version} {prec.build}"
+
+
+log = get_logger(__name__)
