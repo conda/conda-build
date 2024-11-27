@@ -2054,7 +2054,8 @@ def compute_content_hash(
             # the raw bytes directly.
             try:
                 try:
-                    with tempfile.SpooledTemporaryFile(max_size=10*1024*1024) as tmp:
+                    ten_mb = 10 * 1024 * 1024
+                    with tempfile.SpooledTemporaryFile(max_size=ten_mb) as tmp:
                         with open(path) as fh:
                             for line in fh:
                                 # Accumulate all line-ending normalized lines first
