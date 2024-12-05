@@ -2760,15 +2760,7 @@ def build(
                     #    can be different from the env for the top level build.
                     with utils.path_prepended(m.config.build_prefix):
                         env = environ.get_dict(m=m)
-
-                    if not hasattr(m, "type"):
-                        if m.config.conda_pkg_format == CondaPkgFormat.V2:
-                            pkg_type = CondaPkgFormat.V2
-                        else:
-                            pkg_type = CondaPkgFormat.V1
-                    else:
-                        pkg_type = m.type
-
+                    pkg_type = getattr(m, "type", m.config.conda_pkg_format) or CondaPkgFormat.V2
                     newly_built_packages = bundlers[pkg_type](
                         output_d, m, env, stats, new_prefix_files
                     )
