@@ -1,5 +1,18 @@
 [//]: # (current developments)
 
+## 24.11.2 (2024-11-26)
+
+### Bug fixes
+
+* Fix bug where `.copy()` was used on a string instead of `copy()` when processing variants. (#5417)
+
+### Contributors
+
+* @corneliusroemer made their first contribution in https://github.com/conda/conda-build/pull/5417
+* @kenodegard
+
+
+
 ## 24.11.1 (2024-11-21)
 
 ### Bug fixes
