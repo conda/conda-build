@@ -210,7 +210,7 @@ def get_pin_from_build(m, dep, build_dep_versions):
     if (
         version
         and dep_name in m.config.variant.get("pin_run_as_build", {})
-        and not (dep_name == "python" and (m.noarch or m.noarch_python))
+        and not (dep_name == "python" and m.python_version_independent)
         and dep_name in build_dep_versions
     ):
         pin_cfg = m.config.variant["pin_run_as_build"][dep_name]
@@ -407,6 +407,8 @@ def get_upstream_pins(m: MetaData, precs, env):
     precs = [prec for prec in precs if prec.name in explicit_specs]
 
     ignore_pkgs_list = utils.ensure_list(m.get_value("build/ignore_run_exports_from"))
+    if m.python_version_independent and not m.noarch:
+        ignore_pkgs_list.append("python")
     ignore_list = utils.ensure_list(m.get_value("build/ignore_run_exports"))
     additional_specs = {}
     for prec in precs:
