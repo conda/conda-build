@@ -369,9 +369,7 @@ def get_uniqueness_key(filename, file):
         or binary.type == lief.ELF.ELF_CLASS.CLASS64
     ):
         dynamic_entries = binary.dynamic_entries
-        result = [
-            e.name for e in dynamic_entries if e.tag == ELF_DYNAMIC_TAGS.SONAME
-        ]
+        result = [e.name for e in dynamic_entries if e.tag == ELF_DYNAMIC_TAGS.SONAME]
         if result:
             return result[0]
         return filename
