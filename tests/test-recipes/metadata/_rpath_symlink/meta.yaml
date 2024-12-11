@@ -27,13 +27,13 @@ requirements:
 
 test:
   requires:
-    - py-lief
+    - py-lief >=0.15
   commands:
     # Test that we get only a single entry that is the library's own directory.
     - |
       python -c '
       import os, lief
       lib = lief.parse(os.environ["PREFIX"] + "/lib/{{ lib_file }}")
-      assert {"$ORIGIN/."} == {e.rpath for e in lib.dynamic_entries if e.tag == lief.ELF.DYNAMIC_TAGS.RPATH}  # [linux]
+      assert {"$ORIGIN/."} == {e.rpath for e in lib.dynamic_entries if e.tag == lief.ELF.DynamicEntry.TAG.RPATH}  # [linux]
       assert {"@loader_path/"} == {command.path for command in lib.commands if command.command == lief.MachO.LOAD_COMMAND_TYPES.RPATH}  # [osx]
       '
