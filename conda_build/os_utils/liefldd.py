@@ -39,6 +39,11 @@ try:
     except AttributeError:
         # Fallback for lief<0.14.
         EXE_FORMATS = lief.EXE_FORMATS
+    try:
+        ELF_DYNAMIC_TAGS = lief.ELF.DynamicEntry.TAG
+    except AttributeError:
+        # Fallback for lief<0.15.
+        ELF_DYNAMIC_TAGS = lief.ELF.DYNAMIC_TAGS
 except ImportError:
     have_lief = False
 
@@ -155,7 +160,7 @@ def _set_elf_rpathy_thing(binary, old_matching, new_rpath, set_rpath, set_runpat
     for e in dynamic_entries:
         if (
             set_runpath
-            and e.tag == lief.ELF.DYNAMIC_TAGS.RUNPATH
+            and e.tag == ELF_DYNAMIC_TAGS.RUNPATH
             and fnmatch(e.runpath, old_matching)
             and e.runpath != new_rpath
         ):
@@ -163,7 +168,7 @@ def _set_elf_rpathy_thing(binary, old_matching, new_rpath, set_rpath, set_runpat
             changed = True
         elif (
             set_rpath
-            and e.tag == lief.ELF.DYNAMIC_TAGS.RPATH
+            and e.tag == ELF_DYNAMIC_TAGS.RPATH
             and fnmatch(e.rpath, old_matching)
             and e.rpath != new_rpath
         ):
@@ -196,7 +201,7 @@ if have_lief:
             elif (
                 binary_format == EXE_FORMATS.MACHO
                 and binary.has_rpath
-                and elf_dyn_tag == lief.ELF.DYNAMIC_TAGS.RPATH
+                and elf_dyn_tag == ELF_DYNAMIC_TAGS.RPATH
             ):
                 rpaths.extend(
                     [
@@ -210,12 +215,12 @@ if have_lief:
     get_runpaths_raw = partial(
         get_rpathy_thing_raw_partial,
         elf_attribute="runpath",
-        elf_dyn_tag=lief.ELF.DYNAMIC_TAGS.RUNPATH,
+        elf_dyn_tag=ELF_DYNAMIC_TAGS.RUNPATH,
     )
     get_rpaths_raw = partial(
         get_rpathy_thing_raw_partial,
         elf_attribute="rpath",
-        elf_dyn_tag=lief.ELF.DYNAMIC_TAGS.RPATH,
+        elf_dyn_tag=ELF_DYNAMIC_TAGS.RPATH,
     )
 else:
 
@@ -365,7 +370,7 @@ def get_uniqueness_key(filename, file):
     ):
         dynamic_entries = binary.dynamic_entries
         result = [
-            e.name for e in dynamic_entries if e.tag == lief.ELF.DYNAMIC_TAGS.SONAME
+            e.name for e in dynamic_entries if e.tag == ELF_DYNAMIC_TAGS.SONAME
         ]
         if result:
             return result[0]
