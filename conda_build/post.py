@@ -1734,7 +1734,9 @@ def _check_one_menuinst_json(json_file):
                 "https://github.com/conda/menuinst/raw/refs/tags/2.2.0/"
                 "menuinst/data/menuinst.schema.json"
             )
-            log.debug("Known wrong value for $schema, defaulting to '%s'", fallback_schema)
+            log.debug(
+                "Known wrong value for $schema, defaulting to '%s'", fallback_schema
+            )
             schema_url = fallback_schema
         validator = _build_validator(schema_url)
         validator.validate(loaded)
