@@ -15,8 +15,8 @@ requirements:
 
 test:
   requires:
-    - py-lief >=0.15
+    - py-lief
   commands:
-    - python -c "import lief; binary = lief.parse(\"${PREFIX}/bin/rpath\"); print([e.rpath for e in binary.dynamic_entries if e.tag == lief.ELF.DynamicEntry.TAG.RPATH])"  # [linux]
-    - python -c "import lief; binary = lief.parse(\"${PREFIX}/bin/rpath\"); print([e.rpath for e in binary.dynamic_entries if e.tag == lief.ELF.DynamicEntry.TAG.RPATH])" | grep \$ORIGIN/../previous:\$ORIGIN/../lib:\$ORIGIN/../plugins:\$ORIGIN/../successive  # [linux]
+    - python -c "import lief; binary = lief.parse(\"${PREFIX}/bin/rpath\"); print([e.rpath for e in binary.dynamic_entries if e.tag == getattr(lief.ELF, 'DYNAMIC_TAGS', getattr(lief.ELF.DynamicEntry, 'TAG', None)).RPATH])"  # [linux]
+    - python -c "import lief; binary = lief.parse(\"${PREFIX}/bin/rpath\"); print([e.rpath for e in binary.dynamic_entries if e.tag == getattr(lief.ELF, 'DYNAMIC_TAGS', getattr(lief.ELF.DynamicEntry, 'TAG', None)).RPATH])" | grep \$ORIGIN/../previous:\$ORIGIN/../lib:\$ORIGIN/../plugins:\$ORIGIN/../successive  # [linux]
     - python -c "import lief; binary = lief.parse(\"${PREFIX}/bin/rpath\"); print(':'.join([command.path.rstrip('/') for command in binary.commands if command.command == lief.MachO.LOAD_COMMAND_TYPES.RPATH]))" | grep ${PREFIX}/../previous:${PREFIX}/../lib:${PREFIX}/plugins:${PREFIX}/../successive  # [osx]
