@@ -22,7 +22,7 @@ All the metadata in the conda-build recipe is specified in the
     build:
       noarch: python
       number: 0
-      script: python -m pip install --no-deps --ignore-installed .
+      script: python -m pip install .
 
     requirements:
       host:
