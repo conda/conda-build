@@ -12,7 +12,7 @@ menuinst >=2
 packaging
 pkginfo
 psutil
-py-lief
+py-lief <0.15
 python >=3.9
 python-libarchive-c
 pytz
