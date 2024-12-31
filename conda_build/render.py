@@ -410,7 +410,7 @@ def get_upstream_pins(m: MetaData, precs, env):
     ignore_list = utils.ensure_list(m.get_value("build/ignore_run_exports"))
     additional_specs = {}
     for prec in precs:
-        if any(prec.name in req.split(" ")[0] for req in ignore_pkgs_list):
+        if any((prec.name == req.split(" ")[0]) for req in ignore_pkgs_list):
             continue
         run_exports = None
         if m.config.use_channeldata:
