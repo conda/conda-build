@@ -2097,3 +2097,8 @@ def test_api_build_inject_jinja2_vars_on_first_pass(testing_config):
 
     testing_config.variant = {"python_min": "3.12"}
     api.build(recipe_dir, config=testing_config)
+
+
+def test_ignore_run_exports_from_substr(tmp_path):
+    with tmp_path:
+        api.build(str(metadata_path / "ignore_run_exports_from_substr"))
