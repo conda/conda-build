@@ -146,6 +146,20 @@ def test_recipe_builds(
     api.build(str(recipe), config=testing_config)
 
 
+@pytest.mark.slow
+@pytest.mark.serial
+def test_python_version_independent(
+    testing_config,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    recipe = os.path.join(metadata_dir, "_python_version_independent")
+    testing_config.activate = True
+    monkeypatch.setenv("CONDA_TEST_VAR", "conda_test")
+    monkeypatch.setenv("CONDA_TEST_VAR_2", "conda_test_2")
+    output = api.build(str(recipe), config=testing_config)[0]
+    print(output)
+
+
 @pytest.mark.serial
 @pytest.mark.skipif(
     "CI" in os.environ and "GITHUB_WORKFLOW" in os.environ,

@@ -2327,7 +2327,7 @@ class MetaData:
         return new
 
     @property
-    def python_version_independent(self):
+    def python_version_independent(self) -> bool:
         return (
             self.get_value("build/python_version_independent")
             or self.get_value("build/noarch") == "python"
@@ -2336,7 +2336,7 @@ class MetaData:
 
     @python_version_independent.setter
     def python_version_independent(self, value: bool) -> None:
-        self.meta.setdefault("build", {})["python_version_independent"] = value
+        self.meta.setdefault("build", {})["python_version_independent"] = bool(value)
 
     @property
     def noarch(self):
