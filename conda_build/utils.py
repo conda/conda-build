@@ -2237,6 +2237,3 @@ def is_conda_pkg(pkg_path: str) -> bool:
 
 def package_record_to_requirement(prec: PackageRecord) -> str:
     return f"{prec.name} {prec.version} {prec.build}"
-
-
-log = get_logger(__name__)
