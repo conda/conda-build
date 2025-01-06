@@ -157,7 +157,8 @@ def test_python_version_independent(
     monkeypatch.setenv("CONDA_TEST_VAR", "conda_test")
     monkeypatch.setenv("CONDA_TEST_VAR_2", "conda_test_2")
     output = api.build(str(recipe), config=testing_config)[0]
-    print(output)
+    *_, subdir, * = output
+    assert subdir != "noarch"
 
 
 @pytest.mark.serial
