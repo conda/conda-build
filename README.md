@@ -4,12 +4,14 @@
 [release-badge]: https://img.shields.io/github/v/release/conda/conda?logo=github
 [anaconda-badge]: https://img.shields.io/conda/vn/anaconda/conda-build?logo=anaconda
 [conda-forge-badge]: https://img.shields.io/conda/vn/conda-forge/conda-build?logo=conda-forge
+[calver-badge]: https://img.shields.io/badge/calver-YY.MM.MICRO-22bfda.svg
 
 # `conda-build`
 
 [![GitHub Scheduled Tests][tests-badge]](https://github.com/conda/conda-build/actions/workflows/tests.yml?query=branch%3Amain+event%3Aschedule)
 [![Codecov Status][codecov-badge]](https://codecov.io/gh/conda/conda-build/branch/main)
 [![CodSpeed Performance Benchmarks][codspeed-badge]](https://codspeed.io/conda/conda-build)
+[![CalVer Versioning][calver-badge]](https://calver.org)
 <br>
 [![GitHub Release][release-badge]](https://github.com/conda/conda-build/releases)
 [![Anaconda Package][anaconda-badge]](https://anaconda.org/anaconda/conda-build)

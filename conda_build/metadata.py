@@ -1771,7 +1771,12 @@ class MetaData:
         return f"{self.name()}-{self.version()}-{self.build_id()}"
 
     def pkg_fn(self):
-        return f"{self.dist()}.tar.bz2"
+        ext = (
+            CondaPkgFormat.V2.ext
+            if self.config.conda_pkg_format == CondaPkgFormat.V2
+            else CondaPkgFormat.V1.ext
+        )
+        return f"{self.dist()}{ext}"
 
     def is_app(self):
         return bool(self.get_value("app/entry"))

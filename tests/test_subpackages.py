@@ -469,9 +469,7 @@ def test_loops_do_not_remove_earlier_packages(testing_config):
 
     api.build(recipe, config=testing_config)
     assert len(output_files) == len(
-        glob(
-            os.path.join(testing_config.croot, testing_config.host_subdir, "*.tar.bz2")
-        )
+        glob(os.path.join(testing_config.croot, testing_config.host_subdir, "*.conda"))
     )
 
 
@@ -484,8 +482,8 @@ def test_build_string_does_not_incorrectly_add_hash(testing_config):
     recipe = os.path.join(subpackage_dir, "_build_string_with_variant")
     output_files = api.get_output_file_paths(recipe, config=testing_config)
     assert len(output_files) == 4
-    assert any("clang_variant-1.0-cling.tar.bz2" in f for f in output_files)
-    assert any("clang_variant-1.0-default.tar.bz2" in f for f in output_files)
+    assert any("clang_variant-1.0-cling.conda" in f for f in output_files)
+    assert any("clang_variant-1.0-default.conda" in f for f in output_files)
 
 
 def test_multi_outputs_without_package_version(testing_config):
@@ -493,9 +491,9 @@ def test_multi_outputs_without_package_version(testing_config):
     recipe = os.path.join(subpackage_dir, "_multi_outputs_without_package_version")
     outputs = api.build(recipe, config=testing_config)
     assert len(outputs) == 3
-    assert outputs[0].endswith("a-1-0.tar.bz2")
-    assert outputs[1].endswith("b-2-0.tar.bz2")
-    assert outputs[2].endswith("c-3-0.tar.bz2")
+    assert outputs[0].endswith("a-1-0.conda")
+    assert outputs[1].endswith("b-2-0.conda")
+    assert outputs[2].endswith("c-3-0.conda")
 
 
 def test_empty_outputs_requires_package_version(testing_config):

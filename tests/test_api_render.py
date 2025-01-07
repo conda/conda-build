@@ -70,7 +70,7 @@ def test_get_output_file_paths(testing_workdir, testing_metadata):
     assert build_path == os.path.join(
         testing_metadata.config.croot,
         testing_metadata.config.host_subdir,
-        "test_get_output_file_paths-1.0-1.tar.bz2",
+        "test_get_output_file_paths-1.0-1.conda",
     )
 
 
@@ -80,7 +80,7 @@ def test_get_output_file_paths_metadata_object(testing_metadata):
     assert build_path == os.path.join(
         testing_metadata.config.croot,
         testing_metadata.config.host_subdir,
-        "test_get_output_file_paths_metadata_object-1.0-1.tar.bz2",
+        "test_get_output_file_paths_metadata_object-1.0-1.conda",
     )
 
 
@@ -104,7 +104,7 @@ def test_get_output_file_paths_jinja2(testing_config):
     assert build_path == os.path.join(
         testing_config.croot,
         testing_config.host_subdir,
-        f"conda-build-test-source-git-jinja2-1.20.2-py{python}{_hash}_0_g262d444.tar.bz2",
+        f"conda-build-test-source-git-jinja2-1.20.2-py{python}{_hash}_0_g262d444.conda",
     )
 
 
