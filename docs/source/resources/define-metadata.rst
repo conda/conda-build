@@ -732,7 +732,7 @@ free-threaded builds you can do
 .. code-block:: yaml
    build:
      python_version_independent: true   # [py == 39]
-     skip: true                         # [py > 39 and python.endswith("t")]
+     skip: true                         # [py > 39 and not python.endswith("t")]
 
    requirements:
      host:
