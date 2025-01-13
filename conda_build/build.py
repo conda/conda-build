@@ -1445,8 +1445,8 @@ def create_info_files(m, replacements, files, prefix):
 
 def get_short_path(m, target_file):
     if m.python_version_independent:
-        if target_file.find("site-packages") >= 0:
-            return target_file[target_file.find("site-packages") :]
+        if (site_packages_idx := target_file.find("site-packages")) >= 0:
+            return target_file[site_packages_idx:]
     if m.noarch == "python":
         entry_point_script_names = get_entry_point_script_names(
             m.get_value("build/entry_points")
