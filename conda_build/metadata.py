@@ -2504,6 +2504,7 @@ class MetaData:
             output_metadata.python_version_independent = (
                 output.get("python_version_independent")
                 or output_metadata.noarch == "python"
+                or output_metadata.noarch_python
             )
             # primarily for tests - make sure that we keep the platform consistent (setting noarch
             #      would reset it)
