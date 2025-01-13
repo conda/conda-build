@@ -1,6 +1,6 @@
 ### Enhancements
 
-* Added SHA224, SHA384 and SHA512 support for validating downloaded sources. (#4793)
+* Add SHA224, SHA384 and SHA512 support for validating downloaded sources. (#4793)
 
 ### Bug fixes
 
