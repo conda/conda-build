@@ -707,7 +707,7 @@ Python version independent packages
 Allows you to specify "no python version" when building a Python
 package thus making it compatible with a user specified range of Python
 versions. Main use-case for this is to create ABI3 packages as specified
-in [CEP20](https://github.com/conda/ceps/blob/main/cep-0020.md).
+in [CEP 20](https://github.com/conda/ceps/blob/main/cep-0020.md).
 
 ABI3 packages support building a native Python extension using a
 specific Python version and running it against any later Python version.
@@ -740,7 +740,7 @@ the package, i.e., for ABI3,
        - python
 
 
-In order to support ABI3 with python 3.9 and onwards and
+In order to support ABI3 with Python 3.9 and onwards and
 free-threaded builds you can do
 
 .. code-block:: yaml
