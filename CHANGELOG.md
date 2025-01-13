@@ -2,6 +2,23 @@
 
 ## 25.1.0 (2025-01-13)
 
+### Contributors
+
+* @conda-bot
+* @carterbox
+* @jaimergp
+* @ForgottenProgramme
+* @beckermr
+* @tttc3
+* @tkelman
+* @ypradat
+* @dependabot[bot]
+* @pre-commit-ci[bot]
+
+
+
+## 25.1.0 (2025-01-13)
+
 ### Enhancements
 
 * Add SHA224, SHA384 and SHA512 support for validating downloaded sources. (#4793)
