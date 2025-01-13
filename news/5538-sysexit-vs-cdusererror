@@ -4,7 +4,7 @@
 
 ### Bug fixes
 
-* Fixed a bug where some ``CondaBuildUserError`` exceptions that were formally ``SystemExit`` exceptions
+* Fix a bug where some ``CondaBuildUserError`` exceptions that were formally ``SystemExit`` exceptions
   were not being caught properly. (#5538)
 
 ### Deprecations

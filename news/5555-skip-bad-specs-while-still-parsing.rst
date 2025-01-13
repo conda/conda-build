@@ -4,7 +4,7 @@
 
 ### Bug fixes
 
-* Fixed a bug where bad match specs from intermediate parsing results would cause parsing to fail. (#5555)
+* Fix a bug where bad match specs from intermediate parsing results would cause parsing to fail. (#5555)
 
 ### Deprecations
 

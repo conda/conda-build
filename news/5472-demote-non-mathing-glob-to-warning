@@ -16,4 +16,4 @@
 
 ### Other
 
-* Demoted logging message about glob finding no matches from error to warning (#5472)
+* Demote logging message about glob finding no matches from error to warning (#5472)
