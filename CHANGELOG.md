@@ -31,7 +31,7 @@
 * @beckermr
 * @tttc3
 * @tkelman made their first contribution in https://github.com/conda/conda-build/pull/5565
-@ypradat made their first contribution in https://github.com/conda/conda-build/pull/5560
+* @ypradat made their first contribution in https://github.com/conda/conda-build/pull/5560
 * @dependabot[bot]
 * @pre-commit-ci[bot]
 
