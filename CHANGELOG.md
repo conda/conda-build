@@ -13,14 +13,14 @@
 ### Bug fixes
 
 * Verify all source hashes when multiple are defined (not just the first one). (#4793)
-* Fixed a bug where some ``CondaBuildUserError`` exceptions that were formally ``SystemExit`` exceptions
+* Fix a bug where some ``CondaBuildUserError`` exceptions that were formally ``SystemExit`` exceptions
   were not being caught properly. (#5538)
-* Fixed a bug where bad match specs from intermediate parsing results would cause parsing to fail. (#5555)
+* Fix a bug where bad match specs from intermediate parsing results would cause parsing to fail. (#5555)
 * Fix `KeyError` when an inconsistent `build.pkg_type` value is specified in `meta.yaml`. (#5560)
 
 ### Other
 
-* Demoted logging message about glob finding no matches from error to warning (#5472)
+* Demot logging message about glob finding no matches from error to warning (#5472)
 
 ### Contributors
 
