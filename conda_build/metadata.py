@@ -1855,10 +1855,10 @@ class MetaData:
             if build_noarch:
                 d["noarch"] = build_noarch
         elif self.python_version_independent:
-            # This is a hack to make current mamba/micromamba compile the pure python files
+            # This is required by CEP 20 (https://github.com/conda/ceps/blob/main/cep-0020.md)
+            # to make current mamba/micromamba compile the pure python files
             # and for micromamba to move the files in site-packages to the correct dir.
-            # (i.e. we need A2 action to apply actions B1-B4 as mentioned in CEP 20
-            # https://github.com/conda/ceps/blob/main/cep-0020.md)
+            # (i.e. we need A2 action to apply actions B1-B4 as mentioned in CEP 20)
             d["noarch"] = "python"
         if self.is_app():
             d.update(self.app_meta())
