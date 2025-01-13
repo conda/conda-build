@@ -1,5 +1,22 @@
 [//]: # (current developments)
 
+## 25.1.0 (2025-01-13)
+
+### Contributors
+
+* @conda-bot
+* @carterbox
+* @jaimergp
+* @ForgottenProgramme
+* @beckermr
+* @tttc3
+* @tkelman
+* @ypradat
+* @dependabot[bot]
+* @pre-commit-ci[bot]
+
+
+
 ## 24.11.2 (2024-11-26)
 
 ### Bug fixes
