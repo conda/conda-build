@@ -1,5 +1,19 @@
 [//]: # (current developments)
 
+## 25.1.1 (2025-01-14)
+
+### Deprecations
+
+* Remove `conda_build.exceptions.UnableToParseMissingJinja2`. (#5587)
+* Remove `conda_build.index.get_build_index(locking)`. (#5587)
+* Remove `conda_build.index.get_build_index(timeout)`. (#5587)
+
+### Contributors
+
+* @kenodegard
+
+
+
 ## 25.1.0 (2025-01-13)
 
 ### Enhancements
