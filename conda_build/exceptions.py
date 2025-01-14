@@ -4,8 +4,6 @@ import textwrap
 
 from conda import CondaError
 
-from .deprecations import deprecated
-
 SEPARATOR = "-" * 70
 
 indent = lambda s: textwrap.fill(textwrap.dedent(s))
@@ -44,22 +42,6 @@ class UnableToParse(YamlParsingError):
         orig = str(self.original)
         indent = lambda s: s.replace("\n", "\n--> ")
         return f"Error Message:\n--> {indent(orig)}\n\n"
-
-
-@deprecated("24.11", "25.1")
-class UnableToParseMissingJinja2(UnableToParse):
-    def error_body(self):
-        return "\n".join(
-            [
-                super().error_body(),
-                indent(
-                    """\
-                It appears you are missing jinja2.  Please install that
-                package, then attempt to build.
-            """
-                ),
-            ]
-        )
 
 
 class MissingDependency(CondaBuildException):

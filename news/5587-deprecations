@@ -1,0 +1,21 @@
+### Enhancements
+
+* <news item>
+
+### Bug fixes
+
+* <news item>
+
+### Deprecations
+
+* Remove `conda_build.exceptions.UnableToParseMissingJinja2`. (#5587)
+* Remove `conda_build.index.get_build_index(locking)`. (#5587)
+* Remove `conda_build.index.get_build_index(timeout)`. (#5587)
+
+### Docs
+
+* <news item>
+
+### Other
+
+* <news item>
