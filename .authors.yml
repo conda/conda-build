@@ -1202,7 +1202,7 @@
   alternate_emails:
   - clee@anaconda.com
 - name: Ken Odegard
-  num_commits: 229
+  num_commits: 232
   email: kodegard@anaconda.com
   first_commit: 2020-09-08 19:53:41
   github: kenodegard
@@ -1225,7 +1225,7 @@
   first_commit: 2020-11-19 10:46:41
 - name: Jannis Leidel
   email: jannis@leidel.info
-  num_commits: 34
+  num_commits: 35
   github: jezdez
   first_commit: 2020-11-19 10:46:41
 - name: Christof Kaufmann
@@ -1489,5 +1489,7 @@
 - name: Mahe Iram Khan
   email: forgotten.programme@gmail.com
   github: ForgottenProgramme
-  num_commits: 6
+  num_commits: 1
   first_commit: 2025-01-13 18:15:05
+  alternate_emails:
+  - 65779580+ForgottenProgramme@users.noreply.github.com
