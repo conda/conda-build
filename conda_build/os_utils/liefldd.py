@@ -44,6 +44,11 @@ try:
     except AttributeError:
         # Fallback for lief<0.15.
         ELF_DYNAMIC_TAGS = lief.ELF.DYNAMIC_TAGS
+    try:
+        LOAD_COMMAND_TYPES = lief.MachO.LoadCommand.TYPE
+    except AttributeError:
+        # Fallback for lief<0.15.
+        LOAD_COMMAND_TYPES = lief.MachO.LOAD_COMMAND_TYPES
 except ImportError:
     have_lief = False
 
@@ -134,7 +139,7 @@ def get_libraries(file):
                 binary_name = [
                     command.name
                     for command in binary.commands
-                    if command.command == lief.MachO.LOAD_COMMAND_TYPES.ID_DYLIB
+                    if command.command == LOAD_COMMAND_TYPES.ID_DYLIB
                 ]
                 binary_name = binary_name[0] if len(binary_name) else None
                 result = [
@@ -207,7 +212,7 @@ if have_lief:
                     [
                         command.path
                         for command in binary.commands
-                        if command.command == lief.MachO.LOAD_COMMAND_TYPES.RPATH
+                        if command.command == LOAD_COMMAND_TYPES.RPATH
                     ]
                 )
         return rpaths, binary_format, binary_type
