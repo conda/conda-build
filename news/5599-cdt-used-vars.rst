@@ -1,6 +1,6 @@
 ### Enhancements
 
-* Add cdt_arch and cdt_name as used vars when cdt jinja is used (#5599)
+* Add `cdt_arch` and `cdt_name` as used vars when cdt jinja is used. (#5599)
 
 ### Bug fixes
 
