@@ -1,5 +1,56 @@
 [//]: # (current developments)
 
+## 25.1.1 (2025-01-14)
+
+### Deprecations
+
+* Remove `conda_build.exceptions.UnableToParseMissingJinja2`. (#5587)
+* Remove `conda_build.index.get_build_index(locking)`. (#5587)
+* Remove `conda_build.index.get_build_index(timeout)`. (#5587)
+
+### Contributors
+
+* @kenodegard
+
+
+
+## 25.1.0 (2025-01-13)
+
+### Enhancements
+
+* Add SHA224, SHA384 and SHA512 support for validating downloaded sources. (#4793)
+* Add new hashing methods (`content_sha256`, `content_sha384`, `content_sha512`) to calculate the
+  checksum of the extracted contents of the downloaded source artifacts. (#4821 via #5277)
+* Make `.conda` the new default package format. `.tar.bz2` files can still be generated with `--package-format=1` and/or `conda_build.pkg_format: 1` in your `.condarc` file. (#5183 via #5527)
+* Add compatibility for LIEF=0.15. (#5564 via #5565)
+
+### Bug fixes
+
+* Verify all source hashes when multiple are defined (not just the first one). (#4793)
+* Fix a bug where some ``CondaBuildUserError`` exceptions that were formally ``SystemExit`` exceptions
+  were not being caught properly. (#5538)
+* Fix a bug where bad match specs from intermediate parsing results would cause parsing to fail. (#5555)
+* Fix `KeyError` when an inconsistent `build.pkg_type` value is specified in `meta.yaml`. (#5560)
+
+### Other
+
+* Demote logging message about glob finding no matches from error to warning (#5472)
+
+### Contributors
+
+* @conda-bot
+* @carterbox
+* @jaimergp
+* @ForgottenProgramme
+* @beckermr
+* @tttc3
+* @tkelman made their first contribution in https://github.com/conda/conda-build/pull/5565
+* @ypradat made their first contribution in https://github.com/conda/conda-build/pull/5560
+* @dependabot[bot]
+* @pre-commit-ci[bot]
+
+
+
 ## 24.11.2 (2024-11-26)
 
 ### Bug fixes

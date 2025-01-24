@@ -210,6 +210,20 @@ the repository. Using path allows you to build packages with
 unstaged and uncommitted changes in the working directory.
 git_url can build only up to the latest commit.
 
+Hashes
+------
+
+Conda-build can check the integrity of the provided sources
+using different hashing algorithms:
+
+- ``md5``, ``sha1`` and ``sha256`` will check the provided
+  hexdigest against the downloaded archive, prior to extraction.
+- ``content_md5``, ``content_sha1`` and ``content_sha256`` will
+  check the provided hexdigest against the contents of the
+  (extracted) directory. ``content_hash_skip`` can take a list of
+  relative files and directories to be ignored during the check
+  (e.g. useful to ignore the ``.git/`` directory when ``git_url``
+  is used to clone a repository).
 
 Patches
 -------
