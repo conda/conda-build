@@ -2228,6 +2228,12 @@ class MetaData:
         if not outputs:
             outputs = [{"name": self.name()}]
 
+        if len(output_matches) != len(outputs):
+            log.warning(
+                "Number of parsed outputs does not match detected raw output blocks. "
+                "If you are using Jinja conditionals to include or exclude outputs, "
+                "consider using `skip: true  # [condition]` instead."
+            )
         try:
             if output_type:
                 output_tuples = [
