@@ -424,6 +424,8 @@ def test_get_used_loop_vars():
         "zlib",
         "pthread_stubs",
         "target_platform",
+        "cdt_name",
+        "cdt_arch",
     }
 
 

@@ -1,6 +1,6 @@
 ### Enhancements
 
-* <news item>
+* Add `cdt_arch` and `cdt_name` as used vars when cdt jinja is used. (#5599)
 
 ### Bug fixes
 
@@ -16,4 +16,4 @@
 
 ### Other
 
-* Demoted logging message about glob finding no matches from error to warning (#5472)
+* <news item>

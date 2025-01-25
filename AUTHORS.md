@@ -138,6 +138,7 @@ Authors are sorted alphabetically.
 * Levi Naden
 * Lori Burns
 * Lukas Schrangl
+* Mahe Iram Khan
 * Mandeep Bhutani
 * Marcel Bargull
 * Marcelo Duarte Trevisani
@@ -227,6 +228,7 @@ Authors are sorted alphabetically.
 * Tom Davidson
 * Tom Pollard
 * Tom Schoonjans
+* Tony Kelman
 * Toon Verstraelen
 * Travis Hathaway
 * Travis Oliphant
@@ -242,6 +244,7 @@ Authors are sorted alphabetically.
 * Wolfgang Ulmer
 * Yann
 * Yannik Tausch
+* Yoann Cédric Pradat
 * Yoav Ram
 * Yu Feng
 * Zane Dufour

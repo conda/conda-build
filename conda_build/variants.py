@@ -741,6 +741,11 @@ def find_used_variables_in_text(variant, recipe_text, selectors_only=False):
             variant_lines = [
                 line for line in recipe_lines if v in line or target_lang in line
             ]
+        elif v.startswith("cdt_"):
+            variant_lines = [
+                line for line in recipe_lines if v in line or "cdt(" in line
+            ]
+            all_res.append(r"\{{\s*cdt\(")
         else:
             variant_lines = [
                 line for line in recipe_lines if v in line.replace("-", "_")
