@@ -2229,7 +2229,7 @@ class MetaData:
             outputs = [{"name": self.name()}]
 
         if len(output_matches) != len(outputs):
-            log.warning(
+            utils.get_logger(__name__).warning(
                 "Number of parsed outputs does not match detected raw output blocks. "
                 "If you are using Jinja conditionals to include or exclude outputs, "
                 "consider using `skip: true  # [condition]` instead."
