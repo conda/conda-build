@@ -493,9 +493,9 @@ def ensure_matching_hashes(output_metadata):
                     if (
                         dep.startswith(m.name() + " ")
                         and len(dep.split(" ")) == 3
-                        and not GlobLowerStrMatch(
-                            dep.split(" ")[-1]
-                        ).match(GlobLowerStrMatch(m.build_id()))
+                        and not GlobLowerStrMatch(dep.split(" ")[-1]).match(
+                            GlobLowerStrMatch(m.build_id())
+                        )
                         and _variants_equal(m, om)
                     ):
                         problemos.append((m.name(), m.build_id(), dep, om.name()))
