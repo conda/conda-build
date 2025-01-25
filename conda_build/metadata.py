@@ -20,7 +20,7 @@ import yaml
 from bs4 import UnicodeDammit
 from conda.base.context import locate_prefix_by_name
 from conda.gateways.disk.read import compute_sum
-from conda.models.match_spec import MatchSpec
+from conda.models.match_spec import GlobLowerStrMatch, MatchSpec
 from frozendict import deepfreeze
 
 from . import utils
@@ -493,7 +493,9 @@ def ensure_matching_hashes(output_metadata):
                     if (
                         dep.startswith(m.name() + " ")
                         and len(dep.split(" ")) == 3
-                        and dep.split(" ")[-1] != m.build_id()
+                        and not GlobLowerStrMatch(
+                            dep.split(" ")[-1]
+                        ).match(GlobLowerStrMatch(m.build_id()))
                         and _variants_equal(m, om)
                     ):
                         problemos.append((m.name(), m.build_id(), dep, om.name()))
