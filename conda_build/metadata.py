@@ -2236,7 +2236,7 @@ class MetaData:
                 "If you are using Jinja conditionals to include or exclude outputs, "
                 "consider using `skip: true  # [condition]` instead."
             )
-        
+
         try:
             if output_type:
                 output_tuples = [
