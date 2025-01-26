@@ -2229,11 +2229,14 @@ class MetaData:
             outputs = [{"name": self.name()}]
 
         if len(output_matches) != len(outputs):
+            # See https://github.com/conda/conda-build/issues/5571
             utils.get_logger(__name__).warning(
-                "Number of parsed outputs does not match detected raw output blocks. "
+                "Number of parsed outputs does not match detected raw metadata blocks. "
+                "Identified output block may be wrong! "
                 "If you are using Jinja conditionals to include or exclude outputs, "
                 "consider using `skip: true  # [condition]` instead."
             )
+        
         try:
             if output_type:
                 output_tuples = [
@@ -2256,7 +2259,8 @@ class MetaData:
         except ValueError:
             if not self.path and self.meta.get("extra", {}).get("parent_recipe"):
                 utils.get_logger(__name__).warning(
-                    f"Didn't match any output in raw metadata.  Target value was: {output_name}"
+                    "Didn't match any output in raw metadata. Target value was: %s",
+                    output_name,
                 )
                 output = ""
             else:
