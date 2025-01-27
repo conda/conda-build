@@ -960,17 +960,17 @@ def test_skip_compile_pyc(testing_config):
         _, ext = os.path.splitext(filename)
         basename = filename.split(".", 1)[0]
         if basename == "skip_compile_pyc":
-            assert (
-                not ext == ".pyc"
-            ), f"a skip_compile_pyc .pyc was compiled: {filename}"
+            assert not ext == ".pyc", (
+                f"a skip_compile_pyc .pyc was compiled: {filename}"
+            )
         if ext == ".pyc":
-            assert (
-                basename == "compile_pyc"
-            ), f"an unexpected .pyc was compiled: {filename}"
+            assert basename == "compile_pyc", (
+                f"an unexpected .pyc was compiled: {filename}"
+            )
             pyc_count = pyc_count + 1
-    assert (
-        pyc_count == 2
-    ), f"there should be 2 .pyc files, instead there were {pyc_count}"
+    assert pyc_count == 2, (
+        f"there should be 2 .pyc files, instead there were {pyc_count}"
+    )
 
 
 def test_detect_binary_files_with_prefix(testing_config):
@@ -991,9 +991,9 @@ def test_detect_binary_files_with_prefix(testing_config):
             or entry.endswith('"binary-has-prefix"')
         ]
     assert len(matches) == 1, "binary-has-prefix not recorded in info/has_prefix"
-    assert (
-        " binary " in matches[0]
-    ), "binary-has-prefix not recorded as binary in info/has_prefix"
+    assert " binary " in matches[0], (
+        "binary-has-prefix not recorded as binary in info/has_prefix"
+    )
 
 
 def test_skip_detect_binary_files_with_prefix(testing_config):
@@ -1026,9 +1026,9 @@ def test_fix_permissions(testing_config):
     outputs = api.build(recipe, config=testing_config)
     with tarfile.open(outputs[0]) as tf:
         for f in tf.getmembers():
-            assert (
-                f.mode & 0o444 == 0o444
-            ), f"tar member '{f.name}' has invalid (read) mode"
+            assert f.mode & 0o444 == 0o444, (
+                f"tar member '{f.name}' has invalid (read) mode"
+            )
 
 
 @pytest.mark.sanity
@@ -1685,9 +1685,9 @@ def test_pin_depends(testing_config):
     assert requires
     if hasattr(requires, "decode"):
         requires = requires.decode()
-    assert re.search(
-        r"python\=[23]\.", requires
-    ), "didn't find pinned python in info/requires"
+    assert re.search(r"python\=[23]\.", requires), (
+        "didn't find pinned python in info/requires"
+    )
 
 
 @pytest.mark.sanity
