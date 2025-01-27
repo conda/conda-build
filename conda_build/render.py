@@ -654,11 +654,30 @@ def finalize_metadata(
         host_requirement_names = [req.split(" ")[0] for req in host_requirements]
         extra_specs = []
         if output and output_excludes and not is_top_level and host_requirement_names:
+            reqs = {}
+
+            # we first make a mapping of output -> requirements
             for ((name, _), (_, other_meta)) in m.other_outputs.items():
-                if name == m.name() or name not in host_requirement_names:
+                if name == m.name():
                     continue
                 other_meta_reqs = other_meta.meta.get("requirements", {}).get("run", [])
-                extra_specs.extend(other_meta_reqs)
+                reqs[name] = set(other_meta_reqs)
+
+            seen = set()
+            # for each subpackage that is a dependency we add its dependencies
+            # and transitive dependencies if the dependency of the subpackage
+            # is a subpackage.
+            to_process = set(name for (name, _) in m.other_outputs if name in host_requirement_names)
+            while to_process:
+                name = to_process.pop()
+                if name == m.name():
+                    continue
+                for req in reqs[name]:
+                    req_name = req.split(" ")[0]
+                    if req_name not in reqs:
+                        extra_specs.append(req)
+                    elif req_name not in seen:
+                        to_process.add(req_name)
 
         m = parent_metadata.get_output_metadata(m.get_rendered_output(m.name()))
         build_unsat, host_unsat = add_upstream_pins(
