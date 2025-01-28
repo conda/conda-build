@@ -2433,7 +2433,7 @@ def build(
                     exclude_pattern = re.compile(
                         r"|".join(rf"(?:^{exc}(?:\s|$|\Z))" for exc in excludes)
                     )
-            add_upstream_pins(m, False, exclude_pattern)
+            add_upstream_pins(m, False, exclude_pattern, [])
 
         create_build_envs(top_level_pkg, notest)
 
