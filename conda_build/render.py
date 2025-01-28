@@ -462,12 +462,18 @@ def _read_upstream_pin_files(
     )
 
 
-def add_upstream_pins(m: MetaData, permit_unsatisfiable_variants, exclude_pattern, extra_specs):
+def add_upstream_pins(
+    m: MetaData, permit_unsatisfiable_variants, exclude_pattern, extra_specs
+):
     """Applies run_exports from any build deps to host and run sections"""
     # if we have host deps, they're more important than the build deps.
     requirements = m.get_section("requirements")
     build_deps, build_unsat, extra_run_specs_from_build = _read_upstream_pin_files(
-        m, "build", permit_unsatisfiable_variants, exclude_pattern, [] if m.is_cross else extra_specs
+        m,
+        "build",
+        permit_unsatisfiable_variants,
+        exclude_pattern,
+        [] if m.is_cross else extra_specs,
     )
 
     # is there a 'host' section?
@@ -657,7 +663,7 @@ def finalize_metadata(
             reqs = {}
 
             # we first make a mapping of output -> requirements
-            for ((name, _), (_, other_meta)) in m.other_outputs.items():
+            for (name, _), (_, other_meta) in m.other_outputs.items():
                 if name == m.name():
                     continue
                 other_meta_reqs = other_meta.meta.get("requirements", {}).get("run", [])
@@ -667,7 +673,9 @@ def finalize_metadata(
             # for each subpackage that is a dependency we add its dependencies
             # and transitive dependencies if the dependency of the subpackage
             # is a subpackage.
-            to_process = set(name for (name, _) in m.other_outputs if name in host_requirement_names)
+            to_process = set(
+                name for (name, _) in m.other_outputs if name in host_requirement_names
+            )
             while to_process:
                 name = to_process.pop()
                 if name == m.name():
@@ -681,8 +689,7 @@ def finalize_metadata(
 
         m = parent_metadata.get_output_metadata(m.get_rendered_output(m.name()))
         build_unsat, host_unsat = add_upstream_pins(
-            m, permit_unsatisfiable_variants, exclude_pattern,
-            extra_specs
+            m, permit_unsatisfiable_variants, exclude_pattern, extra_specs
         )
         # getting this AFTER add_upstream_pins is important, because that function adds deps
         #     to the metadata.

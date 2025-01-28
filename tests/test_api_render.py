@@ -126,7 +126,10 @@ def test_transitive_subpackage_dependency(testing_config):
     recipe_dir = os.path.join(metadata_dir, "transitive_subpackage")
     metadata = api.render(recipe_dir, config=testing_config)[1][0]
     assert not metadata.get_value("requirements/run")
-    assert any(req.startswith("openssl 1.0.2") for req in metadata.get_value("requirements/host"))
+    assert any(
+        req.startswith("openssl 1.0.2")
+        for req in metadata.get_value("requirements/host")
+    )
 
 
 @pytest.mark.slow
