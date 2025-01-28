@@ -122,6 +122,13 @@ def test_pin_compatible_semver(testing_config):
     assert "zlib >=1.2.11,<2.0a0" in metadata.get_value("requirements/run")
 
 
+def test_transitive_subpackage_dependency(testing_config):
+    recipe_dir = os.path.join(metadata_dir, "transitive_subpackage")
+    metadata = api.render(recipe_dir, config=testing_config)[1][0]
+    assert not metadata.get_value("requirements/run")
+    assert any(req.startswith("openssl 1.0.2") for req in metadata.get_value("requirements/host"))
+
+
 @pytest.mark.slow
 @pytest.mark.xfail(on_win, reason="Defaults channel has conflicting vc packages")
 def test_resolved_packages_recipe(testing_config):
