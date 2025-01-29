@@ -124,9 +124,9 @@ def test_intradependencies(testing_config):
     outputs2 = api.build(recipe, config=testing_config)
     assert len(outputs2) == 11
     outputs2_set = {os.path.basename(p) for p in outputs2}
-    assert (
-        outputs1_set == outputs2_set
-    ), f"pkgs differ :: get_output_file_paths()={outputs1_set} but build()={outputs2_set}"
+    assert outputs1_set == outputs2_set, (
+        f"pkgs differ :: get_output_file_paths()={outputs1_set} but build()={outputs2_set}"
+    )
 
 
 def test_git_in_output_version(testing_config, conda_build_test_recipe_envvar: str):
@@ -448,12 +448,12 @@ def test_inherit_build_number(testing_config):
     recipe = os.path.join(subpackage_dir, "_inherit_build_number")
     metadata_tuples = api.render(recipe, config=testing_config)
     for metadata, _, _ in metadata_tuples:
-        assert (
-            "number" in metadata.meta["build"]
-        ), "build number was not inherited at all"
-        assert (
-            int(metadata.meta["build"]["number"]) == 1
-        ), "build number should have been inherited as '1'"
+        assert "number" in metadata.meta["build"], (
+            "build number was not inherited at all"
+        )
+        assert int(metadata.meta["build"]["number"]) == 1, (
+            "build number should have been inherited as '1'"
+        )
 
 
 def test_circular_deps_cross(testing_config):

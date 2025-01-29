@@ -1263,9 +1263,9 @@ def main_maybe_test():
             else:
                 that = this
             print("\n".join(this))
-            assert (
-                set(this) == set(that)
-            ), f"py-ldd result incorrect for {codefile}, this:\n{set(this)}\nvs that:\n{set(that)}"
+            assert set(this) == set(that), (
+                f"py-ldd result incorrect for {codefile}, this:\n{set(this)}\nvs that:\n{set(that)}"
+            )
     else:
         return main(sys.argv)
 
