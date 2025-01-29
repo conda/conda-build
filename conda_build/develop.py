@@ -1,12 +1,20 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
+
 import shutil
 import sys
 from os.path import abspath, exists, expanduser, isdir, join
+from pathlib import Path
+from typing import TYPE_CHECKING
 
-from conda_build.os_utils.external import find_executable
-from conda_build.post import mk_relative_osx
-from conda_build.utils import check_call_env, get_site_packages, rec_glob
+from .exceptions import CondaBuildUserError
+from .os_utils.external import find_executable
+from .post import mk_relative_osx
+from .utils import check_call_env, get_site_packages, on_mac, rec_glob
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def relink_sharedobjects(pkg_path, build_prefix):
@@ -24,7 +32,7 @@ def relink_sharedobjects(pkg_path, build_prefix):
     # find binaries in package dir and make them relocatable
     bin_files = rec_glob(pkg_path, [".so"])
     for b_file in bin_files:
-        if sys.platform == "darwin":
+        if on_mac:
             mk_relative_osx(b_file, build_prefix)
         else:
             print("Nothing to do on Linux or Windows.")
@@ -54,13 +62,13 @@ def write_to_conda_pth(sp_dir, pkg_path):
             print("added " + pkg_path)
 
 
-def get_setup_py(path_):
-    """Return full path to setup.py or exit if not found"""
+def get_setup_py(path_: Path) -> Path:
+    """Return full path to setup.py or raise error if not found"""
     # build path points to source dir, builds are placed in the
     setup_py = join(path_, "setup.py")
 
     if not exists(setup_py):
-        sys.exit(f"No setup.py found in {path_}. Exiting.")
+        raise CondaBuildUserError(f"No setup.py found in {path_}.")
 
     return setup_py
 
@@ -126,21 +134,18 @@ def _uninstall(sp_dir, pkg_path):
 
 
 def execute(
-    recipe_dirs,
-    prefix=sys.prefix,
-    no_pth_file=False,
-    build_ext=False,
-    clean=False,
-    uninstall=False,
-):
+    recipe_dirs: list[str],
+    prefix: str = sys.prefix,
+    no_pth_file: bool = False,
+    build_ext: bool = False,
+    clean: bool = False,
+    uninstall: bool = False,
+) -> None:
     if not isdir(prefix):
-        sys.exit(
-            """\
-Error: environment does not exist: %s
-#
-# Use 'conda create' to create the environment first.
-#"""
-            % prefix
+        raise CondaBuildUserError(
+            f"Error: environment does not exist: {prefix}\n"
+            f"\n"
+            f"Use 'conda create' to create the environment first."
         )
 
     assert find_executable("python", prefix=prefix)

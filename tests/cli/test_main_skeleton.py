@@ -34,20 +34,26 @@ def test_skeleton_pypi_arguments_work(testing_workdir):
 
     https://github.com/conda/conda-build/pull/1384
     """
-    args = ["pypi", "msumastro", "--version=1.1.6", "--pin-numpy"]
+    args = ["pypi", "fasttext", "--version=0.9.2", "--pin-numpy"]
     main_skeleton.execute(args)
-    assert os.path.isdir("msumastro")
+    assert os.path.isdir("fasttext")
 
     # Deliberately bypass metadata reading in conda build to get as
     # close to the "ground truth" as possible.
-    with open(os.path.join("msumastro", "meta.yaml")) as f:
+    with open(os.path.join("fasttext", "meta.yaml")) as f:
         assert f.read().count("numpy x.x") == 2
 
-    args = ["pypi", "photutils", "--version=0.2.2", "--setup-options=--offline"]
+    args = [
+        "pypi",
+        "photutils",
+        "--version=1.10.0",
+        "--setup-options=--offline",
+        "--extra-specs=extension-helpers",
+    ]
     main_skeleton.execute(args)
     assert os.path.isdir("photutils")
     # Check that the setup option occurs in bld.bat and build.sh.
 
-    m = api.render("photutils")[0][0]
-    assert "--offline" in m.meta["build"]["script"]
-    assert m.version() == "0.2.2"
+    metadata = api.render("photutils")[0][0]
+    assert "--offline" in metadata.meta["build"]["script"]
+    assert metadata.version() == "1.10.0"

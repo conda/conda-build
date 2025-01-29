@@ -4,43 +4,40 @@
 This file tests the build.py module.  It sits lower in the stack than the API tests,
 and is more unit-test oriented.
 """
+
+from __future__ import annotations
+
 import json
 import os
 import sys
+from contextlib import nullcontext
 from pathlib import Path
+from typing import TYPE_CHECKING
 
+import pytest
 from conda.common.compat import on_win
 
 from conda_build import api, build
+from conda_build.exceptions import CondaBuildUserError
 
 from .utils import get_noarch_python_meta, metadata_dir
 
-PREFIX_TESTS = {"normal": os.path.sep}
-if on_win:
-    PREFIX_TESTS.update({"double_backslash": "\\\\", "forward_slash": "/"})
+if TYPE_CHECKING:
+    from conda_build.config import Config
 
+if TYPE_CHECKING:
+    from pytest_mock import MockerFixture
 
-def test_find_prefix_files(testing_workdir):
-    """
-    Write test output that has the prefix to be found, then verify that the prefix finding
-    identified the correct number of files.
-    """
-    # create text files to be replaced
-    files = []
-    for style, replacement in PREFIX_TESTS.items():
-        filename = Path(testing_workdir, f"{style}.txt")
-        filename.write_text(testing_workdir.replace(os.path.sep, replacement))
-        files.append(str(filename))
-
-    assert len(list(build.have_prefix_files(files, testing_workdir))) == len(files)
+    from conda_build.config import Config
+    from conda_build.metadata import MetaData
 
 
 def test_build_preserves_PATH(testing_config):
-    m = api.render(os.path.join(metadata_dir, "source_git"), config=testing_config)[0][
-        0
-    ]
+    metadata = api.render(
+        os.path.join(metadata_dir, "source_git"), config=testing_config
+    )[0][0]
     ref_path = os.environ["PATH"]
-    build.build(m, stats=None)
+    build.build(metadata, stats=None)
     assert os.environ["PATH"] == ref_path
 
 
@@ -301,3 +298,94 @@ def test_rewrite_output(testing_config, capsys):
         assert "LIBDIR=$PREFIX/lib" in stdout
         assert "PWD=$SRC_DIR" in stdout
         assert "BUILD_PREFIX=$BUILD_PREFIX" in stdout
+
+
+@pytest.mark.parametrize(
+    "script,error,interpreter",
+    [
+        # known interpreter
+        ("foo.sh", None, build.INTERPRETER_BASH),
+        ("foo.bat", None, build.INTERPRETER_BAT),
+        ("foo.ps1", None, build.INTERPRETER_POWERSHELL),
+        ("foo.py", None, build.INTERPRETER_PYTHON),
+        ("foo.bar.sh", None, build.INTERPRETER_BASH),
+        ("foo.bar.bat", None, build.INTERPRETER_BAT),
+        ("foo.bar.ps1", None, build.INTERPRETER_POWERSHELL),
+        ("foo.bar.py", None, build.INTERPRETER_PYTHON),
+        # unknown interpreter
+        ("foo", NotImplementedError, None),
+        ("foo.unknown", NotImplementedError, None),
+        ("foo.zsh", NotImplementedError, None),
+        ("foo.csh", NotImplementedError, None),
+        ("foo.exe", NotImplementedError, None),
+        ("foo.exe", NotImplementedError, None),
+        ("foo.sh.other", NotImplementedError, None),
+        ("foo.bat.other", NotImplementedError, None),
+        ("foo.ps1.other", NotImplementedError, None),
+        ("foo.py.other", NotImplementedError, None),
+        ("foo.sh_what", NotImplementedError, None),
+        ("foo.bat_what", NotImplementedError, None),
+        ("foo.ps1_what", NotImplementedError, None),
+        ("foo.py_what", NotImplementedError, None),
+    ],
+)
+def test_guess_interpreter(
+    script: str,
+    error: type[Exception] | None,
+    interpreter: list[str],
+):
+    with pytest.raises(error) if error else nullcontext():
+        assert build.guess_interpreter(script) == interpreter
+
+
+@pytest.mark.parametrize("readme", ["README.md", "README.rst", "README"])
+def test_copy_readme(testing_metadata: MetaData, readme: str):
+    testing_metadata.meta["about"]["readme"] = readme
+    with pytest.raises(CondaBuildUserError):
+        build.copy_readme(testing_metadata)
+
+    Path(testing_metadata.config.work_dir, readme).touch()
+    build.copy_readme(testing_metadata)
+    assert Path(testing_metadata.config.info_dir, readme).exists()
+
+
+@pytest.mark.skipif(not on_win, reason="WSL is only on Windows")
+def test_wsl_unsupported(
+    testing_metadata: MetaData,
+    mocker: MockerFixture,
+    tmp_path: Path,
+):
+    mocker.patch(
+        "conda_build.os_utils.external.find_executable",
+        return_value="C:\\Windows\\System32\\bash.exe",
+    )
+
+    (script := tmp_path / "install.sh").touch()
+    with pytest.raises(CondaBuildUserError):
+        build.bundle_conda(
+            output={"script": script},
+            metadata=testing_metadata,
+            env={},
+            stats={},
+        )
+
+
+def test_handle_anaconda_upload(testing_config: Config, mocker: MockerFixture):
+    mocker.patch(
+        "conda_build.os_utils.external.find_executable",
+        return_value=None,
+    )
+    testing_config.anaconda_upload = True
+
+    with pytest.raises(CondaBuildUserError):
+        build.handle_anaconda_upload((), testing_config)
+
+
+def test_tests_failed(testing_metadata: MetaData, tmp_path: Path):
+    with pytest.raises(CondaBuildUserError):
+        build.tests_failed(
+            package_or_metadata=testing_metadata,
+            move_broken=True,
+            broken_dir=tmp_path,
+            config=testing_metadata.config,
+        )

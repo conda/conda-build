@@ -5,12 +5,15 @@ import os
 import pytest
 
 from conda_build import api
+from conda_build.config import CondaPkgFormat
 
 from .utils import metadata_dir
 
 
 @pytest.mark.parametrize("pkg_format,pkg_ext", [(None, ".tar.bz2"), ("2", ".conda")])
-def test_conda_pkg_format(pkg_format, pkg_ext, testing_config, monkeypatch, capfd):
+def test_conda_pkg_format(
+    pkg_format, pkg_ext, testing_config, monkeypatch, capfd, request
+):
     """Conda package format "2" builds .conda packages."""
 
     # Build the "entry_points" recipe, which contains a test pass for package.
@@ -19,18 +22,25 @@ def test_conda_pkg_format(pkg_format, pkg_ext, testing_config, monkeypatch, capf
     # These variables are defined solely for testing purposes,
     # so they can be checked within build scripts
     testing_config.activate = True
-    testing_config.conda_pkg_format = pkg_format
+    testing_config.conda_pkg_format = (
+        None if pkg_format is None else CondaPkgFormat.normalize(pkg_format)
+    )
     monkeypatch.setenv("CONDA_TEST_VAR", "conda_test")
     monkeypatch.setenv("CONDA_TEST_VAR_2", "conda_test_2")
 
-    (output_file,) = api.get_output_file_paths(recipe, config=testing_config)
+    # Recipe "entry_points" is used in other test -> add test-specific variant
+    # (change build hash) to avoid clashes in package cache from other tests.
+    variants = {"pytest_name": [request.node.name.replace("[", "").replace("]", "")]}
+    (output_file,) = api.get_output_file_paths(
+        recipe, config=testing_config, variants=variants
+    )
     assert output_file.endswith(pkg_ext)
 
-    api.build(recipe, config=testing_config)
+    api.build(recipe, config=testing_config, variants=variants)
     assert os.path.exists(output_file)
 
     out, err = capfd.readouterr()
 
     # Verify that test pass ran through api
     assert "Manual entry point" in out
-    assert "TEST END: %s" % output_file in out
+    assert f"TEST END: {output_file}" in out

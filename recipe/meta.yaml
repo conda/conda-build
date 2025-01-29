@@ -1,6 +1,7 @@
 package:
   name: conda-build
-  version: {{ GIT_DESCRIBE_TAG }}.{{ GIT_BUILD_STR }}
+  # VERSION_OVERRIDE is used by the canary release workflow
+  version: {{ os.getenv("VERSION_OVERRIDE") or GIT_DESCRIBE_TAG }}.{{ GIT_BUILD_STR }}
 
 source:
   # git_url only captures committed code
@@ -9,15 +10,14 @@ source:
 build:
   script: {{ PYTHON }} -m pip install . --no-deps --no-build-isolation -vv
   entry_points:
-    - conda-build = conda_build.cli.main_build:main
-    - conda-convert = conda_build.cli.main_convert:main
-    - conda-debug = conda_build.cli.main_debug:main
-    - conda-develop = conda_build.cli.main_develop:main
-    - conda-index = conda_build.cli.main_index:main
-    - conda-inspect = conda_build.cli.main_inspect:main
-    - conda-metapackage = conda_build.cli.main_metapackage:main
-    - conda-render = conda_build.cli.main_render:main
-    - conda-skeleton = conda_build.cli.main_skeleton:main
+    - conda-build = conda_build.cli.main_build:execute
+    - conda-convert = conda_build.cli.main_convert:execute
+    - conda-debug = conda_build.cli.main_debug:execute
+    - conda-develop = conda_build.cli.main_develop:execute
+    - conda-inspect = conda_build.cli.main_inspect:execute
+    - conda-metapackage = conda_build.cli.main_metapackage:execute
+    - conda-render = conda_build.cli.main_render:execute
+    - conda-skeleton = conda_build.cli.main_skeleton:execute
 
 requirements:
   build:
@@ -31,30 +31,31 @@ requirements:
   run:
     - beautifulsoup4
     - chardet
-    - conda >=4.13
-    - conda-index
-    - conda-package-handling >=1.3
+    - conda >=23.7.0
+    - conda-index >=0.4.0
+    - conda-package-handling >=2.2.0
     - filelock
-    - glob2 >=0.6
+    - frozendict >=2.4.2
     - jinja2
+    - jsonschema >=4.19
     - m2-patch >=2.6               # [win]
+    - menuinst >=2
     - packaging
     - patch >=2.6                  # [not win]
     - patchelf                     # [linux]
     - pkginfo
     - psutil
-    - py-lief                      # [not win]
+    - py-lief
     - python
     - python-build
     - python-libarchive-c
     - pytz
     - pyyaml
     - requests
-    - six
     - tomli                        # [py<311]
     - tqdm
   run_constrained:
-    - conda-verify  >=3.0.2
+    - conda-verify  >=3.1.0
 
 test:
   imports:
@@ -62,15 +63,16 @@ test:
     - conda_build
     # new/updated submodules (can be dropped after 1-2 releases)
     - conda_build.index
-  files:
-    - test_bdist_conda_setup.py
+  requires:
+    - setuptools
+    - pip
   commands:
-    # builtin subcommands
+    - python -m pip check
+    # subcommands
     - conda --help
     - conda build --help
     - conda convert --help
     - conda develop --help
-    - conda index --help
     - conda inspect --help
     - conda inspect linkages --help  # [unix]
     - conda inspect objects --help  # [osx]
@@ -78,8 +80,17 @@ test:
     - conda render --help
     - conda skeleton --help
     - conda debug --help
-    # bdist_conda
-    - python test_bdist_conda_setup.py bdist_conda --help
+    # entrypoints
+    - conda-build --help
+    - conda-convert --help
+    - conda-develop --help
+    - conda-inspect --help
+    - conda-inspect linkages --help  # [unix]
+    - conda-inspect objects --help  # [osx]
+    - conda-metapackage --help
+    - conda-render --help
+    - conda-skeleton --help
+    - conda-debug --help
 
 about:
   home: https://conda.org

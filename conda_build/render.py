@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from __future__ import annotations
 
+import functools
 import json
 import os
 import random
@@ -10,36 +11,48 @@ import string
 import subprocess
 import sys
 import tarfile
-import tempfile
 from collections import OrderedDict, defaultdict
-from functools import lru_cache
-from os.path import abspath, isdir, isfile
+from contextlib import contextmanager
+from os.path import (
+    isabs,
+    isdir,
+    isfile,
+    join,
+    normpath,
+)
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import yaml
+from conda.base.context import context
+from conda.cli.common import specs_from_url
+from conda.core.package_cache_data import ProgressiveFetchExtract
+from conda.exceptions import NoPackagesFoundError, UnsatisfiableError
+from conda.gateways.disk.create import TemporaryDirectory
+from conda.models.records import PackageRecord
+from conda.models.version import VersionOrder
 
-import conda_build.index
-import conda_build.source as source
-from conda_build import environ, exceptions, utils
-from conda_build.exceptions import DependencyNeedsBuildingError
-from conda_build.metadata import MetaData, combine_top_level_metadata_with_output
-from conda_build.variants import (
+from . import environ, exceptions, source, utils
+from .config import CondaPkgFormat
+from .exceptions import CondaBuildUserError, DependencyNeedsBuildingError
+from .index import get_build_index
+from .metadata import MetaData, MetaDataTuple, combine_top_level_metadata_with_output
+from .utils import (
+    CONDA_PACKAGE_EXTENSION_V1,
+    package_record_to_requirement,
+)
+from .variants import (
     filter_by_key_value,
     get_package_variants,
     list_of_dicts_to_dict_of_lists,
 )
 
-from .conda_interface import (
-    ProgressiveFetchExtract,
-    TemporaryDirectory,
-    UnsatisfiableError,
-    execute_actions,
-    pkgs_dirs,
-    specs_from_url,
-)
-from .utils import CONDA_PACKAGE_EXTENSION_V1, CONDA_PACKAGE_EXTENSION_V2
+if TYPE_CHECKING:
+    import os
+    from collections.abc import Iterable, Iterator
+    from typing import Any
 
-# from conda_build.jinja_context import pin_subpackage_against_outputs
+    from .config import Config
 
 
 def odict_representer(dumper, data):
@@ -51,41 +64,34 @@ yaml.add_representer(tuple, yaml.representer.SafeRepresenter.represent_list)
 yaml.add_representer(OrderedDict, odict_representer)
 
 
-def bldpkg_path(m):
+def bldpkg_path(m: MetaData) -> str:
     """
     Returns path to built package's tarball given its ``Metadata``.
     """
     subdir = "noarch" if m.noarch or m.noarch_python else m.config.host_subdir
 
     if not hasattr(m, "type"):
-        if m.config.conda_pkg_format == "2":
-            pkg_type = "conda_v2"
+        if m.config.conda_pkg_format == CondaPkgFormat.V2:
+            pkg_type = CondaPkgFormat.V2
         else:
-            pkg_type = "conda"
+            pkg_type = CondaPkgFormat.V1
     else:
         pkg_type = m.type
 
     # the default case will switch over to conda_v2 at some point
-    if pkg_type == "conda":
-        path = os.path.join(
-            m.config.output_folder, subdir, f"{m.dist()}{CONDA_PACKAGE_EXTENSION_V1}"
+    if pkg_type == CondaPkgFormat.V1:
+        path = join(
+            m.config.output_folder, subdir, f"{m.dist()}{CondaPkgFormat.V1.ext}"
         )
-    elif pkg_type == "conda_v2":
-        path = os.path.join(
-            m.config.output_folder, subdir, f"{m.dist()}{CONDA_PACKAGE_EXTENSION_V2}"
+    elif pkg_type == CondaPkgFormat.V2:
+        path = join(
+            m.config.output_folder, subdir, f"{m.dist()}{CondaPkgFormat.V2.ext}"
         )
     else:
-        path = f"{m.type} file for {m.name()} in: {os.path.join(m.config.output_folder, subdir)}"
+        path = (
+            f"{m.type} file for {m.name()} in: {join(m.config.output_folder, subdir)}"
+        )
     return path
-
-
-def actions_to_pins(actions):
-    if "LINK" in actions:
-        return [
-            " ".join(spec.dist_name.split()[0].rsplit("-", 2))
-            for spec in actions["LINK"]
-        ]
-    return []
 
 
 def _categorize_deps(m, specs, exclude_pattern, variant):
@@ -110,7 +116,7 @@ def _categorize_deps(m, specs, exclude_pattern, variant):
                 # for sake of comparison, ignore dashes and underscores
                 if dash_or_under.sub("", key) == dash_or_under.sub(
                     "", spec_name
-                ) and not re.search(r"%s\s+[0-9a-zA-Z\_\.\<\>\=\*]" % spec_name, spec):
+                ) and not re.search(rf"{spec_name}\s+[0-9a-zA-Z\_\.\<\>\=\*]", spec):
                     dependencies.append(" ".join((spec_name, value)))
         elif exclude_pattern.match(spec):
             pass_through_deps.append(spec)
@@ -118,12 +124,13 @@ def _categorize_deps(m, specs, exclude_pattern, variant):
 
 
 def get_env_dependencies(
-    m,
+    m: MetaData,
     env,
     variant,
     exclude_pattern=None,
     permit_unsatisfiable_variants=False,
     merge_build_host_on_same_platform=True,
+    extra_specs=None,
 ):
     specs = m.get_depends_top_and_out(env)
     # replace x.x with our variant's numpy version, or else conda tries to literally go get x.x
@@ -142,13 +149,15 @@ def get_env_dependencies(
     )
 
     dependencies = set(dependencies)
+    if extra_specs:
+        dependencies |= set(extra_specs)
     unsat = None
     random_string = "".join(
         random.choice(string.ascii_uppercase + string.digits) for _ in range(10)
     )
     with TemporaryDirectory(prefix="_", suffix=random_string) as tmpdir:
         try:
-            actions = environ.get_install_actions(
+            precs = environ.get_package_records(
                 tmpdir,
                 tuple(dependencies),
                 env,
@@ -170,17 +179,17 @@ def get_env_dependencies(
             else:
                 unsat = e.message
             if permit_unsatisfiable_variants:
-                actions = {}
+                precs = []
             else:
                 raise
 
-    specs = actions_to_pins(actions)
+    specs = [package_record_to_requirement(prec) for prec in precs]
     return (
         utils.ensure_list(
-            (specs + subpackages + pass_through_deps)
-            or m.meta.get("requirements", {}).get(env, [])
+            (specs + subpackages + pass_through_deps + (extra_specs or []))
+            or m.get_value(f"requirements/{env}", [])
         ),
-        actions,
+        precs,
         unsat,
     )
 
@@ -246,7 +255,7 @@ def _filter_run_exports(specs, ignore_list):
 def find_pkg_dir_or_file_in_pkgs_dirs(
     distribution: str, m: MetaData, files_only: bool = False
 ) -> str | None:
-    for cache in map(Path, (*pkgs_dirs, *m.config.bldpkgs_dirs)):
+    for cache in map(Path, (*context.pkgs_dirs, *m.config.bldpkgs_dirs)):
         package = cache / (distribution + CONDA_PACKAGE_EXTENSION_V1)
         if package.is_file():
             return str(package)
@@ -273,24 +282,25 @@ def find_pkg_dir_or_file_in_pkgs_dirs(
                     archive.add(entry, arcname=entry.name)
 
             return str(package)
+    return None
 
 
-@lru_cache(maxsize=None)
+@functools.cache
 def _read_specs_from_package(pkg_loc, pkg_dist):
     specs = {}
-    if pkg_loc and os.path.isdir(pkg_loc):
-        downstream_file = os.path.join(pkg_loc, "info/run_exports")
-        if os.path.isfile(downstream_file):
+    if pkg_loc and isdir(pkg_loc):
+        downstream_file = join(pkg_loc, "info/run_exports")
+        if isfile(downstream_file):
             with open(downstream_file) as f:
                 specs = {"weak": [spec.rstrip() for spec in f.readlines()]}
         # a later attempt: record more info in the yaml file, to support "strong" run exports
-        elif os.path.isfile(downstream_file + ".yaml"):
+        elif isfile(downstream_file + ".yaml"):
             with open(downstream_file + ".yaml") as f:
                 specs = yaml.safe_load(f)
-        elif os.path.isfile(downstream_file + ".json"):
+        elif isfile(downstream_file + ".json"):
             with open(downstream_file + ".json") as f:
                 specs = json.load(f)
-    if not specs and pkg_loc and os.path.isfile(pkg_loc):
+    if not specs and pkg_loc and isfile(pkg_loc):
         # switching to json for consistency in conda-build 4
         specs_yaml = utils.package_has_file(pkg_loc, "info/run_exports.yaml")
         specs_json = utils.package_has_file(pkg_loc, "info/run_exports.json")
@@ -317,9 +327,9 @@ def _read_specs_from_package(pkg_loc, pkg_dist):
     return specs
 
 
-def execute_download_actions(m, actions, env, package_subset=None, require_files=False):
+def execute_download_actions(m, precs, env, package_subset=None, require_files=False):
     subdir = getattr(m.config, f"{env}_subdir")
-    index, _, _ = conda_build.index.get_build_index(
+    index, _, _ = get_build_index(
         subdir=subdir,
         bldpkgs_dir=m.config.bldpkgs_dir,
         output_folder=m.config.output_folder,
@@ -328,43 +338,43 @@ def execute_download_actions(m, actions, env, package_subset=None, require_files
         channel_urls=m.config.channel_urls,
         debug=m.config.debug,
         verbose=m.config.verbose,
-        locking=m.config.locking,
-        timeout=m.config.timeout,
     )
 
     # this should be just downloading packages.  We don't need to extract them -
 
-    download_actions = {
-        k: v for k, v in actions.items() if k in ("FETCH", "EXTRACT", "PREFIX")
-    }
-    if "FETCH" in actions or "EXTRACT" in actions:
-        # this is to force the download
-        execute_actions(download_actions, index, verbose=m.config.debug)
+    # NOTE: The following commented execute_actions is defunct
+    # (FETCH/EXTRACT were replaced by PROGRESSIVEFETCHEXTRACT).
+    #
+    # download_actions = {
+    #     k: v for k, v in actions.items() if k in (FETCH, EXTRACT, PREFIX)
+    # }
+    # if FETCH in actions or EXTRACT in actions:
+    #     # this is to force the download
+    #     execute_actions(download_actions, index, verbose=m.config.debug)
 
     pkg_files = {}
 
-    packages = actions.get("LINK", [])
-    package_subset = utils.ensure_list(package_subset)
+    if isinstance(package_subset, PackageRecord):
+        package_subset = [package_subset]
+    else:
+        package_subset = utils.ensure_list(package_subset)
     selected_packages = set()
     if package_subset:
         for pkg in package_subset:
-            if hasattr(pkg, "name"):
-                if pkg in packages:
-                    selected_packages.add(pkg)
+            if isinstance(pkg, PackageRecord):
+                prec = pkg
+                if prec in precs:
+                    selected_packages.add(prec)
             else:
                 pkg_name = pkg.split()[0]
-                for link_pkg in packages:
-                    if pkg_name == link_pkg.name:
-                        selected_packages.add(link_pkg)
+                for link_prec in precs:
+                    if pkg_name == link_prec.name:
+                        selected_packages.add(link_prec)
                         break
-        packages = selected_packages
+        precs = selected_packages
 
-    for pkg in packages:
-        if hasattr(pkg, "dist_name"):
-            pkg_dist = pkg.dist_name
-        else:
-            pkg = strip_channel(pkg)
-            pkg_dist = pkg.split(" ")[0]
+    for prec in precs:
+        pkg_dist = "-".join((prec.name, prec.version, prec.build))
         pkg_loc = find_pkg_dir_or_file_in_pkgs_dirs(
             pkg_dist, m, files_only=require_files
         )
@@ -373,53 +383,53 @@ def execute_download_actions(m, actions, env, package_subset=None, require_files
         # TODO: this is a vile hack reaching into conda's internals. Replace with
         #    proper conda API when available.
         if not pkg_loc:
-            try:
-                pkg_record = [_ for _ in index if _.dist_name == pkg_dist][0]
-                # the conda 4.4 API uses a single `link_prefs` kwarg
-                # whereas conda 4.3 used `index` and `link_dists` kwargs
-                pfe = ProgressiveFetchExtract(link_prefs=(index[pkg_record],))
-            except TypeError:
-                # TypeError: __init__() got an unexpected keyword argument 'link_prefs'
-                pfe = ProgressiveFetchExtract(link_dists=[pkg], index=index)
+            link_prec = [
+                rec
+                for rec in index
+                if (rec.name, rec.version, rec.build)
+                == (prec.name, prec.version, prec.build)
+            ][0]
+            pfe = ProgressiveFetchExtract(link_prefs=(link_prec,))
             with utils.LoggingContext():
                 pfe.execute()
-            for pkg_dir in pkgs_dirs:
-                _loc = os.path.join(pkg_dir, index[pkg].fn)
-                if os.path.isfile(_loc):
+            for pkg_dir in context.pkgs_dirs:
+                _loc = join(pkg_dir, prec.fn)
+                if isfile(_loc):
                     pkg_loc = _loc
                     break
-        pkg_files[pkg] = pkg_loc, pkg_dist
+        pkg_files[prec] = pkg_loc, pkg_dist
 
     return pkg_files
 
 
-def get_upstream_pins(m, actions, env):
+def get_upstream_pins(m: MetaData, precs, env):
     """Download packages from specs, then inspect each downloaded package for additional
     downstream dependency specs.  Return these additional specs."""
-
-    env_specs = m.meta.get("requirements", {}).get(env, [])
+    env_specs = m.get_value(f"requirements/{env}", [])
     explicit_specs = [req.split(" ")[0] for req in env_specs] if env_specs else []
-    linked_packages = actions.get("LINK", [])
-    linked_packages = [pkg for pkg in linked_packages if pkg.name in explicit_specs]
+    precs = [prec for prec in precs if prec.name in explicit_specs]
 
     ignore_pkgs_list = utils.ensure_list(m.get_value("build/ignore_run_exports_from"))
     ignore_list = utils.ensure_list(m.get_value("build/ignore_run_exports"))
     additional_specs = {}
-    for pkg in linked_packages:
-        if any(pkg.name in req.split(" ")[0] for req in ignore_pkgs_list):
+    for prec in precs:
+        if any(prec.name in req.split(" ")[0] for req in ignore_pkgs_list):
             continue
         run_exports = None
         if m.config.use_channeldata:
-            channeldata = utils.download_channeldata(pkg.channel)
+            channeldata = utils.download_channeldata(prec.channel)
             # only use channeldata if requested, channeldata exists and contains
             # a packages key, otherwise use run_exports from the packages themselves
             if "packages" in channeldata:
-                pkg_data = channeldata["packages"].get(pkg.name, {})
-                run_exports = pkg_data.get("run_exports", {}).get(pkg.version, {})
+                pkg_data = channeldata["packages"].get(prec.name, {})
+                run_exports = pkg_data.get("run_exports", {}).get(prec.version, {})
         if run_exports is None:
             loc, dist = execute_download_actions(
-                m, actions, env=env, package_subset=pkg
-            )[pkg]
+                m,
+                precs,
+                env=env,
+                package_subset=[prec],
+            )[prec]
             run_exports = _read_specs_from_package(loc, dist)
         specs = _filter_run_exports(run_exports, ignore_list)
         if specs:
@@ -427,30 +437,43 @@ def get_upstream_pins(m, actions, env):
     return additional_specs
 
 
-def _read_upstream_pin_files(m, env, permit_unsatisfiable_variants, exclude_pattern):
-    deps, actions, unsat = get_env_dependencies(
+def _read_upstream_pin_files(
+    m: MetaData,
+    env,
+    permit_unsatisfiable_variants,
+    exclude_pattern,
+    extra_specs,
+):
+    deps, precs, unsat = get_env_dependencies(
         m,
         env,
         m.config.variant,
         exclude_pattern,
         permit_unsatisfiable_variants=permit_unsatisfiable_variants,
+        extra_specs=extra_specs,
     )
     # extend host deps with strong build run exports.  This is important for things like
     #    vc feature activation to work correctly in the host env.
-    extra_run_specs = get_upstream_pins(m, actions, env)
+    extra_run_specs = get_upstream_pins(m, precs, env)
     return (
-        list(set(deps)) or m.meta.get("requirements", {}).get(env, []),
+        list(set(deps)) or m.get_value(f"requirements/{env}", []),
         unsat,
         extra_run_specs,
     )
 
 
-def add_upstream_pins(m, permit_unsatisfiable_variants, exclude_pattern):
+def add_upstream_pins(
+    m: MetaData, permit_unsatisfiable_variants, exclude_pattern, extra_specs
+):
     """Applies run_exports from any build deps to host and run sections"""
     # if we have host deps, they're more important than the build deps.
-    requirements = m.meta.get("requirements", {})
+    requirements = m.get_section("requirements")
     build_deps, build_unsat, extra_run_specs_from_build = _read_upstream_pin_files(
-        m, "build", permit_unsatisfiable_variants, exclude_pattern
+        m,
+        "build",
+        permit_unsatisfiable_variants,
+        exclude_pattern,
+        [] if m.is_cross else extra_specs,
     )
 
     # is there a 'host' section?
@@ -464,7 +487,7 @@ def add_upstream_pins(m, permit_unsatisfiable_variants, exclude_pattern):
 
         if not host_reqs:
             matching_output = [
-                out for out in m.meta.get("outputs", []) if out.get("name") == m.name()
+                out for out in m.get_section("outputs") if out.get("name") == m.name()
             ]
             if matching_output:
                 requirements = utils.expand_reqs(
@@ -476,7 +499,7 @@ def add_upstream_pins(m, permit_unsatisfiable_variants, exclude_pattern):
         host_reqs.extend(extra_run_specs_from_build.get("strong", []))
 
         host_deps, host_unsat, extra_run_specs_from_host = _read_upstream_pin_files(
-            m, "host", permit_unsatisfiable_variants, exclude_pattern
+            m, "host", permit_unsatisfiable_variants, exclude_pattern, extra_specs
         )
         if m.noarch or m.noarch_python:
             extra_run_specs = set(extra_run_specs_from_host.get("noarch", []))
@@ -580,7 +603,11 @@ def _simplify_to_exact_constraints(metadata):
     metadata.meta["requirements"] = requirements
 
 
-def finalize_metadata(m, parent_metadata=None, permit_unsatisfiable_variants=False):
+def finalize_metadata(
+    m: MetaData,
+    parent_metadata=None,
+    permit_unsatisfiable_variants=False,
+):
     """Fully render a recipe.  Fill in versions for build/host dependencies."""
     if not parent_metadata:
         parent_metadata = m
@@ -605,7 +632,7 @@ def finalize_metadata(m, parent_metadata=None, permit_unsatisfiable_variants=Fal
                 )
             )
 
-        parent_recipe = m.meta.get("extra", {}).get("parent_recipe", {})
+        parent_recipe = m.get_value("extra/parent_recipe", {})
 
         # extract the topmost section where variables are defined, and put it on top of the
         #     requirements for a particular output
@@ -625,21 +652,48 @@ def finalize_metadata(m, parent_metadata=None, permit_unsatisfiable_variants=Fal
             requirements = utils.expand_reqs(output.get("requirements", {}))
             m.meta["requirements"] = requirements
 
-        if m.meta.get("requirements"):
-            utils.insert_variant_versions(
-                m.meta["requirements"], m.config.variant, "build"
+        if requirements := m.get_section("requirements"):
+            utils.insert_variant_versions(requirements, m.config.variant, "build")
+            utils.insert_variant_versions(requirements, m.config.variant, "host")
+
+        host_requirements = requirements.get("host" if m.is_cross else "build", [])
+        host_requirement_names = [req.split(" ")[0] for req in host_requirements]
+        extra_specs = []
+        if output and output_excludes and not is_top_level and host_requirement_names:
+            reqs = {}
+
+            # we first make a mapping of output -> requirements
+            for (name, _), (_, other_meta) in m.other_outputs.items():
+                if name == m.name():
+                    continue
+                other_meta_reqs = other_meta.meta.get("requirements", {}).get("run", [])
+                reqs[name] = set(other_meta_reqs)
+
+            seen = set()
+            # for each subpackage that is a dependency we add its dependencies
+            # and transitive dependencies if the dependency of the subpackage
+            # is a subpackage.
+            to_process = set(
+                name for (name, _) in m.other_outputs if name in host_requirement_names
             )
-            utils.insert_variant_versions(
-                m.meta["requirements"], m.config.variant, "host"
-            )
+            while to_process:
+                name = to_process.pop()
+                if name == m.name():
+                    continue
+                for req in reqs[name]:
+                    req_name = req.split(" ")[0]
+                    if req_name not in reqs:
+                        extra_specs.append(req)
+                    elif req_name not in seen:
+                        to_process.add(req_name)
 
         m = parent_metadata.get_output_metadata(m.get_rendered_output(m.name()))
         build_unsat, host_unsat = add_upstream_pins(
-            m, permit_unsatisfiable_variants, exclude_pattern
+            m, permit_unsatisfiable_variants, exclude_pattern, extra_specs
         )
         # getting this AFTER add_upstream_pins is important, because that function adds deps
         #     to the metadata.
-        requirements = m.meta.get("requirements", {})
+        requirements = m.get_section("requirements")
 
         # here's where we pin run dependencies to their build time versions.  This happens based
         #     on the keys in the 'pin_run_as_build' key in the variant, which is a list of package
@@ -663,6 +717,7 @@ def finalize_metadata(m, parent_metadata=None, permit_unsatisfiable_variants=Fal
             m.config.variant,
             exclude_pattern=exclude_pattern,
             permit_unsatisfiable_variants=permit_unsatisfiable_variants,
+            extra_specs=extra_specs,
         )
         full_build_dep_versions = {
             dep.split()[0]: " ".join(dep.split()[1:]) for dep in full_build_deps
@@ -700,48 +755,40 @@ def finalize_metadata(m, parent_metadata=None, permit_unsatisfiable_variants=Fal
                 utils.ensure_valid_spec(spec, warn=True) for spec in versioned_test_deps
             ]
             m.meta["test"]["requires"] = versioned_test_deps
-        extra = m.meta.get("extra", {})
+        extra = m.get_section("extra")
         extra["copy_test_source_files"] = m.config.copy_test_source_files
         m.meta["extra"] = extra
 
         # if source/path is relative, then the output package makes no sense at all.  The next
         #   best thing is to hard-code the absolute path.  This probably won't exist on any
         #   system other than the original build machine, but at least it will work there.
-        if m.meta.get("source"):
-            if "path" in m.meta["source"]:
-                source_path = m.meta["source"]["path"]
-                os.path.expanduser(source_path)
-                if not os.path.isabs(source_path):
-                    m.meta["source"]["path"] = os.path.normpath(
-                        os.path.join(m.path, source_path)
-                    )
-                elif "git_url" in m.meta["source"] and not (
-                    # absolute paths are not relative paths
-                    os.path.isabs(m.meta["source"]["git_url"])
-                    or
-                    # real urls are not relative paths
-                    ":" in m.meta["source"]["git_url"]
-                ):
-                    m.meta["source"]["git_url"] = os.path.normpath(
-                        os.path.join(m.path, m.meta["source"]["git_url"])
-                    )
+        for source_dict in m.get_section("source"):
+            if (source_path := source_dict.get("path")) and not isabs(source_path):
+                source_dict["path"] = normpath(join(m.path, source_path))
+            elif (
+                (git_url := source_dict.get("git_url"))
+                # absolute paths are not relative paths
+                and not isabs(git_url)
+                # real urls are not relative paths
+                and ":" not in git_url
+            ):
+                source_dict["git_url"] = normpath(join(m.path, git_url))
 
-        if not m.meta.get("build"):
-            m.meta["build"] = {}
+        m.meta.setdefault("build", {})
 
         _simplify_to_exact_constraints(m)
 
         if build_unsat or host_unsat:
             m.final = False
             log = utils.get_logger(__name__)
-            log.warn(
-                "Returning non-final recipe for {}; one or more dependencies "
-                "was unsatisfiable:".format(m.dist())
+            log.warning(
+                f"Returning non-final recipe for {m.dist()}; one or more dependencies "
+                "was unsatisfiable:"
             )
             if build_unsat:
-                log.warn(f"Build: {build_unsat}")
+                log.warning(f"Build: {build_unsat}")
             if host_unsat:
-                log.warn(f"Host: {host_unsat}")
+                log.warning(f"Host: {host_unsat}")
         else:
             m.final = True
     if is_top_level:
@@ -790,42 +837,28 @@ def reparse(metadata):
 
 
 def distribute_variants(
-    metadata,
+    metadata: MetaData,
     variants,
-    permit_unsatisfiable_variants=False,
-    allow_no_other_outputs=False,
-    bypass_env_check=False,
-):
-    rendered_metadata = {}
+    permit_unsatisfiable_variants: bool = False,
+    allow_no_other_outputs: bool = False,
+    bypass_env_check: bool = False,
+) -> list[MetaDataTuple]:
+    rendered_metadata: dict[
+        tuple[str, str, tuple[tuple[str, str], ...]], MetaDataTuple
+    ] = {}
     need_source_download = True
 
     # don't bother distributing python if it's a noarch package, and figure out
     # which python version we prefer. `python_age` can use used to tweak which
     # python gets used here.
     if metadata.noarch or metadata.noarch_python:
-        from .conda_interface import VersionOrder
-
-        age = int(
-            metadata.get_value(
-                "build/noarch_python_build_age", metadata.config.noarch_python_build_age
-            )
-        )
-        versions = []
-        for variant in variants:
-            if "python" in variant:
-                vo = variant["python"]
-                if vo not in versions:
-                    versions.append(vo)
-        version_indices = sorted(
-            range(len(versions)), key=lambda k: VersionOrder(versions[k].split(" ")[0])
-        )
-        if age < 0:
-            age = 0
-        elif age > len(versions) - 1:
-            age = len(versions) - 1
-        build_ver = versions[version_indices[len(versions) - 1 - age]]
+        # filter variants by the newest Python version
+        version = sorted(
+            {version for variant in variants if (version := variant.get("python"))},
+            key=lambda key: VersionOrder(key.split(" ")[0]),
+        )[-1]
         variants = filter_by_key_value(
-            variants, "python", build_ver, "noarch_python_reduction"
+            variants, "python", version, "noarch_python_reduction"
         )
 
     # store these for reference later
@@ -844,12 +877,20 @@ def distribute_variants(
     used_variables = metadata.get_used_loop_vars(force_global=False)
     top_loop = metadata.get_reduced_variant_set(used_variables)
 
+    # defer potentially expensive copy of input variants list
+    # until after reduction of the list for each variant
+    # since the initial list can be very long
+    all_variants = metadata.config.variants
+    metadata.config.variants = []
+
     for variant in top_loop:
-        from conda_build.build import get_all_replacements
+        from .build import get_all_replacements
 
         get_all_replacements(variant)
         mv = metadata.copy()
         mv.config.variant = variant
+        # start with shared list:
+        mv.config.variants = all_variants
 
         pin_run_as_build = variant.get("pin_run_as_build", {})
         if mv.numpy_xx and "numpy" not in pin_run_as_build:
@@ -869,6 +910,9 @@ def distribute_variants(
                 )
                 or mv.config.variants
             )
+        # copy variants before we start modifying them,
+        # but after we've reduced the list via the conform_dict filter
+        mv.config.variants = mv.config.copy_variants()
         get_all_replacements(mv.config.variants)
         pin_run_as_build = variant.get("pin_run_as_build", {})
         if mv.numpy_xx and "numpy" not in pin_run_as_build:
@@ -893,7 +937,7 @@ def distribute_variants(
                 allow_no_other_outputs=allow_no_other_outputs,
                 bypass_env_check=bypass_env_check,
             )
-        except SystemExit:
+        except (SystemExit, CondaBuildUserError):
             pass
         need_source_download = not mv.needs_source_for_render or not mv.source_provided
 
@@ -903,23 +947,25 @@ def distribute_variants(
                 mv.config.variant.get("target_platform", mv.config.subdir),
                 tuple((var, mv.config.variant.get(var)) for var in mv.get_used_vars()),
             )
-        ] = (mv, need_source_download, None)
+        ] = MetaDataTuple(mv, need_source_download, False)
     # list of tuples.
     # each tuple item is a tuple of 3 items:
-    #    metadata, need_download, need_reparse_in_env
+    #    metadata, need_download, need_reparse
     return list(rendered_metadata.values())
 
 
-def expand_outputs(metadata_tuples):
+def expand_outputs(
+    metadata_tuples: Iterable[MetaDataTuple],
+) -> list[tuple[dict, MetaData]]:
     """Obtain all metadata objects for all outputs from recipe.  Useful for outputting paths."""
-    expanded_outputs = OrderedDict()
+    from copy import deepcopy
+
+    from .build import get_all_replacements
+
+    expanded_outputs: dict[str, tuple[dict, MetaData]] = {}
 
     for _m, download, reparse in metadata_tuples:
-        from conda_build.build import get_all_replacements
-
         get_all_replacements(_m.config)
-        from copy import deepcopy
-
         for output_dict, m in deepcopy(_m).get_output_metadata_set(
             permit_unsatisfiable_variants=False
         ):
@@ -928,15 +974,37 @@ def expand_outputs(metadata_tuples):
     return list(expanded_outputs.values())
 
 
+@contextmanager
+def open_recipe(recipe: str | os.PathLike | Path) -> Iterator[Path]:
+    """Open the recipe from a file (meta.yaml), directory (recipe), or tarball (package)."""
+    recipe = Path(recipe)
+
+    if not recipe.exists():
+        sys.exit(f"Error: non-existent: {recipe}")
+    elif recipe.is_dir():
+        # read the recipe from the current directory
+        yield recipe
+    elif recipe.suffixes in [[".tar"], [".tar", ".gz"], [".tgz"], [".tar", ".bz2"]]:
+        # extract the recipe to a temporary directory
+        with TemporaryDirectory() as tmp, tarfile.open(recipe, "r:*") as tar:
+            tar.extractall(path=tmp)
+            yield Path(tmp)
+    elif recipe.suffix == ".yaml":
+        # read the recipe from the parent directory
+        yield recipe.parent
+    else:
+        sys.exit(f"Error: non-recipe: {recipe}")
+
+
 def render_recipe(
-    recipe_path,
-    config,
-    no_download_source=False,
-    variants=None,
-    permit_unsatisfiable_variants=True,
-    reset_build_id=True,
-    bypass_env_check=False,
-):
+    recipe_dir: str | os.PathLike | Path,
+    config: Config,
+    no_download_source: bool = False,
+    variants: dict[str, Any] | None = None,
+    permit_unsatisfiable_variants: bool = True,
+    reset_build_id: bool = True,
+    bypass_env_check: bool = False,
+) -> list[MetaDataTuple]:
     """Returns a list of tuples, each consisting of
 
     (metadata-object, needs_download, needs_render_in_env)
@@ -944,74 +1012,98 @@ def render_recipe(
     You get one tuple per variant.  Outputs are not factored in here (subpackages won't affect these
     results returned here.)
     """
-    arg = recipe_path
-    if isfile(arg):
-        if arg.endswith((".tar", ".tar.gz", ".tgz", ".tar.bz2")):
-            recipe_dir = tempfile.mkdtemp()
-            t = tarfile.open(arg, "r:*")
-            t.extractall(path=recipe_dir)
-            t.close()
-            need_cleanup = True
-        elif arg.endswith(".yaml"):
-            recipe_dir = os.path.dirname(arg)
-            need_cleanup = False
+    with open_recipe(recipe_dir) as recipe:
+        try:
+            m = MetaData(str(recipe), config=config)
+        except exceptions.YamlParsingError as e:
+            sys.exit(e.error_msg())
+
+        # important: set build id *before* downloading source.  Otherwise source goes into a different
+        #    build folder.
+        if config.set_build_id:
+            m.config.compute_build_id(m.name(), m.version(), reset=reset_build_id)
+
+        # this source may go into a folder that doesn't match the eventual build folder.
+        #   There's no way around it AFAICT.  We must download the source to be able to render
+        #   the recipe (from anything like GIT_FULL_HASH), but we can't know the final build
+        #   folder until rendering is complete, because package names can have variant jinja2 in them.
+        if m.needs_source_for_render and not m.source_provided:
+            try_download(m, no_download_source=no_download_source)
+
+        if m.final:
+            if not getattr(m.config, "variants", None):
+                m.config.ignore_system_variants = True
+                if isfile(cbc_yaml := join(m.path, "conda_build_config.yaml")):
+                    m.config.variant_config_files = [cbc_yaml]
+                m.config.variants = get_package_variants(m, variants=variants)
+                m.config.variant = m.config.variants[0]
+            return [MetaDataTuple(m, False, False)]
         else:
-            print("Ignoring non-recipe: %s" % arg)
-            return None, None
-    else:
-        recipe_dir = abspath(arg)
-        need_cleanup = False
+            # merge any passed-in variants with any files found
+            variants = get_package_variants(m, variants=variants)
 
-    if not isdir(recipe_dir):
-        sys.exit("Error: no such directory: %s" % recipe_dir)
+            # when building, we don't want to fully expand all outputs into metadata, only expand
+            #    whatever variants we have (i.e. expand top-level variants, not output-only variants)
+            return distribute_variants(
+                m,
+                variants,
+                permit_unsatisfiable_variants=permit_unsatisfiable_variants,
+                allow_no_other_outputs=True,
+                bypass_env_check=bypass_env_check,
+            )
 
-    try:
-        m = MetaData(recipe_dir, config=config)
-    except exceptions.YamlParsingError as e:
-        sys.stderr.write(e.error_msg())
-        sys.exit(1)
 
-    rendered_metadata = {}
+def render_metadata_tuples(
+    metadata_tuples: Iterable[MetaDataTuple],
+    config: Config,
+    permit_unsatisfiable_variants: bool = True,
+    finalize: bool = True,
+    bypass_env_check: bool = False,
+) -> list[MetaDataTuple]:
+    output_metas: dict[tuple[str, str, tuple[tuple[str, str], ...]], MetaDataTuple] = {}
+    for meta, download, render_in_env in metadata_tuples:
+        if not meta.skip() or not config.trim_skip:
+            for od, om in meta.get_output_metadata_set(
+                permit_unsatisfiable_variants=permit_unsatisfiable_variants,
+                permit_undefined_jinja=not finalize,
+                bypass_env_check=bypass_env_check,
+            ):
+                if not om.skip() or not config.trim_skip:
+                    if "type" not in od or od["type"] == "conda":
+                        if finalize and not om.final:
+                            try:
+                                om = finalize_metadata(
+                                    om,
+                                    permit_unsatisfiable_variants=permit_unsatisfiable_variants,
+                                )
+                            except (DependencyNeedsBuildingError, NoPackagesFoundError):
+                                if not permit_unsatisfiable_variants:
+                                    raise
 
-    # important: set build id *before* downloading source.  Otherwise source goes into a different
-    #    build folder.
-    if config.set_build_id:
-        m.config.compute_build_id(m.name(), m.version(), reset=reset_build_id)
+                        # remove outputs section from output objects for simplicity
+                        if not om.path and (outputs := om.get_section("outputs")):
+                            om.parent_outputs = outputs
+                            del om.meta["outputs"]
 
-    # this source may go into a folder that doesn't match the eventual build folder.
-    #   There's no way around it AFAICT.  We must download the source to be able to render
-    #   the recipe (from anything like GIT_FULL_HASH), but we can't know the final build
-    #   folder until rendering is complete, because package names can have variant jinja2 in them.
-    if m.needs_source_for_render and not m.source_provided:
-        try_download(m, no_download_source=no_download_source)
-    if m.final:
-        if not hasattr(m.config, "variants") or not m.config.variant:
-            m.config.ignore_system_variants = True
-            if os.path.isfile(os.path.join(m.path, "conda_build_config.yaml")):
-                m.config.variant_config_files = [
-                    os.path.join(m.path, "conda_build_config.yaml")
-                ]
-            m.config.variants = get_package_variants(m, variants=variants)
-            m.config.variant = m.config.variants[0]
-        rendered_metadata = [
-            (m, False, False),
-        ]
-    else:
-        # merge any passed-in variants with any files found
-        variants = get_package_variants(m, variants=variants)
+                        output_metas[
+                            om.dist(),
+                            om.config.variant.get("target_platform"),
+                            tuple(
+                                (var, om.config.variant[var])
+                                for var in om.get_used_vars()
+                            ),
+                        ] = MetaDataTuple(om, download, render_in_env)
+                    else:
+                        output_metas[
+                            f"{om.type}: {om.name()}",
+                            om.config.variant.get("target_platform"),
+                            tuple(
+                                (var, om.config.variant[var])
+                                for var in om.get_used_vars()
+                            ),
+                        ] = MetaDataTuple(om, download, render_in_env)
 
-        # when building, we don't want to fully expand all outputs into metadata, only expand
-        #    whatever variants we have (i.e. expand top-level variants, not output-only variants)
-        rendered_metadata = distribute_variants(
-            m,
-            variants,
-            permit_unsatisfiable_variants=permit_unsatisfiable_variants,
-            allow_no_other_outputs=True,
-            bypass_env_check=bypass_env_check,
-        )
-    if need_cleanup:
-        utils.rm_rf(recipe_dir)
-    return rendered_metadata
+    return list(output_metas.values())
 
 
 # Keep this out of the function below so it can be imported by other modules.
@@ -1059,7 +1151,11 @@ yaml.add_representer(str, _unicode_representer)
 unicode = None  # silence pyflakes about unicode not existing in py3
 
 
-def output_yaml(metadata, filename=None, suppress_outputs=False):
+def output_yaml(
+    metadata: MetaData,
+    filename: str | os.PathLike | Path | None = None,
+    suppress_outputs: bool = False,
+) -> str:
     local_metadata = metadata.copy()
     if (
         suppress_outputs
@@ -1074,13 +1170,9 @@ def output_yaml(metadata, filename=None, suppress_outputs=False):
         indent=2,
     )
     if filename:
-        if any(sep in filename for sep in ("\\", "/")):
-            try:
-                os.makedirs(os.path.dirname(filename))
-            except OSError:
-                pass
-        with open(filename, "w") as f:
-            f.write(output)
-        return "Wrote yaml to %s" % filename
+        filename = Path(filename)
+        filename.parent.mkdir(parents=True, exist_ok=True)
+        filename.write_text(output)
+        return f"Wrote yaml to {filename}"
     else:
         return output

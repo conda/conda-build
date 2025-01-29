@@ -97,7 +97,26 @@ Parts of a channel
         "version": "0.1.0"
       },
       ...
+    },
+    "packages.conda": {
+        "super-fun-package-0.2.0-py310_0.conda": {
+        "build": "py37_0",
+        "build_number": 0,
+        "depends": [
+          "some-depends"
+        ],
+        "license": "BSD",
+        "md5": "a75683f8d9f5b58c19a8ec5d0b7f796e",
+        "name": "super-fun-package",
+        "sha256": "e39029d601b9f493ea05c37a2630a9fe5810f1fe3c3f4250e51886838e8e0287",
+        "size": 4125,
+        "subdir": "win-64",
+        "timestamp": 1530731987654,
+        "version": "0.2.0"
+      },
+      ...
     }
+  }
 
 How an index is generated
 -------------------------
@@ -218,7 +237,7 @@ already extracted can save a lot of time in fully re-creating the index, should
 that be necessary.
 
 An aside: one design goal of the ``.conda`` package format was to make indexing as
-fast as possible. To achieve this, the .conda format separates metadata from the
+fast as possible. To achieve this, the ``.conda`` format separates metadata from the
 actual package contents. Where the old ``.tar.bz2`` container required extracting
 the entire package to obtain the metadata, the new package format allows
 extraction of metadata without touching the package contents. This allows

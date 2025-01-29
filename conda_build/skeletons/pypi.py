@@ -4,7 +4,9 @@
 Tools for converting PyPI packages to conda recipes.
 """
 
+from __future__ import annotations
 
+import configparser
 import keyword
 import logging
 import os
@@ -12,42 +14,43 @@ import re
 import subprocess
 import sys
 from collections import OrderedDict, defaultdict
+from io import StringIO
 from os import chdir, getcwd, listdir, makedirs
 from os.path import abspath, exists, isdir, isfile, join
 from shutil import copy2
 from tempfile import mkdtemp
+from typing import TYPE_CHECKING
 from urllib.parse import urljoin, urlsplit
 
 import pkginfo
 import requests
 import yaml
+from conda.base.context import context
+from conda.cli.common import spec_from_line
+from conda.gateways.connection.download import download
+from conda.gateways.disk.read import compute_sum
+from conda.models.version import normalized_version
+from conda.utils import human_bytes
 from requests.packages.urllib3.util.url import parse_url
 
-from conda_build.conda_interface import (
-    StringIO,
-    configparser,
-    default_python,
-    download,
-    hashsum_file,
-    human_bytes,
-    input,
-    normalized_version,
-    spec_from_line,
-)
-from conda_build.config import Config
-from conda_build.environ import create_env
-from conda_build.license_family import allowed_license_families, guess_license_family
-from conda_build.metadata import MetaData
-from conda_build.render import FIELDS as EXPECTED_SECTION_ORDER
-from conda_build.source import apply_patch
-from conda_build.utils import (
+from ..config import Config
+from ..environ import create_env
+from ..license_family import allowed_license_families, guess_license_family
+from ..metadata import MetaData
+from ..render import FIELDS as EXPECTED_SECTION_ORDER
+from ..source import apply_patch
+from ..utils import (
     check_call_env,
     decompressible_exts,
     ensure_list,
+    on_win,
     rm_rf,
     tar_xf,
 )
-from conda_build.version import _parse as parse_version
+from ..version import _parse as parse_version
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
 
 pypi_example = """
 Examples:
@@ -118,7 +121,7 @@ DISTUTILS_PATCH = '''\
 diff core.py core.py
 --- core.py
 +++ core.py
-@@ -166,5 +167,40 @@ def setup (**attrs):
+@@ -166,5 +167,42 @@ def setup (**attrs):
  \n
 +# ====== BEGIN CONDA SKELETON PYPI PATCH ======
 +
@@ -151,7 +154,9 @@ diff core.py core.py
 +    data['classifiers'] = kwargs.get('classifiers', None)
 +    data['version'] = kwargs.get('version', '??PACKAGE-VERSION-UNKNOWN??')
 +    with io.open(os.path.join("{}", "pkginfo.yaml"), 'w', encoding='utf-8') as fn:
-+        fn.write(yaml.safe_dump(data, encoding=None))
++        _yaml = yaml.YAML(typ='safe', pure=True)
++        _yaml.encoding = None
++        _yaml.dump(data, fn)
 +
 +
 +# ======= END CONDA SKELETON PYPI PATCH ======
@@ -254,35 +259,33 @@ def _formating_value(attribute_name, attribute_value):
 
 
 def skeletonize(
-    packages,
-    output_dir=".",
-    version=None,
-    recursive=False,
-    all_urls=False,
-    pypi_url="https://pypi.io/pypi/",
-    noprompt=True,
-    version_compare=False,
-    python_version=None,
-    manual_url=False,
-    all_extras=False,
-    noarch_python=False,
-    config=None,
-    setup_options=None,
-    extra_specs=[],
-    pin_numpy=False,
-):
+    packages: list[str],
+    output_dir: str = ".",
+    version: str | None = None,
+    recursive: bool = False,
+    all_urls: bool = False,
+    pypi_url: str = "https://pypi.io/pypi/",
+    noprompt: bool = True,
+    version_compare: bool = False,
+    python_version: str | None = None,
+    manual_url: bool = False,
+    all_extras: bool = False,
+    noarch_python: bool = False,
+    config: Config | None = None,
+    setup_options: str | Iterable[str] | None = None,
+    extra_specs: str | Iterable[str] | None = None,
+    pin_numpy: bool = False,
+) -> None:
     package_dicts = {}
 
-    if not setup_options:
-        setup_options = []
-
-    if isinstance(setup_options, str):
-        setup_options = [setup_options]
+    setup_options = ensure_list(setup_options)
+    extra_specs = ensure_list(extra_specs)
 
     if not config:
         config = Config()
 
-    python_version = python_version or config.variant.get("python", default_python)
+    if not python_version:
+        python_version = config.variant.get("python", context.default_python)
 
     created_recipes = []
     while packages:
@@ -299,7 +302,7 @@ def skeletonize(
         if not is_url:
             dir_path = join(output_dir, package.lower())
             if exists(dir_path) and not version_compare:
-                raise RuntimeError("directory already exists: %s" % dir_path)
+                raise RuntimeError(f"directory already exists: {dir_path}")
         d = package_dicts.setdefault(
             package,
             {
@@ -323,7 +326,7 @@ def skeletonize(
 
             if pypi_resp.status_code != 200:
                 sys.exit(
-                    "Request to fetch %s failed with status: %d"
+                    "Request to fetch %s failed with status: %d"  # noqa: UP031
                     % (package_pypi_url, pypi_resp.status_code)
                 )
 
@@ -336,21 +339,18 @@ def skeletonize(
             if version:
                 if version not in versions:
                     sys.exit(
-                        "Error: Version %s of %s is not available on PyPI."
-                        % (version, package)
+                        f"Error: Version {version} of {package} is not available on PyPI."
                     )
                 d["version"] = version
             else:
                 # select the most visible version from PyPI.
                 if not versions:
-                    sys.exit(
-                        "Error: Could not find any versions of package %s" % package
-                    )
+                    sys.exit(f"Error: Could not find any versions of package {package}")
                 if len(versions) > 1:
-                    print("Warning, the following versions were found for %s" % package)
+                    print(f"Warning, the following versions were found for {package}")
                     for ver in versions:
                         print(ver)
-                    print("Using %s" % versions[-1])
+                    print(f"Using {versions[-1]}")
                     print("Use --version to specify a different version.")
                 d["version"] = versions[-1]
 
@@ -404,7 +404,7 @@ def skeletonize(
         d = package_dicts[package]
         name = d["packagename"].lower()
         makedirs(join(output_dir, name))
-        print("Writing recipe for %s" % package.lower())
+        print(f"Writing recipe for {package.lower()}")
         with open(join(output_dir, name, "meta.yaml"), "w") as f:
             rendered_recipe = PYPI_META_HEADER.format(**d)
 
@@ -431,7 +431,9 @@ def skeletonize(
             if noarch_python:
                 ordered_recipe["build"]["noarch"] = "python"
 
-            recipe_script_cmd = ["{{ PYTHON }} -m pip install . -vv"]
+            recipe_script_cmd = [
+                "{{ PYTHON }} -m pip install . -vv --no-deps --no-build-isolation"
+            ]
             ordered_recipe["build"]["script"] = " ".join(
                 recipe_script_cmd + setup_options
             )
@@ -556,9 +558,9 @@ def add_parser(repos):
     pypi.add_argument(
         "--python-version",
         action="store",
-        default=default_python,
+        default=context.default_python,
         help="""Version of Python to use to run setup.py. Default is %(default)s.""",
-        choices=["2.7", "3.5", "3.6", "3.7", "3.8", "3.9", "3.10", "3.11"],
+        choices=["2.7", "3.5", "3.6", "3.7", "3.8", "3.9", "3.10", "3.11", "3.12"],
     )
 
     pypi.add_argument(
@@ -640,8 +642,8 @@ def get_download_data(
             if not urls[0]["url"]:
                 # The package doesn't have a url, or maybe it only has a wheel.
                 sys.exit(
-                    "Error: Could not build recipe for %s. "
-                    "Could not find any valid urls." % package
+                    f"Error: Could not build recipe for {package}. "
+                    "Could not find any valid urls."
                 )
             U = parse_url(urls[0]["url"])
             if not U.path:
@@ -650,13 +652,13 @@ def get_download_data(
             fragment = U.fragment or ""
             digest = fragment.split("=")
         else:
-            sys.exit("Error: No source urls found for %s" % package)
+            sys.exit(f"Error: No source urls found for {package}")
     if len(urls) > 1 and not noprompt:
-        print("More than one source version is available for %s:" % package)
+        print(f"More than one source version is available for {package}:")
         if manual_url:
             for i, url in enumerate(urls):
                 print(
-                    "%d: %s (%s) %s"
+                    "%d: %s (%s) %s"  # noqa: UP031
                     % (i, url["url"], human_bytes(url["size"]), url["comment_text"])
                 )
             n = int(input("which version should i use? "))
@@ -687,7 +689,7 @@ def get_download_data(
         filename = url["filename"] or "package"
     else:
         # User provided a URL, try to use it.
-        print("Using url %s" % package)
+        print(f"Using url {package}")
         pypiurl = package
         U = parse_url(package)
         digest = U.fragment.split("=")
@@ -709,7 +711,7 @@ def version_compare(package, versions):
 
     recipe_dir = abspath(package.lower())
     if not isdir(recipe_dir):
-        sys.exit("Error: no such directory: %s" % recipe_dir)
+        sys.exit(f"Error: no such directory: {recipe_dir}")
     m = MetaData(recipe_dir)
     local_version = nv(m.version())
     print(f"Local recipe for {package} has version {local_version}")
@@ -719,11 +721,11 @@ def version_compare(package, versions):
         # Comparing normalized versions, displaying non normalized ones
         new_versions = versions[: norm_versions.index(local_version)]
         if len(new_versions) > 0:
-            print("Following new versions of %s are avaliable" % (package))
+            print(f"Following new versions of {package} are avaliable")
             for ver in new_versions:
                 print(ver)
         else:
-            print("No new version for %s is available" % (package))
+            print(f"No new version for {package} is available")
         sys.exit()
 
 
@@ -826,7 +828,7 @@ def get_package_metadata(
     config,
     setup_options,
 ):
-    print("Downloading %s" % package)
+    print(f"Downloading {package}")
     print("PyPI URL: ", metadata["pypiurl"])
     pkginfo = get_pkginfo(
         package,
@@ -980,7 +982,7 @@ def get_dependencies(requires, setuptools_enabled=True):
                     )
                     spec = _spec_from_line(dep_orig)
                 if spec is None:
-                    sys.exit("Error: Could not parse: %s" % dep)
+                    sys.exit(f"Error: Could not parse: {dep}")
 
             if marker:
                 spec = " ".join((spec, marker))
@@ -1056,10 +1058,10 @@ def get_license_name(package, pkginfo, no_prompt=False, data=None):
         if no_prompt:
             return license_name
         elif "\n" not in license_name:
-            print('Using "%s" for the license' % license_name)
+            print(f'Using "{license_name}" for the license')
         else:
             # Some projects put the whole license text in this field
-            print("This is the license for %s" % package)
+            print(f"This is the license for {package}")
             print()
             print(license_name)
             print()
@@ -1068,8 +1070,8 @@ def get_license_name(package, pkginfo, no_prompt=False, data=None):
         license_name = "UNKNOWN"
     else:
         license_name = input(
-            "No license could be found for %s on PyPI or in the source. "
-            "What license should I use? " % package
+            f"No license could be found for {package} on PyPI or in the source. "
+            "What license should I use? "
         )
     return license_name
 
@@ -1173,7 +1175,7 @@ def unpack(src_path, tempdir):
     if src_path.lower().endswith(decompressible_exts):
         tar_xf(src_path, tempdir)
     else:
-        raise Exception("not a valid source: %s" % src_path)
+        raise Exception(f"not a valid source: {src_path}")
 
 
 def get_dir(tempdir):
@@ -1207,7 +1209,7 @@ def get_requirements(package, pkginfo, all_extras=True):
         try:
             extras_require = [pkginfo["extras_require"][x] for x in extras]
         except KeyError:
-            sys.exit("Error: Invalid extra features: [%s]" % ",".join(extras))
+            sys.exit("Error: Invalid extra features: [{}]".format(",".join(extras)))
         # match PEP 508 environment markers; currently only matches the
         #  subset of environment markers that compare to python_version
         #  using a single basic Python comparison operator
@@ -1276,14 +1278,14 @@ def get_pkginfo(
         download_path = join(config.src_cache, filename)
         if (
             not isfile(download_path)
-            or hashsum_file(download_path, hash_type) != hash_value
+            or compute_sum(download_path, hash_type) != hash_value
         ):
             download(pypiurl, join(config.src_cache, filename))
-            if hashsum_file(download_path, hash_type) != hash_value:
+            if compute_sum(download_path, hash_type) != hash_value:
                 raise RuntimeError(
-                    " Download of {} failed"
-                    " checksum type {} expected value {}. Please"
-                    " try again.".format(package, hash_type, hash_value)
+                    f" Download of {package} failed"
+                    f" checksum type {hash_type} expected value {hash_value}. Please"
+                    " try again."
                 )
         else:
             print("Using cached download")
@@ -1291,14 +1293,14 @@ def get_pkginfo(
         # Needs to be done in this block because this is where we have
         # access to the source file.
         if hash_type != "sha256":
-            new_hash_value = hashsum_file(download_path, "sha256")
+            new_hash_value = compute_sum(download_path, "sha256")
         else:
             new_hash_value = ""
 
-        print("Unpacking %s..." % package)
+        print(f"Unpacking {package}...")
         unpack(join(config.src_cache, filename), tempdir)
         print("done")
-        print("working in %s" % tempdir)
+        print(f"working in {tempdir}")
         src_dir = get_dir(tempdir)
         # TODO: find args parameters needed by run_setuppy
         run_setuppy(
@@ -1356,7 +1358,7 @@ def run_setuppy(src_dir, temp_dir, python_version, extra_specs, config, setup_op
 
     create_env(
         config.host_prefix,
-        specs_or_actions=specs,
+        specs_or_precs=specs,
         env="host",
         subdir=subdir,
         clear_cache=False,
@@ -1364,46 +1366,47 @@ def run_setuppy(src_dir, temp_dir, python_version, extra_specs, config, setup_op
     )
     stdlib_dir = join(
         config.host_prefix,
-        "Lib" if sys.platform == "win32" else "lib/python%s" % python_version,
+        "Lib" if on_win else f"lib/python{python_version}",
     )
 
     patch = join(temp_dir, "pypi-distutils.patch")
     with open(patch, "wb") as f:
         f.write(DISTUTILS_PATCH.format(temp_dir.replace("\\", "\\\\")).encode("utf-8"))
 
-    if exists(join(stdlib_dir, "distutils", "core.py-copy")):
-        rm_rf(join(stdlib_dir, "distutils", "core.py"))
-        copy2(
-            join(stdlib_dir, "distutils", "core.py-copy"),
-            join(stdlib_dir, "distutils", "core.py"),
-        )
-        # Avoid race conditions. Invalidate the cache.
-        rm_rf(
-            join(
-                stdlib_dir,
-                "distutils",
-                "__pycache__",
-                "core.cpython-%s%s.pyc" % sys.version_info[:2],
+    # distutils deprecated in Python 3.10+, removed in Python 3.12+
+    distutils = join(stdlib_dir, "distutils")
+    if isdir(distutils):
+        if exists(join(distutils, "core.py-copy")):
+            rm_rf(join(distutils, "core.py"))
+            copy2(
+                join(distutils, "core.py-copy"),
+                join(distutils, "core.py"),
             )
-        )
-        rm_rf(
-            join(
-                stdlib_dir,
-                "distutils",
-                "__pycache__",
-                "core.cpython-%s%s.pyo" % sys.version_info[:2],
+            # Avoid race conditions. Invalidate the cache.
+            rm_rf(
+                join(
+                    distutils,
+                    "__pycache__",
+                    f"core.cpython-{sys.version_info[0]}{sys.version_info[1]}.pyc",
+                )
             )
-        )
-    else:
-        copy2(
-            join(stdlib_dir, "distutils", "core.py"),
-            join(stdlib_dir, "distutils", "core.py-copy"),
-        )
-    apply_patch(join(stdlib_dir, "distutils"), patch, config=config)
+            rm_rf(
+                join(
+                    distutils,
+                    "__pycache__",
+                    f"core.cpython-{sys.version_info[0]}{sys.version_info[1]}.pyo",
+                )
+            )
+        else:
+            copy2(
+                join(distutils, "core.py"),
+                join(distutils, "core.py-copy"),
+            )
+        apply_patch(distutils, patch, config=config)
 
-    vendored = join(stdlib_dir, "site-packages", "setuptools", "_distutils")
-    if os.path.isdir(vendored):
-        apply_patch(vendored, patch, config=config)
+    setuptools = join(stdlib_dir, "site-packages", "setuptools", "_distutils")
+    if isdir(setuptools):
+        apply_patch(setuptools, patch, config=config)
 
     # Save PYTHONPATH for later
     env = os.environ.copy()
@@ -1418,8 +1421,8 @@ def run_setuppy(src_dir, temp_dir, python_version, extra_specs, config, setup_op
     try:
         check_call_env(cmdargs, env=env)
     except subprocess.CalledProcessError:
-        print("$PYTHONPATH = %s" % env["PYTHONPATH"])
-        sys.exit("Error: command failed: %s" % " ".join(cmdargs))
+        print("$PYTHONPATH = {}".format(env["PYTHONPATH"]))
+        sys.exit("Error: command failed: {}".format(" ".join(cmdargs)))
     finally:
         chdir(cwd)
 

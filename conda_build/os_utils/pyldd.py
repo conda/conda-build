@@ -1,5 +1,7 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
+
 import argparse
 import glob
 import logging
@@ -7,8 +9,10 @@ import os
 import re
 import struct
 import sys
+from functools import partial
+from pathlib import Path
 
-from conda_build.utils import ensure_list, get_logger
+from ..utils import ensure_list, get_logger, on_linux, on_mac, on_win
 
 logging.basicConfig(level=logging.INFO)
 
@@ -184,7 +188,7 @@ class fileview:
         self._pos = 0
 
     def __repr__(self):
-        return "<fileview [%d, %d] %r>" % (self._start, self._end, self._fileobj)
+        return "<fileview [%d, %d] %r>" % (self._start, self._end, self._fileobj)  # noqa: UP031
 
     def tell(self):
         return self._pos
@@ -192,7 +196,7 @@ class fileview:
     def _checkwindow(self, seekto, op):
         if not (self._start <= seekto <= self._end):
             raise OSError(
-                "%s to offset %d is outside window [%d, %d]"
+                "%s to offset %d is outside window [%d, %d]"  # noqa: UP031
                 % (op, seekto, self._start, self._end)
             )
 
@@ -358,20 +362,6 @@ def do_file(file, lc_operation, off_sz, arch, results, *args):
         results.append(do_macho(file, 64, BIG_ENDIAN, lc_operation, *args))
     elif magic == MH_CIGAM_64 and arch in ("any", "x86_64"):
         results.append(do_macho(file, 64, LITTLE_ENDIAN, lc_operation, *args))
-
-
-def mach_o_change(path, arch, what, value):
-    """
-    Replace a given name (what) in any LC_LOAD_DYLIB command found in
-    the given binary with a new name (value), provided it's shorter.
-    """
-
-    assert len(what) >= len(value)
-
-    results = []
-    with open(path, "r+b") as f:
-        do_file(f, replace_lc_load_dylib, offset_size(), arch, results, what, value)
-    return results
 
 
 def mach_o_find_dylibs(ofile, arch, regex=".*"):
@@ -703,13 +693,9 @@ class elfheader:
             get_logger(__name__).warning(f"file.tell()={loc} != ehsize={self.ehsize}")
 
     def __str__(self):
-        return "bitness {}, endian {}, version {}, type {}, machine {}, entry {}".format(  # noqa
-            self.bitness,
-            self.endian,
-            self.version,
-            self.type,
-            hex(self.machine),
-            hex(self.entry),
+        return (
+            f"bitness {self.bitness}, endian {self.endian}, version {self.version}, "
+            f"type {self.type}, machine {hex(self.machine)}, entry {hex(self.entry)}"
         )
 
 
@@ -1028,49 +1014,41 @@ def codefile(file, arch="any", initial_rpaths_transitive=[]):
         return inscrutablefile(file, list(initial_rpaths_transitive))
 
 
-def codefile_class(filename, skip_symlinks=False):
-    if os.path.islink(filename):
-        if skip_symlinks:
-            return None
-        else:
-            filename = os.path.realpath(filename)
-    if os.path.isdir(filename):
+def codefile_class(
+    path: str | os.PathLike | Path,
+    skip_symlinks: bool = False,
+) -> type[DLLfile | EXEfile | machofile | elffile] | None:
+    # same signature as conda.os_utils.liefldd.codefile_class
+    path = Path(path)
+    if skip_symlinks and path.is_symlink():
         return None
-    if filename.endswith((".dll", ".pyd")):
+    path = path.resolve()
+
+    def _get_magic_bit(path: Path) -> bytes:
+        with path.open("rb") as handle:
+            bit = handle.read(4)
+        return struct.unpack(BIG_ENDIAN + "L", bit)[0]
+
+    if path.is_dir():
+        return None
+    elif path.suffix.lower() in (".dll", ".pyd"):
         return DLLfile
-    if filename.endswith(".exe"):
+    elif path.suffix.lower() == ".exe":
         return EXEfile
-    # Java .class files share 0xCAFEBABE with Mach-O FAT_MAGIC.
-    if filename.endswith(".class"):
+    elif path.suffix.lower() == ".class":
+        # Java .class files share 0xCAFEBABE with Mach-O FAT_MAGIC.
         return None
-    if not os.path.exists(filename) or os.path.getsize(filename) < 4:
+    elif not path.exists() or path.stat().st_size < 4:
         return None
-    with open(filename, "rb") as file:
-        (magic,) = struct.unpack(BIG_ENDIAN + "L", file.read(4))
-        file.seek(0)
-        if magic in (FAT_MAGIC, MH_MAGIC, MH_CIGAM, MH_CIGAM_64):
-            return machofile
-        elif magic == ELF_HDR:
-            return elffile
-    return None
-
-
-def is_codefile(filename, skip_symlinks=True):
-    klass = codefile_class(filename, skip_symlinks=skip_symlinks)
-    if not klass:
-        return False
-    return True
-
-
-def codefile_type(filename, skip_symlinks=True):
-    "Returns None, 'machofile' or 'elffile'"
-    klass = codefile_class(filename, skip_symlinks=skip_symlinks)
-    if not klass:
+    elif (magic := _get_magic_bit(path)) == ELF_HDR:
+        return elffile
+    elif magic in (FAT_MAGIC, MH_MAGIC, MH_CIGAM, MH_CIGAM_64):
+        return machofile
+    else:
         return None
-    return klass.__name__
 
 
-def _trim_sysroot(sysroot):
+def _trim_sysroot(sysroot: str) -> str:
     if sysroot:
         while sysroot.endswith("/") or sysroot.endswith("\\"):
             sysroot = sysroot[:-1]
@@ -1079,7 +1057,7 @@ def _trim_sysroot(sysroot):
 
 def _get_arch_if_native(arch):
     if arch == "native":
-        if sys.platform == "win32":
+        if on_win:
             arch = "x86_64" if sys.maxsize > 2**32 else "i686"
         else:
             _, _, _, _, arch = os.uname()
@@ -1088,7 +1066,7 @@ def _get_arch_if_native(arch):
 
 # TODO :: Consider memoizing instead of repeatedly scanning
 # TODO :: libc.so/libSystem.dylib when inspect_linkages(recurse=True)
-def _inspect_linkages_this(filename, sysroot="", arch="native"):
+def _inspect_linkages_this(filename, sysroot: str = "", arch="native"):
     """
 
     :param filename:
@@ -1120,49 +1098,9 @@ def _inspect_linkages_this(filename, sysroot="", arch="native"):
         return cf.uniqueness_key(), orig_names, resolved_names
 
 
-def inspect_rpaths(
-    filename, resolve_dirnames=True, use_os_varnames=True, sysroot="", arch="native"
-):
-    if not os.path.exists(filename):
-        return [], []
-    sysroot = _trim_sysroot(sysroot)
-    arch = _get_arch_if_native(arch)
-    with open(filename, "rb") as f:
-        # TODO :: Problems here:
-        # TODO :: 1. macOS can modify RPATH for children in each .so
-        # TODO :: 2. Linux can identify the program interpreter which can change the initial RPATHs
-        # TODO :: Should '/lib', '/usr/lib' not include (or be?!) `sysroot`(s) instead?
-        cf = codefile(f, arch, ["/lib", "/usr/lib"])
-        if resolve_dirnames:
-            return [
-                _get_resolved_location(
-                    cf,
-                    rpath,
-                    os.path.dirname(filename),
-                    os.path.dirname(filename),
-                    sysroot,
-                )[0]
-                for rpath in cf.rpaths_nontransitive
-            ]
-        else:
-            if use_os_varnames:
-                return [cf.to_os_varnames(rpath) for rpath in cf.rpaths_nontransitive]
-            else:
-                return cf.rpaths_nontransitive
-
-
-def get_runpaths(filename, arch="native"):
-    if not os.path.exists(filename):
-        return []
-    arch = _get_arch_if_native(arch)
-    with open(filename, "rb") as f:
-        cf = codefile(f, arch, ["/lib", "/usr/lib"])
-        return cf.get_runpaths()
-
-
 # TODO :: Consider returning a tree structure or a dict when recurse is True?
 def inspect_linkages(
-    filename, resolve_filenames=True, recurse=True, sysroot="", arch="native"
+    filename, resolve_filenames=True, recurse=True, sysroot: str = "", arch="native"
 ):
     already_seen = set()
     todo = {filename}
@@ -1230,24 +1168,10 @@ def otool(*args):
             args.filename, resolve_filenames=False, recurse=False, arch=args.arch_type
         )
         print(
-            "Shared libs used (non-recursively) by {} are:\n{}".format(
-                args.filename, shared_libs
-            )
+            f"Shared libs used (non-recursively) by {args.filename} are:\n{shared_libs}"
         )
         return 0
     return 1
-
-
-def otool_sys(*args):
-    import subprocess
-
-    result = subprocess.check_output("/usr/bin/otool", args).decode(encoding="ascii")
-    return result
-
-
-def ldd_sys(*args):
-    result = []
-    return result
 
 
 def ldd(*args):
@@ -1262,11 +1186,7 @@ def ldd(*args):
         shared_libs = inspect_linkages(
             args.filename, resolve_filenames=False, recurse=True
         )
-        print(
-            "Shared libs used (recursively) by {} are:\n{}".format(
-                args.filename, shared_libs
-            )
-        )
+        print(f"Shared libs used (recursively) by {args.filename} are:\n{shared_libs}")
         return 0
     return 1
 
@@ -1278,23 +1198,20 @@ def main(argv):
         elif re.match(r".*otool(?:$|\.exe|\.py)", progname):
             return otool(*argv[2 - idx :])
         elif os.path.isfile(progname):
-            klass = codefile_class(progname)
-            if not klass:
+            if not (codefile := codefile_class(progname)):
                 return 1
-            elif klass == elffile:
+            elif codefile == elffile:
                 return ldd(*argv[1 - idx :])
-            elif klass == machofile:
+            elif codefile == machofile:
                 return otool("-L", *argv[1 - idx :])
     return 1
 
 
 def main_maybe_test():
     if sys.argv[1] == "test":
-        import functools
-
         tool = sys.argv[2]
         if tool != "otool" and tool != "ldd":
-            if sys.platform == "darwin":
+            if on_mac:
                 tool = "otool"
             else:
                 tool = "ldd"
@@ -1310,21 +1227,21 @@ def main_maybe_test():
         else:
             sysroot = ""
         if tool == "otool":
-            test_this = functools.partial(
+            test_this = partial(
                 inspect_linkages,
                 sysroot=sysroot,
                 resolve_filenames=False,
                 recurse=False,
             )
-            if sys.platform == "darwin":
-                test_that = functools.partial(inspect_linkages_otool)
+            if on_mac:
+                test_that = partial(inspect_linkages_otool)
             SOEXT = "dylib"
         elif tool == "ldd":
-            test_this = functools.partial(
+            test_this = partial(
                 inspect_linkages, sysroot=sysroot, resolve_filenames=True, recurse=True
             )
-            if sys.platform.startswith("linux"):
-                test_that = functools.partial(inspect_linkages_ldd)
+            if on_linux:
+                test_that = partial(inspect_linkages_ldd)
             SOEXT = "so"
         # Find a load of dylibs or elfs and compare
         # the output against 'otool -L' or 'ldd'
@@ -1346,11 +1263,9 @@ def main_maybe_test():
             else:
                 that = this
             print("\n".join(this))
-            assert set(this) == set(
-                that
-            ), "py-ldd result incorrect for {}, this:\n{}\nvs that:\n{}".format(
-                codefile, set(this), set(that)
-            )
+            assert (
+                set(this) == set(that)
+            ), f"py-ldd result incorrect for {codefile}, this:\n{set(this)}\nvs that:\n{set(that)}"
     else:
         return main(sys.argv)
 

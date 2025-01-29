@@ -1,12 +1,21 @@
-[ci-tests-badge]: https://github.com/conda/conda-build/actions/workflows/tests.yml/badge.svg
-[codecov-badge]: https://img.shields.io/codecov/c/github/conda/conda-build/main.svg?label=coverage
-[release-badge]: https://img.shields.io/github/release/conda/conda-build.svg
+[tests-badge]: https://img.shields.io/github/actions/workflow/status/conda/conda-build/tests.yml?branch=main&event=schedule&logo=github&label=tests
+[codecov-badge]: https://img.shields.io/codecov/c/github/conda/conda-build/main?logo=codecov
+[codspeed-badge]: https://img.shields.io/endpoint?url=https://codspeed.io/badge.json
+[release-badge]: https://img.shields.io/github/v/release/conda/conda?logo=github
+[anaconda-badge]: https://img.shields.io/conda/vn/anaconda/conda-build?logo=anaconda
+[conda-forge-badge]: https://img.shields.io/conda/vn/conda-forge/conda-build?logo=conda-forge
+[calver-badge]: https://img.shields.io/badge/calver-YY.MM.MICRO-22bfda.svg
 
 # `conda-build`
 
-[![CI Tests (GitHub Actions)][ci-tests-badge]](https://github.com/conda/conda-build/actions/workflows/tests.yml)
+[![GitHub Scheduled Tests][tests-badge]](https://github.com/conda/conda-build/actions/workflows/tests.yml?query=branch%3Amain+event%3Aschedule)
 [![Codecov Status][codecov-badge]](https://codecov.io/gh/conda/conda-build/branch/main)
-[![latest release version][release-badge]](https://github.com/conda/conda/releases)
+[![CodSpeed Performance Benchmarks][codspeed-badge]](https://codspeed.io/conda/conda-build)
+[![CalVer Versioning][calver-badge]](https://calver.org)
+<br>
+[![GitHub Release][release-badge]](https://github.com/conda/conda-build/releases)
+[![Anaconda Package][anaconda-badge]](https://anaconda.org/anaconda/conda-build)
+[![conda-forge Package][conda-forge-badge]](https://anaconda.org/conda-forge/conda-build)
 
 ## Installation
 
@@ -17,7 +26,6 @@ $ conda info
 # Install conda-build in the base env
 $ conda install -n base conda-build
 ```
-
 
 ## Building Your Own Packages
 

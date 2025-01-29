@@ -1,5 +1,7 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
+
 import datetime
 import json
 import logging
@@ -10,23 +12,19 @@ import time
 from build.util import project_wheel_metadata
 from functools import partial
 from io import StringIO, TextIOBase
-from typing import IO, Any, Optional
+from subprocess import CalledProcessError
+from typing import TYPE_CHECKING
 from warnings import warn
 
 import jinja2
 import yaml
-
-try:
-    import tomllib  # Python 3.11
-except:
-    import tomli as tomllib
+from frozendict import deepfreeze
 
 from . import _load_setup_py_data
 from .environ import get_dict as get_environ
 from .exceptions import CondaBuildException
 from .render import get_env_dependencies
 from .utils import (
-    HashableDict,
     apply_pin_expressions,
     check_call_env,
     copy_into,
@@ -36,6 +34,14 @@ from .utils import (
     rm_rf,
 )
 from .variants import DEFAULT_COMPILERS
+
+try:
+    import tomllib  # Python 3.11
+except:
+    import tomli as tomllib
+
+if TYPE_CHECKING:
+    from typing import IO, Any
 
 log = get_logger(__name__)
 
@@ -69,49 +75,13 @@ class UndefinedNeverFail(jinja2.Undefined):
 
     # Using any of these methods on an Undefined variable
     # results in another Undefined variable.
-    __add__ = (
-        __radd__
-    ) = (
-        __mul__
-    ) = (
-        __rmul__
-    ) = (
-        __div__
-    ) = (
-        __rdiv__
-    ) = (
-        __truediv__
-    ) = (
+    __add__ = __radd__ = __mul__ = __rmul__ = __div__ = __rdiv__ = __truediv__ = (
         __rtruediv__
-    ) = (
-        __floordiv__
-    ) = (
-        __rfloordiv__
-    ) = (
-        __mod__
-    ) = (
-        __rmod__
-    ) = (
-        __pos__
-    ) = (
-        __neg__
-    ) = (
+    ) = __floordiv__ = __rfloordiv__ = __mod__ = __rmod__ = __pos__ = __neg__ = (
         __call__
-    ) = (
-        __getitem__
-    ) = (
-        __lt__
-    ) = (
-        __le__
-    ) = (
-        __gt__
-    ) = (
-        __ge__
-    ) = (
-        __complex__
-    ) = __pow__ = __rpow__ = lambda self, *args, **kwargs: self._return_undefined(
-        self._undefined_name
-    )
+    ) = __getitem__ = __lt__ = __le__ = __gt__ = __ge__ = __complex__ = __pow__ = (
+        __rpow__
+    ) = lambda self, *args, **kwargs: self._return_undefined(self._undefined_name)
 
     # Accessing an attribute of an Undefined variable
     # results in another Undefined variable.
@@ -198,7 +168,12 @@ def load_setup_py_data(
             args.extend(["--recipe-dir", recipe_dir])
         if permit_undefined_jinja:
             args.append("--permit-undefined-jinja")
-        check_call_env(args, env=env)
+        try:
+            check_call_env(args, env=env)
+        except CalledProcessError as exc:
+            raise CondaBuildException(
+                "Could not run load_setup_py_data in subprocess"
+            ) from exc
         # this is a file that the subprocess will have written
         with open(
             os.path.join(m.config.work_dir, "conda_build_loaded_setup_py.json")
@@ -226,7 +201,7 @@ def load_setup_py_data(
             else:
                 raise CondaBuildException(
                     "Could not render recipe - need modules "
-                    'installed in root env.  Import error was "{}"'.format(e)
+                    f'installed in root env.  Import error was "{e}"'
                 )
     # cleanup: we must leave the source tree empty unless the source code is already present
     rm_rf(os.path.join(m.config.work_dir, "_load_setup_py_data.py"))
@@ -352,7 +327,7 @@ def pin_compatible(
         # There are two cases considered here (so far):
         # 1. Good packages that follow semver style (if not philosophy).  For example, 1.2.3
         # 2. Evil packages that cram everything alongside a single major version.  For example, 9b
-        key = (m.name(), HashableDict(m.config.variant))
+        key = (m.name(), deepfreeze(m.config.variant))
         if key in cached_env_dependencies:
             pins = cached_env_dependencies[key]
         else:
@@ -383,11 +358,11 @@ def pin_compatible(
                         compatibility = apply_pin_expressions(version, min_pin, max_pin)
 
     if not compatibility and not permit_undefined_jinja and not bypass_env_check:
-        check = re.compile(r"pin_compatible\s*\(\s*[" '"]{}[' '"]'.format(package_name))
+        check = re.compile(rf'pin_compatible\s*\(\s*["]{package_name}["]')
         if check.search(m.extract_requirements_text()):
             raise RuntimeError(
-                "Could not get compatibility information for {} package.  "
-                "Is it one of your host dependencies?".format(package_name)
+                f"Could not get compatibility information for {package_name} package.  "
+                "Is it one of your host dependencies?"
             )
     return (
         " ".join((package_name, compatibility))
@@ -443,10 +418,7 @@ def pin_subpackage_against_outputs(
                         ]
                     )
                 else:
-                    pin = "{} {}".format(
-                        sp_m.name(),
-                        apply_pin_expressions(sp_m.version(), min_pin, max_pin),
-                    )
+                    pin = f"{sp_m.name()} {apply_pin_expressions(sp_m.version(), min_pin, max_pin)}"
         else:
             pin = matching_package_keys[0][0]
     return pin
@@ -497,9 +469,9 @@ def pin_subpackage(
         pin = subpackage_name
         if not permit_undefined_jinja and not allow_no_other_outputs:
             raise ValueError(
-                "Didn't find subpackage version info for '{}', which is used in a"
+                f"Didn't find subpackage version info for '{subpackage_name}', which is used in a"
                 " pin_subpackage expression.  Is it actually a subpackage?  If not, "
-                "you want pin_compatible instead.".format(subpackage_name)
+                "you want pin_compatible instead."
             )
     return pin
 
@@ -518,34 +490,42 @@ def native_compiler(language, config):
     return compiler
 
 
-def compiler(language, config, permit_undefined_jinja=False):
-    """Support configuration of compilers.  This is somewhat platform specific.
+def _target(language, config, permit_undefined_jinja=False, component="compiler"):
+    """Support configuration of compilers/stdlib.  This is somewhat platform specific.
 
-    Native compilers never list their host - it is always implied.  Generally, they are
+    Native compilers/stdlib never list their host - it is always implied.  Generally, they are
     metapackages, pointing at a package that does specify the host.  These in turn may be
     metapackages, pointing at a package where the host is the same as the target (both being the
     native architecture).
     """
 
-    compiler = native_compiler(language, config)
+    if component == "compiler":
+        package_prefix = native_compiler(language, config)
+    else:
+        package_prefix = language
+
     version = None
     if config.variant:
         target_platform = config.variant.get("target_platform", config.subdir)
-        language_compiler_key = f"{language}_compiler"
-        # fall back to native if language-compiler is not explicitly set in variant
-        compiler = config.variant.get(language_compiler_key, compiler)
-        version = config.variant.get(language_compiler_key + "_version")
+        language_key = f"{language}_{component}"
+        # fall back to native if language-key is not explicitly set in variant
+        package_prefix = config.variant.get(language_key, package_prefix)
+        version = config.variant.get(language_key + "_version")
     else:
         target_platform = config.subdir
 
-    # support cross compilers.  A cross-compiler package will have a name such as
+    # support cross components.  A cross package will have a name such as
     #    gcc_target
     #    gcc_linux-cos6-64
-    compiler = "_".join([compiler, target_platform])
+    package = f"{package_prefix}_{target_platform}"
     if version:
-        compiler = " ".join((compiler, version))
-        compiler = ensure_valid_spec(compiler, warn=False)
-    return compiler
+        package = f"{package} {version}"
+        package = ensure_valid_spec(package, warn=False)
+    return package
+
+
+# ensure we have compiler in namespace
+compiler = partial(_target, component="compiler")
 
 
 def ccache(method, config, permit_undefined_jinja=False):
@@ -700,7 +680,7 @@ def _load_data(stream: IO, fmt: str, *args, **kwargs) -> Any:
 
 def load_file_data(
     filename: str,
-    fmt: Optional[str] = None,
+    fmt: str | None = None,
     *args,
     config=None,
     from_recipe_dir=False,
@@ -812,7 +792,16 @@ def context_processor(
             skip_build_id=skip_build_id,
         ),
         compiler=partial(
-            compiler, config=config, permit_undefined_jinja=permit_undefined_jinja
+            _target,
+            config=config,
+            permit_undefined_jinja=permit_undefined_jinja,
+            component="compiler",
+        ),
+        stdlib=partial(
+            _target,
+            config=config,
+            permit_undefined_jinja=permit_undefined_jinja,
+            component="stdlib",
         ),
         cdt=partial(cdt, config=config, permit_undefined_jinja=permit_undefined_jinja),
         ccache=partial(

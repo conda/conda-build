@@ -1,0 +1,15 @@
+{% set version = "1" %}
+
+package:
+  name: sysroot_detection
+  version: {{ version }}
+
+source:
+  path: main.c
+
+build:
+  number: 0
+
+requirements:
+  build:
+    - {{ compiler('c') }}

@@ -3,8 +3,8 @@
 import re
 import string
 
-from conda_build import exceptions
-from conda_build.utils import comma_join
+from . import exceptions
+from .utils import comma_join
 
 allowed_license_families = """
 AGPL
@@ -29,7 +29,7 @@ gpl2_regex = re.compile("GPL[^3]*2")  # match GPL2
 gpl3_regex = re.compile("GPL[^2]*3")  # match GPL3
 gpl23_regex = re.compile("GPL[^2]*>= *2")  # match GPL >= 2
 cc_regex = re.compile(r"CC\w+")  # match CC
-punk_regex = re.compile("[%s]" % re.escape(string.punctuation))  # removes punks
+punk_regex = re.compile(f"[{re.escape(string.punctuation)}]")  # removes punks
 
 
 def match_gpl3(family):
@@ -109,7 +109,7 @@ def ensure_valid_license_family(meta):
     if remove_special_characters(normalize(license_family)) not in allowed_families:
         raise RuntimeError(
             exceptions.indent(
-                "about/license_family '%s' not allowed. Allowed families are %s."
-                % (license_family, comma_join(sorted(allowed_license_families)))
+                f"about/license_family '{license_family}' not allowed. "
+                f"Allowed families are {comma_join(sorted(allowed_license_families))}."
             )
         )

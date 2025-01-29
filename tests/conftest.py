@@ -5,15 +5,19 @@ import subprocess
 import sys
 import tempfile
 from collections import defaultdict
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Iterator
 
 import pytest
 from conda.common.compat import on_mac, on_win
+from conda_index.api import update_index
+from pytest import MonkeyPatch
 
+import conda_build
 import conda_build.config
 from conda_build.config import (
     Config,
+    _get_or_merge_config,
     _src_cache_root_default,
     conda_pkg_format_default,
     enable_static_default,
@@ -21,42 +25,42 @@ from conda_build.config import (
     error_overlinking_default,
     exit_on_verify_error_default,
     filename_hashing_default,
-    get_or_merge_config,
     ignore_verify_codes_default,
     no_rewrite_stdout_env_default,
-    noarch_python_build_age_default,
 )
 from conda_build.metadata import MetaData
 from conda_build.utils import check_call_env, copy_into, prepend_bin_path
 from conda_build.variants import get_default_variant
 
 
+@pytest.hookimpl
+def pytest_report_header(config: pytest.Config):
+    # ensuring the expected development conda is being run
+    expected = Path(__file__).parent.parent / "conda_build" / "__init__.py"
+    assert expected.samefile(conda_build.__file__)
+    return f"conda_build.__file__: {conda_build.__file__}"
+
+
 @pytest.fixture(scope="function")
-def testing_workdir(tmpdir, request):
+def testing_workdir(monkeypatch: MonkeyPatch, tmp_path: Path) -> Iterator[str]:
     """Create a workdir in a safe temporary folder; cd into dir above before test, cd out after
 
     :param tmpdir: py.test fixture, will be injected
     :param request: py.test fixture-related, will be injected (see pytest docs)
     """
+    saved_path = Path.cwd()
+    monkeypatch.chdir(tmp_path)
 
-    saved_path = os.getcwd()
-
-    tmpdir.chdir()
     # temporary folder for profiling output, if any
-    tmpdir.mkdir("prof")
+    prof = tmp_path / "prof"
+    prof.mkdir(parents=True)
 
-    def return_to_saved_path():
-        if os.path.isdir(os.path.join(saved_path, "prof")):
-            profdir = tmpdir.join("prof")
-            files = profdir.listdir("*.prof") if profdir.isdir() else []
+    yield str(tmp_path)
 
-            for f in files:
-                copy_into(str(f), os.path.join(saved_path, "prof", f.basename))
-        os.chdir(saved_path)
-
-    request.addfinalizer(return_to_saved_path)
-
-    return str(tmpdir)
+    # if the original CWD has a prof folder, copy any new prof files into it
+    if (saved_path / "prof").is_dir() and prof.is_dir():
+        for file in prof.glob("*.prof"):
+            copy_into(str(file), str(saved_path / "prof" / file.name))
 
 
 @pytest.fixture(scope="function")
@@ -72,7 +76,8 @@ def testing_homedir() -> Iterator[Path]:
             os.chdir(saved)
     except OSError:
         pytest.xfail(
-            f"failed to create temporary directory () in {'%HOME%' if on_win else '${HOME}'} (tmpfs inappropriate for xattrs)"
+            f"failed to create temporary directory () in {'%HOME%' if on_win else '${HOME}'} "
+            "(tmpfs inappropriate for xattrs)"
         )
 
 
@@ -81,13 +86,12 @@ def testing_config(testing_workdir):
     def boolify(v):
         return v == "true"
 
-    result = Config(
+    testing_config_kwargs = dict(
         croot=testing_workdir,
         anaconda_upload=False,
         verbose=True,
         activate=False,
         debug=False,
-        variant=None,
         test_run_post=False,
         # These bits ensure that default values are used instead of any
         # present in ~/.condarc
@@ -95,17 +99,25 @@ def testing_config(testing_workdir):
         _src_cache_root=_src_cache_root_default,
         error_overlinking=boolify(error_overlinking_default),
         error_overdepending=boolify(error_overdepending_default),
-        noarch_python_build_age=noarch_python_build_age_default,
         enable_static=boolify(enable_static_default),
         no_rewrite_stdout_env=boolify(no_rewrite_stdout_env_default),
         ignore_verify_codes=ignore_verify_codes_default,
         exit_on_verify_error=exit_on_verify_error_default,
         conda_pkg_format=conda_pkg_format_default,
     )
+
+    if on_mac and "CONDA_BUILD_SYSROOT" in os.environ:
+        var_dict = {
+            "CONDA_BUILD_SYSROOT": [os.environ["CONDA_BUILD_SYSROOT"]],
+        }
+    else:
+        var_dict = None
+
+    result = Config(variant=var_dict, **testing_config_kwargs)
+    result._testing_config_kwargs = testing_config_kwargs
     assert result.no_rewrite_stdout_env is False
     assert result._src_cache_root is None
     assert result.src_cache_root == testing_workdir
-    assert result.noarch_python_build_age == 0
     return result
 
 
@@ -121,11 +133,21 @@ def default_testing_config(testing_config, monkeypatch, request):
         return
 
     def get_or_merge_testing_config(config, variant=None, **kwargs):
-        return get_or_merge_config(config or testing_config, variant, **kwargs)
+        if not config:
+            # If no existing config, override kwargs that are None with testing config defaults.
+            # (E.g., "croot" is None if called via "(..., *args.__dict__)" in cli.main_build.)
+            kwargs.update(
+                {
+                    key: value
+                    for key, value in testing_config._testing_config_kwargs.items()
+                    if kwargs.get(key) is None
+                }
+            )
+        return _get_or_merge_config(config, variant, **kwargs)
 
     monkeypatch.setattr(
         conda_build.config,
-        "get_or_merge_config",
+        "_get_or_merge_config",
         get_or_merge_testing_config,
     )
 
@@ -190,24 +212,35 @@ def variants_conda_build_sysroot(monkeypatch, request):
     if not on_mac:
         return {}
 
-    monkeypatch.setenv(
-        "CONDA_BUILD_SYSROOT",
-        subprocess.run(
-            ["xcrun", "--sdk", "macosx", "--show-sdk-path"],
-            check=True,
-            capture_output=True,
-            text=True,
-        ).stdout.strip(),
-    )
-    monkeypatch.setenv(
-        "MACOSX_DEPLOYMENT_TARGET",
-        subprocess.run(
+    # if we do not speciy a custom sysroot, we get what the
+    # current SDK has
+    if "CONDA_BUILD_SYSROOT" not in os.environ:
+        monkeypatch.setenv(
+            "CONDA_BUILD_SYSROOT",
+            subprocess.run(
+                ["xcrun", "--sdk", "macosx", "--show-sdk-path"],
+                check=True,
+                capture_output=True,
+                text=True,
+            ).stdout.strip(),
+        )
+
+        mdt = subprocess.run(
             ["xcrun", "--sdk", "macosx", "--show-sdk-version"],
             check=True,
             capture_output=True,
             text=True,
-        ).stdout.strip(),
-    )
+        ).stdout.strip()
+    else:
+        # custom sysroots always have names like MacOSX<version>.sdk
+        mdt = (
+            os.path.basename(os.environ["CONDA_BUILD_SYSROOT"])
+            .replace("MacOSX", "")
+            .replace(".sdk", "")
+        )
+
+    monkeypatch.setenv("MACOSX_DEPLOYMENT_TARGET", mdt)
+
     return request.param
 
 
@@ -235,3 +268,11 @@ def conda_build_test_recipe_envvar(
     name = "CONDA_BUILD_TEST_RECIPE_PATH"
     monkeypatch.setenv(name, str(conda_build_test_recipe_path))
     return name
+
+
+@pytest.fixture(scope="session")
+def empty_channel(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """Create a temporary, empty conda channel."""
+    channel = tmp_path_factory.mktemp("empty_channel", numbered=False)
+    update_index(channel)
+    return channel

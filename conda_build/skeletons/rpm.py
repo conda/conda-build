@@ -1,31 +1,29 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
+
 import argparse
-from copy import copy
-
-from conda_build.license_family import guess_license_family
-from conda_build.source import download_to_cache
-
-try:
-    import cPickle as pickle
-except:
-    import pickle as pickle
-
 import gzip
 import hashlib
+import pickle
 import re
+from copy import copy
 from os import chmod, makedirs
 from os.path import basename, dirname, exists, join, splitext
 from textwrap import wrap
+from typing import TYPE_CHECKING
+from urllib.request import urlopen
 from xml.etree import ElementTree as ET
 
+from ..license_family import guess_license_family
+from ..source import download_to_cache
+from ..utils import ensure_list
 from .cran import yaml_quote_string
 
-try:
-    from urllib.request import urlopen
-except ImportError:
-    from urllib2 import urlopen
+if TYPE_CHECKING:
+    from collections.abc import Iterable
 
+    from ..config import Config
 
 # This is used in two places
 default_architecture = "x86_64"
@@ -337,9 +335,7 @@ def get_repo_dict(repomd_url, data_type, dict_massager, cdt, src_cache):
             )
             assert (
                 csum == cached_csum
-            ), "Checksum for {} does not match value in {}".format(
-                xmlgz_file, repomd_url
-            )
+            ), f"Checksum for {xmlgz_file} does not match value in {repomd_url}"
             with gzip.open(cached_path, "rb") as gz:
                 xml_content = gz.read()
                 xml_csum = cdt["checksummer"]()
@@ -473,8 +469,9 @@ def remap_license(rpm_license):
     }
     l_rpm_license = rpm_license.lower()
     if l_rpm_license in mapping:
-        license, family = mapping[l_rpm_license], guess_license_family(
-            mapping[l_rpm_license]
+        license, family = (
+            mapping[l_rpm_license],
+            guess_license_family(mapping[l_rpm_license]),
         )
     else:
         license, family = rpm_license, guess_license_family(rpm_license)
@@ -546,9 +543,7 @@ def write_conda_recipes(
                         depends.append(copy_provides)
             else:
                 print(
-                    "WARNING: Additional dependency of {}, {} not found".format(
-                        package, missing_dep
-                    )
+                    f"WARNING: Additional dependency of {package}, {missing_dep} not found"
                 )
     for depend in depends:
         dep_entry, dep_name, dep_arch = find_repo_entry_and_arch(
@@ -651,14 +646,14 @@ def write_conda_recipes(
 # Do I want to pass just the package name, the CDT and the arch and rely on
 # expansion to form the URL? I have been going backwards and forwards here.
 def write_conda_recipe(
-    packages,
-    distro,
-    output_dir,
-    architecture,
-    recursive,
-    override_arch,
-    dependency_add,
-    config,
+    packages: list[str],
+    distro: str,
+    output_dir: str,
+    architecture: str,
+    recursive: bool,
+    override_arch: bool,
+    dependency_add: list[str],
+    config: Config | None,
 ):
     cdt_name = distro
     bits = "32" if architecture in ("armv6", "armv7a", "i686", "i386") else "64"
@@ -720,16 +715,18 @@ def write_conda_recipe(
 
 
 def skeletonize(
-    packages,
-    output_dir=".",
-    version=None,
-    recursive=False,
-    architecture=default_architecture,
-    override_arch=True,
-    dependency_add=[],
-    config=None,
-    distro=default_distro,
+    packages: list[str],
+    output_dir: str = ".",
+    version: str | None = None,
+    recursive: bool = False,
+    architecture: str = default_architecture,
+    override_arch: bool = True,
+    dependency_add: str | Iterable[str] | None = None,
+    config: Config | None = None,
+    distro: str = default_distro,
 ):
+    dependency_add = ensure_list(dependency_add)
+
     write_conda_recipe(
         packages,
         distro,
@@ -797,9 +794,7 @@ def add_parser(repos):
         "--distro",
         type=distro,
         default=default_distro,
-        help="Distro to use. Applies to all packages, valid values are: {}".format(
-            valid_distros()
-        ),
+        help=f"Distro to use. Applies to all packages, valid values are: {valid_distros()}",
     )
 
     rpm.add_argument(

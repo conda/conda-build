@@ -4,7 +4,7 @@ import json
 import tarfile
 from os.path import basename, normpath
 
-from conda_build.utils import codec, filter_info_files
+from .utils import codec, filter_info_files
 
 
 def dist_fn(fn):
@@ -13,7 +13,7 @@ def dist_fn(fn):
     elif fn.endswith(".tar.bz2"):
         return fn[:-8]
     else:
-        raise Exception("did not expect filename: %r" % fn)
+        raise Exception(f"did not expect filename: {fn!r}")
 
 
 class TarCheck:
@@ -51,9 +51,9 @@ class TarCheck:
             return
         for p in sorted(seta | setb):
             if p not in seta:
-                print("%r not in info/files" % p)
+                print(f"{p!r} not in info/files")
             if p not in setb:
-                print("%r not in tarball" % p)
+                print(f"{p!r} not in tarball")
         raise Exception("info/files")
 
     def index_json(self):
@@ -61,9 +61,7 @@ class TarCheck:
         for varname in "name", "version":
             if info[varname] != getattr(self, varname):
                 raise Exception(
-                    "{}: {!r} != {!r}".format(
-                        varname, info[varname], getattr(self, varname)
-                    )
+                    f"{varname}: {info[varname]!r} != {getattr(self, varname)!r}"
                 )
         assert isinstance(info["build_number"], int)
 
@@ -90,9 +88,8 @@ class TarCheck:
             self.config.host_subdir,
             "noarch",
             self.config.target_subdir,
-        ], (
-            "Inconsistent subdir in package - index.json expecting {},"
-            " got {}".format(self.config.host_subdir, info["subdir"])
+        ], "Inconsistent subdir in package - index.json expecting {}, got {}".format(
+            self.config.host_subdir, info["subdir"]
         )
 
 

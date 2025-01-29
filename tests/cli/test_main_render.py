@@ -1,80 +1,76 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
+
 import os
 import sys
+from typing import TYPE_CHECKING
 
 import pytest
 import yaml
+from conda.exceptions import PackagesNotFoundError
 
 from conda_build import api
 from conda_build.cli import main_render
-from conda_build.conda_interface import TemporaryDirectory
 
 from ..utils import metadata_dir
 
+if TYPE_CHECKING:
+    from pathlib import Path
 
-def test_render_add_channel():
+
+def test_render_add_channel(tmp_path: Path) -> None:
     """This recipe requires the conda_build_test_requirement package, which is
     only on the conda_build_test channel. This verifies that the -c argument
     works for rendering."""
-    with TemporaryDirectory() as tmpdir:
-        rendered_filename = os.path.join(tmpdir, "out.yaml")
-        args = [
-            "-c",
-            "conda_build_test",
-            os.path.join(metadata_dir, "_recipe_requiring_external_channel"),
-            "--file",
-            rendered_filename,
-        ]
-        main_render.execute(args)
-        with open(rendered_filename) as rendered_file:
-            rendered_meta = yaml.safe_load(rendered_file)
-        required_package_string = [
-            pkg
-            for pkg in rendered_meta["requirements"]["build"]
-            if "conda_build_test_requirement" in pkg
-        ][0]
-        required_package_details = required_package_string.split(" ")
-        assert len(required_package_details) > 1, (
-            "Expected version number on successful "
-            "rendering, but got only {}".format(required_package_details)
-        )
-        assert (
-            required_package_details[1] == "1.0"
-        ), f"Expected version number 1.0 on successful rendering, but got {required_package_details[1]}"
-
-
-def test_render_without_channel_fails(tmp_path):
-    # do make extra channel available, so the required package should not be found
-    rendered_filename = tmp_path / "out.yaml"
+    rendered_filename = os.path.join(tmp_path, "out.yaml")
     args = [
-        "--override-channels",
+        "-c",
+        "conda_build_test",
         os.path.join(metadata_dir, "_recipe_requiring_external_channel"),
         "--file",
-        str(rendered_filename),
+        rendered_filename,
     ]
     main_render.execute(args)
     with open(rendered_filename) as rendered_file:
         rendered_meta = yaml.safe_load(rendered_file)
     required_package_string = [
         pkg
-        for pkg in rendered_meta.get("requirements", {}).get("build", [])
+        for pkg in rendered_meta["requirements"]["build"]
         if "conda_build_test_requirement" in pkg
     ][0]
+    required_package_details = required_package_string.split(" ")
+    assert len(required_package_details) > 1, (
+        "Expected version number on successful "
+        f"rendering, but got only {required_package_details}"
+    )
     assert (
-        required_package_string == "conda_build_test_requirement"
-    ), f"Expected to get only base package name because it should not be found, but got :{required_package_string}"
+        required_package_details[1] == "1.0"
+    ), f"Expected version number 1.0 on successful rendering, but got {required_package_details[1]}"
 
 
-def test_render_output_build_path(testing_workdir, testing_metadata, capfd, caplog):
+def test_render_with_empty_channel_fails(tmp_path: Path, empty_channel: Path) -> None:
+    with pytest.raises(PackagesNotFoundError):
+        main_render.execute(
+            [
+                "--override-channels",
+                f"--channel={empty_channel}",
+                os.path.join(metadata_dir, "_recipe_requiring_external_channel"),
+                f"--file={tmp_path / 'out.yaml'}",
+            ]
+        )
+
+
+def test_render_output_build_path(
+    testing_workdir, testing_config, testing_metadata, capfd, caplog
+):
     api.output_yaml(testing_metadata, "meta.yaml")
     args = ["--output", testing_workdir]
     main_render.execute(args)
     test_path = os.path.join(
-        sys.prefix,
-        "conda-bld",
+        testing_config.croot,
         testing_metadata.config.host_subdir,
-        "test_render_output_build_path-1.0-1.tar.bz2",
+        "test_render_output_build_path-1.0-1.conda",
     )
     output, error = capfd.readouterr()
     assert output.rstrip() == test_path, error
@@ -82,17 +78,16 @@ def test_render_output_build_path(testing_workdir, testing_metadata, capfd, capl
 
 
 def test_render_output_build_path_and_file(
-    testing_workdir, testing_metadata, capfd, caplog
+    testing_workdir, testing_config, testing_metadata, capfd, caplog
 ):
     api.output_yaml(testing_metadata, "meta.yaml")
     rendered_filename = "out.yaml"
     args = ["--output", "--file", rendered_filename, testing_workdir]
     main_render.execute(args)
     test_path = os.path.join(
-        sys.prefix,
-        "conda-bld",
+        testing_config.croot,
         testing_metadata.config.host_subdir,
-        "test_render_output_build_path_and_file-1.0-1.tar.bz2",
+        "test_render_output_build_path_and_file-1.0-1.conda",
     )
     output, error = capfd.readouterr()
     assert output.rstrip() == test_path, error
@@ -118,10 +113,8 @@ def test_render_output_build_path_set_python(testing_workdir, testing_metadata, 
     main_render.execute(args)
 
     _hash = metadata.hash_dependencies()
-    test_path = (
-        "test_render_output_build_path_set_python-1.0-py{}{}{}_1.tar.bz2".format(
-            version.split(".")[0], version.split(".")[1], _hash
-        )
+    test_path = "test_render_output_build_path_set_python-1.0-py{}{}{}_1.conda".format(
+        version.split(".")[0], version.split(".")[1], _hash
     )
     output, error = capfd.readouterr()
     assert os.path.basename(output.rstrip()) == test_path, error

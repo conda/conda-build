@@ -7,9 +7,10 @@ import os
 import tarfile
 
 import pytest
+from conda.gateways.connection.download import download
 
 from conda_build import api
-from conda_build.conda_interface import download
+from conda_build.exceptions import CondaBuildUserError
 from conda_build.utils import on_win, package_has_file
 
 from .utils import assert_package_consistency, metadata_dir
@@ -55,15 +56,12 @@ def test_show_imports(base_platform, package, capfd):
         if platform == source_platform:
             platforms.remove(platform)
 
-    f = "http://repo.anaconda.com/pkgs/free/{}-64/{}-py36_0.tar.bz2".format(
-        base_platform, package_name
-    )
+    f = f"http://repo.anaconda.com/pkgs/free/{base_platform}-64/{package_name}-py36_0.tar.bz2"
     fn = f"{package_name}-py36_0.tar.bz2"
     download(f, fn)
 
     for platform in platforms:
-        with pytest.raises(SystemExit):
-            api.convert(fn, platforms=platform, show_imports=True)
+        api.convert(fn, platforms=platform, show_imports=True)
 
         output, error = capfd.readouterr()
 
@@ -78,14 +76,11 @@ def test_show_imports(base_platform, package, capfd):
 def test_no_imports_found(base_platform, package, capfd):
     package_name, example_file = package
 
-    f = "http://repo.anaconda.com/pkgs/free/{}-64/{}-py36_0.tar.bz2".format(
-        base_platform, package_name
-    )
+    f = f"http://repo.anaconda.com/pkgs/free/{base_platform}-64/{package_name}-py36_0.tar.bz2"
     fn = f"{package_name}-py36_0.tar.bz2"
     download(f, fn)
 
-    with pytest.raises(SystemExit):
-        api.convert(fn, platforms=None, show_imports=True)
+    api.convert(fn, platforms=None, show_imports=True)
 
     output, error = capfd.readouterr()
     assert "No imports found." in output
@@ -96,18 +91,15 @@ def test_no_imports_found(base_platform, package, capfd):
 def test_no_platform(base_platform, package):
     package_name, example_file = package
 
-    f = "http://repo.anaconda.com/pkgs/free/{}-64/{}-py36_0.tar.bz2".format(
-        base_platform, package_name
-    )
+    f = f"http://repo.anaconda.com/pkgs/free/{base_platform}-64/{package_name}-py36_0.tar.bz2"
     fn = f"{package_name}-py36_0.tar.bz2"
     download(f, fn)
 
-    with pytest.raises(SystemExit) as e:
+    with pytest.raises(
+        CondaBuildUserError,
+        match="Error: --platform option required for conda package conversion.",
+    ):
         api.convert(fn, platforms=None)
-
-    assert "Error: --platform option required for conda package conversion." in str(
-        e.value
-    )
 
 
 @pytest.mark.parametrize("base_platform", ["linux", "win", "osx"])
@@ -122,20 +114,17 @@ def test_c_extension_error(base_platform, package):
         if platform == source_platform:
             platforms.remove(platform)
 
-    f = "http://repo.anaconda.com/pkgs/free/{}-64/{}-py36_0.tar.bz2".format(
-        base_platform, package_name
-    )
+    f = f"http://repo.anaconda.com/pkgs/free/{base_platform}-64/{package_name}-py36_0.tar.bz2"
     fn = f"{package_name}-py36_0.tar.bz2"
     download(f, fn)
 
     for platform in platforms:
-        with pytest.raises(SystemExit) as e:
+        with pytest.raises(
+            CondaBuildUserError,
+            match=f"WARNING: Package {fn} contains C extensions; skipping conversion. "
+            "Use -f to force conversion.",
+        ):
             api.convert(fn, platforms=platform)
-
-    assert (
-        "WARNING: Package {} contains C extensions; skipping conversion. "
-        "Use -f to force conversion.".format(fn)
-    ) in str(e.value)
 
 
 @pytest.mark.parametrize("base_platform", ["linux", "win", "osx"])
@@ -150,9 +139,7 @@ def test_c_extension_conversion(base_platform, package):
         if platform == source_platform:
             platforms.remove(platform)
 
-    f = "http://repo.anaconda.com/pkgs/free/{}-64/{}-py36_0.tar.bz2".format(
-        base_platform, package_name
-    )
+    f = f"http://repo.anaconda.com/pkgs/free/{base_platform}-64/{package_name}-py36_0.tar.bz2"
     fn = f"{package_name}-py36_0.tar.bz2"
     download(f, fn)
 
@@ -170,9 +157,7 @@ def test_c_extension_conversion(base_platform, package):
 def test_convert_platform_to_others(base_platform, package):
     package_name, example_file = package
     subdir = f"{base_platform}-64"
-    f = "http://repo.anaconda.com/pkgs/free/{}/{}-py27_0.tar.bz2".format(
-        subdir, package_name
-    )
+    f = f"http://repo.anaconda.com/pkgs/free/{subdir}/{package_name}-py27_0.tar.bz2"
     fn = f"{package_name}-py27_0.tar.bz2"
     download(f, fn)
     expected_paths_json = package_has_file(fn, "info/paths.json")
@@ -194,9 +179,13 @@ def test_convert_platform_to_others(base_platform, package):
 @pytest.mark.skipif(
     on_win, reason="we create the pkg to be converted in *nix; don't run on win."
 )
-def test_convert_from_unix_to_win_creates_entry_points(testing_config):
+def test_convert_from_unix_to_win_creates_entry_points(testing_config, request):
+    testing_config.conda_pkg_format = 1
     recipe_dir = os.path.join(metadata_dir, "entry_points")
-    fn = api.build(recipe_dir, config=testing_config)[0]
+    # Recipe "entry_points" is used in other test -> add test-specific variant
+    # (change build hash) to avoid clashes in package cache from other tests.
+    variants = {"pytest_name": [request.node.name]}
+    fn = api.build(recipe_dir, config=testing_config, variants=variants)[0]
     for platform in ["win-64", "win-32"]:
         api.convert(fn, platforms=[platform], force=True)
         converted_fn = os.path.join(platform, os.path.basename(fn))
@@ -251,9 +240,7 @@ def test_convert_from_unix_to_win_creates_entry_points(testing_config):
 def test_convert_dependencies(base_platform, package):
     package_name, example_file = package
     subdir = f"{base_platform}-64"
-    f = "http://repo.anaconda.com/pkgs/free/{}/{}-np112py36_0.tar.bz2".format(
-        subdir, package_name
-    )
+    f = f"http://repo.anaconda.com/pkgs/free/{subdir}/{package_name}-np112py36_0.tar.bz2"
     fn = f"{package_name}-np112py36_0.tar.bz2"
     download(f, fn)
 
@@ -288,9 +275,7 @@ def test_convert_dependencies(base_platform, package):
 def test_convert_no_dependencies(base_platform, package):
     package_name, example_file = package
     subdir = f"{base_platform}-64"
-    f = "http://repo.anaconda.com/pkgs/free/{}/{}-np112py36_0.tar.bz2".format(
-        subdir, package_name
-    )
+    f = f"http://repo.anaconda.com/pkgs/free/{subdir}/{package_name}-np112py36_0.tar.bz2"
     fn = f"{package_name}-np112py36_0.tar.bz2"
     download(f, fn)
 
@@ -321,9 +306,7 @@ def test_skip_conversion(base_platform, package, capfd):
     package_name, example_file = package
     source_plat_arch = f"{base_platform}-64"
 
-    f = "http://repo.anaconda.com/pkgs/free/{}-64/{}-np112py36_0.tar.bz2".format(
-        base_platform, package_name
-    )
+    f = f"http://repo.anaconda.com/pkgs/free/{base_platform}-64/{package_name}-np112py36_0.tar.bz2"
     fn = f"{package_name}-np112py36_0.tar.bz2"
     download(f, fn)
 
@@ -334,8 +317,8 @@ def test_skip_conversion(base_platform, package, capfd):
     output, error = capfd.readouterr()
 
     skip_message = (
-        "Source platform '{}' and target platform '{}' are identical. "
-        "Skipping conversion.\n".format(source_plat_arch, source_plat_arch)
+        f"Source platform '{source_plat_arch}' and target platform '{source_plat_arch}' are identical. "
+        "Skipping conversion.\n"
     )
 
     package = os.path.join(source_plat_arch, fn)
@@ -358,9 +341,7 @@ def test_renaming_executables(base_platform, package):
     """
     package_name, example_file = package
     subdir = f"{base_platform}-64"
-    f = "http://repo.anaconda.com/pkgs/free/{}/{}-py27_0.tar.bz2".format(
-        subdir, package_name
-    )
+    f = f"http://repo.anaconda.com/pkgs/free/{subdir}/{package_name}-py27_0.tar.bz2"
     fn = f"{package_name}-py27_0.tar.bz2"
     download(f, fn)
     expected_paths_json = package_has_file(fn, "info/paths.json")

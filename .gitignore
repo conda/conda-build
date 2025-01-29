@@ -24,3 +24,6 @@ conda-build-testing
 rever/
 **/.vscode
 **/_build
+
+# setuptools-scm
+conda_build/_version.py

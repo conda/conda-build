@@ -47,15 +47,19 @@ Authors are sorted alphabetically.
 * Christopher Whelan
 * Conda Bot
 * Connor Martin
+* Cornelius Roemer
 * Crystal Soja
 * Dan Blanchard
 * Dan Lovell
 * Daniel Bast
+* Daniel Ching
 * Daniel Damiani
 * Daniel Holth
+* Daniel Petry
 * Darren Dale
 * Dave Clements
 * Dave Hirschfeld
+* Dave Karetnyk
 * David Froger
 * David Li
 * Derek Ludwig
@@ -73,6 +77,7 @@ Authors are sorted alphabetically.
 * Felix Kühnl
 * Ferry Firmansjah
 * Filipe Fernandes
+* Finn Womack
 * Floris Bruynooghe
 * Gabriel Reis
 * Gaëtan de Menten
@@ -80,6 +85,7 @@ Authors are sorted alphabetically.
 * Greg Brener
 * Guilherme Quentel Melo
 * Guillaume Baty
+* H. Vetinari
 * Harsh Gupta
 * Harun Reşit Zafer
 * Heather Kelly
@@ -89,6 +95,7 @@ Authors are sorted alphabetically.
 * Ilan Schnell
 * Isuru Fernando
 * Ivan Kalev
+* Jack Olivieri
 * Jacob Walls
 * Jaime Rodríguez-Guerra
 * James Abbott
@@ -109,17 +116,20 @@ Authors are sorted alphabetically.
 * John Omotani
 * Johnny
 * Jonathan J. Helmus
+* Jose Diaz-Gonzalez
 * Joseph Crail
 * Joseph Hunkeler
 * Juan Lasheras
 * Julian Rüth
 * Julien Schueller
+* Justin Wood (Callek)
 * Jürgen Gmach
 * Jędrzej Nowak
 * Kai Tietz
 * Kale Franz
 * Katherine Kinnaman
 * Ken Odegard
+* Klaus Zimmermann
 * Korijn van Golen
 * Kurt Schelfthout
 * Kyle Leaders
@@ -128,6 +138,7 @@ Authors are sorted alphabetically.
 * Levi Naden
 * Lori Burns
 * Lukas Schrangl
+* Mahe Iram Khan
 * Mandeep Bhutani
 * Marcel Bargull
 * Marcelo Duarte Trevisani
@@ -169,6 +180,7 @@ Authors are sorted alphabetically.
 * Rachel Rigdon
 * Ray Donnelly
 * Remi Chateauneu
+* Riadh Fezzani
 * Riccardo Vianello
 * Richard Frank
 * Richard Hattersley
@@ -191,6 +203,7 @@ Authors are sorted alphabetically.
 * Sergio Oller
 * Serhii Kupriienko
 * Shaun Walbridge
+* Shaun Walbridge
 * Siu Kwan Lam
 * Sophia Castellarin
 * Sophian Guidara
@@ -208,11 +221,14 @@ Authors are sorted alphabetically.
 * Thomas A Caswell
 * Thomas Holder
 * Thomas Kluyver
+* Tim Paine
 * Tim Snyder
+* Tobias Fischer
 * Todd Tomashek
 * Tom Davidson
 * Tom Pollard
 * Tom Schoonjans
+* Tony Kelman
 * Toon Verstraelen
 * Travis Hathaway
 * Travis Oliphant
@@ -224,8 +240,11 @@ Authors are sorted alphabetically.
 * Vlad Frolov
 * Wes Turner
 * Wim Glenn
+* Wolf Vollprecht
 * Wolfgang Ulmer
 * Yann
+* Yannik Tausch
+* Yoann Cédric Pradat
 * Yoav Ram
 * Yu Feng
 * Zane Dufour
