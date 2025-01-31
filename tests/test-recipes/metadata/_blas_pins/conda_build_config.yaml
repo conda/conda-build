@@ -1,0 +1,42 @@
+c_compiler:                # [win]
+- clang                    # [win]
+cxx_compiler:              # [win]
+- clangxx                  # [win]
+
+blas_impl:
+- openblas
+- openblas                 # [win]
+- mkl                      # [x86_64 and not osx]
+- blis                     # [x86_64]
+- accelerate               # [osx]
+
+blas_impl_lib:
+- libopenblas.so.0         # [linux]
+- libopenblas.0.dylib      # [osx]
+- openblas.dll             # [win]
+- openblas.dll             # [win]
+
+- libmkl_rt.so             # [linux64]
+- mkl_rt.2.dll             # [win64]
+
+- libblis.so.4             # [linux64]
+- libblis.4.dylib          # [osx and x86_64]
+- libblis.4.dll            # [win64]
+
+- libvecLibFort-ng.dylib   # [osx]
+
+blas_default_impl:
+- openblas                 # [not win]
+- mkl                      # [win]
+
+openblas_type:             # [win]
+- openmp                   # [win]
+- pthreads                 # [win]
+- dummy                    # [win]
+- dummy                    # [win]
+
+zip_keys:
+-
+  - blas_impl
+  - blas_impl_lib
+  - openblas_type          # [win]
