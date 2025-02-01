@@ -42,7 +42,9 @@ requirements:
     - menuinst >=2
     - packaging
     - patch >=2.6                  # [not win]
-    # cap due to https://github.com/conda/conda-build/issues/4881; https://github.com/NixOS/patchelf/issues/492
+    # Cap to avoid bug where ELF load command is garbled.
+    # xref: https://github.com/conda/conda-build/issues/4881
+    # xref: https://github.com/NixOS/patchelf/issues/492
     - patchelf <0.18               # [linux]
     - pkginfo
     - psutil
