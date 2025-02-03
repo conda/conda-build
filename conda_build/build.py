@@ -3306,7 +3306,8 @@ def test(
         and not metadata.config.test_run_post
     ):
         print("Nothing to test for:", test_package_name)
-        return True
+        # return False or raise an exception
+        raise CondaBuildUserError(f"No tests found for package: {test_package_name}")
 
     if metadata.config.remove_work_dir:
         for name, prefix in (
