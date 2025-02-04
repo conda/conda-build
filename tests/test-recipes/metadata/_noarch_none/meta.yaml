@@ -6,7 +6,7 @@ source:
   path: ./noarch_test_package
 
 build:
-  script: pip install --no-deps .
+  script: pip install .
   noarch: none
 
 requirements:
