@@ -348,9 +348,9 @@ def test_hash_build_id(testing_metadata):
         if hdeps_tp == hdeps:
             found = True
             break
-    assert (
-        found
-    ), f"Did not find build that matched {hdeps} when testing each of DEFAULT_SUBDIRS"
+    assert found, (
+        f"Did not find build that matched {hdeps} when testing each of DEFAULT_SUBDIRS"
+    )
     assert testing_metadata.build_id() == hdeps + "_1"
 
 

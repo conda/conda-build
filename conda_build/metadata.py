@@ -1468,9 +1468,9 @@ class MetaData:
 
         section_data = self.get_section(section)
         if isinstance(section_data, dict):
-            assert (
-                not index
-            ), f"Got non-zero index ({index}), but section {section} is not a list."
+            assert not index, (
+                f"Got non-zero index ({index}), but section {section} is not a list."
+            )
         elif isinstance(section_data, list):
             # The 'source' section can be written a list, in which case the name
             # is passed in with an index, e.g. get_value('source/0/git_url')
@@ -1485,9 +1485,9 @@ class MetaData:
                 section_data = {}
             else:
                 section_data = section_data[index]
-                assert isinstance(
-                    section_data, dict
-                ), f"Expected {section}/{index} to be a dict"
+                assert isinstance(section_data, dict), (
+                    f"Expected {section}/{index} to be a dict"
+                )
 
         value = section_data.get(key, default)
 
