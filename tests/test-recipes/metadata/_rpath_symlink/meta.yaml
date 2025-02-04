@@ -35,5 +35,5 @@ test:
       import os, lief
       lib = lief.parse(os.environ["PREFIX"] + "/lib/{{ lib_file }}")
       assert {"$ORIGIN/."} == {e.rpath for e in lib.dynamic_entries if e.tag == getattr(lief.ELF, "DYNAMIC_TAGS", getattr(lief.ELF.DynamicEntry, "TAG", None)).RPATH}  # [linux]
-      assert {"@loader_path/"} == {command.path for command in lib.commands if command.command == lief.MachO.LOAD_COMMAND_TYPES.RPATH}  # [osx]
+      assert {"@loader_path/"} == {command.path for command in lib.commands if command.command == getattr(lief.MachO, "LOAD_COMMAND_TYPES", getattr(lief.MachO.LoadCommand, "TYPE", None)).RPATH}  # [osx]
       '
