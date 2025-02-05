@@ -1,5 +1,19 @@
 [//]: # (current developments)
 
+## 25.1.2 (2025-02-05)
+
+### Enhancements
+
+* Additional compatibility fixes for LIEF>=0.15. (#5594 via #5595)
+
+### Contributors
+
+* @ForgottenProgramme
+* @tkelman
+* @travishathaway
+
+
+
 ## 25.1.1 (2025-01-14)
 
 ### Deprecations
