@@ -4,7 +4,7 @@
 
 ### Enhancements
 
-* Additional compatibility fixes for LIEF>=0.15. (#5594 via #5595)
+* Fix LIEF>=0.15 compatibility. (#5594 via #5595)
 
 ### Contributors
 
