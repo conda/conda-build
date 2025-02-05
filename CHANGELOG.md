@@ -8,9 +8,7 @@
 
 ### Contributors
 
-* @ForgottenProgramme
 * @tkelman
-* @travishathaway
 
 
 
