@@ -1527,9 +1527,9 @@ def skeletonize(
                     deps.append(
                         f"{INDENT}{{{{ posix }}}}automake-wrapper{sel_src_and_win}"
                     )
-                    deps.append(f"{INDENT}{{{{ posix }}}}pkg-config")
+                    deps.append(f"{INDENT}pkg-config")
                 if need_make:
-                    deps.append(f"{INDENT}{{{{ posix }}}}make            {sel_src}")
+                    deps.append(f"{INDENT}make            {sel_src}")
                     if not need_autotools:
                         deps.append(
                             f"{INDENT}{{{{ posix }}}}sed             {sel_src_and_win}"
