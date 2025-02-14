@@ -471,9 +471,9 @@ def test_reduced_hashing_behavior(testing_config):
         finalize=False,
         bypass_env_check=True,
     )[0][0]
-    assert (
-        "c_compiler" in metadata.get_hash_contents()
-    ), "hash contents should contain c_compiler"
+    assert "c_compiler" in metadata.get_hash_contents(), (
+        "hash contents should contain c_compiler"
+    )
     assert re.search(
         "h[0-9a-f]{%d}" % testing_config.hash_length,  # noqa: UP031
         metadata.build_id(),
@@ -886,10 +886,7 @@ def test_find_used_variables_in_text(vars, text, found_vars):
 def test_find_used_variables_in_shell_script(tmp_path: Path) -> None:
     variants = ("FOO", "BAR", "BAZ", "QUX")
     (script := tmp_path / "script.sh").write_text(
-        f"${variants[0]}\n"
-        f"${{{variants[1]}}}\n"
-        f"${{{{{variants[2]}}}}}\n"
-        f"$${variants[3]}\n"
+        f"${variants[0]}\n${{{variants[1]}}}\n${{{{{variants[2]}}}}}\n$${variants[3]}\n"
     )
     assert find_used_variables_in_shell_script(variants, script) == {"FOO", "BAR"}
 
@@ -897,10 +894,7 @@ def test_find_used_variables_in_shell_script(tmp_path: Path) -> None:
 def test_find_used_variables_in_batch_script(tmp_path: Path) -> None:
     variants = ("FOO", "BAR", "BAZ", "QUX")
     (script := tmp_path / "script.sh").write_text(
-        f"%{variants[0]}%\n"
-        f"%%{variants[1]}%%\n"
-        f"${variants[2]}\n"
-        f"${{{variants[3]}}}\n"
+        f"%{variants[0]}%\n%%{variants[1]}%%\n${variants[2]}\n${{{variants[3]}}}\n"
     )
     assert find_used_variables_in_batch_script(variants, script) == {"FOO", "BAR"}
 

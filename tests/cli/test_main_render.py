@@ -44,9 +44,9 @@ def test_render_add_channel(tmp_path: Path) -> None:
         "Expected version number on successful "
         f"rendering, but got only {required_package_details}"
     )
-    assert (
-        required_package_details[1] == "1.0"
-    ), f"Expected version number 1.0 on successful rendering, but got {required_package_details[1]}"
+    assert required_package_details[1] == "1.0", (
+        f"Expected version number 1.0 on successful rendering, but got {required_package_details[1]}"
+    )
 
 
 def test_render_with_empty_channel_fails(tmp_path: Path, empty_channel: Path) -> None:
