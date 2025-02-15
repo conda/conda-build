@@ -1577,10 +1577,10 @@ def skeletonize(
                                 inputs_dict = package_to_inputs_dict(
                                     output_dir, output_suffix, git_tag, lower_name, None
                                 )
-                                assert (
-                                    lower_name == inputs_dict["pkg-name"]
-                                ), "name {} != inputs_dict['pkg-name'] {}".format(
-                                    name, inputs_dict["pkg-name"]
+                                assert lower_name == inputs_dict["pkg-name"], (
+                                    "name {} != inputs_dict['pkg-name'] {}".format(
+                                        name, inputs_dict["pkg-name"]
+                                    )
                                 )
                                 assert lower_name not in package_list
                                 package_dicts.update(

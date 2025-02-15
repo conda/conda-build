@@ -292,9 +292,9 @@ def regex_files_rg(
                     # match_line_number = match['data']['line_number']
                     # match_absolute_offset = match['data']['absolute_offset']
                     if old_stage == "begin":
-                        assert (
-                            match_filename_begin == match_filename
-                        ), f"{match_filename_begin} != \n {match_filename}"
+                        assert match_filename_begin == match_filename, (
+                            f"{match_filename_begin} != \n {match_filename}"
+                        )
                     if match_filename not in match_records:
                         if debug_this:
                             # We could add: #'line': match_line, 'line_number': match_line_number but it would
@@ -975,21 +975,21 @@ def get_all_replacements(variant):
         return []
 
     repl = variant["replacements"]
-    assert isinstance(
-        repl, dict
-    ), f"Found 'replacements' ({repl}), but it is not a dict"
-    assert (
-        "all_replacements" in repl
-    ), f"Found 'replacements' ({repl}), but it doesn't contain 'all_replacements'"
+    assert isinstance(repl, dict), (
+        f"Found 'replacements' ({repl}), but it is not a dict"
+    )
+    assert "all_replacements" in repl, (
+        f"Found 'replacements' ({repl}), but it doesn't contain 'all_replacements'"
+    )
 
     repl = repl["all_replacements"]
-    assert isinstance(
-        repl, list
-    ), f"Found 'all_replacements' ({repl}), but it is not a list"
+    assert isinstance(repl, list), (
+        f"Found 'all_replacements' ({repl}), but it is not a list"
+    )
     if repl:
-        assert isinstance(
-            repl[0], dict
-        ), f"Found 'all_replacements[0]' ({repl[0]}), but it is not a dict"
+        assert isinstance(repl[0], dict), (
+            f"Found 'all_replacements[0]' ({repl[0]}), but it is not a dict"
+        )
 
     return repl
 
@@ -2433,7 +2433,7 @@ def build(
                     exclude_pattern = re.compile(
                         r"|".join(rf"(?:^{exc}(?:\s|$|\Z))" for exc in excludes)
                     )
-            add_upstream_pins(m, False, exclude_pattern)
+            add_upstream_pins(m, False, exclude_pattern, [])
 
         create_build_envs(top_level_pkg, notest)
 
@@ -2654,9 +2654,9 @@ def build(
                         os.path.join(m.config.work_dir, test_script),
                     )
 
-                assert (
-                    output_d.get("type") != "conda" or m.final
-                ), f"output metadata for {m.dist()} is not finalized"
+                assert output_d.get("type") != "conda" or m.final, (
+                    f"output metadata for {m.dist()} is not finalized"
+                )
                 pkg_path = bldpkg_path(m)
                 if pkg_path not in built_packages and pkg_path not in new_pkgs:
                     log.info(f"Packaging {m.name()}")

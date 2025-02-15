@@ -1,0 +1,15 @@
+package:
+  name: foo_split
+  version: 1.0.0
+
+outputs:
+  - name: libfoo
+    requirements:
+      host:
+        - openssl
+
+  - name: foo
+    requirements:
+      host:
+        - python
+        - {{ pin_subpackage('libfoo', exact=True) }}

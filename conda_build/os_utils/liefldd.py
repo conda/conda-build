@@ -772,7 +772,7 @@ def get_static_lib_exports(file):
                 obj_ends.add(offsets[i])
                 if debug_static_archives:
                     print(
-                        f"symname {syms[i]}, offset {offsets[i]}, name {name}, elf? {content[index2:index2 + 4]}"
+                        f"symname {syms[i]}, offset {offsets[i]}, name {name}, elf? {content[index2 : index2 + 4]}"
                     )
         elif name.startswith(b"__.SYMDEF"):
             # Reference:
