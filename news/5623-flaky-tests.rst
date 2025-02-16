@@ -1,3 +1,3 @@
 ### Other
 
-* Introduced the ``flaky`` decorator for tests that fail at random. (#5623)
+* Added the ``flaky`` mark for some OSX tests that fail at random. (#5623)
