@@ -3,6 +3,7 @@ conda-verify
 contextlib2
 coverage
 cytoolz
+flaky
 git
 numpy
 perl
