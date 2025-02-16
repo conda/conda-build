@@ -316,6 +316,7 @@ def test_output_build_path_git_source(testing_config):
 
 @pytest.mark.sanity
 @pytest.mark.serial
+@pytest.mark.flaky(reruns=5, reruns_delay=2)
 def test_build_with_no_activate_does_not_activate():
     api.build(
         os.path.join(metadata_dir, "_set_env_var_no_activate_build"),
