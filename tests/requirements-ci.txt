@@ -9,7 +9,7 @@ numpy
 perl
 pip
 pyflakes
-pytest
+pytest <8.1
 pytest-cov
 pytest-forked
 pytest-mock
