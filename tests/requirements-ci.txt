@@ -3,13 +3,12 @@ conda-verify
 contextlib2
 coverage
 cytoolz
-flaky
 git
 numpy
 perl
 pip
 pyflakes
-pytest <8.1
+pytest
 pytest-cov
 pytest-forked
 pytest-mock

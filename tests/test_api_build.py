@@ -34,7 +34,6 @@ from conda.common.compat import on_linux, on_mac, on_win
 from conda.exceptions import ClobberError, CondaError, CondaMultiError, LinkError
 from conda.utils import url_path
 from conda_index.api import update_index
-from flaky import flaky
 from packaging.version import Version
 
 from conda_build import __version__, api, exceptions
@@ -475,7 +474,7 @@ def test_build_msvc_compiler(msvc_ver, monkeypatch):
 @pytest.mark.sanity
 @pytest.mark.parametrize("platform", platforms)
 @pytest.mark.parametrize("target_compiler", compilers)
-@flaky
+@pytest.mark.flaky(reruns=5, reruns_delay=2)
 def test_cmake_generator(platform, target_compiler, testing_config):
     testing_config.variant["python"] = target_compiler
     testing_config.activate = True
@@ -1793,7 +1792,7 @@ def test_overlinking_detection_ignore_patterns(
     rm_rf(dest_bat)
 
 
-@flaky
+@pytest.mark.flaky(reruns=5, reruns_delay=2)
 def test_overdepending_detection(testing_config, variants_conda_build_sysroot):
     testing_config.activate = True
     testing_config.error_overlinking = True
