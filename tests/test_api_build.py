@@ -2105,3 +2105,20 @@ def test_api_build_inject_jinja2_vars_on_first_pass(testing_config):
 
     testing_config.variant = {"python_min": "3.12"}
     api.build(recipe_dir, config=testing_config)
+
+
+@pytest.mark.skipif(not on_linux, reason="One platform is enough")
+def test_build_strings_glob_match(testing_config: Config) -> None:
+    """
+    Test issues observed in:
+    - https://github.com/conda/conda-build/issues/5571#issuecomment-2605223563
+    - https://github.com/conda-forge/conda-smithy/pull/2232#issuecomment-2618825581
+    - https://github.com/conda-forge/blas-feedstock/pull/132
+    - https://github.com/conda/conda-build/pull/5600
+    """
+    testing_config.channel_urls = ["conda-forge"]
+    with pytest.raises(RuntimeError, match="Could not download"):
+        # We expect an error fetching the license because we added a bad path on purpose
+        # so we don't start the actual build. However, this is enough to get us through
+        # the multi-output render phase where we examine compatibility of pins.
+        api.build(metadata_path / "_blas_pins", config=testing_config)
