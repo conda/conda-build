@@ -13,7 +13,7 @@ build:
   noarch: python
   skip: True  # [win]
   script:
-    - {{ PYTHON }} -m pip install . --no-deps --ignore-installed --no-cache-dir -vvv
+    - {{ PYTHON }} -m pip install . -vvv
     # We use 'somewhere' instead of 'bin' here because conda-build is quite broken in what it considers
     # and entry point script when you use noarch: python, involving finding files in 'bin' that contain
     # prefix and making assumptions about that (we could check for python in the shebang at least, but
