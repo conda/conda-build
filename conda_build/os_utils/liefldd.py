@@ -50,10 +50,14 @@ try:
         # Fallback for lief<0.15.
         LOAD_COMMAND_TYPES = lief.MachO.LOAD_COMMAND_TYPES
     try:
-        ELF_CLASS = lief.ELF.Header.CLASS
+        ELF64 = lief.ELF.Header.CLASS.ELF64
+        ELF32 = lief.ELF.Header.CLASS.ELF32
     except AttributeError:
         # Fallback for lief<0.15.
-        ELF_CLASS = lief.ELF.ELF_CLASS
+        ELF64 = lief.ELF.ELF64
+        ELF32 = lief.ELF.ELF_CLASS.CLASS32
+
+
 except ImportError:
     have_lief = False
 
@@ -203,7 +207,7 @@ if have_lief:
             binary_format = binary.format
             if binary_format == EXE_FORMATS.ELF:
                 binary_type = binary.type
-                if binary_type == ELF_CLASS.CLASS32 or binary_type == ELF_CLASS.CLASS64:
+                if binary_type == ELF32 or binary_type == ELF64:
                     rpaths = _get_elf_rpathy_thing(binary, elf_attribute, elf_dyn_tag)
             elif (
                 binary_format == EXE_FORMATS.MACHO
@@ -257,7 +261,7 @@ def set_rpath(old_matching, new_rpath, file):
     if not binary:
         return
     if binary.format == EXE_FORMATS.ELF and (
-        binary.type == ELF_CLASS.CLASS32 or binary.type == ELF_CLASS.CLASS64
+        binary.type == ELF32 or binary.type == ELF64
     ):
         if _set_elf_rpathy_thing(
             binary, old_matching, new_rpath, set_rpath=True, set_runpath=False
@@ -345,7 +349,7 @@ def from_os_varnames(binary_format, binary_type, input_):
             .replace("@rpath", "$RPATH")
         )
     elif binary_format == EXE_FORMATS.ELF:
-        if binary_type == ELF_CLASS.CLASS64:
+        if binary_type == ELF64:
             libdir = "/lib64"
         else:
             libdir = "/lib"
@@ -371,7 +375,7 @@ def get_uniqueness_key(filename, file):
     elif binary.format == EXE_FORMATS.MACHO:
         return filename
     elif binary.format == EXE_FORMATS.ELF and (  # noqa
-        binary.type == ELF_CLASS.CLASS32 or binary.type == ELF_CLASS.CLASS64
+        binary.type == ELF32 or binary.type == ELF64
     ):
         dynamic_entries = binary.dynamic_entries
         result = [e.name for e in dynamic_entries if e.tag == ELF_DYNAMIC_TAGS.SONAME]
@@ -488,7 +492,7 @@ def inspect_linkages_lief(
     if not binary:
         default_paths = []
     elif binary.format == EXE_FORMATS.ELF:
-        if binary.type == ELF_CLASS.CLASS64:
+        if binary.type == ELF64:
             default_paths = [
                 "$SYSROOT/lib64",
                 "$SYSROOT/usr/lib64",
