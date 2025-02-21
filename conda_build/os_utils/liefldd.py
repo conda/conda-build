@@ -54,7 +54,7 @@ try:
         ELF32 = lief.ELF.Header.CLASS.ELF32
     except AttributeError:
         # Fallback for lief<0.15.
-        ELF64 = lief.ELF.ELF64
+        ELF64 = lief.ELF.ELF_CLASS.CLASS64
         ELF32 = lief.ELF.ELF_CLASS.CLASS32
 
 
