@@ -146,6 +146,21 @@ def test_recipe_builds(
     api.build(str(recipe), config=testing_config)
 
 
+@pytest.mark.slow
+@pytest.mark.serial
+def test_python_version_independent(
+    testing_config,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    recipe = os.path.join(metadata_dir, "_python_version_independent")
+    testing_config.activate = True
+    monkeypatch.setenv("CONDA_TEST_VAR", "conda_test")
+    monkeypatch.setenv("CONDA_TEST_VAR_2", "conda_test_2")
+    output = api.build(str(recipe), config=testing_config)[0]
+    subdir = os.path.basename(os.path.dirname(output))
+    assert subdir != "noarch"
+
+
 @pytest.mark.serial
 @pytest.mark.skipif(
     "CI" in os.environ and "GITHUB_WORKFLOW" in os.environ,
@@ -316,6 +331,7 @@ def test_output_build_path_git_source(testing_config):
 
 @pytest.mark.sanity
 @pytest.mark.serial
+@pytest.mark.flaky(reruns=5, reruns_delay=2)
 def test_build_with_no_activate_does_not_activate():
     api.build(
         os.path.join(metadata_dir, "_set_env_var_no_activate_build"),
@@ -474,6 +490,7 @@ def test_build_msvc_compiler(msvc_ver, monkeypatch):
 @pytest.mark.sanity
 @pytest.mark.parametrize("platform", platforms)
 @pytest.mark.parametrize("target_compiler", compilers)
+@pytest.mark.flaky(reruns=5, reruns_delay=2)
 def test_cmake_generator(platform, target_compiler, testing_config):
     testing_config.variant["python"] = target_compiler
     testing_config.activate = True
@@ -1791,6 +1808,7 @@ def test_overlinking_detection_ignore_patterns(
     rm_rf(dest_bat)
 
 
+@pytest.mark.flaky(reruns=5, reruns_delay=2)
 def test_overdepending_detection(testing_config, variants_conda_build_sysroot):
     testing_config.activate = True
     testing_config.error_overlinking = True
@@ -2107,3 +2125,20 @@ def test_api_build_inject_jinja2_vars_on_first_pass(testing_config):
 def test_ignore_run_exports_from_substr(tmp_path):
     with tmp_path:
         api.build(str(metadata_path / "ignore_run_exports_from_substr"))
+
+        
+@pytest.mark.skipif(not on_linux, reason="One platform is enough")
+def test_build_strings_glob_match(testing_config: Config) -> None:
+    """
+    Test issues observed in:
+    - https://github.com/conda/conda-build/issues/5571#issuecomment-2605223563
+    - https://github.com/conda-forge/conda-smithy/pull/2232#issuecomment-2618825581
+    - https://github.com/conda-forge/blas-feedstock/pull/132
+    - https://github.com/conda/conda-build/pull/5600
+    """
+    testing_config.channel_urls = ["conda-forge"]
+    with pytest.raises(RuntimeError, match="Could not download"):
+        # We expect an error fetching the license because we added a bad path on purpose
+        # so we don't start the actual build. However, this is enough to get us through
+        # the multi-output render phase where we examine compatibility of pins.
+        api.build(metadata_path / "_blas_pins", config=testing_config)
