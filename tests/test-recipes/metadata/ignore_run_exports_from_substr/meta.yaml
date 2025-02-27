@@ -9,6 +9,6 @@ build:
 
 requirements:
   host:
-    - python
+    - conda-forge::python
   run:
     - numpy
