@@ -2122,11 +2122,13 @@ def test_api_build_inject_jinja2_vars_on_first_pass(testing_config):
     api.build(recipe_dir, config=testing_config)
 
 
-def test_ignore_run_exports_from_substr(tmp_path):
+def test_ignore_run_exports_from_substr(tmp_path, capsys):
     with tmp_path:
         api.build(str(metadata_path / "ignore_run_exports_from_substr"))
 
-        
+    assert "- python_abi " in capsys.readouterr().out
+
+
 @pytest.mark.skipif(not on_linux, reason="One platform is enough")
 def test_build_strings_glob_match(testing_config: Config) -> None:
     """
