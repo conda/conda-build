@@ -1,0 +1,5 @@
+### Other
+
+* Remove `--no-deps`, `--no-build-isolation`, and `--ignore-installed`
+  `pip install` options in example recipes as `conda-build` will enforce
+  all required `pip install` options itself at build time. (#5541)
