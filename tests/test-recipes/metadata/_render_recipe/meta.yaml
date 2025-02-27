@@ -19,7 +19,7 @@ build:
   script:
     - {{ PYTHON }} conf/cythonize.py
     - export PETSC_DIR=$PREFIX
-    - {{ PYTHON }} -m pip -v install --no-deps .
+    - {{ PYTHON }} -m pip -v install .
   skip: true  # [win]
   track_features:
     - petsc4py_complex  # [scalar == "complex"]
