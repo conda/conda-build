@@ -1,0 +1,16 @@
+package:
+  name: noarch-test
+  version: 0.1
+
+source:
+  path: ../../test-package
+
+build:
+  number: 0
+  noarch: python
+
+requirements:
+  host:
+    - python {{ python_min }}.*
+  run:
+    - python >={{ python_min }}

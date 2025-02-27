@@ -40,7 +40,7 @@ from conda.utils import url_path
 
 from . import __version__ as conda_build_version
 from . import environ, noarch_python, source, tarcheck, utils
-from .config import Config
+from .config import CondaPkgFormat, Config
 from .create_test import create_all_test_files
 from .exceptions import (
     BuildScriptException,
@@ -70,8 +70,6 @@ from .render import (
     try_download,
 )
 from .utils import (
-    CONDA_PACKAGE_EXTENSION_V1,
-    CONDA_PACKAGE_EXTENSION_V2,
     CONDA_PACKAGE_EXTENSIONS,
     env_var,
     glob,
@@ -91,7 +89,8 @@ if on_win:
     from . import windows
 
 if TYPE_CHECKING:
-    from typing import Any, Iterable
+    from collections.abc import Iterable
+    from typing import Any
 
 if "bsd" in sys.platform:
     shell_path = "/bin/sh"
@@ -293,9 +292,9 @@ def regex_files_rg(
                     # match_line_number = match['data']['line_number']
                     # match_absolute_offset = match['data']['absolute_offset']
                     if old_stage == "begin":
-                        assert (
-                            match_filename_begin == match_filename
-                        ), f"{match_filename_begin} != \n {match_filename}"
+                        assert match_filename_begin == match_filename, (
+                            f"{match_filename_begin} != \n {match_filename}"
+                        )
                     if match_filename not in match_records:
                         if debug_this:
                             # We could add: #'line': match_line, 'line_number': match_line_number but it would
@@ -976,21 +975,21 @@ def get_all_replacements(variant):
         return []
 
     repl = variant["replacements"]
-    assert isinstance(
-        repl, dict
-    ), f"Found 'replacements' ({repl}), but it is not a dict"
-    assert (
-        "all_replacements" in repl
-    ), f"Found 'replacements' ({repl}), but it doesn't contain 'all_replacements'"
+    assert isinstance(repl, dict), (
+        f"Found 'replacements' ({repl}), but it is not a dict"
+    )
+    assert "all_replacements" in repl, (
+        f"Found 'replacements' ({repl}), but it doesn't contain 'all_replacements'"
+    )
 
     repl = repl["all_replacements"]
-    assert isinstance(
-        repl, list
-    ), f"Found 'all_replacements' ({repl}), but it is not a list"
+    assert isinstance(repl, list), (
+        f"Found 'all_replacements' ({repl}), but it is not a list"
+    )
     if repl:
-        assert isinstance(
-            repl[0], dict
-        ), f"Found 'all_replacements[0]' ({repl[0]}), but it is not a dict"
+        assert isinstance(repl[0], dict), (
+            f"Found 'all_replacements[0]' ({repl[0]}), but it is not a dict"
+        )
 
     return repl
 
@@ -1248,8 +1247,11 @@ def write_info_files_file(m, files):
 def write_link_json(m):
     package_metadata = OrderedDict()
     noarch_type = m.get_value("build/noarch")
-    if noarch_type:
-        noarch_type_str = str(noarch_type)
+    if noarch_type or m.python_version_independent:
+        if noarch_type:
+            noarch_type_str = str(noarch_type)
+        elif m.python_version_independent:
+            noarch_type_str = "python"
         noarch_dict = OrderedDict(type=noarch_type_str)
         if noarch_type_str.lower() == "python":
             entry_points = m.get_value("build/entry_points")
@@ -1442,13 +1444,14 @@ def create_info_files(m, replacements, files, prefix):
 
 
 def get_short_path(m, target_file):
+    if m.python_version_independent:
+        if (site_packages_idx := target_file.find("site-packages")) >= 0:
+            return target_file[site_packages_idx:]
     if m.noarch == "python":
         entry_point_script_names = get_entry_point_script_names(
             m.get_value("build/entry_points")
         )
-        if target_file.find("site-packages") >= 0:
-            return target_file[target_file.find("site-packages") :]
-        elif target_file.startswith("bin") and (
+        if target_file.startswith("bin") and (
             target_file not in entry_point_script_names
         ):
             return target_file.replace("bin", "python-scripts")
@@ -1666,6 +1669,9 @@ def post_process_files(m: MetaData, initial_prefix_files):
         noarch_python.populate_files(
             m, pkg_files, host_prefix, entry_point_script_names
         )
+    elif m.python_version_independent:
+        # For non noarch: python ones, we don't need to handle entry points in a special way.
+        noarch_python.populate_files(m, pkg_files, host_prefix, [])
 
     current_prefix_files = utils.prefix_files(prefix=host_prefix)
     new_files = current_prefix_files - initial_prefix_files
@@ -1897,9 +1903,12 @@ def bundle_conda(
     tmp_archives = []
     final_outputs = []
     cph_kwargs = {}
-    ext = CONDA_PACKAGE_EXTENSION_V1
-    if output.get("type") == "conda_v2" or metadata.config.conda_pkg_format == "2":
-        ext = CONDA_PACKAGE_EXTENSION_V2
+    ext = CondaPkgFormat.V1.ext
+    if (
+        output.get("type") == CondaPkgFormat.V2
+        or metadata.config.conda_pkg_format == CondaPkgFormat.V2
+    ):
+        ext = CondaPkgFormat.V2.ext
         cph_kwargs["compression_tuple"] = (
             ".tar.zst",
             "zstd",
@@ -1917,7 +1926,7 @@ def bundle_conda(
 
         # we're done building, perform some checks
         for tmp_path in tmp_archives:
-            if tmp_path.endswith(CONDA_PACKAGE_EXTENSION_V1):
+            if tmp_path.endswith(CondaPkgFormat.V1.ext):
                 tarcheck.check_all(tmp_path, metadata.config)
             output_filename = os.path.basename(tmp_path)
 
@@ -2059,8 +2068,8 @@ def scan_metadata(path):
 
 
 bundlers = {
-    "conda": bundle_conda,
-    "conda_v2": bundle_conda,
+    CondaPkgFormat.V1: bundle_conda,
+    CondaPkgFormat.V2: bundle_conda,
     "wheel": bundle_wheel,
 }
 
@@ -2431,7 +2440,7 @@ def build(
                     exclude_pattern = re.compile(
                         r"|".join(rf"(?:^{exc}(?:\s|$|\Z))" for exc in excludes)
                     )
-            add_upstream_pins(m, False, exclude_pattern)
+            add_upstream_pins(m, False, exclude_pattern, [])
 
         create_build_envs(top_level_pkg, notest)
 
@@ -2652,9 +2661,9 @@ def build(
                         os.path.join(m.config.work_dir, test_script),
                     )
 
-                assert (
-                    output_d.get("type") != "conda" or m.final
-                ), f"output metadata for {m.dist()} is not finalized"
+                assert output_d.get("type") != "conda" or m.final, (
+                    f"output metadata for {m.dist()} is not finalized"
+                )
                 pkg_path = bldpkg_path(m)
                 if pkg_path not in built_packages and pkg_path not in new_pkgs:
                     log.info(f"Packaging {m.name()}")
@@ -2758,7 +2767,10 @@ def build(
                     #    can be different from the env for the top level build.
                     with utils.path_prepended(m.config.build_prefix):
                         env = environ.get_dict(m=m)
-                    pkg_type = "conda" if not hasattr(m, "type") else m.type
+                    pkg_type = (
+                        getattr(m, "type", m.config.conda_pkg_format)
+                        or CondaPkgFormat.V2
+                    )
                     newly_built_packages = bundlers[pkg_type](
                         output_d, m, env, stats, new_prefix_files
                     )
@@ -2797,8 +2809,6 @@ def build(
                             channel_urls=m.config.channel_urls,
                             debug=m.config.debug,
                             verbose=m.config.verbose,
-                            locking=m.config.locking,
-                            timeout=m.config.timeout,
                             clear_cache=True,
                             omit_defaults=False,
                         )
@@ -2809,8 +2819,6 @@ def build(
                         channel_urls=m.config.channel_urls,
                         debug=m.config.debug,
                         verbose=m.config.verbose,
-                        locking=m.config.locking,
-                        timeout=m.config.timeout,
                         clear_cache=True,
                         omit_defaults=False,
                     )
@@ -3035,7 +3043,7 @@ def _set_env_variables_for_build(m, env):
     # locally, and if we don't, it's a problem.
     env["PIP_NO_INDEX"] = True
 
-    if m.noarch == "python":
+    if m.python_version_independent:
         env["PYTHONDONTWRITEBYTECODE"] = True
 
     # The stuff in replacements is not parsable in a shell script (or we need to escape it)

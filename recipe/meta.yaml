@@ -1,6 +1,7 @@
 package:
   name: conda-build
-  version: {{ GIT_DESCRIBE_TAG }}.{{ GIT_BUILD_STR }}
+  # VERSION_OVERRIDE is used by the canary release workflow
+  version: {{ os.getenv("VERSION_OVERRIDE") or GIT_DESCRIBE_TAG }}.{{ GIT_BUILD_STR }}
 
 source:
   # git_url only captures committed code
@@ -41,7 +42,10 @@ requirements:
     - menuinst >=2
     - packaging
     - patch >=2.6                  # [not win]
-    - patchelf                     # [linux]
+    # Cap to avoid bug where ELF load command is garbled.
+    # xref: https://github.com/conda/conda-build/issues/4881
+    # xref: https://github.com/NixOS/patchelf/issues/492
+    - patchelf <0.18               # [linux]
     - pkginfo
     - psutil
     - py-lief

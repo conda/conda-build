@@ -1,5 +1,131 @@
 [//]: # (current developments)
 
+## 25.1.1 (2025-01-14)
+
+### Deprecations
+
+* Remove `conda_build.exceptions.UnableToParseMissingJinja2`. (#5587)
+* Remove `conda_build.index.get_build_index(locking)`. (#5587)
+* Remove `conda_build.index.get_build_index(timeout)`. (#5587)
+
+### Contributors
+
+* @kenodegard
+
+
+
+## 25.1.0 (2025-01-13)
+
+### Enhancements
+
+* Add SHA224, SHA384 and SHA512 support for validating downloaded sources. (#4793)
+* Add new hashing methods (`content_sha256`, `content_sha384`, `content_sha512`) to calculate the
+  checksum of the extracted contents of the downloaded source artifacts. (#4821 via #5277)
+* Make `.conda` the new default package format. `.tar.bz2` files can still be generated with `--package-format=1` and/or `conda_build.pkg_format: 1` in your `.condarc` file. (#5183 via #5527)
+* Add compatibility for LIEF=0.15. (#5564 via #5565)
+
+### Bug fixes
+
+* Verify all source hashes when multiple are defined (not just the first one). (#4793)
+* Fix a bug where some ``CondaBuildUserError`` exceptions that were formally ``SystemExit`` exceptions
+  were not being caught properly. (#5538)
+* Fix a bug where bad match specs from intermediate parsing results would cause parsing to fail. (#5555)
+* Fix `KeyError` when an inconsistent `build.pkg_type` value is specified in `meta.yaml`. (#5560)
+
+### Other
+
+* Demote logging message about glob finding no matches from error to warning (#5472)
+
+### Contributors
+
+* @conda-bot
+* @carterbox
+* @jaimergp
+* @ForgottenProgramme
+* @beckermr
+* @tttc3
+* @tkelman made their first contribution in https://github.com/conda/conda-build/pull/5565
+* @ypradat made their first contribution in https://github.com/conda/conda-build/pull/5560
+* @dependabot[bot]
+* @pre-commit-ci[bot]
+
+
+
+## 24.11.2 (2024-11-26)
+
+### Bug fixes
+
+* Fix bug where `.copy()` was used on a string instead of `copy()` when processing variants. (#5417)
+
+### Contributors
+
+* @corneliusroemer made their first contribution in https://github.com/conda/conda-build/pull/5417
+* @kenodegard
+
+
+
+## 24.11.1 (2024-11-21)
+
+### Bug fixes
+
+* Fix `TypeError` when no CLI arguments are passed. (#5549 via #5550)
+
+### Contributors
+
+* @beeankha
+* @kenodegard
+
+
+
+## 24.11.0 (2024-11-15)
+
+### Enhancements
+
+* Introduce `--package-format` as a command line argument. (#4890 via #5209)
+  * This takes precedence over default value and `condarc`.
+  * Normalization occurs so `1`, `"1"`, `tar.bz2`,`.tar.bz2`, `2`, `"2"`, `conda`, `.conda` are all recognized and mapped appropriately.
+  * Other options are rejected.
+* Add  support for [CEP-17](https://github.com/conda/ceps/blob/main/cep-0017.md) that allows specifying the location of the site-packages directory with the `python_site_packages_path` build option for any packages named `python`. (#5502)
+
+### Bug fixes
+
+* Fix regex for Jinja2 `set` / `for` statements to be more specific. (#5514)
+* Fix `ruamel.yaml` usage to use supported APIs. (#5517)
+* Fix bug variant variables were not defined for the first parsing pass of a recipe. (#5528)
+* Fix a bug where variants were incorrectly found as being used when they matched a leading substring of
+  another variant. (#5535)
+* Fix a bug where variants were not found when variables were used in `pin_*` statements. (#5535)
+
+### Deprecations
+
+* Deprecate `conda_build.exceptions.UnableToParseMissingJinja2`. (#5497)
+* Deprecate `conda_build.index.get_build_index(locking)`. (#5508)
+* Deprecate `conda_build.index.get_build_index(timeout)`. (#5508)
+* Require Python 3.9 or greater. (#5525)
+* The default value for `--package-format` and `conda_pkg_format` will become `.conda` in 25.1. (#5534)
+
+### Docs
+
+* Better document `run_test.r`. (#5479)
+* Fix bug in docs build by pinning `conda-sphinx-theme` version to 0.2.2. (#5518)
+
+### Contributors
+
+* @beeankha
+* @conda-bot
+* @jaimergp
+* @jezdez
+* @jdblischak
+* @jjhelmus
+* @kenodegard
+* @zklaus
+* @beckermr
+* @ryanskeith
+* @dependabot[bot]
+* @pre-commit-ci[bot]
+
+
+
 ## 24.9.0 (2024-09-18)
 
 ### Enhancements

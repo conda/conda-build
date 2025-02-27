@@ -1,12 +1,14 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
+
 import logging
 import os
 from functools import partial
 from os.path import dirname
+from typing import TYPE_CHECKING
 
 from conda.base.context import context
-from conda.core.index import get_index
 from conda.exceptions import CondaHTTPError
 from conda.utils import url_path
 from conda_index.index import update_index as _update_index
@@ -15,6 +17,19 @@ from . import utils
 from .utils import (
     get_logger,
 )
+
+if TYPE_CHECKING:
+    from conda.models.channels import Channel
+
+try:
+    from conda.core.index import Index
+except ImportError:
+    # FUTURE: remove for `conda >=24.9`
+    from conda.core.index import get_index
+
+    def Index(channels: tuple[str | Channel, ...] = (), *args, **kwargs) -> dict:  # type: ignore[no-redef]
+        return get_index(channel_urls=channels, *args, **kwargs)
+
 
 log = get_logger(__name__)
 
@@ -38,8 +53,6 @@ def get_build_index(
     channel_urls=None,
     debug=False,
     verbose=True,
-    locking=None,
-    timeout=None,
 ):
     """
     Used during package builds to create/get a channel including any local or
@@ -102,26 +115,24 @@ def get_build_index(
             if subdir == "noarch":
                 subdir = context.subdir
             try:
-                # get_index() is like conda reading the index, not conda_index
+                # Index() is like conda reading the index, not conda_index
                 # creating a new index.
-                cached_index = get_index(
-                    channel_urls=urls,
+                cached_index = Index(
+                    channels=urls,
                     prepend=not omit_defaults,
-                    use_local=False,
-                    use_cache=context.offline,
                     platform=subdir,
+                    use_local=False,
                 )
             # HACK: defaults does not have the many subfolders we support.  Omit it and
             #          try again.
             except CondaHTTPError:
                 if "defaults" in urls:
                     urls.remove("defaults")
-                cached_index = get_index(
-                    channel_urls=urls,
-                    prepend=omit_defaults,
-                    use_local=False,
-                    use_cache=context.offline,
+                cached_index = Index(
+                    channels=urls,
+                    prepend=not omit_defaults,
                     platform=subdir,
+                    use_local=False,
                 )
 
         local_index_timestamp = os.path.getmtime(index_file)

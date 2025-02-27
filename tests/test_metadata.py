@@ -348,9 +348,9 @@ def test_hash_build_id(testing_metadata):
         if hdeps_tp == hdeps:
             found = True
             break
-    assert (
-        found
-    ), f"Did not find build that matched {hdeps} when testing each of DEFAULT_SUBDIRS"
+    assert found, (
+        f"Did not find build that matched {hdeps} when testing each of DEFAULT_SUBDIRS"
+    )
     assert testing_metadata.build_id() == hdeps + "_1"
 
 
@@ -585,10 +585,14 @@ def test_select_lines_invalid():
     ],
 )
 def test_sanitize_source(keys: list[str], expected: dict[str, str] | None) -> None:
-    with pytest.raises(
-        CondaBuildUserError,
-        match=r"Multiple git_revs:",
-    ) if expected is None else nullcontext():
+    with (
+        pytest.raises(
+            CondaBuildUserError,
+            match=r"Multiple git_revs:",
+        )
+        if expected is None
+        else nullcontext()
+    ):
         assert sanitize({"source": {key: "rev" for key in keys}}) == {
             "source": expected
         }
@@ -606,10 +610,14 @@ def test_sanitize_source(keys: list[str], expected: dict[str, str] | None) -> No
     ],
 )
 def test_check_bad_chrs(value: str, field: str, invalid: str) -> None:
-    with pytest.raises(
-        CondaBuildUserError,
-        match=rf"Bad character\(s\) \({invalid}\) in {field}: {value}\.",
-    ) if invalid else nullcontext():
+    with (
+        pytest.raises(
+            CondaBuildUserError,
+            match=rf"Bad character\(s\) \({invalid}\) in {field}: {value}\.",
+        )
+        if invalid
+        else nullcontext()
+    ):
         check_bad_chrs(value, field)
 
 
@@ -647,3 +655,72 @@ build:
         pytest.fail(
             "Undefined variable caused error, even though this build is skipped"
         )
+
+
+@pytest.mark.parametrize("have_variant", [True, False])
+def test_parse_until_resolved_missing_jinja_in_spec(
+    testing_metadata: MetaData,
+    tmp_path: Path,
+    have_variant: bool,
+) -> None:
+    (recipe := tmp_path / (name := "meta.yaml")).write_text(
+        """
+package:
+    name: dummy
+    version: 1.0.0
+
+build:
+    noarch: python
+    number: 0
+
+requirements:
+    host:
+        - python ={{ python_min }}
+    run:
+        - python >={{ python_min }}
+"""
+    )
+    (tmp_path / "conda_build_config.yaml").write_text(
+        """
+python_min:
+    - 3.6
+"""
+    )
+    testing_metadata._meta_path = recipe
+    testing_metadata._meta_name = name
+    if have_variant:
+        testing_metadata.config.variant = {"python_min": "3.6"}
+    else:
+        delattr(testing_metadata.config, "variant")
+        delattr(testing_metadata.config, "variant_config_files")
+        delattr(testing_metadata.config, "variants")
+
+    try:
+        testing_metadata.parse_until_resolved()
+        if not have_variant:
+            pytest.fail("Undefined variable did NOT cause spec parsing error!")
+        else:
+            print("parsed OK!")
+    except (Exception, SystemExit):
+        if have_variant:
+            pytest.fail(
+                "Undefined variable caused spec parsing error even if we have the variant!"
+            )
+        else:
+            print("did not parse OK!")
+
+
+def test_extract_single_output_text_with_jinja_is_broken():
+    """
+    Given a recipe with three outputs 1, 2, and 3, where 2 is guarded by a falsy Jinja-if,
+    MetaData.extract_single_output_text() returns 2 when asked for 3.
+
+    This is a bug that should be fixed.
+    """
+    metadata = MetaData(os.path.join(metadata_dir, "_jinja_outputs"))
+    output = metadata.extract_single_output_text(
+        "output3", getattr(metadata, "type", None)
+    )
+    # We of course want to obtain output3, but the buggy behaviour gave us output2.
+    assert "output3" not in output
+    assert "output2" in output

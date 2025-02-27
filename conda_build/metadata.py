@@ -11,26 +11,26 @@ import sys
 import time
 import warnings
 from collections import OrderedDict
-from functools import lru_cache
+from functools import cache, lru_cache
 from os.path import isdir, isfile, join
 from typing import TYPE_CHECKING, NamedTuple, overload
 
+import jinja2
 import yaml
 from bs4 import UnicodeDammit
 from conda.base.context import locate_prefix_by_name
 from conda.gateways.disk.read import compute_sum
-from conda.models.match_spec import MatchSpec
+from conda.models.match_spec import GlobLowerStrMatch, MatchSpec
 from frozendict import deepfreeze
 
 from . import utils
-from .config import Config, get_or_merge_config
+from .config import CondaPkgFormat, Config, get_or_merge_config
 from .exceptions import (
     CondaBuildException,
     CondaBuildUserError,
     DependencyNeedsBuildingError,
     RecipeError,
     UnableToParse,
-    UnableToParseMissingJinja2,
 )
 from .features import feature_list
 from .license_family import ensure_valid_license_family
@@ -49,6 +49,7 @@ from .variants import (
     find_used_variables_in_shell_script,
     find_used_variables_in_text,
     get_default_variant,
+    get_package_variants,
     get_vars,
     list_of_dicts_to_dict_of_lists,
 )
@@ -289,7 +290,7 @@ def eval_selector(selector_string, namespace, variants_in_place):
         return eval_selector(next_string, namespace, variants_in_place)
 
 
-@lru_cache(maxsize=None)
+@cache
 def _split_line_selector(text: str) -> tuple[tuple[str | None, str], ...]:
     lines: list[tuple[str | None, str]] = []
     for line in text.splitlines():
@@ -358,13 +359,6 @@ def yamlize(data):
     try:
         return yaml.load(data, Loader=StringifyNumbersLoader)
     except yaml.error.YAMLError as e:
-        if "{{" in data:
-            try:
-                import jinja2
-
-                jinja2  # Avoid pyflakes failure: 'jinja2' imported but unused
-            except ImportError:
-                raise UnableToParseMissingJinja2(original=e)
         print("Problematic recipe:", file=sys.stderr)
         print(data, file=sys.stderr)
         raise UnableToParse(original=e)
@@ -499,7 +493,9 @@ def ensure_matching_hashes(output_metadata):
                     if (
                         dep.startswith(m.name() + " ")
                         and len(dep.split(" ")) == 3
-                        and dep.split(" ")[-1] != m.build_id()
+                        and not GlobLowerStrMatch(dep.split(" ")[-1]).match(
+                            GlobLowerStrMatch(m.build_id())
+                        )
                         and _variants_equal(m, om)
                     ):
                         problemos.append((m.name(), m.build_id(), dep, om.name()))
@@ -572,7 +568,14 @@ FIELDS = {
         "url": None,
         "md5": str,
         "sha1": None,
+        "sha224": None,
         "sha256": None,
+        "sha384": None,
+        "sha512": None,
+        "content_sha256": None,
+        "content_sha384": None,
+        "content_sha512": None,
+        "content_hash_skip": list,
         "path": str,
         "path_via_symlink": None,
         "git_url": str,
@@ -605,6 +608,7 @@ FIELDS = {
         "script": list,
         "noarch": str,
         "noarch_python": bool,
+        "python_version_independent": bool,
         "has_prefix_files": None,
         "binary_has_prefix_files": None,
         "ignore_prefix_files": None,
@@ -635,6 +639,7 @@ FIELDS = {
         "error_overdepending": None,
         "error_overlinking": None,
         "overlinking_ignore_patterns": [],
+        "python_site_packages_path": str,
     },
     "outputs": {
         "name": None,
@@ -1076,7 +1081,7 @@ def _filter_recipe_text(text, extract_pattern=None):
     return text
 
 
-@lru_cache(maxsize=None)
+@cache
 def read_meta_file(meta_path):
     with open(meta_path, "rb") as f:
         recipe_text = UnicodeDammit(f.read()).unicode_markup
@@ -1173,7 +1178,21 @@ class MetaData:
         # Therefore, undefined jinja variables are permitted here
         # In the second pass, we'll be more strict. See build.build()
         # Primarily for debugging.  Ensure that metadata is not altered after "finalizing"
-        self.parse_again(permit_undefined_jinja=True, allow_no_other_outputs=True)
+
+        try:
+            # For the first pass, we do a simple read of any variants in the recipe and
+            # use them. These are then discarded. Other operations on the metadata
+            # will restore versions of them as needed. This is done to preserve
+            # old behavior.
+            old_config = self.config
+
+            self.config = get_or_merge_config(config, variant=variant)
+            self.config.variants = get_package_variants(self)
+            self.config.variant = self.config.variants[0]
+            self.parse_again(permit_undefined_jinja=True, allow_no_other_outputs=True)
+        finally:
+            self.config = old_config
+
         self.config.disable_pip = self.disable_pip
         # establish whether this recipe should squish build and host together
 
@@ -1450,9 +1469,9 @@ class MetaData:
 
         section_data = self.get_section(section)
         if isinstance(section_data, dict):
-            assert (
-                not index
-            ), f"Got non-zero index ({index}), but section {section} is not a list."
+            assert not index, (
+                f"Got non-zero index ({index}), but section {section} is not a list."
+            )
         elif isinstance(section_data, list):
             # The 'source' section can be written a list, in which case the name
             # is passed in with an index, e.g. get_value('source/0/git_url')
@@ -1467,9 +1486,9 @@ class MetaData:
                 section_data = {}
             else:
                 section_data = section_data[index]
-                assert isinstance(
-                    section_data, dict
-                ), f"Expected {section}/{index} to be a dict"
+                assert isinstance(section_data, dict), (
+                    f"Expected {section}/{index} to be a dict"
+                )
 
         value = section_data.get(key, default)
 
@@ -1588,21 +1607,34 @@ class MetaData:
             try:
                 ms = MatchSpec(spec)
             except AssertionError:
-                raise RuntimeError(f"Invalid package specification: {spec!r}")
+                if len(self.undefined_jinja_vars) == 0:
+                    raise RuntimeError(f"Invalid package specification: {spec!r}")
+                else:
+                    continue
             except (AttributeError, ValueError) as e:
-                raise RuntimeError(
-                    "Received dictionary as spec.  Note that pip requirements are "
-                    "not supported in conda-build meta.yaml.  Error message: " + str(e)
-                )
+                if len(self.undefined_jinja_vars) == 0:
+                    raise RuntimeError(
+                        "Received dictionary as spec.  Note that pip requirements are "
+                        "not supported in conda-build meta.yaml.  Error message: "
+                        + str(e)
+                    )
+                else:
+                    continue
+
             if ms.name == self.name() and not (
                 typ == "build" and self.config.host_subdir != self.config.build_subdir
             ):
                 raise RuntimeError(f"{self.name()} cannot depend on itself")
+
+            # TODO: IDK what this does since AFAIK the inner continue applies only
+            # to the inner loop
             for name, ver in name_ver_list:
                 if ms.name == name:
                     if self.noarch:
                         continue
 
+            # TODO: the validation here appears to be a waste of time since MatchSpec
+            # appears to validate?
             for c in "=!@#$%^&*:;\"'\\|<>?/":
                 if c in ms.name:
                     sys.exit(
@@ -1742,7 +1774,12 @@ class MetaData:
         return f"{self.name()}-{self.version()}-{self.build_id()}"
 
     def pkg_fn(self):
-        return f"{self.dist()}.tar.bz2"
+        ext = (
+            CondaPkgFormat.V2.ext
+            if self.config.conda_pkg_format == CondaPkgFormat.V2
+            else CondaPkgFormat.V1.ext
+        )
+        return f"{self.dist()}{ext}"
 
     def is_app(self):
         return bool(self.get_value("app/entry"))
@@ -1807,6 +1844,10 @@ class MetaData:
             d["provides_features"] = self.get_value("build/provides_features")
         if self.get_value("build/requires_features"):
             d["requires_features"] = self.get_value("build/requires_features")
+        if self.get_value("build/python_site_packages_path"):
+            d["python_site_packages_path"] = self.get_value(
+                "build/python_site_packages_path"
+            )
         if self.noarch:
             d["platform"] = d["arch"] = None
             d["subdir"] = "noarch"
@@ -1815,6 +1856,12 @@ class MetaData:
             build_noarch = self.get_value("build/noarch")
             if build_noarch:
                 d["noarch"] = build_noarch
+        elif self.python_version_independent:
+            # This is required by CEP 20 (https://github.com/conda/ceps/blob/main/cep-0020.md)
+            # to make current mamba/micromamba compile the pure python files
+            # and for micromamba to move the files in site-packages to the correct dir.
+            # (i.e. we need A2 action to apply actions B1-B4 as mentioned in CEP 20)
+            d["noarch"] = "python"
         if self.is_app():
             d.update(self.app_meta())
         return d
@@ -1918,17 +1965,6 @@ class MetaData:
         permit_undefined_jinja: If True, *any* use of undefined jinja variables will
                                 evaluate to an emtpy string, without emitting an error.
         """
-        try:
-            import jinja2
-        except ImportError:
-            print("There was an error importing jinja2.", file=sys.stderr)
-            print(
-                "Please run `conda install jinja2` to enable jinja template support",
-                file=sys.stderr,
-            )  # noqa
-            with open(self.meta_path) as fd:
-                return fd.read()
-
         from .jinja_context import (
             FilteredLoader,
             UndefinedNeverFail,
@@ -2201,6 +2237,15 @@ class MetaData:
         if not outputs:
             outputs = [{"name": self.name()}]
 
+        if len(output_matches) != len(outputs):
+            # See https://github.com/conda/conda-build/issues/5571
+            utils.get_logger(__name__).warning(
+                "Number of parsed outputs does not match detected raw metadata blocks. "
+                "Identified output block may be wrong! "
+                "If you are using Jinja conditionals to include or exclude outputs, "
+                "consider using `skip: true  # [condition]` instead."
+            )
+
         try:
             if output_type:
                 output_tuples = [
@@ -2208,9 +2253,9 @@ class MetaData:
                         out.get("name", self.name()),
                         out.get(
                             "type",
-                            "conda_v2"
-                            if self.config.conda_pkg_format == "2"
-                            else "conda",
+                            CondaPkgFormat.V2
+                            if self.config.conda_pkg_format == CondaPkgFormat.V2
+                            else CondaPkgFormat.V1,
                         ),
                     )
                     for out in outputs
@@ -2223,7 +2268,8 @@ class MetaData:
         except ValueError:
             if not self.path and self.meta.get("extra", {}).get("parent_recipe"):
                 utils.get_logger(__name__).warning(
-                    f"Didn't match any output in raw metadata.  Target value was: {output_name}"
+                    "Didn't match any output in raw metadata. Target value was: %s",
+                    output_name,
                 )
                 output = ""
             else:
@@ -2290,9 +2336,25 @@ class MetaData:
         new.config = self.config.copy()
         new.meta = copy.deepcopy(self.meta)
         new.type = getattr(
-            self, "type", "conda_v2" if self.config.conda_pkg_format == "2" else "conda"
+            self,
+            "type",
+            CondaPkgFormat.V2
+            if self.config.conda_pkg_format == CondaPkgFormat.V2
+            else CondaPkgFormat.V1,
         )
         return new
+
+    @property
+    def python_version_independent(self) -> bool:
+        return (
+            self.get_value("build/python_version_independent")
+            or self.get_value("build/noarch") == "python"
+            or self.noarch_python
+        )
+
+    @python_version_independent.setter
+    def python_version_independent(self, value: bool) -> None:
+        self.meta.setdefault("build", {})["python_version_independent"] = bool(value)
 
     @property
     def noarch(self):
@@ -2380,7 +2442,10 @@ class MetaData:
         if output.get("name") == self.name():
             output_metadata = self.copy()
             output_metadata.type = output.get(
-                "type", "conda_v2" if self.config.conda_pkg_format == "2" else "conda"
+                "type",
+                CondaPkgFormat.V2
+                if self.config.conda_pkg_format == CondaPkgFormat.V2
+                else CondaPkgFormat.V1,
             )
 
         else:
@@ -2406,7 +2471,10 @@ class MetaData:
                 self.reconcile_metadata_with_output_dict(output_metadata, output)
 
             output_metadata.type = output.get(
-                "type", "conda_v2" if self.config.conda_pkg_format == "2" else "conda"
+                "type",
+                CondaPkgFormat.V2
+                if self.config.conda_pkg_format == CondaPkgFormat.V2
+                else CondaPkgFormat.V1,
             )
 
             if "name" in output:
@@ -2445,6 +2513,11 @@ class MetaData:
             output_metadata.final = False
             output_metadata.noarch = output.get("noarch", False)
             output_metadata.noarch_python = output.get("noarch_python", False)
+            output_metadata.python_version_independent = (
+                output.get("python_version_independent")
+                or output_metadata.noarch == "python"
+                or output_metadata.noarch_python
+            )
             # primarily for tests - make sure that we keep the platform consistent (setting noarch
             #      would reset it)
             if (
@@ -2567,7 +2640,7 @@ class MetaData:
                     ref_metadata.parse_until_resolved(
                         allow_no_other_outputs=True, bypass_env_check=True
                     )
-                except SystemExit:
+                except (SystemExit, CondaBuildUserError):
                     pass
                 outputs = get_output_dicts_from_metadata(ref_metadata)
 
@@ -2599,7 +2672,7 @@ class MetaData:
                         ref_metadata.other_outputs = out_metadata.other_outputs = (
                             all_output_metadata
                         )
-                except SystemExit:
+                except (SystemExit, CondaBuildUserError):
                     if not permit_undefined_jinja:
                         raise
                     output_tuples = []
@@ -2616,8 +2689,8 @@ class MetaData:
 
             for output_d, m in render_order:
                 if not output_d.get("type") or output_d["type"] in (
-                    "conda",
-                    "conda_v2",
+                    CondaPkgFormat.V1,
+                    CondaPkgFormat.V2,
                 ):
                     conda_packages[
                         m.name(),

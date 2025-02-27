@@ -10,7 +10,7 @@ import re
 import sys
 from collections import OrderedDict
 from copy import copy
-from functools import lru_cache
+from functools import cache
 from itertools import product
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -22,7 +22,8 @@ from .utils import ensure_list, get_logger, islist, on_win, trim_empty_keys
 from .version import _parse as parse_version
 
 if TYPE_CHECKING:
-    from typing import Any, Iterable
+    from collections.abc import Iterable
+    from typing import Any
 
 DEFAULT_VARIANTS = {
     "python": f"{sys.version_info.major}.{sys.version_info.minor}",
@@ -103,7 +104,7 @@ SUFFIX_MAP = {
 }
 
 
-@lru_cache(maxsize=None)
+@cache
 def _get_default_compilers(platform, py_ver):
     compilers = DEFAULT_COMPILERS[platform].copy()
     if platform == "win":
@@ -328,7 +329,7 @@ def _combine_spec_dictionaries(
                                     ) != len(ensure_list(v)):
                                         break
                                 else:
-                                    values[k] = v.copy()
+                                    values[k] = copy(v)
                                 missing_subvalues = [
                                     subvalue
                                     for subvalue in ensure_list(v)
@@ -504,7 +505,7 @@ def filter_by_key_value(variants, key, values, source_name):
     return reduced_variants
 
 
-@lru_cache(maxsize=None)
+@cache
 def _split_str(string, char):
     return string.split(char)
 
@@ -722,7 +723,7 @@ def get_vars(
     }
 
 
-@lru_cache(maxsize=None)
+@cache
 def find_used_variables_in_text(variant, recipe_text, selectors_only=False):
     used_variables = set()
     recipe_lines = recipe_text.splitlines()
@@ -740,6 +741,11 @@ def find_used_variables_in_text(variant, recipe_text, selectors_only=False):
             variant_lines = [
                 line for line in recipe_lines if v in line or target_lang in line
             ]
+        elif v.startswith("cdt_"):
+            variant_lines = [
+                line for line in recipe_lines if v in line or "cdt(" in line
+            ]
+            all_res.append(r"\{{\s*cdt\(")
         else:
             variant_lines = [
                 line for line in recipe_lines if v in line.replace("-", "_")
@@ -748,7 +754,9 @@ def find_used_variables_in_text(variant, recipe_text, selectors_only=False):
             continue
         v_regex = re.escape(v)
         v_req_regex = "[-_]".join(map(re.escape, v.split("_")))
-        variant_regex = rf"\{{\s*(?:pin_[a-z]+\(\s*?['\"])?{v_regex}[^'\"]*?\}}\}}"
+        variant_regex = (
+            rf"\{{\s*(?:pin_[a-z]+\(\s*?['\"])?{v_regex}[^_0-9a-zA-Z].*?\}}\}}"
+        )
         selector_regex = rf"^[^#\[]*?\#?\s\[[^\]]*?(?<![_\w\d]){v_regex}[=\s<>!\]]"
         # NOTE: why use a regex instead of the jinja2 parser/AST?
         # One can ask the jinja2 parser for undefined variables, but conda-build moves whole
@@ -759,8 +767,16 @@ def find_used_variables_in_text(variant, recipe_text, selectors_only=False):
         )
         # TODO: this `for` regex won't catch some common cases like lists of vars, multiline
         # jinja2 blocks, if filters on the for loop, etc.
-        for_regex = r"(?:^|[^\{])\{%\s*for\s*.*\s*in\s*" + v_regex + r"(?:[^%]*?)?%\}"
-        set_regex = r"(?:^|[^\{])\{%\s*set\s*.*\s*=\s*.*" + v_regex + r"(?:[^%]*?)?%\}"
+        for_regex = (
+            r"(?:^|[^\{])\{%\s*for\s*.*\s*in\s*"
+            + v_regex
+            + r"(?![a-zA-Z_0-9])(?:[^%]*?)?%\}"
+        )
+        set_regex = (
+            r"(?:^|[^\{])\{%\s*set\s*.*\s*=\s*.*"
+            + v_regex
+            + r"(?![a-zA-Z_0-9])(?:[^%]*?)?%\}"
+        )
         # plain req name, no version spec.  Look for end of line after name, or comment or selector
         requirement_regex = rf"^\s+\-\s+{v_req_regex}\s*(?:\s[\[#]|$)"
         if selectors_only:

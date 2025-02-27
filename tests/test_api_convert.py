@@ -180,6 +180,7 @@ def test_convert_platform_to_others(base_platform, package):
     on_win, reason="we create the pkg to be converted in *nix; don't run on win."
 )
 def test_convert_from_unix_to_win_creates_entry_points(testing_config, request):
+    testing_config.conda_pkg_format = 1
     recipe_dir = os.path.join(metadata_dir, "entry_points")
     # Recipe "entry_points" is used in other test -> add test-specific variant
     # (change build hash) to avoid clashes in package cache from other tests.
