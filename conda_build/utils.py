@@ -670,6 +670,17 @@ def copytree(src, dst, symlinks=False, ignore=None, dry_run=False):
     return dst_lst
 
 
+def is_subdir(child, parent, strict=True):
+    """
+    Check whether child is a (strict) subdirectory of parent.
+    """
+    parent = Path(parent).resolve()
+    child = Path(child).resolve()
+    if strict:
+        return parent in child.parents
+    return child == parent or parent in child.parents
+
+
 def merge_tree(
     src, dst, symlinks=False, timeout=900, lock=None, locking=True, clobber=False
 ):
@@ -680,9 +691,7 @@ def merge_tree(
     Like copytree(src, dst), but raises an error if merging the two trees
     would overwrite any files.
     """
-    dst = os.path.normpath(os.path.normcase(dst))
-    src = os.path.normpath(os.path.normcase(src))
-    assert not dst.startswith(src), (
+    assert not is_subdir(dst, src, strict=False), (
         "Can't merge/copy source into subdirectory of itself.  "
         "Please create separate spaces for these things.\n"
         f"  src: {src}\n"
@@ -1060,6 +1069,7 @@ def iter_entry_points(items):
 
 
 def create_entry_point(path, module, func, config):
+    """Creates an entry point for legacy noarch_python builds"""
     import_name = func.split(".")[0]
     pyscript = PY_TMPL % {"module": module, "func": func, "import_name": import_name}
     if on_win:
@@ -1083,6 +1093,7 @@ def create_entry_point(path, module, func, config):
 
 
 def create_entry_points(items, config):
+    """Creates entry points for legacy noarch_python builds"""
     if not items:
         return
     bin_dir = join(config.host_prefix, bin_dirname)
@@ -1130,7 +1141,7 @@ def convert_path_for_cygwin_or_msys2(exe, path):
 def get_skip_message(m: MetaData) -> str:
     return (
         f"Skipped: {m.name()} from {m.path} defines build/skip for this configuration "
-        f"({({k: m.config.variant[k] for k in m.get_used_vars()})})."
+        f"({ ({k: m.config.variant[k] for k in m.get_used_vars()}) })."
     )
 
 

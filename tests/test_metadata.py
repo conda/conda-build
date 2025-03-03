@@ -348,9 +348,9 @@ def test_hash_build_id(testing_metadata):
         if hdeps_tp == hdeps:
             found = True
             break
-    assert (
-        found
-    ), f"Did not find build that matched {hdeps} when testing each of DEFAULT_SUBDIRS"
+    assert found, (
+        f"Did not find build that matched {hdeps} when testing each of DEFAULT_SUBDIRS"
+    )
     assert testing_metadata.build_id() == hdeps + "_1"
 
 
@@ -708,3 +708,19 @@ python_min:
             )
         else:
             print("did not parse OK!")
+
+
+def test_extract_single_output_text_with_jinja_is_broken():
+    """
+    Given a recipe with three outputs 1, 2, and 3, where 2 is guarded by a falsy Jinja-if,
+    MetaData.extract_single_output_text() returns 2 when asked for 3.
+
+    This is a bug that should be fixed.
+    """
+    metadata = MetaData(os.path.join(metadata_dir, "_jinja_outputs"))
+    output = metadata.extract_single_output_text(
+        "output3", getattr(metadata, "type", None)
+    )
+    # We of course want to obtain output3, but the buggy behaviour gave us output2.
+    assert "output3" not in output
+    assert "output2" in output

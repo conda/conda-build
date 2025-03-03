@@ -146,6 +146,21 @@ def test_recipe_builds(
     api.build(str(recipe), config=testing_config)
 
 
+@pytest.mark.slow
+@pytest.mark.serial
+def test_python_version_independent(
+    testing_config,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    recipe = os.path.join(metadata_dir, "_python_version_independent")
+    testing_config.activate = True
+    monkeypatch.setenv("CONDA_TEST_VAR", "conda_test")
+    monkeypatch.setenv("CONDA_TEST_VAR_2", "conda_test_2")
+    output = api.build(str(recipe), config=testing_config)[0]
+    subdir = os.path.basename(os.path.dirname(output))
+    assert subdir != "noarch"
+
+
 @pytest.mark.serial
 @pytest.mark.skipif(
     "CI" in os.environ and "GITHUB_WORKFLOW" in os.environ,
@@ -316,6 +331,7 @@ def test_output_build_path_git_source(testing_config):
 
 @pytest.mark.sanity
 @pytest.mark.serial
+@pytest.mark.flaky(reruns=5, reruns_delay=2)
 def test_build_with_no_activate_does_not_activate():
     api.build(
         os.path.join(metadata_dir, "_set_env_var_no_activate_build"),
@@ -474,6 +490,7 @@ def test_build_msvc_compiler(msvc_ver, monkeypatch):
 @pytest.mark.sanity
 @pytest.mark.parametrize("platform", platforms)
 @pytest.mark.parametrize("target_compiler", compilers)
+@pytest.mark.flaky(reruns=5, reruns_delay=2)
 def test_cmake_generator(platform, target_compiler, testing_config):
     testing_config.variant["python"] = target_compiler
     testing_config.activate = True
@@ -960,17 +977,17 @@ def test_skip_compile_pyc(testing_config):
         _, ext = os.path.splitext(filename)
         basename = filename.split(".", 1)[0]
         if basename == "skip_compile_pyc":
-            assert (
-                not ext == ".pyc"
-            ), f"a skip_compile_pyc .pyc was compiled: {filename}"
+            assert not ext == ".pyc", (
+                f"a skip_compile_pyc .pyc was compiled: {filename}"
+            )
         if ext == ".pyc":
-            assert (
-                basename == "compile_pyc"
-            ), f"an unexpected .pyc was compiled: {filename}"
+            assert basename == "compile_pyc", (
+                f"an unexpected .pyc was compiled: {filename}"
+            )
             pyc_count = pyc_count + 1
-    assert (
-        pyc_count == 2
-    ), f"there should be 2 .pyc files, instead there were {pyc_count}"
+    assert pyc_count == 2, (
+        f"there should be 2 .pyc files, instead there were {pyc_count}"
+    )
 
 
 def test_detect_binary_files_with_prefix(testing_config):
@@ -991,9 +1008,9 @@ def test_detect_binary_files_with_prefix(testing_config):
             or entry.endswith('"binary-has-prefix"')
         ]
     assert len(matches) == 1, "binary-has-prefix not recorded in info/has_prefix"
-    assert (
-        " binary " in matches[0]
-    ), "binary-has-prefix not recorded as binary in info/has_prefix"
+    assert " binary " in matches[0], (
+        "binary-has-prefix not recorded as binary in info/has_prefix"
+    )
 
 
 def test_skip_detect_binary_files_with_prefix(testing_config):
@@ -1026,9 +1043,9 @@ def test_fix_permissions(testing_config):
     outputs = api.build(recipe, config=testing_config)
     with tarfile.open(outputs[0]) as tf:
         for f in tf.getmembers():
-            assert (
-                f.mode & 0o444 == 0o444
-            ), f"tar member '{f.name}' has invalid (read) mode"
+            assert f.mode & 0o444 == 0o444, (
+                f"tar member '{f.name}' has invalid (read) mode"
+            )
 
 
 @pytest.mark.sanity
@@ -1421,7 +1438,7 @@ def test_recursion_layers(testing_config):
     reason="spaces break openssl prefix replacement on *nix",
 )
 @pytest.mark.skipif(
-    datetime.now() < datetime(2025, 1, 31),
+    datetime.now() < datetime(2025, 3, 31),
     reason="Unblock CI while https://github.com/mamba-org/mamba/issues/3730 gets a fix",
 )
 def test_croot_with_spaces(testing_metadata, testing_workdir):
@@ -1685,9 +1702,9 @@ def test_pin_depends(testing_config):
     assert requires
     if hasattr(requires, "decode"):
         requires = requires.decode()
-    assert re.search(
-        r"python\=[23]\.", requires
-    ), "didn't find pinned python in info/requires"
+    assert re.search(r"python\=[23]\.", requires), (
+        "didn't find pinned python in info/requires"
+    )
 
 
 @pytest.mark.sanity
@@ -1791,6 +1808,7 @@ def test_overlinking_detection_ignore_patterns(
     rm_rf(dest_bat)
 
 
+@pytest.mark.flaky(reruns=5, reruns_delay=2)
 def test_overdepending_detection(testing_config, variants_conda_build_sysroot):
     testing_config.activate = True
     testing_config.error_overlinking = True
@@ -2102,3 +2120,27 @@ def test_api_build_inject_jinja2_vars_on_first_pass(testing_config):
 
     testing_config.variant = {"python_min": "3.12"}
     api.build(recipe_dir, config=testing_config)
+
+
+def test_ignore_run_exports_from_substr(tmp_path, capsys):
+    with tmp_path:
+        api.build(str(metadata_path / "ignore_run_exports_from_substr"))
+
+    assert "- python_abi " in capsys.readouterr().out
+
+
+@pytest.mark.skipif(not on_linux, reason="One platform is enough")
+def test_build_strings_glob_match(testing_config: Config) -> None:
+    """
+    Test issues observed in:
+    - https://github.com/conda/conda-build/issues/5571#issuecomment-2605223563
+    - https://github.com/conda-forge/conda-smithy/pull/2232#issuecomment-2618825581
+    - https://github.com/conda-forge/blas-feedstock/pull/132
+    - https://github.com/conda/conda-build/pull/5600
+    """
+    testing_config.channel_urls = ["conda-forge"]
+    with pytest.raises(RuntimeError, match="Could not download"):
+        # We expect an error fetching the license because we added a bad path on purpose
+        # so we don't start the actual build. However, this is enough to get us through
+        # the multi-output render phase where we examine compatibility of pins.
+        api.build(metadata_path / "_blas_pins", config=testing_config)

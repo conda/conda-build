@@ -20,7 +20,7 @@ import yaml
 from bs4 import UnicodeDammit
 from conda.base.context import locate_prefix_by_name
 from conda.gateways.disk.read import compute_sum
-from conda.models.match_spec import MatchSpec
+from conda.models.match_spec import GlobLowerStrMatch, MatchSpec
 from frozendict import deepfreeze
 
 from . import utils
@@ -493,7 +493,9 @@ def ensure_matching_hashes(output_metadata):
                     if (
                         dep.startswith(m.name() + " ")
                         and len(dep.split(" ")) == 3
-                        and dep.split(" ")[-1] != m.build_id()
+                        and not GlobLowerStrMatch(dep.split(" ")[-1]).match(
+                            GlobLowerStrMatch(m.build_id())
+                        )
                         and _variants_equal(m, om)
                     ):
                         problemos.append((m.name(), m.build_id(), dep, om.name()))
@@ -606,6 +608,7 @@ FIELDS = {
         "script": list,
         "noarch": str,
         "noarch_python": bool,
+        "python_version_independent": bool,
         "has_prefix_files": None,
         "binary_has_prefix_files": None,
         "ignore_prefix_files": None,
@@ -1466,9 +1469,9 @@ class MetaData:
 
         section_data = self.get_section(section)
         if isinstance(section_data, dict):
-            assert (
-                not index
-            ), f"Got non-zero index ({index}), but section {section} is not a list."
+            assert not index, (
+                f"Got non-zero index ({index}), but section {section} is not a list."
+            )
         elif isinstance(section_data, list):
             # The 'source' section can be written a list, in which case the name
             # is passed in with an index, e.g. get_value('source/0/git_url')
@@ -1483,9 +1486,9 @@ class MetaData:
                 section_data = {}
             else:
                 section_data = section_data[index]
-                assert isinstance(
-                    section_data, dict
-                ), f"Expected {section}/{index} to be a dict"
+                assert isinstance(section_data, dict), (
+                    f"Expected {section}/{index} to be a dict"
+                )
 
         value = section_data.get(key, default)
 
@@ -1853,6 +1856,12 @@ class MetaData:
             build_noarch = self.get_value("build/noarch")
             if build_noarch:
                 d["noarch"] = build_noarch
+        elif self.python_version_independent:
+            # This is required by CEP 20 (https://github.com/conda/ceps/blob/main/cep-0020.md)
+            # to make current mamba/micromamba compile the pure python files
+            # and for micromamba to move the files in site-packages to the correct dir.
+            # (i.e. we need A2 action to apply actions B1-B4 as mentioned in CEP 20)
+            d["noarch"] = "python"
         if self.is_app():
             d.update(self.app_meta())
         return d
@@ -2228,6 +2237,15 @@ class MetaData:
         if not outputs:
             outputs = [{"name": self.name()}]
 
+        if len(output_matches) != len(outputs):
+            # See https://github.com/conda/conda-build/issues/5571
+            utils.get_logger(__name__).warning(
+                "Number of parsed outputs does not match detected raw metadata blocks. "
+                "Identified output block may be wrong! "
+                "If you are using Jinja conditionals to include or exclude outputs, "
+                "consider using `skip: true  # [condition]` instead."
+            )
+
         try:
             if output_type:
                 output_tuples = [
@@ -2250,7 +2268,8 @@ class MetaData:
         except ValueError:
             if not self.path and self.meta.get("extra", {}).get("parent_recipe"):
                 utils.get_logger(__name__).warning(
-                    f"Didn't match any output in raw metadata.  Target value was: {output_name}"
+                    "Didn't match any output in raw metadata. Target value was: %s",
+                    output_name,
                 )
                 output = ""
             else:
@@ -2324,6 +2343,18 @@ class MetaData:
             else CondaPkgFormat.V1,
         )
         return new
+
+    @property
+    def python_version_independent(self) -> bool:
+        return (
+            self.get_value("build/python_version_independent")
+            or self.get_value("build/noarch") == "python"
+            or self.noarch_python
+        )
+
+    @python_version_independent.setter
+    def python_version_independent(self, value: bool) -> None:
+        self.meta.setdefault("build", {})["python_version_independent"] = bool(value)
 
     @property
     def noarch(self):
@@ -2482,6 +2513,11 @@ class MetaData:
             output_metadata.final = False
             output_metadata.noarch = output.get("noarch", False)
             output_metadata.noarch_python = output.get("noarch_python", False)
+            output_metadata.python_version_independent = (
+                output.get("python_version_independent")
+                or output_metadata.noarch == "python"
+                or output_metadata.noarch_python
+            )
             # primarily for tests - make sure that we keep the platform consistent (setting noarch
             #      would reset it)
             if (
