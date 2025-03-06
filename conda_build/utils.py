@@ -56,7 +56,7 @@ from conda.base.constants import (
     KNOWN_SUBDIRS,
 )
 from conda.base.context import context
-from conda.common.path import win_path_to_unix
+from conda.common.path import BIN_DIRECTORY, win_path_to_unix
 from conda.exceptions import CondaHTTPError
 from conda.gateways.connection.download import download
 from conda.gateways.disk.create import TemporaryDirectory
@@ -67,6 +67,7 @@ from conda.models.records import PackageRecord
 from conda.models.version import VersionOrder
 from conda.utils import unix_path_to_win
 
+from .deprecations import deprecated
 from .exceptions import BuildLockError
 
 if TYPE_CHECKING:
@@ -84,7 +85,12 @@ on_mac = sys.platform == "darwin"
 on_linux = sys.platform == "linux"
 
 codec = getpreferredencoding() or "utf-8"
-root_script_dir = os.path.join(context.root_prefix, "Scripts" if on_win else "bin")
+deprecated.constant(
+    "25.3",
+    "25.5",
+    "root_script_dir",
+    os.path.join(context.root_prefix, BIN_DIRECTORY),
+)
 mmap_MAP_PRIVATE = 0 if on_win else mmap.MAP_PRIVATE
 mmap_PROT_READ = 0 if on_win else mmap.PROT_READ
 mmap_PROT_WRITE = 0 if on_win else mmap.PROT_WRITE
@@ -2103,7 +2109,10 @@ def compute_content_hash(
 def write_bat_activation_text(file_handle, m):
     from .os_utils.external import find_executable
 
-    file_handle.write(f'call "{root_script_dir}\\..\\condabin\\conda_hook.bat"\n')
+    file_handle.write(f'call "{context.root_prefix}\\condabin\\conda_hook.bat"\n')
+    for key, value in context.conda_exe_vars_dict.items():
+        file_handle.write(f'set "{key}={value or ""}"\n')
+    file_handle.write("set CONDA_EXE\n")
     if m.is_cross:
         # HACK: we need both build and host envs "active" - i.e. on PATH,
         #     and with their activate.d scripts sourced. Conda only
@@ -2128,12 +2137,12 @@ def write_bat_activation_text(file_handle, m):
             open(history_file, "a").close()
 
         file_handle.write(
-            f'call "{root_script_dir}\\..\\condabin\\conda.bat" activate "{m.config.host_prefix}"\n'
+            f'call "{context.root_prefix}\\condabin\\conda.bat" activate "{m.config.host_prefix}"\n'
         )
 
     # Write build prefix activation AFTER host prefix, so that its executables come first
     file_handle.write(
-        f'call "{root_script_dir}\\..\\condabin\\conda.bat" activate --stack "{m.config.build_prefix}"\n'
+        f'call "{context.root_prefix}\\condabin\\conda.bat" activate --stack "{m.config.build_prefix}"\n'
     )
 
     ccache = find_executable("ccache", m.config.build_prefix, False)
