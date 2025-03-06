@@ -2112,7 +2112,6 @@ def write_bat_activation_text(file_handle, m):
     file_handle.write(f'call "{context.root_prefix}\\condabin\\conda_hook.bat"\n')
     for key, value in context.conda_exe_vars_dict.items():
         file_handle.write(f'set "{key}={value or ""}"\n')
-    file_handle.write("set CONDA_EXE\n")
     if m.is_cross:
         # HACK: we need both build and host envs "active" - i.e. on PATH,
         #     and with their activate.d scripts sourced. Conda only
