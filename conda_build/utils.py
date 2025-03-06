@@ -56,7 +56,7 @@ from conda.base.constants import (
     KNOWN_SUBDIRS,
 )
 from conda.base.context import context
-from conda.common.path import BIN_DIRECTORY, win_path_to_unix
+from conda.common.path import win_path_to_unix
 from conda.exceptions import CondaHTTPError
 from conda.gateways.connection.download import download
 from conda.gateways.disk.create import TemporaryDirectory
@@ -89,7 +89,7 @@ deprecated.constant(
     "25.3",
     "25.5",
     "root_script_dir",
-    os.path.join(context.root_prefix, BIN_DIRECTORY),
+    os.path.join(context.root_prefix, "Scripts" if on_win else "bin"),
 )
 mmap_MAP_PRIVATE = 0 if on_win else mmap.MAP_PRIVATE
 mmap_PROT_READ = 0 if on_win else mmap.PROT_READ
