@@ -29,12 +29,12 @@
 * @jaimergp
 * @jezdez
 * @kenodegard
-* @bernt-matthias
+* @bernt-matthias made their first contribution in https://github.com/conda/conda-build/pull/5627
 * @ForgottenProgramme
 * @beckermr
 * @travishathaway
-* @vyasr
-* @woutdenolf
+* @vyasr made their first contribution in https://github.com/conda/conda-build/pull/5575
+* @woutdenolf made their first contribution in https://github.com/conda/conda-build/pull/4977
 * @dependabot[bot]
 * @pre-commit-ci[bot]
 
