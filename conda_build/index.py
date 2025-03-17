@@ -11,7 +11,6 @@ from typing import TYPE_CHECKING
 from conda.base.context import context
 from conda.exceptions import CondaHTTPError
 from conda.utils import url_path
-from conda_index.index import update_index as _update_index
 
 from . import utils
 from .utils import (
@@ -20,6 +19,14 @@ from .utils import (
 
 if TYPE_CHECKING:
     from conda.models.channels import Channel
+
+try:
+    from conda_index.index import update_index as _update_index
+except ImportError:
+    raise ImportError(
+        "conda-build requires conda-index to be installed. Please install conda-index using conda."
+    )
+
 
 try:
     from conda.core.index import Index
