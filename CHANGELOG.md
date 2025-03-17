@@ -1,5 +1,45 @@
 [//]: # (current developments)
 
+## 25.3.0 (2025-03-17)
+
+### Enhancements
+
+* Added an option `build.python_version_independent` to recipes to support
+  building ABI3 for one CPython version and using the package in any
+  later version. (#5456)
+* Add `cdt_arch` and `cdt_name` as used vars when cdt jinja is used. (#5599)
+
+### Bug fixes
+
+* merge_tree: proper check for subdirectory
+* Perform build string pin compatibility checks with glob matching instead of strict string equality. (#5600)
+* Warn about parsed and raw output block mismatches. This can cause issues with custom build strings, among others. The recommendation is to avoid Jinja flow control to build the output list. Use `skip: true` as necessary. (#5571 via #5601)
+* Fixes transitive subpackage dependency resolution issue #3308. (#5603)
+* Limit `patchelf` to `<0.18`. (#5607)
+* Use the `CONDA_EXE` as defined in `context.conda_exe_vars_dict` instead of defaulting to the one in the `base` env. (#5637)
+
+### Other
+
+* Added the ``flaky`` mark for some OSX/Win tests that fail at random. (#5623)
+
+### Contributors
+
+* @conda-bot
+* @isuruf
+* @jaimergp
+* @jezdez
+* @kenodegard
+* @bernt-matthias
+* @ForgottenProgramme
+* @beckermr
+* @travishathaway
+* @vyasr
+* @woutdenolf
+* @dependabot[bot]
+* @pre-commit-ci[bot]
+
+
+
 ## 25.1.2 (2025-02-05)
 
 ### Enhancements
