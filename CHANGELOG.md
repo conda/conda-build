@@ -4,14 +4,12 @@
 
 ### Enhancements
 
-* Added an option `build.python_version_independent` to recipes to support
-  building ABI3 for one CPython version and using the package in any
-  later version. (#5456)
+* Add recipe option `build.python_version_independent` to support building ABI3 for one CPython version and using the package in any later version. (#5456)
 * Add `cdt_arch` and `cdt_name` as used vars when cdt jinja is used. (#5599)
 
 ### Bug fixes
 
-* merge_tree: proper check for subdirectory
+* Fix subdirectory check for `conda_build.utils.merge_tree`. (#4976 via #4977)
 * Perform build string pin compatibility checks with glob matching instead of strict string equality. (#5600)
 * Warn about parsed and raw output block mismatches. This can cause issues with custom build strings, among others. The recommendation is to avoid Jinja flow control to build the output list. Use `skip: true` as necessary. (#5571 via #5601)
 * Fixes transitive subpackage dependency resolution issue #3308. (#5603)
@@ -20,7 +18,7 @@
 
 ### Other
 
-* Added the ``flaky`` mark for some OSX/Win tests that fail at random. (#5623)
+* Add `flaky` marker to tests that fail randomly. (#5623)
 
 ### Contributors
 
