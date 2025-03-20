@@ -183,10 +183,10 @@ def get_env_dependencies(
             else:
                 raise
 
-    specs = [package_record_to_requirement(prec) for prec in precs]
+    precs_as_strict_specs = [package_record_to_requirement(prec) for prec in precs]
     return (
         utils.ensure_list(
-            (specs + subpackages + pass_through_deps + (extra_specs or []))
+            (precs_as_strict_specs + subpackages + pass_through_deps)
             or m.get_value(f"requirements/{env}", [])
         ),
         precs,
