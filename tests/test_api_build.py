@@ -2144,3 +2144,12 @@ def test_build_strings_glob_match(testing_config: Config) -> None:
         # so we don't start the actual build. However, this is enough to get us through
         # the multi-output render phase where we examine compatibility of pins.
         api.build(metadata_path / "_blas_pins", config=testing_config)
+
+
+# @pytest.mark.skipif(not on_linux, reason="needs compilers in cbc.yaml")
+def test_api_build_grpc_issue5632(tmp_path, testing_config):
+    testing_config.channel_urls = ["conda-forge"]
+    with tmp_path:
+        api.build(str(metadata_path / "grpc"), config=testing_config)
+
+    # assert "- python_abi " in capsys.readouterr().out
