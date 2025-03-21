@@ -2147,7 +2147,14 @@ def test_build_strings_glob_match(testing_config: Config) -> None:
 
 
 @pytest.mark.skipif(not on_linux, reason="needs __glibc virtual package")
-def test_api_build_grpc_issue5632(tmp_path, testing_config):
+def test_api_build_grpc_issue5645(tmp_path, testing_config):
     testing_config.channel_urls = ["conda-forge"]
     with tmp_path:
         api.build(str(metadata_path / "_grpc"), config=testing_config)
+
+
+@pytest.mark.skipif(not on_linux, reason="needs __glibc virtual package")
+def test_api_build_grpc_issue5644(tmp_path, testing_config):
+    testing_config.channel_urls = ["conda-forge"]
+    with tmp_path:
+        api.build(str(metadata_path / "_pytorch_cpu"), config=testing_config)
