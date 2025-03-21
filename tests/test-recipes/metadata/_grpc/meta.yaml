@@ -106,7 +106,7 @@ outputs:
         - {{ compiler('c') }}
         - {{ compiler('cxx') }}
       host:
-        - grpcio ={{ version }}=*_{{ PKG_BUILDNUM }}
+        - grpcio {{ version }}.* *_{{ PKG_BUILDNUM }}
         - python
         - cython
         - pip
@@ -114,7 +114,7 @@ outputs:
         - libabseil
         - libprotobuf
       run:
-        - grpcio ={{ version }}=*_{{ PKG_BUILDNUM }}
+        - grpcio {{ version }}.* *_{{ PKG_BUILDNUM }}
         - python
         - protobuf
         - setuptools

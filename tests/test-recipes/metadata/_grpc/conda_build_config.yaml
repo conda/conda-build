@@ -1,7 +1,7 @@
 c_ares:
 - '1'
 c_compiler:
-- gcc
+- conda-forge::gcc
 c_compiler_version:
 - '13'
 c_stdlib:
@@ -15,7 +15,7 @@ channel_sources:
 channel_targets:
 - conda-forge main
 cxx_compiler:
-- gxx
+- conda-forge::gxx
 cxx_compiler_version:
 - '13'
 docker_image:

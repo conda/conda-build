@@ -2150,4 +2150,4 @@ def test_build_strings_glob_match(testing_config: Config) -> None:
 def test_api_build_grpc_issue5632(tmp_path, testing_config):
     testing_config.channel_urls = ["conda-forge"]
     with tmp_path:
-        api.build(str(metadata_path / "grpc"), config=testing_config)
+        api.build(str(metadata_path / "_grpc"), config=testing_config)
