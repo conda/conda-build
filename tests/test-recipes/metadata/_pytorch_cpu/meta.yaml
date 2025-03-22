@@ -1,0 +1,346 @@
+# if you wish to build release candidate number X, append the version string with ".rcX"
+{% set version = "2.6.0" %}
+{% set build = 2 %}
+
+# Use a higher build number for the CUDA variant, to ensure that it's
+# preferred by conda's solver, and it's preferentially
+# installed where the platform supports it.
+{% if cuda_compiler_version != "None" %}
+{% set build = build + 200 %}
+{% endif %}
+
+{% if blas_impl == "mkl" %}
+{% set build = build + 100 %}
+{% endif %}
+
+# see .ci/docker/ci_commit_pins/triton.txt
+# pytorch and triton are released in tandem, see notes in their release process
+# https://github.com/pytorch/pytorch/blob/main/RELEASE.md#triton-dependency-for-the-release
+{% set triton = "3.2.0" %}
+
+# TODO Temporary pin, remove me
+{% set mkl = "<2025" %}
+
+package:
+  name: libtorch
+  version: {{ version }}
+
+# source:
+# {% if "rc" in version %}
+#   git_url: https://github.com/pytorch/pytorch.git
+#   git_rev: v{{ version.replace(".rc", "-rc") }}
+# {% else %}
+#   # The "pytorch-v" tarballs contain submodules; the "pytorch-" ones don't.
+#   url: https://github.com/pytorch/pytorch/releases/download/v{{ version }}/pytorch-v{{ version }}.tar.gz
+#   sha256: 3005690eb7b083c443a38c7657938af63902f524ad87a6c83f1aca38c77e3b57
+# {% endif %}
+
+build:
+  number: {{ build }}
+  # cuda 11.8 was dropped due to maintenance effort, see discussion in #177
+  skip: true  # [cuda_compiler_version == "11.8"]
+  # This logic allows two rc variants to be defined in the conda_build_config, but only one to actually be built.
+  # We want to be able to define two variants in the cbc so we can assign different labels to each in the upload channel
+  # (by zipping is_rc with channel_targets). This prevents rc builds being used unless specifically requested.
+{% if "rc" in version %}
+  skip: true  # [not is_rc]
+{% else %}
+  skip: true  # [is_rc]
+{% endif %}
+  string: cuda{{ cuda_compiler_version | replace('.', '') }}_{{ blas_impl }}_h{{ PKG_HASH }}_{{ build }}  # [cuda_compiler_version != "None"]
+  string: cpu_{{ blas_impl }}_h{{ PKG_HASH }}_{{ build }}                                                 # [cuda_compiler_version == "None"]
+  detect_binary_files_with_prefix: false
+  run_exports:
+    - {{ pin_subpackage('libtorch', max_pin='x.x') }}
+  ignore_run_exports_from:
+    - python *                               # [megabuild]
+    - numpy *                                # [megabuild]
+    - cross-python_{{ target_platform }}     # [megabuild and build_platform != target_platform]
+  ignore_run_exports:
+    - python *                               # [megabuild]
+    - numpy *                                # [megabuild]
+    - libmagma_sparse
+  script:
+    - echo "built it" > ${PREFIX}/pytorch_cpu_build.txt
+
+requirements:
+  # Keep this list synchronized (except for python*, numpy*) in outputs
+  # We use python to build libtorch as well because it is easier
+  build:
+    # When you change 3.12 here, change it in build.sh/bld.bat as well
+    - python 3.12                            # [megabuild and build_platform != target_platform]
+    - python                                 # [not megabuild and build_platform != target_platform]
+    - cross-python_{{ target_platform }}     # [build_platform != target_platform]
+    - numpy  *                               # [megabuild and build_platform != target_platform]
+    - numpy                                  # [not megabuild and build_platform != target_platform]
+    - {{ stdlib('c') }}
+    - {{ compiler('c') }}
+    - {{ compiler('cxx') }}
+    - {{ compiler('cuda') }}                 # [cuda_compiler_version != "None"]
+    - llvm-openmp               # [unix]
+    - intel-openmp {{ mkl }}    # [win]
+    - libuv                     # [win]
+    - cmake
+    - ninja
+    # Keep libprotobuf here so that a compatibile version
+    # of protobuf is installed between build and host
+    - libprotobuf
+    - protobuf
+    - make      # [linux]
+    - sccache   # [win]
+    - grep      # [unix]
+    - rsync     # [unix]
+  host:
+    # GPU requirements
+    - cudnn                           # [cuda_compiler_version != "None"]
+    - nccl                            # [cuda_compiler_version != "None" and linux]
+    - magma                           # [cuda_compiler_version != "None"]
+    - cuda-version {{ cuda_compiler_version }}  # [cuda_compiler_version != "None"]
+    - nvtx-c                          # [cuda_compiler_version != "None"]
+    {% if cuda_compiler_version != "None" %}
+    - cuda-driver-dev                 # [linux]
+    - cuda-cudart-dev
+    - cuda-cupti-dev
+    - cuda-nvrtc-dev
+    - cuda-nvtx-dev
+    - cuda-nvml-dev
+    - cuda-profiler-api
+    - cusparselt
+    - libcublas-dev
+    - libcudss-dev
+    - libcufile-dev  # [linux]
+    - libcufft-dev
+    - libcurand-dev
+    - libcusolver-dev
+    - libcusparse-dev
+    {% endif %}
+    # other requirements
+    - python 3.12  # [megabuild]
+    - python       # [not megabuild]
+    - numpy *      # [megabuild]
+    - numpy        # [not megabuild]
+    - pip
+    - setuptools
+    - pyyaml
+    - requests
+    - six
+    - mkl-devel {{ mkl }}   # [blas_impl == "mkl"]
+    - libcblas * *_mkl      # [blas_impl == "mkl"]
+    - libblas               # [blas_impl != "mkl"]
+    - libcblas              # [blas_impl != "mkl"]
+    - liblapack             # [blas_impl != "mkl"]
+    - llvm-openmp             # [unix]
+    - intel-openmp {{ mkl }}  # [win]
+    - libabseil
+    - libprotobuf
+    - sleef
+    - libuv
+    - pkg-config  # [unix]
+    - typing_extensions
+    - pybind11
+    - eigen
+    - zlib
+  run:
+    # GPU requirements without run_exports
+    - {{ pin_compatible('cudnn') }}     # [cuda_compiler_version != "None"]
+    - intel-openmp {{ mkl }}            # [win]
+    - libblas * *{{ blas_impl }}        # [blas_impl == "mkl"]
+  run_constrained:
+    # These constraints ensure conflict between pytorch and
+    # pytorch-cpu 1.1 which we built before conda-forge had GPU infrastructure
+    # built into place.
+    # https://github.com/conda-forge/pytorch-cpu-feedstock/issues/65
+    - pytorch-cpu =={{ version }}  # [cuda_compiler_version == "None"]
+    - pytorch-gpu ==99999999       # [cuda_compiler_version == "None"]
+    - pytorch-gpu =={{ version }}  # [cuda_compiler_version != "None"]
+    - pytorch-cpu ==99999999       # [cuda_compiler_version != "None"]
+    - pytorch {{ version }} cuda{{ cuda_compiler_version | replace('.', '') }}_{{ blas_impl }}_*_{{ build }}  # [cuda_compiler_version != "None"]
+    - pytorch {{ version }} cpu_{{ blas_impl }}_*_{{ build }}                                                 # [cuda_compiler_version == "None"]
+    # if using OpenBLAS, ensure that a version compatible with OpenMP is used
+    # otherwise, we get the following warnings:
+    # OpenBLAS Warning : Detect OpenMP Loop and this application may hang. Please rebuild the library with USE_OPENMP=1 option.
+    - openblas * openmp_*          # [unix and blas_impl != "mkl"]
+
+# these tests are for the libtorch output below, but due to
+# a particularity of conda-build, that output is defined in
+# the global build stage, including tests
+test:
+  commands:
+    - echo "it works!"
+
+outputs:
+  - name: libtorch
+  - name: pytorch
+    build:
+      script:
+        - echo "built it" > ${PREFIX}/pytorch_cpu_build.txt
+      string: cuda{{ cuda_compiler_version | replace('.', '') }}_{{ blas_impl }}_py{{ CONDA_PY }}_h{{ PKG_HASH }}_{{ build }}  # [cuda_compiler_version != "None"]
+      string: cpu_{{ blas_impl }}_py{{ CONDA_PY }}_h{{ PKG_HASH }}_{{ build }}                                                 # [cuda_compiler_version == "None"]
+      detect_binary_files_with_prefix: false
+      run_exports:
+        - {{ pin_subpackage('pytorch', max_pin='x.x') }}
+        - {{ pin_subpackage('libtorch', max_pin='x.x') }}
+      ignore_run_exports:
+        - libmagma_sparse
+    requirements:
+      build:
+        - python
+        - cross-python_{{ target_platform }}     # [build_platform != target_platform]
+        - numpy                                  # [build_platform != target_platform]
+        - {{ stdlib('c') }}
+        - {{ compiler('c') }}
+        - {{ compiler('cxx') }}
+        - {{ compiler('cuda') }}                 # [cuda_compiler_version != "None"]
+        - llvm-openmp             # [unix]
+        - intel-openmp {{ mkl }}  # [win]
+        - cmake
+        - ninja
+        # Keep libprotobuf here so that a compatibile version
+        # of protobuf is installed between build and host
+        - libprotobuf
+        - protobuf
+        - make      # [linux]
+        - sccache   # [win]
+      host:
+        - {{ pin_subpackage('libtorch', exact=True) }}
+        # GPU requirements
+        - cudnn                           # [cuda_compiler_version != "None"]
+        - nccl                            # [cuda_compiler_version != "None" and linux]
+        - cuda-version {{ cuda_compiler_version }}  # [cuda_compiler_version != "None"]
+        - nvtx-c                          # [cuda_compiler_version != "None"]
+        - magma                           # [cuda_compiler_version != "None"]
+        {% if cuda_compiler_version != "None" %}
+        - cuda-driver-dev                 # [linux]
+        - cuda-cudart-dev
+        - cuda-cupti-dev
+        - cuda-nvrtc-dev
+        - cuda-nvtx-dev
+        - cuda-nvml-dev
+        - cuda-profiler-api
+        - cusparselt
+        - libcublas-dev
+        - libcudss-dev
+        - libcufile-dev  # [linux]
+        - libcufft-dev
+        - libcurand-dev
+        - libcusolver-dev
+        - libcusparse-dev
+        {% endif %}
+        # other requirements
+        - python
+        - numpy
+        - pip
+        - setuptools
+        - pyyaml
+        - requests
+        - six
+        - mkl-devel {{ mkl }}   # [blas_impl == "mkl"]
+        - libcblas * *_mkl      # [blas_impl == "mkl"]
+        - libcblas              # [blas_impl != "mkl"]
+        - liblapack             # [blas_impl != "mkl"]
+        - llvm-openmp             # [unix]
+        - intel-openmp {{ mkl }}  # [win]
+        - libabseil
+        - libprotobuf
+        - pybind11
+        - eigen
+        - sleef
+        - libuv
+        - pkg-config  # [unix]
+        - typing_extensions
+        - zlib
+      run:
+        - {{ pin_subpackage('libtorch', exact=True) }}  # [megabuild]
+        # for non-megabuild, allow libtorch from any python version
+        - libtorch {{ version }}.* *_{{ build }}        # [not megabuild]
+        - llvm-openmp                       # [unix]
+        - intel-openmp {{ mkl }}            # [win]
+        - libblas * *{{ blas_impl }}        # [blas_impl == "mkl"]
+        - nomkl                             # [blas_impl != "mkl"]
+        # GPU requirements without run_exports
+        - {{ pin_compatible('cudnn') }}     # [cuda_compiler_version != "None"]
+        - triton {{ triton }}               # [cuda_compiler_version != "None" and not win]
+        # avoid that people without GPUs needlessly download ~0.5-1GB
+        - __cuda                            # [cuda_compiler_version != "None"]
+        - python
+        # other requirements, see https://github.com/pytorch/pytorch/blame/main/requirements.txt
+        - filelock
+        - fsspec
+        - jinja2
+        - networkx
+        - optree >=0.13.0
+        - pybind11
+        - setuptools
+        # sympy 1.13.2 was reported to result in test failures on Windows and mac
+        # https://github.com/pytorch/pytorch/pull/133235
+        - sympy >=1.13.1,!=1.13.2
+        - typing_extensions >=4.10.0
+      run_constrained:
+        # These constraints ensure conflict between pytorch and
+        # pytorch-cpu 1.1 which we built before conda-forge had GPU infrastructure
+        # built into place.
+        # https://github.com/conda-forge/pytorch-cpu-feedstock/issues/65
+        - pytorch-cpu =={{ version }}  # [cuda_compiler_version == "None"]
+        - pytorch-gpu ==99999999       # [cuda_compiler_version == "None"]
+        - pytorch-gpu =={{ version }}  # [cuda_compiler_version != "None"]
+        - pytorch-cpu ==99999999       # [cuda_compiler_version != "None"]
+
+    test:
+      commands:
+        - echo "it works!"
+
+  # 2021/08/01, hmaarrfk
+  # While this seems like a roundabout way of defining the package name
+  # It helps the linter avoid errors on a package not having tests.
+  {% set pytorch_cpu_gpu = "pytorch-cpu" %}   # [cuda_compiler_version == "None"]
+  {% set pytorch_cpu_gpu = "pytorch-gpu" %}   # [cuda_compiler_version != "None"]
+  - name: {{ pytorch_cpu_gpu }}
+    build:
+      script:
+        - echo "built it" > ${PREFIX}/pytorch_cpu_build.txt
+      string: cuda{{ cuda_compiler_version | replace('.', '') }}_{{ blas_impl }}_h{{ PKG_HASH }}_{{ build }}                  # [megabuild and cuda_compiler_version != "None"]
+      string: cpu_{{ blas_impl }}_h{{ PKG_HASH }}_{{ build }}                                                                 # [megabuild and cuda_compiler_version == "None"]
+      string: cuda{{ cuda_compiler_version | replace('.', '') }}_{{ blas_impl }}py{{ CONDA_PY }}_h{{ PKG_HASH }}_{{ build }}  # [not megabuild and cuda_compiler_version != "None"]
+      string: cpu_{{ blas_impl }}_py{{ CONDA_PY }}_h{{ PKG_HASH }}_{{ build }}                                                # [not megabuild and cuda_compiler_version == "None"]
+      detect_binary_files_with_prefix: false
+      # weigh down cpu implementation and give cuda preference
+      track_features:
+        - pytorch-cpu                                      # [cuda_compiler_version == "None"]
+    requirements:
+      run:
+        - pytorch {{ version }}=cuda*_{{ blas_impl }}*{{ build }}   # [megabuild and cuda_compiler_version != "None"]
+        - pytorch {{ version }}=cpu_{{ blas_impl }}*{{ build }}     # [megabuild and cuda_compiler_version == "None"]
+        - {{ pin_subpackage("pytorch", exact=True) }}               # [not megabuild]
+    test:
+      commands:
+        - echo "it works!"
+
+about:
+  home: https://pytorch.org/
+  dev_url: https://github.com/pytorch/pytorch
+  license: BSD-3-Clause
+  license_family: BSD
+  # license_file:
+  #   - LICENSE
+  #   - NOTICE
+  #   - third_party/CMake/Copyright.txt
+  summary: PyTorch is an optimized tensor library for deep learning using GPUs and CPUs.
+  description: |
+    PyTorch is a Python package that provides two high-level features:
+      - Tensor computation (like NumPy) with strong GPU acceleration
+      - Deep neural networks built on a tape-based autograd system
+    You can reuse your favorite Python packages such as NumPy, SciPy, and Cython to extend PyTorch when needed.
+  doc_url: https://pytorch.org/docs/
+
+extra:
+  recipe-maintainers:
+    - baszalmstra
+    - benjaminrwilson
+    - beckermr
+    - h-vetinari
+    - hmaarrfk
+    - jeongseok-meta
+    - mgorny
+    - sodre
+    - Tobias-Fischer
+  feedstock-name: pytorch-cpu
