@@ -25,22 +25,20 @@ package:
   name: libtorch
   version: {{ version }}
 
-source:
-{% if "rc" in version %}
-  git_url: https://github.com/pytorch/pytorch.git
-  git_rev: v{{ version.replace(".rc", "-rc") }}
-{% else %}
-  # The "pytorch-v" tarballs contain submodules; the "pytorch-" ones don't.
-  url: https://github.com/pytorch/pytorch/releases/download/v{{ version }}/pytorch-v{{ version }}.tar.gz
-  sha256: 3005690eb7b083c443a38c7657938af63902f524ad87a6c83f1aca38c77e3b57
-{% endif %}
+# source:
+# {% if "rc" in version %}
+#   git_url: https://github.com/pytorch/pytorch.git
+#   git_rev: v{{ version.replace(".rc", "-rc") }}
+# {% else %}
+#   # The "pytorch-v" tarballs contain submodules; the "pytorch-" ones don't.
+#   url: https://github.com/pytorch/pytorch/releases/download/v{{ version }}/pytorch-v{{ version }}.tar.gz
+#   sha256: 3005690eb7b083c443a38c7657938af63902f524ad87a6c83f1aca38c77e3b57
+# {% endif %}
 
 build:
   number: {{ build }}
   # cuda 11.8 was dropped due to maintenance effort, see discussion in #177
   skip: true  # [cuda_compiler_version == "11.8"]
-  # debug
-  skip: true  # [not (osx and py==312)]
   # This logic allows two rc variants to be defined in the conda_build_config, but only one to actually be built.
   # We want to be able to define two variants in the cbc so we can assign different labels to each in the upload channel
   # (by zipping is_rc with channel_targets). This prevents rc builds being used unless specifically requested.
@@ -322,10 +320,10 @@ about:
   dev_url: https://github.com/pytorch/pytorch
   license: BSD-3-Clause
   license_family: BSD
-  license_file:
-    - LICENSE
-    - NOTICE
-    - third_party/CMake/Copyright.txt
+  # license_file:
+  #   - LICENSE
+  #   - NOTICE
+  #   - third_party/CMake/Copyright.txt
   summary: PyTorch is an optimized tensor library for deep learning using GPUs and CPUs.
   description: |
     PyTorch is a Python package that provides two high-level features:
