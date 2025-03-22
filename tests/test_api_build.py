@@ -2157,7 +2157,9 @@ def test_api_build_grpc_issue5645(tmp_path, testing_config):
         api.build(str(metadata_path / "_grpc"), config=testing_config)
 
 
-@pytest.mark.skipif(not on_mac, reason="needs to cross-compile from osx-64 to osx-arm64")
+@pytest.mark.skipif(
+    not on_mac, reason="needs to cross-compile from osx-64 to osx-arm64"
+)
 def test_api_build_pytorch_cpu_issue5644(tmp_path, testing_config):
     # this test has to cross-compile from osx-64 to osx-arm64
     try:
