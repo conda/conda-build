@@ -50,7 +50,7 @@ from .variants import (
 if TYPE_CHECKING:
     import os
     from collections.abc import Iterable, Iterator
-    from typing import Any, Dict, List
+    from typing import Any
 
     from .config import Config
 
@@ -606,10 +606,11 @@ def _simplify_to_exact_constraints(metadata):
     metadata.meta["requirements"] = requirements
 
 
-def _strip_variant(variant: Dict, used_vars: List[str]) -> Dict:
+def _strip_variant(variant: dict, used_vars: list[str]) -> dict:
     return {k: v for k, v in variant.items() if k in used_vars}
 
-def _variants_match(first: Dict, second: Dict) -> bool:
+
+def _variants_match(first: dict, second: dict) -> bool:
     extend_keys = first.get("extend_keys", set()) | second.get("extend_keys", set())
     for k, first_val in first.items():
         if k in extend_keys or k == "extend_keys":
@@ -684,8 +685,12 @@ def finalize_metadata(
             for (name, _), (_, other_meta) in m.other_outputs.items():
                 if name == m.name():
                     continue
-                if not _variants_match(_strip_variant(m.config.variant, m.get_used_vars()),
-                        _strip_variant(other_meta.config.variant, other_meta.get_used_vars())):
+                if not _variants_match(
+                    _strip_variant(m.config.variant, m.get_used_vars()),
+                    _strip_variant(
+                        other_meta.config.variant, other_meta.get_used_vars()
+                    ),
+                ):
                     continue
                 other_meta_reqs = other_meta.meta.get("requirements", {}).get("run", [])
                 reqs[name] = set(other_meta_reqs)
