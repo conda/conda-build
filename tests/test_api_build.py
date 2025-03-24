@@ -2179,3 +2179,15 @@ def test_api_build_pytorch_cpu_issue5644(tmp_path, testing_config):
             os.environ["CONDA_SUBDIR"] = old_subdir
         else:
             del os.environ["CONDA_SUBDIR"]
+
+
+def test_build_script_permissions(testing_config):
+    recipe = os.path.join(metadata_dir, "_noarch_python")
+    metadata = api.render(
+        recipe, config=testing_config, dirty=True, remove_work_dir=False
+    )[0][0]
+    api.build(metadata, notest=True)
+    build_script = os.path.join(metadata.config.work_dir, "conda_build.sh")
+    assert (os.stat(build_script).st_mode & 0o777) == 0o700
+    env_script = os.path.join(metadata.config.work_dir, "build_env_setup.sh")
+    assert (os.stat(env_script).st_mode & 0o777) == 0o600
