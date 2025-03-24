@@ -2144,3 +2144,34 @@ def test_build_strings_glob_match(testing_config: Config) -> None:
         # so we don't start the actual build. However, this is enough to get us through
         # the multi-output render phase where we examine compatibility of pins.
         api.build(metadata_path / "_blas_pins", config=testing_config)
+
+
+@pytest.mark.skipif(not on_linux, reason="needs __glibc virtual package")
+def test_api_build_grpc_issue5645(tmp_path, testing_config):
+    testing_config.channel_urls = ["conda-forge"]
+    with tmp_path:
+        api.build(str(metadata_path / "_grpc"), config=testing_config)
+
+
+@pytest.mark.skipif(
+    not on_mac, reason="needs to cross-compile from osx-64 to osx-arm64"
+)
+def test_api_build_pytorch_cpu_issue5644(tmp_path, testing_config):
+    # this test has to cross-compile from osx-64 to osx-arm64
+    try:
+        if "CONDA_SUBDIR" in os.environ:
+            old_subdir = os.environ["CONDA_SUBDIR"]
+            has_old_subdir = True
+        else:
+            has_old_subdir = False
+            old_subdir = None
+        os.environ["CONDA_SUBDIR"] = "osx-64"
+
+        testing_config.channel_urls = ["conda-forge"]
+        with tmp_path:
+            api.build(str(metadata_path / "_pytorch_cpu"), config=testing_config)
+    finally:
+        if has_old_subdir:
+            os.environ["CONDA_SUBDIR"] = old_subdir
+        else:
+            del os.environ["CONDA_SUBDIR"]
