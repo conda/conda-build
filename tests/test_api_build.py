@@ -2148,6 +2148,8 @@ def test_build_strings_glob_match(testing_config: Config) -> None:
 
 @pytest.mark.skipif(not on_linux, reason="needs __glibc virtual package")
 def test_api_build_grpc_issue5645(tmp_path, testing_config):
+    if Version(conda_version) < Version("25.1.0"):
+        pytest.skip("needs conda 25.1.0")
     testing_config.channel_urls = ["conda-forge"]
     with tmp_path:
         api.build(str(metadata_path / "_grpc"), config=testing_config)
