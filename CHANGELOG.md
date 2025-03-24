@@ -31,9 +31,10 @@
 * Fix subdirectory check for `conda_build.utils.merge_tree`. (#4976 via #4977)
 * Perform build string pin compatibility checks with glob matching instead of strict string equality. (#5600)
 * Warn about parsed and raw output block mismatches. This can cause issues with custom build strings, among others. The recommendation is to avoid Jinja flow control to build the output list. Use `skip: true` as necessary. (#5571 via #5601)
-* Fixes transitive subpackage dependency resolution issue #3308. (#5603)
+* Fix transitive subpackage dependency resolution issue #3308. (#5603)
 * Limit `patchelf` to `<0.18`. (#5607)
 * Use the `CONDA_EXE` as defined in `context.conda_exe_vars_dict` instead of defaulting to the one in the `base` env. (#5637)
+* Fix LIEF>=0.15 compatibility. (#5626 via #5627)
 
 ### Other
 
