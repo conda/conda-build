@@ -186,7 +186,7 @@ def get_env_dependencies(
     specs = [package_record_to_requirement(prec) for prec in precs]
     return (
         utils.ensure_list(
-            (specs + subpackages + pass_through_deps + (extra_specs or []))
+            (specs + subpackages + pass_through_deps)
             or m.get_value(f"requirements/{env}", [])
         ),
         precs,
@@ -605,6 +605,20 @@ def _simplify_to_exact_constraints(metadata):
     metadata.meta["requirements"] = requirements
 
 
+def _strip_variant(variant: Dict, used_vars: List[str]) -> Dict:
+    return {k: v for k, v in variant.items() if k in used_vars}
+
+def _variants_match(first: Dict, second: Dict) -> bool:
+    extend_keys = first.get("extend_keys", set()) | second.get("extend_keys", set())
+    for k, first_val in first.items():
+        if k in extend_keys or k == "extend_keys":
+            continue
+        if second_val := second.get(k):
+            if first_val != second_val:
+                return False
+    return True
+
+
 def finalize_metadata(
     m: MetaData,
     parent_metadata=None,
@@ -664,9 +678,13 @@ def finalize_metadata(
         if output and output_excludes and not is_top_level and host_requirement_names:
             reqs = {}
 
+            other_output_names = [name for (name, _) in m.other_outputs]
             # we first make a mapping of output -> requirements
             for (name, _), (_, other_meta) in m.other_outputs.items():
                 if name == m.name():
+                    continue
+                if not _variants_match(_strip_variant(m.config.variant, m.get_used_vars()),
+                        _strip_variant(other_meta.config.variant, other_meta.get_used_vars())):
                     continue
                 other_meta_reqs = other_meta.meta.get("requirements", {}).get("run", [])
                 reqs[name] = set(other_meta_reqs)
@@ -682,9 +700,11 @@ def finalize_metadata(
                 name = to_process.pop()
                 if name == m.name():
                     continue
+                if name not in reqs:
+                    continue
                 for req in reqs[name]:
                     req_name = req.split(" ")[0]
-                    if req_name not in reqs:
+                    if req_name not in other_output_names:
                         extra_specs.append(req)
                     elif req_name not in seen:
                         to_process.add(req_name)
