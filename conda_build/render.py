@@ -132,6 +132,7 @@ def get_env_dependencies(
     merge_build_host_on_same_platform=True,
     extra_specs=None,
 ):
+    extra_specs = extra_specs or []
     specs = m.get_depends_top_and_out(env)
     # replace x.x with our variant's numpy version, or else conda tries to literally go get x.x
     if env in ("build", "host"):
