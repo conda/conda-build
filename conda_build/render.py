@@ -50,7 +50,7 @@ from .variants import (
 if TYPE_CHECKING:
     import os
     from collections.abc import Iterable, Iterator
-    from typing import Any
+    from typing import Any, Dict, List
 
     from .config import Config
 
