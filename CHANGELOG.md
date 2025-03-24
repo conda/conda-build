@@ -1,5 +1,24 @@
 [//]: # (current developments)
 
+## 25.3.1 (2025-03-24)
+
+### Enhancements
+
+* Add regression tests for issues #5644 and #5645. (#5648)
+
+### Bug fixes
+
+* Revert #5603 to avoid rendering regressions in multi-output recipes. (#5644, #5645 via #5647)
+* Use more adequate permissions for temporary build scripts written to `$SRC_DIR`.
+
+### Contributors
+
+* @jaimergp
+* @kenodegard
+* @beckermr
+
+
+
 ## 25.3.0 (2025-03-17)
 
 ### Enhancements
