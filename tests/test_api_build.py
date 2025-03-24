@@ -137,10 +137,6 @@ def test_recipe_builds(
         pytest.xfail("Issue related to #3754 on conda-build.")
     elif recipe.name == "unicode_all_over" and context.solver == "libmamba":
         pytest.xfail("Unicode package names not supported in libmamba.")
-    elif recipe.name == "transitive_subpackage":
-        pytest.xfail(
-            "Added as part of #5603, reverted in #5647. Fix needs to be reworked."
-        )
 
     # These variables are defined solely for testing purposes,
     # so they can be checked within build scripts
