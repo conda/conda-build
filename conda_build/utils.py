@@ -11,6 +11,7 @@ import logging.config
 import mmap
 import os
 import re
+import secrets
 import shutil
 import stat
 import subprocess
@@ -2260,3 +2261,39 @@ def is_conda_pkg(pkg_path: str) -> bool:
 
 def package_record_to_requirement(prec: PackageRecord) -> str:
     return f"{prec.name} {prec.version} {prec.build}"
+
+
+@contextlib.contextmanager
+def set_umask(mask: int = 0) -> Iterator[None]:
+    current = os.umask(mask)
+    yield
+    os.umask(current)
+
+
+@contextlib.contextmanager
+def create_file_with_permissions(path: str, permissions: int):
+    """
+    Opens a new file for writing, with permissions set from creation time.
+    This is achieved by creating a temporary directory in the same parent
+    directory, opening a new file inside with the right permissions,
+    yielding the descriptor so the caller can add the necessary contents,
+    and then moving the temporary file to the target location, with preserved
+    permissions.
+
+    The umask is temporarily reset during this process, and then restored.
+    This is needed so permissions can be applied as intended. Without a zeroed
+    umask, the system umask might filter the passed value to a different one.
+    For example, given a system umask=022, passing 666 will result in a file
+    with permissions 644.
+    """
+
+    def opener(path, flags):
+        return os.open(path, flags, mode=permissions)
+
+    dirname = os.path.dirname(path)
+    with set_umask(), TemporaryDirectory(dir=dirname) as tmpdir:
+        tmp_path = os.path.join(tmpdir, secrets.token_urlsafe(64))
+        with open(tmp_path, "w", opener=opener) as fh:
+            yield fh
+
+        shutil.move(tmp_path, path)
