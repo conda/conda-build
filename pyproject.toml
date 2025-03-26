@@ -25,7 +25,8 @@ dependencies = [
   "beautifulsoup4",
   "chardet",
   "conda >=23.7.0",
-  "conda-index >=0.4.0",
+  # Disabled due to conda-index not being available on PyPI
+  # "conda-index >=0.4.0",
   "conda-package-handling >=2.2.0",
   "filelock",
   "frozendict >=2.4.2",
@@ -131,6 +132,8 @@ filterwarnings = [
   # ignore conda-package-streaming error
   "ignore:conda.core.index._supplement_index_with_system is pending deprecation:PendingDeprecationWarning:conda",
   "ignore:conda.core.index._make_virtual_package is pending deprecation:PendingDeprecationWarning:conda",
+  # ignore conda error
+  "ignore:conda.plan is pending deprecation:PendingDeprecationWarning:conda",
   # ignore tarfile
   "ignore:Python 3.14 will, by default, filter extracted tar archives:DeprecationWarning",
 ]

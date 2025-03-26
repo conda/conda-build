@@ -210,6 +210,20 @@ the repository. Using path allows you to build packages with
 unstaged and uncommitted changes in the working directory.
 git_url can build only up to the latest commit.
 
+Hashes
+------
+
+Conda-build can check the integrity of the provided sources
+using different hashing algorithms:
+
+- ``md5``, ``sha1`` and ``sha256`` will check the provided
+  hexdigest against the downloaded archive, prior to extraction.
+- ``content_md5``, ``content_sha1`` and ``content_sha256`` will
+  check the provided hexdigest against the contents of the
+  (extracted) directory. ``content_hash_skip`` can take a list of
+  relative files and directories to be ignored during the check
+  (e.g. useful to ignore the ``.git/`` directory when ``git_url``
+  is used to clone a repository).
 
 Patches
 -------
@@ -686,6 +700,61 @@ conda >=4.3 to install.
    ``noarch`` packages are built with the directives which evaluate to ``True`` in the platform
    it was built, which probably will result in incorrect/incomplete installation in other
    platforms.
+
+Python version independent packages
+-----------------------------------
+
+Allows you to specify "no python version" when building a Python
+package thus making it compatible with a user specified range of Python
+versions. Main use-case for this is to create ABI3 packages as specified
+in [CEP 20](https://github.com/conda/ceps/blob/main/cep-0020.md).
+
+ABI3 packages support building a native Python extension using a
+specific Python version and running it against any later Python version.
+ABI3 or stable ABI is supported by only CPython - the reference Python
+implementation with the Global Interpreter Lock (GIL) enabled. Therefore
+package builders who wishes to support the free-threaded python build
+or another implementation like PyPy still has to build a conda package
+specific to that ABI as they don't support ABI3. There are other
+proposed standards like HPy and ABI4 (work-in-progress) that tries
+to address all python implementations.
+
+conda-build can indicate that a conda package works for any python version
+by adding
+
+.. code-block:: yaml
+
+   build:
+     python_version_independent: true
+
+A package builder also has to indicate which standard is supported by
+the package, i.e., for ABI3,
+
+.. code-block:: yaml
+
+   requirements:
+     host:
+       - python-abi3
+       - python
+     run:
+       - python
+
+
+In order to support ABI3 with Python 3.9 and onwards and
+free-threaded builds you can do
+
+.. code-block:: yaml
+   build:
+     python_version_independent: true   # [py == 39]
+     skip: true                         # [py > 39 and not python.endswith("t")]
+
+   requirements:
+     host:
+       - python-abi3                    # [py == 39]
+       - python
+     run:
+       - python
+
 
 Include build recipe
 --------------------

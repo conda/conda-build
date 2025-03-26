@@ -1,5 +1,106 @@
 [//]: # (current developments)
 
+## 25.3.0 (2025-03-17)
+
+### Enhancements
+
+* Add recipe option `build.python_version_independent` to support building ABI3 for one CPython version and using the package in any later version. (#5456)
+* Add `cdt_arch` and `cdt_name` as used vars when cdt jinja is used. (#5599)
+
+### Bug fixes
+
+* Fix subdirectory check for `conda_build.utils.merge_tree`. (#4976 via #4977)
+* Perform build string pin compatibility checks with glob matching instead of strict string equality. (#5600)
+* Warn about parsed and raw output block mismatches. This can cause issues with custom build strings, among others. The recommendation is to avoid Jinja flow control to build the output list. Use `skip: true` as necessary. (#5571 via #5601)
+* Fixes transitive subpackage dependency resolution issue #3308. (#5603)
+* Limit `patchelf` to `<0.18`. (#5607)
+* Use the `CONDA_EXE` as defined in `context.conda_exe_vars_dict` instead of defaulting to the one in the `base` env. (#5637)
+
+### Other
+
+* Add `flaky` marker to tests that fail randomly. (#5623)
+
+### Contributors
+
+* @conda-bot
+* @isuruf
+* @jaimergp
+* @jezdez
+* @kenodegard
+* @bernt-matthias made their first contribution in https://github.com/conda/conda-build/pull/5627
+* @ForgottenProgramme
+* @beckermr
+* @travishathaway
+* @vyasr made their first contribution in https://github.com/conda/conda-build/pull/5575
+* @woutdenolf made their first contribution in https://github.com/conda/conda-build/pull/4977
+* @dependabot[bot]
+* @pre-commit-ci[bot]
+
+
+
+## 25.1.2 (2025-02-05)
+
+### Enhancements
+
+* Fix LIEF>=0.15 compatibility. (#5594 via #5595)
+
+### Contributors
+
+* @tkelman
+
+
+
+## 25.1.1 (2025-01-14)
+
+### Deprecations
+
+* Remove `conda_build.exceptions.UnableToParseMissingJinja2`. (#5587)
+* Remove `conda_build.index.get_build_index(locking)`. (#5587)
+* Remove `conda_build.index.get_build_index(timeout)`. (#5587)
+
+### Contributors
+
+* @kenodegard
+
+
+
+## 25.1.0 (2025-01-13)
+
+### Enhancements
+
+* Add SHA224, SHA384 and SHA512 support for validating downloaded sources. (#4793)
+* Add new hashing methods (`content_sha256`, `content_sha384`, `content_sha512`) to calculate the
+  checksum of the extracted contents of the downloaded source artifacts. (#4821 via #5277)
+* Make `.conda` the new default package format. `.tar.bz2` files can still be generated with `--package-format=1` and/or `conda_build.pkg_format: 1` in your `.condarc` file. (#5183 via #5527)
+* Add compatibility for LIEF=0.15. (#5564 via #5565)
+
+### Bug fixes
+
+* Verify all source hashes when multiple are defined (not just the first one). (#4793)
+* Fix a bug where some ``CondaBuildUserError`` exceptions that were formally ``SystemExit`` exceptions
+  were not being caught properly. (#5538)
+* Fix a bug where bad match specs from intermediate parsing results would cause parsing to fail. (#5555)
+* Fix `KeyError` when an inconsistent `build.pkg_type` value is specified in `meta.yaml`. (#5560)
+
+### Other
+
+* Demote logging message about glob finding no matches from error to warning (#5472)
+
+### Contributors
+
+* @conda-bot
+* @carterbox
+* @jaimergp
+* @ForgottenProgramme
+* @beckermr
+* @tttc3
+* @tkelman made their first contribution in https://github.com/conda/conda-build/pull/5565
+* @ypradat made their first contribution in https://github.com/conda/conda-build/pull/5560
+* @dependabot[bot]
+* @pre-commit-ci[bot]
+
+
+
 ## 24.11.2 (2024-11-26)
 
 ### Bug fixes

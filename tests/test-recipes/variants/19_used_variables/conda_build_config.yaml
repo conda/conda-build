@@ -11,6 +11,10 @@ pthread_stubs:
 some_package:
   - mooo
   - llama
+cdt_name:
+  - cos6
+cdt_arch:
+  - baz
 # not directly used, but is "used" by virtue of being zipped
 zipped_var:
   - chicken

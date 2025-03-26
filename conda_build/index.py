@@ -11,16 +11,22 @@ from typing import TYPE_CHECKING
 from conda.base.context import context
 from conda.exceptions import CondaHTTPError
 from conda.utils import url_path
-from conda_index.index import update_index as _update_index
 
 from . import utils
-from .deprecations import deprecated
 from .utils import (
     get_logger,
 )
 
 if TYPE_CHECKING:
     from conda.models.channels import Channel
+
+try:
+    from conda_index.index import update_index as _update_index
+except ImportError:
+    raise ImportError(
+        "conda-build requires conda-index to be installed. Please install conda-index using conda."
+    )
+
 
 try:
     from conda.core.index import Index
@@ -45,8 +51,6 @@ cached_channels = []
 # os.environ['CONDA_ADD_ANACONDA_TOKEN'] = "false"
 
 
-@deprecated.argument("24.11", "25.1", "locking")
-@deprecated.argument("24.11", "25.1", "timeout")
 def get_build_index(
     subdir,
     bldpkgs_dir,
