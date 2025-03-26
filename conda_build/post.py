@@ -61,7 +61,13 @@ from .os_utils.pyldd import (
     elffile,
     machofile,
 )
-from .utils import on_mac, on_win, prefix_files
+from .utils import (
+    FALLBACK_MENUINST_SCHEMA,
+    VALID_SCHEMA_LOCATIONS,
+    on_mac,
+    on_win,
+    prefix_files,
+)
 
 if TYPE_CHECKING:
     from typing import Literal
@@ -1696,18 +1702,30 @@ def _build_validator(url):
     import jsonschema
     import requests
 
-    log = utils.get_logger(__name__, dedupe=False)
-    r = requests.get(url)
-    if not r.ok:
-        log.error("Could not fetch '%s', status code %s", r.status_code)
+    if not url.startswith(VALID_SCHEMA_LOCATIONS):
+        log.error(
+            "JSON Schema at '%s' URL doesn't match any of the valid locations: %s. "
+            "This will be an error in 25.11.",  # FUTURE: Raise in 25.11
+            url,
+            VALID_SCHEMA_LOCATIONS,
+        )
         return
-    schema = r.json()
+    log = utils.get_logger(__name__, dedupe=False)
+    try:
+        r = requests.get(url)
+        r.raise_for_status()
+    except requests.exceptions.HTTPError as exc:
+        log.error(
+            "Could not fetch '%s', status code %s", url, r.status_code, exc_info=exc
+        )
+        return
 
+    schema = r.json()
     try:
         ValidatorClass = jsonschema.validators.validator_for(schema)
         return ValidatorClass(schema)
     except (jsonschema.SchemaError, json.JSONDecodeError, OSError) as exc:
-        log.error("'%s' is not a valid menuinst schema", url, exc_info=exc)
+        log.error("'%s' is not a valid menuinst schema.", url, exc_info=exc)
         return
 
 
@@ -1726,23 +1744,29 @@ def _check_one_menuinst_json(json_file):
         schema_url = loaded.get("$schema")
         if not schema_url:
             log.error(
-                "Invalid empty value for $schema. '%s' won't be validated", json_file
+                "Invalid empty value for $schema. '%s' won't be validated. "
+                "This will be an error in 25.11.",  # FUTURE: Raise in 25.11
+                json_file,
             )
             return
         elif schema_url == "https://json-schema.org/draft-07/schema":
-            fallback_schema = (
-                "https://github.com/conda/menuinst/raw/refs/tags/2.2.0/"
-                "menuinst/data/menuinst.schema.json"
+            # This is for compatibility with menuinst files built as per the wrong
+            # recommendations of menuinst >=2,<=2.2
+            log.warning(
+                "Known wrong value for $schema, defaulting to '%s'",
+                FALLBACK_MENUINST_SCHEMA,
             )
-            log.debug(
-                "Known wrong value for $schema, defaulting to '%s'", fallback_schema
-            )
-            schema_url = fallback_schema
+            schema_url = FALLBACK_MENUINST_SCHEMA
         validator = _build_validator(schema_url)
+        if validator is None:
+            # FUTURE: Raise in 25.11
+            log.error("Could not build validator. This will be an error in 25.11.")
+            return
         validator.validate(loaded)
     except (jsonschema.ValidationError, json.JSONDecodeError, OSError) as exc:
         log.error(
-            "'%s' is not a valid menuinst JSON document!",
+            # FUTURE: Raise in 25.11
+            "'%s' is not a valid menuinst JSON document! This will be an error in 25.11.",
             json_file,
             exc_info=exc,
         )
