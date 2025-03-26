@@ -44,7 +44,7 @@ from os.path import (
 )
 from pathlib import Path
 from threading import Thread
-from typing import TYPE_CHECKING, overload
+from typing import TYPE_CHECKING, overload, Iterator
 
 import conda_package_handling.api
 import filelock
