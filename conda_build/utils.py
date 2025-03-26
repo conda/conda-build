@@ -22,7 +22,7 @@ import time
 import urllib.parse as urlparse
 import urllib.request as urllib
 from collections import OrderedDict, defaultdict
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterable
 from functools import cache, partial
 from glob import glob
 from io import StringIO
@@ -72,7 +72,7 @@ from .deprecations import deprecated
 from .exceptions import BuildLockError
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Mapping, Iterator
     from typing import TypeVar
 
     from .metadata import MetaData
