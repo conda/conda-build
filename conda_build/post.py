@@ -1702,6 +1702,8 @@ def _build_validator(url):
     import jsonschema
     import requests
 
+    log = utils.get_logger(__name__, dedupe=False)
+
     if not url.startswith(VALID_SCHEMA_LOCATIONS):
         log.error(
             "JSON Schema at '%s' URL doesn't match any of the valid locations: %s. "
