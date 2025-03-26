@@ -19,7 +19,7 @@ from conda_build.utils import (
     package_has_file,
 )
 
-from .utils import add_mangling, metadata_dir, subpackage_path
+from .utils import add_mangling, metadata_dir, raises_after, subpackage_path
 
 
 @pytest.mark.skipif(
@@ -104,7 +104,7 @@ def test_pypi_installer_metadata(testing_config):
 
 
 def test_menuinst_validation_ok(testing_config, caplog, tmp_path):
-    "1st check - validation passes with recipe as is"
+    "validation passes with recipe as is"
     recipe = Path(metadata_dir, "_menu_json_validation")
     recipe_tmp = tmp_path / "_menu_json_validation"
     shutil.copytree(recipe, recipe_tmp)
@@ -119,8 +119,8 @@ def test_menuinst_validation_ok(testing_config, caplog, tmp_path):
     assert package_has_file(pkg, "Menu/menu_json_validation.json")
 
 
-def test_menuinst_validation_fails_bad_schema(testing_config, caplog, tmp_path):
-    "2nd check - valid JSON but invalid content fails validation"
+def test_menuinst_validation_fails_bad_input(testing_config, caplog, tmp_path):
+    "valid JSON but invalid content fails validation"
     recipe = Path(metadata_dir, "_menu_json_validation")
     recipe_tmp = tmp_path / "_menu_json_validation"
     shutil.copytree(recipe, recipe_tmp)
@@ -128,9 +128,9 @@ def test_menuinst_validation_fails_bad_schema(testing_config, caplog, tmp_path):
     menu_json_contents = menu_json.read_text()
 
     bad_data = json.loads(menu_json_contents)
-    bad_data["menu_items"][0]["osx"] = ["bad", "schema"]
+    bad_data["menu_items"][0]["osx"] = ["bad", "input"]
     menu_json.write_text(json.dumps(bad_data, indent=2))
-    with caplog.at_level(logging.WARNING):
+    with caplog.at_level(logging.WARNING), raises_after((2025, 9, 10), Exception):
         api.build(str(recipe_tmp), config=testing_config, notest=True)
 
     captured_text = caplog.text
@@ -139,8 +139,30 @@ def test_menuinst_validation_fails_bad_schema(testing_config, caplog, tmp_path):
     assert "ValidationError" in captured_text
 
 
+def test_menuinst_validation_fails_bad_schema_url(testing_config, caplog, tmp_path):
+    "valid JSON but invalid $schema URL fails validation"
+    recipe = Path(metadata_dir, "_menu_json_validation")
+    recipe_tmp = tmp_path / "_menu_json_validation"
+    shutil.copytree(recipe, recipe_tmp)
+    menu_json = recipe_tmp / "menu.json"
+    menu_json_contents = menu_json.read_text()
+
+    bad_data = json.loads(menu_json_contents)
+    bad_data["$schema"] = (
+        "https://raw.githubusercontent.com/conda/menuinst/"
+        "7e1aa1fc445935d25f7d22cf808b68d41fa6956c/menuinst/data/menuinst-1-1-0.schema.json"
+    )
+    menu_json.write_text(json.dumps(bad_data, indent=2))
+    with caplog.at_level(logging.WARNING), raises_after((2025, 9, 10), Exception):
+        api.build(str(recipe_tmp), config=testing_config, notest=True)
+
+    captured_text = caplog.text
+    assert "Found 'Menu/*.json' files but couldn't validate:" not in captured_text
+    assert "URL doesn't match any of the valid locations:" in captured_text
+
+
 def test_menuinst_validation_fails_bad_json(testing_config, monkeypatch, tmp_path):
-    "3rd check - non-parsable JSON fails validation"
+    "non-parsable JSON fails validation"
     recipe = Path(metadata_dir, "_menu_json_validation")
     recipe_tmp = tmp_path / "_menu_json_validation"
     shutil.copytree(recipe, recipe_tmp)
@@ -167,13 +189,13 @@ def test_menuinst_validation_fails_bad_json(testing_config, monkeypatch, tmp_pat
     # a module-level global that we could easily patch.
     monkeypatch.setattr(conda_build.utils, "get_logger", get_monkey_logger)
 
-    api.build(str(recipe_tmp), config=testing_config, notest=True)
+    with raises_after((2025, 9, 10), Exception):
+        api.build(str(recipe_tmp), config=testing_config, notest=True)
 
     # without %s substitution
     messages = [record[0] for record in records]
 
-    assert "Found 'Menu/*.json' files but couldn't validate: %s" not in messages
-    assert "'%s' is not a valid menuinst JSON document!" in messages
+    assert any("'%s' is not a valid menuinst JSON document!" in msg for msg in messages)
     assert any(
         isinstance(record[-1].get("exc_info"), json.JSONDecodeError)
         for record in records

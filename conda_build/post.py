@@ -1705,13 +1705,12 @@ def _build_validator(url):
     log = utils.get_logger(__name__, dedupe=False)
 
     if not url.startswith(VALID_SCHEMA_LOCATIONS):
-        log.error(
+        log.warning(
             "JSON Schema at '%s' URL doesn't match any of the valid locations: %s. "
             "This will be an error in 25.11.",  # FUTURE: Raise in 25.11
             url,
             VALID_SCHEMA_LOCATIONS,
         )
-        return
     log = utils.get_logger(__name__, dedupe=False)
     try:
         r = requests.get(url)
@@ -1766,11 +1765,11 @@ def _check_one_menuinst_json(json_file):
             return
         validator.validate(loaded)
     except (jsonschema.ValidationError, json.JSONDecodeError, OSError) as exc:
-        log.debug("jsonschema exception", exc_info=exc)
         log.warning(
             # FUTURE: Raise in 25.11
             "'%s' is not a valid menuinst JSON document! This will be an error in 25.11.",
             json_file,
+            exc_info=exc,
         )
     else:
         log.info("'%s' is a valid menuinst JSON document", json_file)
