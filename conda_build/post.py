@@ -1717,9 +1717,8 @@ def _build_validator(url):
         r = requests.get(url)
         r.raise_for_status()
     except requests.exceptions.HTTPError as exc:
-        log.error(
-            "Could not fetch '%s', status code %s", url, r.status_code, exc_info=exc
-        )
+        log.debug("requests exception", exc_info=exc)
+        log.error("Could not fetch '%s', status code %s", url, r.status_code)
         return
 
     schema = r.json()
@@ -1727,7 +1726,8 @@ def _build_validator(url):
         ValidatorClass = jsonschema.validators.validator_for(schema)
         return ValidatorClass(schema)
     except (jsonschema.SchemaError, json.JSONDecodeError, OSError) as exc:
-        log.error("'%s' is not a valid menuinst schema.", url, exc_info=exc)
+        log.debug("jsonschema exception", exc_info=exc)
+        log.error("'%s' is not a valid menuinst schema.", url)
         return
 
 
@@ -1766,11 +1766,11 @@ def _check_one_menuinst_json(json_file):
             return
         validator.validate(loaded)
     except (jsonschema.ValidationError, json.JSONDecodeError, OSError) as exc:
+        log.debug("jsonschema exception", exc_info=exc)
         log.error(
             # FUTURE: Raise in 25.11
             "'%s' is not a valid menuinst JSON document! This will be an error in 25.11.",
             json_file,
-            exc_info=exc,
         )
     else:
         log.info("'%s' is a valid menuinst JSON document", json_file)
