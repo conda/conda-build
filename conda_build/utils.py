@@ -22,7 +22,7 @@ import time
 import urllib.parse as urlparse
 import urllib.request as urllib
 from collections import OrderedDict, defaultdict
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator
 from functools import cache, partial
 from glob import glob
 from io import StringIO
@@ -44,7 +44,7 @@ from os.path import (
 )
 from pathlib import Path
 from threading import Thread
-from typing import TYPE_CHECKING, overload, Iterator
+from typing import TYPE_CHECKING, overload
 
 import conda_package_handling.api
 import filelock
