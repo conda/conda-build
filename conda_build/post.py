@@ -1718,7 +1718,7 @@ def _build_validator(url):
         r.raise_for_status()
     except requests.exceptions.HTTPError as exc:
         log.debug("requests exception", exc_info=exc)
-        log.error("Could not fetch '%s', status code %s", url, r.status_code)
+        log.warning("Could not fetch '%s', status code %s", url, r.status_code)
         return
 
     schema = r.json()
@@ -1727,7 +1727,7 @@ def _build_validator(url):
         return ValidatorClass(schema)
     except (jsonschema.SchemaError, json.JSONDecodeError, OSError) as exc:
         log.debug("jsonschema exception", exc_info=exc)
-        log.error("'%s' is not a valid menuinst schema.", url)
+        log.warning("'%s' is not a valid menuinst schema.", url)
         return
 
 
@@ -1740,12 +1740,12 @@ def _check_one_menuinst_json(json_file):
         with open(json_file) as f:
             text = f.read()
         if "$schema" not in text:
-            log.warning("menuinst v1 JSON document '%s' won't be validated.", json_file)
+            log.info("menuinst v1 JSON document '%s' won't be validated.", json_file)
             return
         loaded = json.loads(text)
         schema_url = loaded.get("$schema")
         if not schema_url:
-            log.error(
+            log.warning(
                 "Invalid empty value for $schema. '%s' won't be validated. "
                 "This will be an error in 25.11.",  # FUTURE: Raise in 25.11
                 json_file,
@@ -1762,12 +1762,12 @@ def _check_one_menuinst_json(json_file):
         validator = _build_validator(schema_url)
         if validator is None:
             # FUTURE: Raise in 25.11
-            log.error("Could not build validator. This will be an error in 25.11.")
+            log.warning("Could not build validator. This will be an error in 25.11.")
             return
         validator.validate(loaded)
     except (jsonschema.ValidationError, json.JSONDecodeError, OSError) as exc:
         log.debug("jsonschema exception", exc_info=exc)
-        log.error(
+        log.warning(
             # FUTURE: Raise in 25.11
             "'%s' is not a valid menuinst JSON document! This will be an error in 25.11.",
             json_file,
