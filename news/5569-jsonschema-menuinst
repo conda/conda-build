@@ -4,11 +4,11 @@
 
 ### Bug fixes
 
-* Validate menuinst JSON documents using the included `$schema` value. `menuinst` is no longer a dependency. (#5569)
+* Validate menuinst JSON documents using the included `$schema` value. (#5569)
 
 ### Deprecations
 
-* <news item>
+* Menuinst validation warnings will be raised as errors in 25.11. (#5569)
 
 ### Docs
 
@@ -16,4 +16,4 @@
 
 ### Other
 
-* <news item>
+* `menuinst` is no longer a dependency. (#5569)
