@@ -855,7 +855,11 @@ class Config:
                 "\n\n",
             )
 
-        for lock in get_conda_operation_locks(self.locking, self.bldpkgs_dirs):
+        for lock in get_conda_operation_locks(
+            self.locking,
+            self.bldpkgs_dirs,
+            self.timeout,
+        ):
             if os.path.isfile(lock.lock_file):
                 rm_rf(lock.lock_file)
 
