@@ -9,6 +9,7 @@ import re
 import shutil
 import stat
 import sys
+import traceback
 from collections import OrderedDict, defaultdict
 from copy import copy
 from fnmatch import filter as fnmatch_filter
@@ -35,15 +36,13 @@ from subprocess import CalledProcessError, call, check_output
 from typing import TYPE_CHECKING
 
 from conda.core.prefix_data import PrefixData
+from conda.gateways.disk.create import TemporaryDirectory
+from conda.gateways.disk.link import lchmod
 from conda.gateways.disk.read import compute_sum
+from conda.misc import walk_prefix
 from conda.models.records import PrefixRecord
 
 from . import utils
-from .conda_interface import (
-    TemporaryDirectory,
-    lchmod,
-    walk_prefix,
-)
 from .exceptions import OverDependingError, OverLinkingError, RunPathError
 from .inspect_pkg import which_package
 from .os_utils import external, macho
@@ -73,6 +72,12 @@ filetypes_for_platform = {
     "win": (DLLfile, EXEfile),
     "osx": (machofile,),
     "linux": (elffile,),
+}
+
+GNU_ARCH_MAP = {
+    "ppc64le": "powerpc64le",
+    "32": "i686",
+    "64": "x86_64",
 }
 
 
@@ -152,11 +157,11 @@ def write_pth(egg_path, config):
     with open(
         join(
             utils.get_site_packages(config.host_prefix, py_ver),
-            "%s.pth" % (fn.split("-")[0]),
+            "{}.pth".format(fn.split("-")[0]),
         ),
         "w",
     ) as fo:
-        fo.write("./%s\n" % fn)
+        fo.write(f"./{fn}\n")
 
 
 def remove_easy_install_pth(files, prefix, config, preserve_egg_dir=False):
@@ -370,7 +375,7 @@ def find_lib(link, prefix, files, path=None):
     if link.startswith(prefix):
         link = normpath(link[len(prefix) + 1 :])
         if not any(link == normpath(w) for w in files):
-            sys.exit("Error: Could not find %s" % link)
+            sys.exit(f"Error: Could not find {link}")
         return link
     if link.startswith("/"):  # but doesn't start with the build prefix
         return
@@ -384,7 +389,7 @@ def find_lib(link, prefix, files, path=None):
         for f in files:
             file_names[basename(f)].append(f)
         if link not in file_names:
-            sys.exit("Error: Could not find %s" % link)
+            sys.exit(f"Error: Could not find {link}")
         if len(file_names[link]) > 1:
             if path and basename(path) == link:
                 # The link is for the file itself, just use it
@@ -405,7 +410,7 @@ def find_lib(link, prefix, files, path=None):
                     "Choosing the first one."
                 )
         return file_names[link][0]
-    print("Don't know how to find %s, skipping" % link)
+    print(f"Don't know how to find {link}, skipping")
 
 
 def osx_ch_link(path, link_dict, host_prefix, build_prefix, files):
@@ -419,8 +424,7 @@ def osx_ch_link(path, link_dict, host_prefix, build_prefix, files):
         )
         if not codefile_class(link, skip_symlinks=True):
             sys.exit(
-                "Error: Compiler runtime library in build prefix not found in host prefix %s"
-                % link
+                f"Error: Compiler runtime library in build prefix not found in host prefix {link}"
             )
         else:
             print(f".. fixing linking of {link} in {path} instead")
@@ -431,7 +435,7 @@ def osx_ch_link(path, link_dict, host_prefix, build_prefix, files):
         return
 
     print(f"Fixing linking of {link} in {path}")
-    print("New link location is %s" % (link_loc))
+    print(f"New link location is {link_loc}")
 
     lib_to_link = relpath(dirname(link_loc), "lib")
     # path_to_lib = utils.relative(path[len(prefix) + 1:])
@@ -606,7 +610,20 @@ def mk_relative_linux(f, prefix, rpaths=("lib",), method=None):
             existing_pe = existing_pe.split(os.pathsep)
     existing = existing_pe
     if have_lief:
-        existing2, _, _ = get_rpaths_raw(elf)
+        existing2 = None
+        try:
+            existing2, _, _ = get_rpaths_raw(elf)
+        except Exception as e:
+            if method == "LIEF":
+                print(
+                    f"ERROR :: get_rpaths_raw({elf!r}) with LIEF failed: {e}, but LIEF was specified"
+                )
+                traceback.print_tb(e.__traceback__)
+            else:
+                print(
+                    f"WARNING :: get_rpaths_raw({elf!r}) with LIEF failed: {e}, will proceed with patchelf"
+                )
+            method = "patchelf"
         if existing_pe and existing_pe != existing2:
             print(
                 f"WARNING :: get_rpaths_raw()={existing2} and patchelf={existing_pe} disagree for {elf} :: "
@@ -649,7 +666,7 @@ def assert_relative_osx(path, host_prefix, build_prefix):
         for prefix in (host_prefix, build_prefix):
             if prefix and name.startswith(prefix):
                 raise RuntimeError(
-                    "library at %s appears to have an absolute path embedded" % path
+                    f"library at {path} appears to have an absolute path embedded"
                 )
 
 
@@ -1308,7 +1325,11 @@ def check_overlinking_impl(
     precs.append(pkg_vendored_dist)
     ignore_list = utils.ensure_list(ignore_run_exports)
     if subdir.startswith("linux"):
+        # libgcc-ng is the defaults & old conda-forge package name
         ignore_list.append("libgcc-ng")
+        # conda-forge::libgcc-ng was renamed 08/27/2024
+        # see https://github.com/conda-forge/ctng-compilers-feedstock/pull/148
+        ignore_list.append("libgcc")
 
     package_nature = {prec: library_nature(prec, run_prefix) for prec in precs}
     lib_packages = {
@@ -1409,8 +1430,20 @@ def check_overlinking_impl(
                     list(diffs)[1:3],
                 )
                 sysroots_files[srs] = sysroot_files
+
+    def sysroot_matches_subdir(path):
+        # The path looks like <PREFIX>/aarch64-conda-linux-gnu/sysroot/
+        # We check that the triplet "aarch64-conda-linux-gnu"
+        # matches the subdir for eg: linux-aarch64.
+        sysroot_arch = Path(path).parent.name.split("-")[0]
+        subdir_arch = subdir.split("-")[-1]
+        return sysroot_arch == GNU_ARCH_MAP.get(subdir_arch, subdir_arch)
+
     sysroots_files = OrderedDict(
-        sorted(sysroots_files.items(), key=lambda x: -len(x[1]))
+        sorted(
+            sysroots_files.items(),
+            key=lambda x: (not sysroot_matches_subdir(x[0]), -len(x[1])),
+        )
     )
 
     all_needed_dsos, needed_dsos_for_file = _collect_needed_dsos(
@@ -1598,7 +1631,7 @@ def post_process_shared_lib(m, f, files, host_prefix=None):
     elif codefile == machofile:
         if m.config.host_platform != "osx":
             log = utils.get_logger(__name__)
-            log.warn(
+            log.warning(
                 "Found Mach-O file but patching is only supported on macOS, skipping: %s",
                 path,
             )
@@ -1634,7 +1667,7 @@ def fix_permissions(files, prefix):
                 lchmod(path, new_mode)
             except (OSError, utils.PermissionError) as e:
                 log = utils.get_logger(__name__)
-                log.warn(str(e))
+                log.warning(str(e))
 
 
 def check_menuinst_json(files, prefix) -> None:
@@ -1772,7 +1805,7 @@ def check_symlinks(files, prefix, croot):
 
     if msgs:
         for msg in msgs:
-            print("Error: %s" % msg, file=sys.stderr)
+            print(f"Error: {msg}", file=sys.stderr)
         sys.exit(1)
 
 

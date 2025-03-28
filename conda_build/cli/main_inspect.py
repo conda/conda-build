@@ -8,19 +8,26 @@ from os.path import expanduser
 from pprint import pprint
 from typing import TYPE_CHECKING
 
-from conda.base.context import context, determine_target_prefix
+from conda.base.context import context
 
 from .. import api
-from ..conda_interface import ArgumentParser, add_parser_prefix
+
+try:
+    from conda.cli.helpers import add_parser_prefix
+except ImportError:
+    # conda<23.11
+    from conda.cli.conda_argparse import add_parser_prefix
 
 if TYPE_CHECKING:
-    from argparse import Namespace
-    from typing import Sequence
+    from argparse import ArgumentParser, Namespace
+    from collections.abc import Sequence
 
 logging.basicConfig(level=logging.INFO)
 
 
 def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
+    from conda.cli.conda_argparse import ArgumentParser
+
     parser = ArgumentParser(
         prog="conda inspect",
         description="Tools for inspecting conda packages.",
@@ -189,6 +196,7 @@ Tools for investigating conda channels.
 
 def execute(args: Sequence[str] | None = None) -> int:
     parser, parsed = parse_args(args)
+    context.__init__(argparse_args=parsed)
 
     if not parsed.subcommand:
         parser.print_help()
@@ -199,7 +207,7 @@ def execute(args: Sequence[str] | None = None) -> int:
         print(
             api.inspect_linkages(
                 parsed.packages,
-                prefix=determine_target_prefix(context, parsed),
+                prefix=context.target_prefix,
                 untracked=parsed.untracked,
                 all_packages=parsed.all,
                 show_files=parsed.show_files,
@@ -211,7 +219,7 @@ def execute(args: Sequence[str] | None = None) -> int:
         print(
             api.inspect_objects(
                 parsed.packages,
-                prefix=determine_target_prefix(context, parsed),
+                prefix=context.target_prefix,
                 groupby=parsed.groupby,
             )
         )

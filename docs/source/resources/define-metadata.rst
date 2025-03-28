@@ -110,7 +110,10 @@ Source from tarball or zip archive
      url: https://pypi.python.org/packages/source/b/bsdiff4/bsdiff4-1.1.4.tar.gz
      md5: 29f6089290505fc1a852e176bd276c43
      sha1: f0a2c9a30073449cfb7d171c57552f3109d93894
+     sha224: ebf3e3b54353146ca21128ed6399739663a1256a223f438ed0223845
      sha256: 5a022ff4c1d1de87232b1c70bde50afbb98212fd246be4a867d8737173cf1f8f
+     sha384: 23eee6ee2e5d1054780e331857589bfba098255a88ae4edd47102fce676694ce0f543dc5c0d27c51f77cc4546d4e74c0
+     sha512: b968c7dc99132252a83b175a96ec75ec842edf9e2494db2c07b419e61a0b1cf6984e7c544452f9ab56aa8581caf966c0f6933fc22a071ccc4fbb5d22b363fe54
 
 If an extracted archive contains only 1 folder at its top level, its contents
 will be moved 1 level up, so that the extracted package contents sit in the
@@ -207,6 +210,20 @@ the repository. Using path allows you to build packages with
 unstaged and uncommitted changes in the working directory.
 git_url can build only up to the latest commit.
 
+Hashes
+------
+
+Conda-build can check the integrity of the provided sources
+using different hashing algorithms:
+
+- ``md5``, ``sha1`` and ``sha256`` will check the provided
+  hexdigest against the downloaded archive, prior to extraction.
+- ``content_md5``, ``content_sha1`` and ``content_sha256`` will
+  check the provided hexdigest against the contents of the
+  (extracted) directory. ``content_hash_skip`` can take a list of
+  relative files and directories to be ignored during the check
+  (e.g. useful to ignore the ``.git/`` directory when ``git_url``
+  is used to clone a repository).
 
 Patches
 -------
@@ -372,6 +389,19 @@ Python in macOS. The default is ``False``.
 
    build:
      osx_is_app: True
+
+python_site_packages_path
+-------------------------
+
+Packages with a name of ``python`` can optionally specify the location of the
+site-packages directory relative to the root of the environment with
+``python_site_packages_path``. This should only be used in ``python`` packages
+and only when the path is not the CPython default.
+
+.. code-block:: yaml
+
+   build:
+     python_site_packages_path: lib/python3.13t/site-packages
 
 
 Track features
@@ -670,6 +700,61 @@ conda >=4.3 to install.
    ``noarch`` packages are built with the directives which evaluate to ``True`` in the platform
    it was built, which probably will result in incorrect/incomplete installation in other
    platforms.
+
+Python version independent packages
+-----------------------------------
+
+Allows you to specify "no python version" when building a Python
+package thus making it compatible with a user specified range of Python
+versions. Main use-case for this is to create ABI3 packages as specified
+in [CEP 20](https://github.com/conda/ceps/blob/main/cep-0020.md).
+
+ABI3 packages support building a native Python extension using a
+specific Python version and running it against any later Python version.
+ABI3 or stable ABI is supported by only CPython - the reference Python
+implementation with the Global Interpreter Lock (GIL) enabled. Therefore
+package builders who wishes to support the free-threaded python build
+or another implementation like PyPy still has to build a conda package
+specific to that ABI as they don't support ABI3. There are other
+proposed standards like HPy and ABI4 (work-in-progress) that tries
+to address all python implementations.
+
+conda-build can indicate that a conda package works for any python version
+by adding
+
+.. code-block:: yaml
+
+   build:
+     python_version_independent: true
+
+A package builder also has to indicate which standard is supported by
+the package, i.e., for ABI3,
+
+.. code-block:: yaml
+
+   requirements:
+     host:
+       - python-abi3
+       - python
+     run:
+       - python
+
+
+In order to support ABI3 with Python 3.9 and onwards and
+free-threaded builds you can do
+
+.. code-block:: yaml
+   build:
+     python_version_independent: true   # [py == 39]
+     skip: true                         # [py > 39 and not python.endswith("t")]
+
+   requirements:
+     host:
+       - python-abi3                    # [py == 39]
+       - python
+     run:
+       - python
+
 
 Include build recipe
 --------------------
@@ -1127,7 +1212,7 @@ Test section
 ============
 
 If this section exists or if there is a
-``run_test.[py,pl,sh,bat]`` file in the recipe, the package is
+``run_test.[py,pl,sh,bat,r]`` file in the recipe, the package is
 installed into a test environment after the build is finished
 and the tests are run there.
 
@@ -1212,12 +1297,12 @@ following:
 Run test script
 ---------------
 
-The script ``run_test.sh``---or ``.bat``, ``.py``, or
-``.pl``---is run automatically if it is part of the recipe.
+The script ``run_test.sh``---or ``.bat``, ``.py``, ``.pl``,
+or ``.r``---is run automatically if it is part of the recipe.
 
 .. note::
-   Python .py and Perl .pl scripts are valid only
-   as part of Python and Perl packages, respectively.
+   Python .py, Perl .pl, and R .r scripts are valid only
+   as part of Python, Perl, and R packages, respectively.
 
 
 Downstream tests
@@ -1313,7 +1398,10 @@ build prefix. Explicit file lists support glob expressions.
 Directory names are also supported, and they recursively include
 contents.
 
-.. code-block:: none
+.. warning::
+   When defining `outputs/files` as a list without specifying `outputs/script`, any file in the prefix (including those installed by host dependencies) matching one of the glob expressions is included in the output.
+
+.. code-block:: yaml
 
    outputs:
      - name: subpackage-name
@@ -1322,6 +1410,29 @@ contents.
          - a-folder
          - *.some-extension
          - somefolder/*.some-extension
+
+Greater control over file matching may be
+achieved by defining ``files`` as a dictionary separating files to
+``include`` from those to ``exclude``.
+When using include/exclude, only files installed by
+the current recipe are considered. i.e. files in the prefix installed
+by host dependencies are excluded. include/exclude must not be used
+simultaneously with glob expressions listed directly in ``outputs/files``.
+Files matching both include and exclude expressions will be excluded.
+
+.. code-block:: yaml
+
+   outputs:
+     - name: subpackage-name
+       files:
+         include:
+           - a-file
+           - a-folder
+           - *.some-extension
+           - somefolder/*.some-extension
+         exclude:
+           - *.exclude-extension
+           - a-folder/**/*.some-extension
 
 Scripts that create or move files into the build prefix can be
 any kind of script. Known script types need only specify the
@@ -1372,10 +1483,9 @@ A subpackage does not automatically inherit any dependencies from its top-level
 recipe, so any build or run requirements needed by the subpackage must be
 explicitly specified.
 
-.. code-block:: none
+.. code-block:: yaml
 
    outputs:
-
      - name: subpackage-name
        requirements:
          build:
@@ -1466,7 +1576,7 @@ You can test subpackages independently of the top-level package.
 Independent test script files for each separate package are
 specified under the subpackage's test section. These files
 support the same formats as the top-level ``run_test.*`` scripts,
-which are .py, .pl, .bat, and .sh. These may be extended to
+which are .py, .pl, .r, .bat, and .sh. These may be extended to
 support other script types in the future.
 
 .. code-block:: yaml

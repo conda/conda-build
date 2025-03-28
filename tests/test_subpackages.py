@@ -11,6 +11,8 @@ import pytest
 from conda.base.context import context
 
 from conda_build import api, utils
+from conda_build.exceptions import BuildScriptException, CondaBuildUserError
+from conda_build.metadata import MetaDataTuple
 from conda_build.render import finalize_metadata
 
 from .utils import get_valid_recipes, subpackage_dir
@@ -56,7 +58,10 @@ def test_output_pkg_path_shows_all_subpackages(testing_metadata):
     testing_metadata.meta["outputs"] = [{"name": "a"}, {"name": "b"}]
     out_dicts_and_metadata = testing_metadata.get_output_metadata_set()
     outputs = api.get_output_file_paths(
-        [(m, None, None) for (_, m) in out_dicts_and_metadata]
+        [
+            MetaDataTuple(metadata, False, False)
+            for _, metadata in out_dicts_and_metadata
+        ]
     )
     assert len(outputs) == 2
 
@@ -65,7 +70,10 @@ def test_subpackage_version_provided(testing_metadata):
     testing_metadata.meta["outputs"] = [{"name": "a", "version": "2.0"}]
     out_dicts_and_metadata = testing_metadata.get_output_metadata_set()
     outputs = api.get_output_file_paths(
-        [(m, None, None) for (_, m) in out_dicts_and_metadata]
+        [
+            MetaDataTuple(metadata, False, False)
+            for _, metadata in out_dicts_and_metadata
+        ]
     )
     assert len(outputs) == 1
     assert "a-2.0-1" in outputs[0]
@@ -79,7 +87,10 @@ def test_subpackage_independent_hash(testing_metadata):
     out_dicts_and_metadata = testing_metadata.get_output_metadata_set()
     assert len(out_dicts_and_metadata) == 2
     outputs = api.get_output_file_paths(
-        [(m, None, None) for (_, m) in out_dicts_and_metadata]
+        [
+            MetaDataTuple(metadata, False, False)
+            for _, metadata in out_dicts_and_metadata
+        ]
     )
     assert len(outputs) == 2
     assert outputs[0][-15:] != outputs[1][-15:]
@@ -113,41 +124,41 @@ def test_intradependencies(testing_config):
     outputs2 = api.build(recipe, config=testing_config)
     assert len(outputs2) == 11
     outputs2_set = {os.path.basename(p) for p in outputs2}
-    assert (
-        outputs1_set == outputs2_set
-    ), f"pkgs differ :: get_output_file_paths()={outputs1_set} but build()={outputs2_set}"
+    assert outputs1_set == outputs2_set, (
+        f"pkgs differ :: get_output_file_paths()={outputs1_set} but build()={outputs2_set}"
+    )
 
 
 def test_git_in_output_version(testing_config, conda_build_test_recipe_envvar: str):
     recipe = os.path.join(subpackage_dir, "_git_in_output_version")
-    outputs = api.render(
+    metadata_tuples = api.render(
         recipe, config=testing_config, finalize=False, bypass_env_check=True
     )
-    assert len(outputs) == 1
-    assert outputs[0][0].version() == "1.22.0"
+    assert len(metadata_tuples) == 1
+    assert metadata_tuples[0][0].version() == "1.22.0"
 
 
 def test_intradep_with_templated_output_name(testing_config):
     recipe = os.path.join(subpackage_dir, "_intradep_with_templated_output_name")
-    metadata = api.render(recipe, config=testing_config)
-    assert len(metadata) == 3
+    metadata_tuples = api.render(recipe, config=testing_config)
+    assert len(metadata_tuples) == 3
     expected_names = {
         "test_templated_subpackage_name",
         "templated_subpackage_nameabc",
         "depends_on_templated",
     }
-    assert {m.name() for (m, _, _) in metadata} == expected_names
+    assert {metadata.name() for metadata, _, _ in metadata_tuples} == expected_names
 
 
 def test_output_specific_subdir(testing_config):
     recipe = os.path.join(subpackage_dir, "_output_specific_subdir")
-    metadata = api.render(recipe, config=testing_config)
-    assert len(metadata) == 3
-    for m, _, _ in metadata:
-        if m.name() in ("default_subdir", "default_subdir_2"):
-            assert m.config.target_subdir == context.subdir
-        elif m.name() == "custom_subdir":
-            assert m.config.target_subdir == "linux-aarch64"
+    metadata_tuples = api.render(recipe, config=testing_config)
+    assert len(metadata_tuples) == 3
+    for metadata, _, _ in metadata_tuples:
+        if metadata.name() in ("default_subdir", "default_subdir_2"):
+            assert metadata.config.target_subdir == context.subdir
+        elif metadata.name() == "custom_subdir":
+            assert metadata.config.target_subdir == "linux-aarch64"
         else:
             raise AssertionError(
                 "Test for output_specific_subdir written incorrectly - "
@@ -157,17 +168,17 @@ def test_output_specific_subdir(testing_config):
 
 def test_about_metadata(testing_config):
     recipe = os.path.join(subpackage_dir, "_about_metadata")
-    metadata = api.render(recipe, config=testing_config)
-    assert len(metadata) == 2
-    for m, _, _ in metadata:
-        if m.name() == "abc":
-            assert "summary" in m.meta["about"]
-            assert m.meta["about"]["summary"] == "weee"
-            assert "home" not in m.meta["about"]
-        elif m.name() == "def":
-            assert "home" in m.meta["about"]
-            assert "summary" not in m.meta["about"]
-            assert m.meta["about"]["home"] == "http://not.a.url"
+    metadata_tuples = api.render(recipe, config=testing_config)
+    assert len(metadata_tuples) == 2
+    for metadata, _, _ in metadata_tuples:
+        if metadata.name() == "abc":
+            assert "summary" in metadata.meta["about"]
+            assert metadata.meta["about"]["summary"] == "weee"
+            assert "home" not in metadata.meta["about"]
+        elif metadata.name() == "def":
+            assert "home" in metadata.meta["about"]
+            assert "summary" not in metadata.meta["about"]
+            assert metadata.meta["about"]["home"] == "http://not.a.url"
     outs = api.build(recipe, config=testing_config)
     for out in outs:
         about_meta = utils.package_has_file(out, "info/about.json")
@@ -282,29 +293,30 @@ def test_per_output_tests(testing_config):
 @pytest.mark.sanity
 def test_per_output_tests_script(testing_config):
     recipe_dir = os.path.join(subpackage_dir, "_output_test_script")
-    with pytest.raises(SystemExit):
+    with pytest.raises(CondaBuildUserError):
         api.build(recipe_dir, config=testing_config)
 
 
 def test_pin_compatible_in_outputs(testing_config):
     recipe_dir = os.path.join(subpackage_dir, "_pin_compatible_in_output")
-    m = api.render(recipe_dir, config=testing_config)[0][0]
+    metadata = api.render(recipe_dir, config=testing_config)[0][0]
     assert any(
-        re.search(r"numpy\s*>=.*,<.*", req) for req in m.meta["requirements"]["run"]
+        re.search(r"numpy\s*>=.*,<.*", req)
+        for req in metadata.meta["requirements"]["run"]
     )
 
 
 def test_output_same_name_as_top_level_does_correct_output_regex(testing_config):
     recipe_dir = os.path.join(subpackage_dir, "_output_named_same_as_top_level")
-    ms = api.render(recipe_dir, config=testing_config)
+    metadata_tuples = api.render(recipe_dir, config=testing_config)
     # TODO: need to decide what best behavior is for saying whether the
     # top-level build reqs or the output reqs for the similarly naemd output
     # win. I think you could have both, but it means rendering a new, extra,
     # build-only metadata in addition to all the outputs
-    for m, _, _ in ms:
-        if m.name() == "ipp":
+    for metadata, _, _ in metadata_tuples:
+        if metadata.name() == "ipp":
             for env in ("build", "host", "run"):
-                assert not m.meta.get("requirements", {}).get(env)
+                assert not metadata.meta.get("requirements", {}).get(env)
 
 
 def test_subpackage_order_natural(testing_config):
@@ -343,6 +355,18 @@ def test_build_script_and_script_env_warn_empty_script_env(testing_config):
 
 
 @pytest.mark.sanity
+def test_build_script_does_not_set_env_from_script_env_if_missing(
+    testing_config, capfd, monkeypatch
+):
+    monkeypatch.delenv("TEST_FN_DOESNT_EXIST", raising=False)
+    recipe = os.path.join(subpackage_dir, "_build_script_relying_on_missing_var")
+    with pytest.raises(BuildScriptException):
+        api.build(recipe, config=testing_config)
+    captured = capfd.readouterr()
+    assert "KeyError: 'TEST_FN_DOESNT_EXIST'" in captured.err
+
+
+@pytest.mark.sanity
 @pytest.mark.skipif(sys.platform != "darwin", reason="only implemented for mac")
 def test_strong_run_exports_from_build_applies_to_host(testing_config):
     recipe = os.path.join(
@@ -361,23 +385,34 @@ def test_strong_run_exports_from_build_applies_to_host(testing_config):
 def test_python_line_up_with_compiled_lib(recipe, testing_config):
     recipe = os.path.join(subpackage_dir, recipe)
     # we use windows so that we have 2 libxyz results (VS2008, VS2015)
-    ms = api.render(recipe, config=testing_config, platform="win", arch="64")
+    metadata_tuples = api.render(
+        recipe, config=testing_config, platform="win", arch="64"
+    )
     # 2 libxyz, 3 py-xyz, 3 xyz
-    assert len(ms) == 8
-    for m, _, _ in ms:
-        if m.name() in ("py-xyz" or "xyz"):
-            deps = m.meta["requirements"]["run"]
+    assert len(metadata_tuples) == 8
+    for metadata, _, _ in metadata_tuples:
+        if metadata.name() in ("py-xyz" or "xyz"):
+            deps = metadata.meta["requirements"]["run"]
             assert any(
                 dep.startswith("libxyz ") and len(dep.split()) == 3 for dep in deps
-            ), (m.name(), deps)
-            assert any(dep.startswith("python >") for dep in deps), (m.name(), deps)
-            assert any(dep.startswith("zlib >") for dep in deps), (m.name(), deps)
-        if m.name() == "xyz":
-            deps = m.meta["requirements"]["run"]
+            ), (metadata.name(), deps)
+            assert any(dep.startswith("python >") for dep in deps), (
+                metadata.name(),
+                deps,
+            )
+            assert any(dep.startswith("zlib >") for dep in deps), (
+                metadata.name(),
+                deps,
+            )
+        if metadata.name() == "xyz":
+            deps = metadata.meta["requirements"]["run"]
             assert any(
                 dep.startswith("py-xyz ") and len(dep.split()) == 3 for dep in deps
-            ), (m.name(), deps)
-            assert any(dep.startswith("python >") for dep in deps), (m.name(), deps)
+            ), (metadata.name(), deps)
+            assert any(dep.startswith("python >") for dep in deps), (
+                metadata.name(),
+                deps,
+            )
 
 
 @pytest.mark.xfail(
@@ -385,17 +420,17 @@ def test_python_line_up_with_compiled_lib(recipe, testing_config):
 )
 def test_merge_build_host_applies_in_outputs(testing_config):
     recipe = os.path.join(subpackage_dir, "_merge_build_host")
-    ms = api.render(recipe, config=testing_config)
-    for m, _, _ in ms:
+    metadata_tuples = api.render(recipe, config=testing_config)
+    for metadata, _, _ in metadata_tuples:
         # top level
-        if m.name() == "test_build_host_merge":
-            assert not m.meta.get("requirements", {}).get("run")
+        if metadata.name() == "test_build_host_merge":
+            assert not metadata.meta.get("requirements", {}).get("run")
         # output
         else:
-            run_exports = set(m.meta.get("build", {}).get("run_exports", []))
+            run_exports = set(metadata.meta.get("build", {}).get("run_exports", []))
             assert len(run_exports) == 2
             assert all(len(export.split()) > 1 for export in run_exports)
-            run_deps = set(m.meta.get("requirements", {}).get("run", []))
+            run_deps = set(metadata.meta.get("requirements", {}).get("run", []))
             assert len(run_deps) == 2
             assert all(len(dep.split()) > 1 for dep in run_deps)
 
@@ -411,12 +446,14 @@ def test_activation_in_output_scripts(testing_config):
 
 def test_inherit_build_number(testing_config):
     recipe = os.path.join(subpackage_dir, "_inherit_build_number")
-    ms = api.render(recipe, config=testing_config)
-    for m, _, _ in ms:
-        assert "number" in m.meta["build"], "build number was not inherited at all"
-        assert (
-            int(m.meta["build"]["number"]) == 1
-        ), "build number should have been inherited as '1'"
+    metadata_tuples = api.render(recipe, config=testing_config)
+    for metadata, _, _ in metadata_tuples:
+        assert "number" in metadata.meta["build"], (
+            "build number was not inherited at all"
+        )
+        assert int(metadata.meta["build"]["number"]) == 1, (
+            "build number should have been inherited as '1'"
+        )
 
 
 def test_circular_deps_cross(testing_config):
@@ -432,9 +469,7 @@ def test_loops_do_not_remove_earlier_packages(testing_config):
 
     api.build(recipe, config=testing_config)
     assert len(output_files) == len(
-        glob(
-            os.path.join(testing_config.croot, testing_config.host_subdir, "*.tar.bz2")
-        )
+        glob(os.path.join(testing_config.croot, testing_config.host_subdir, "*.conda"))
     )
 
 
@@ -447,8 +482,8 @@ def test_build_string_does_not_incorrectly_add_hash(testing_config):
     recipe = os.path.join(subpackage_dir, "_build_string_with_variant")
     output_files = api.get_output_file_paths(recipe, config=testing_config)
     assert len(output_files) == 4
-    assert any("clang_variant-1.0-cling.tar.bz2" in f for f in output_files)
-    assert any("clang_variant-1.0-default.tar.bz2" in f for f in output_files)
+    assert any("clang_variant-1.0-cling.conda" in f for f in output_files)
+    assert any("clang_variant-1.0-default.conda" in f for f in output_files)
 
 
 def test_multi_outputs_without_package_version(testing_config):
@@ -456,9 +491,9 @@ def test_multi_outputs_without_package_version(testing_config):
     recipe = os.path.join(subpackage_dir, "_multi_outputs_without_package_version")
     outputs = api.build(recipe, config=testing_config)
     assert len(outputs) == 3
-    assert outputs[0].endswith("a-1-0.tar.bz2")
-    assert outputs[1].endswith("b-2-0.tar.bz2")
-    assert outputs[2].endswith("c-3-0.tar.bz2")
+    assert outputs[0].endswith("a-1-0.conda")
+    assert outputs[1].endswith("b-2-0.conda")
+    assert outputs[2].endswith("c-3-0.conda")
 
 
 def test_empty_outputs_requires_package_version(testing_config):

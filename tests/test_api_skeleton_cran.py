@@ -5,8 +5,8 @@ Integrative tests of the CRAN skeleton that start from
 conda_build.api.skeletonize and check the output files
 """
 
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Sequence
 
 import pytest
 
@@ -41,12 +41,12 @@ def test_cran_license(
     api.skeletonize(
         packages=package, repo="cran", output_dir=tmp_path, config=testing_config
     )
-    m = api.render(str(tmp_path / package / "meta.yaml"))[0][0]
+    metadata = api.render(str(tmp_path / package / "meta.yaml"))[0][0]
 
-    assert m.get_value("about/license") == license_id
-    assert m.get_value("about/license_family") == license_family
+    assert metadata.get_value("about/license") == license_id
+    assert metadata.get_value("about/license_family") == license_family
     assert {
-        Path(license).name for license in m.get_value("about/license_file", "")
+        Path(license).name for license in metadata.get_value("about/license_file", "")
     } == set(license_files)
 
 

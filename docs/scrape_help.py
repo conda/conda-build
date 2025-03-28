@@ -112,7 +112,7 @@ def external_commands():
 
     def get_help(command):
         command_help[command] = conda_command_help(command)
-        print("Checked for subcommand help for %s" % command)
+        print(f"Checked for subcommand help for {command}")
 
     with ThreadPoolExecutor(len(commands)) as executor:
         # list() is needed for force exceptions to be raised
@@ -164,7 +164,7 @@ def generate_man(command):
             [
                 "help2man",
                 "--name",
-                "conda %s" % command,
+                f"conda {command}",
                 "--section",
                 "1",
                 "--source",
@@ -172,36 +172,34 @@ def generate_man(command):
                 "--version-string",
                 conda_version,
                 "--no-info",
-                "conda %s" % command,
+                f"conda {command}",
             ]
         )
         retries -= 1
 
     if not manpage:
-        sys.exit("Error: Could not get help for conda %s" % command)
+        sys.exit(f"Error: Could not get help for conda {command}")
 
     replacements = man_replacements()
     for text in replacements:
         manpage = manpage.replace(text, replacements[text])
-    with open(join(manpath, "conda-%s.1" % command.replace(" ", "-")), "w") as f:
+    with open(join(manpath, "conda-{}.1".format(command.replace(" ", "-"))), "w") as f:
         f.write(manpage)
 
-    print("Generated manpage for conda %s" % command)
+    print(f"Generated manpage for conda {command}")
 
 
 def generate_html(command):
     command_file = command.replace(" ", "-")
 
     # Use abspath so that it always has a path separator
-    man = Popen(
-        ["man", abspath(join(manpath, "conda-%s.1" % command_file))], stdout=PIPE
-    )
+    man = Popen(["man", abspath(join(manpath, f"conda-{command_file}.1"))], stdout=PIPE)
     htmlpage = check_output(
         [
             "man2html",
             "-bare",  # Don't use HTML, HEAD, or BODY tags
             "title",
-            "conda-%s" % command_file,
+            f"conda-{command_file}",
             "-topm",
             "0",  # No top margin
             "-botm",
@@ -210,14 +208,14 @@ def generate_html(command):
         stdin=man.stdout,
     )
 
-    with open(join(manpath, "conda-%s.html" % command_file), "wb") as f:
+    with open(join(manpath, f"conda-{command_file}.html"), "wb") as f:
         f.write(htmlpage)
-    print("Generated html for conda %s" % command)
+    print(f"Generated html for conda {command}")
 
 
 def write_rst(command, sep=None):
     command_file = command.replace(" ", "-")
-    with open(join(manpath, "conda-%s.html" % command_file)) as f:
+    with open(join(manpath, f"conda-{command_file}.html")) as f:
         html = f.read()
 
     rp = rstpath
@@ -225,13 +223,13 @@ def write_rst(command, sep=None):
         rp = join(rp, sep)
     if not isdir(rp):
         makedirs(rp)
-    with open(join(rp, "conda-%s.rst" % command_file), "w") as f:
+    with open(join(rp, f"conda-{command_file}.rst"), "w") as f:
         f.write(RST_HEADER.format(command=command))
         for line in html.splitlines():
             f.write("   ")
             f.write(line)
             f.write("\n")
-    print("Generated rst for conda %s" % command)
+    print(f"Generated rst for conda {command}")
 
 
 def main():
