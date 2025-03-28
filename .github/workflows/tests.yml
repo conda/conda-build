@@ -148,15 +148,8 @@ jobs:
           pytest
           --cov=conda_build
           -n auto
-          "tests/test_api_build.py::test_recipe_builds[python_env_defined]"
-          "tests/test_api_build.py::test_recipe_builds[jinja_load_setuptools]"
-          "tests/test_api_build.py::test_recipe_builds[relative_url_download]"
-          "tests/cli/test_main_build.py::test_build_empty_sections"
-          "tests/cli/test_main_build.py::test_build_without_channel_fails"
-          "tests/cli/test_main_build.py::test_no_filename_hash"
-          "tests/cli/test_main_build.py::test_build_output_build_path"
-          "tests/cli/test_main_build.py::test_build_output_build_path_multiple_recipes"
-          "tests/cli/test_main_build.py::test_slash_in_recipe_arg_keeps_build_id"
+          -m "${{ env.PYTEST_MARKER }}"
+          --exitfirst
 
       - name: Upload Coverage
         uses: codecov/codecov-action@13ce06bfc6bbe3ecf90edbbf1bc32fe5978ca1d3 # v5.3.1
