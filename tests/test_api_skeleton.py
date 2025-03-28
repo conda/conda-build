@@ -387,7 +387,14 @@ def test_list_skeletons():
 
 
 def test_pypi_with_entry_points(tmp_path: Path):
-    api.skeletonize("planemo", repo="pypi", python_version="3.7", output_dir=tmp_path)
+    # planemo 0.75.29 dropped setup.py
+    api.skeletonize(
+        "planemo",
+        repo="pypi",
+        version="0.75.28",
+        python_version="3.12",
+        output_dir=tmp_path,
+    )
     assert (tmp_path / "planemo").is_dir()
 
 
