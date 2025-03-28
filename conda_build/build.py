@@ -71,6 +71,7 @@ from .render import (
 )
 from .utils import (
     CONDA_PACKAGE_EXTENSIONS,
+    create_file_with_permissions,
     env_var,
     glob,
     on_mac,
@@ -2440,7 +2441,7 @@ def build(
                     exclude_pattern = re.compile(
                         r"|".join(rf"(?:^{exc}(?:\s|$|\Z))" for exc in excludes)
                     )
-            add_upstream_pins(m, False, exclude_pattern, [])
+            add_upstream_pins(m, False, exclude_pattern)
 
         create_build_envs(top_level_pkg, notest)
 
@@ -3063,24 +3064,24 @@ def write_build_scripts(m, script, build_file):
 
     work_file = join(m.config.work_dir, "conda_build.sh")
     env_file = join(m.config.work_dir, "build_env_setup.sh")
-    with open(env_file, "w") as bf:
+
+    with create_file_with_permissions(env_file, 0o600) as bf:
         for k, v in env.items():
             if v != "" and v is not None:
                 bf.write(f'export {k}="{v}"\n')
-
         if m.activate_build_script:
             _write_sh_activation_text(bf, m)
-    with open(work_file, "w") as bf:
+
+    with create_file_with_permissions(work_file, 0o700) as bf:
         # bf.write('set -ex\n')
         bf.write("if [ -z ${CONDA_BUILD+x} ]; then\n")
-        bf.write(f"    source {env_file}\n")
+        bf.write(f"    source '{env_file}'\n")
         bf.write("fi\n")
         if script:
             bf.write(script)
         if isfile(build_file) and not script:
-            bf.write(open(build_file).read())
+            bf.write(Path(build_file).read_text())
 
-    os.chmod(work_file, 0o766)
     return work_file, env_file
 
 
