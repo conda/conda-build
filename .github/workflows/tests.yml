@@ -151,6 +151,13 @@ jobs:
           -m "${{ env.PYTEST_MARKER }}"
           --exitfirst
 
+      - name: Setup tmate session
+        # enter debugging session if tests failed
+        if: failure()
+        uses: mxschmitt/action-tmate@e5c7151931ca95bad1c6f4190c730ecf8c7dde48 # v3.19
+        with:
+          limit-access-to-actor: true
+
       - name: Upload Coverage
         uses: codecov/codecov-action@13ce06bfc6bbe3ecf90edbbf1bc32fe5978ca1d3 # v5.3.1
         with:
