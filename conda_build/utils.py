@@ -72,7 +72,7 @@ from .deprecations import deprecated
 from .exceptions import BuildLockError
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Mapping
+    from collections.abc import Mapping
     from typing import TypeVar
 
     from .metadata import MetaData
