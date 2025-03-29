@@ -2179,6 +2179,7 @@ def test_api_build_pytorch_cpu_issue5644(tmp_path, testing_config):
             del os.environ["CONDA_SUBDIR"]
 
 
+@pytest.mark.skipif(on_win, reason="file permissions not relevant on Windows")
 def test_build_script_permissions(testing_config):
     recipe = os.path.join(metadata_dir, "_noarch_python")
     metadata = api.render(

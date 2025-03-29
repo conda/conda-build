@@ -2264,7 +2264,7 @@ def package_record_to_requirement(prec: PackageRecord) -> str:
 
 
 @contextlib.contextmanager
-def set_umask(mask: int = 0) -> Iterator[None]:
+def set_umask(mask: int = 0) -> Iterable[None]:
     current = os.umask(mask)
     yield
     os.umask(current)
