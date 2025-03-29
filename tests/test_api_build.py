@@ -1462,7 +1462,11 @@ def test_unknown_selectors(testing_config):
 def test_failed_recipe_leaves_folders(testing_config):
     recipe = os.path.join(fail_dir, "recursive-build")
     metadata = api.render(recipe, config=testing_config)[0][0]
-    locks = get_conda_operation_locks(metadata.config)
+    locks = get_conda_operation_locks(
+        metadata.config.locking,
+        metadata.config.bldpkgs_dirs,
+        metadata.config.timeout,
+    )
     with pytest.raises((RuntimeError, exceptions.DependencyNeedsBuildingError)):
         api.build(metadata)
     assert os.path.isdir(metadata.config.build_folder), "build folder was removed"
