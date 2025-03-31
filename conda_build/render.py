@@ -130,7 +130,6 @@ def get_env_dependencies(
     exclude_pattern=None,
     permit_unsatisfiable_variants=False,
     merge_build_host_on_same_platform=True,
-    extra_specs=None,
 ):
     specs = m.get_depends_top_and_out(env)
     # replace x.x with our variant's numpy version, or else conda tries to literally go get x.x
@@ -149,8 +148,6 @@ def get_env_dependencies(
     )
 
     dependencies = set(dependencies)
-    if extra_specs:
-        dependencies |= set(extra_specs)
     unsat = None
     random_string = "".join(
         random.choice(string.ascii_uppercase + string.digits) for _ in range(10)
@@ -186,7 +183,7 @@ def get_env_dependencies(
     specs = [package_record_to_requirement(prec) for prec in precs]
     return (
         utils.ensure_list(
-            (specs + subpackages + pass_through_deps + (extra_specs or []))
+            (specs + subpackages + pass_through_deps)
             or m.get_value(f"requirements/{env}", [])
         ),
         precs,
@@ -413,6 +410,8 @@ def get_upstream_pins(m: MetaData, precs, env):
     if m.python_version_independent and not m.noarch:
         ignore_pkgs_list.append("python")
     ignore_list = utils.ensure_list(m.get_value("build/ignore_run_exports"))
+    if m.python_version_independent and not m.noarch:
+        ignore_list.append("python")
     additional_specs = {}
     for prec in precs:
         if any((prec.name == req.split(" ")[0]) for req in ignore_pkgs_list):
@@ -444,7 +443,6 @@ def _read_upstream_pin_files(
     env,
     permit_unsatisfiable_variants,
     exclude_pattern,
-    extra_specs,
 ):
     deps, precs, unsat = get_env_dependencies(
         m,
@@ -452,7 +450,6 @@ def _read_upstream_pin_files(
         m.config.variant,
         exclude_pattern,
         permit_unsatisfiable_variants=permit_unsatisfiable_variants,
-        extra_specs=extra_specs,
     )
     # extend host deps with strong build run exports.  This is important for things like
     #    vc feature activation to work correctly in the host env.
@@ -464,18 +461,12 @@ def _read_upstream_pin_files(
     )
 
 
-def add_upstream_pins(
-    m: MetaData, permit_unsatisfiable_variants, exclude_pattern, extra_specs
-):
+def add_upstream_pins(m: MetaData, permit_unsatisfiable_variants, exclude_pattern):
     """Applies run_exports from any build deps to host and run sections"""
     # if we have host deps, they're more important than the build deps.
     requirements = m.get_section("requirements")
     build_deps, build_unsat, extra_run_specs_from_build = _read_upstream_pin_files(
-        m,
-        "build",
-        permit_unsatisfiable_variants,
-        exclude_pattern,
-        [] if m.is_cross else extra_specs,
+        m, "build", permit_unsatisfiable_variants, exclude_pattern
     )
 
     # is there a 'host' section?
@@ -501,7 +492,7 @@ def add_upstream_pins(
         host_reqs.extend(extra_run_specs_from_build.get("strong", []))
 
         host_deps, host_unsat, extra_run_specs_from_host = _read_upstream_pin_files(
-            m, "host", permit_unsatisfiable_variants, exclude_pattern, extra_specs
+            m, "host", permit_unsatisfiable_variants, exclude_pattern
         )
         if m.noarch or m.noarch_python:
             extra_run_specs = set(extra_run_specs_from_host.get("noarch", []))
@@ -658,40 +649,9 @@ def finalize_metadata(
             utils.insert_variant_versions(requirements, m.config.variant, "build")
             utils.insert_variant_versions(requirements, m.config.variant, "host")
 
-        host_requirements = requirements.get("host" if m.is_cross else "build", [])
-        host_requirement_names = [req.split(" ")[0] for req in host_requirements]
-        extra_specs = []
-        if output and output_excludes and not is_top_level and host_requirement_names:
-            reqs = {}
-
-            # we first make a mapping of output -> requirements
-            for (name, _), (_, other_meta) in m.other_outputs.items():
-                if name == m.name():
-                    continue
-                other_meta_reqs = other_meta.meta.get("requirements", {}).get("run", [])
-                reqs[name] = set(other_meta_reqs)
-
-            seen = set()
-            # for each subpackage that is a dependency we add its dependencies
-            # and transitive dependencies if the dependency of the subpackage
-            # is a subpackage.
-            to_process = set(
-                name for (name, _) in m.other_outputs if name in host_requirement_names
-            )
-            while to_process:
-                name = to_process.pop()
-                if name == m.name():
-                    continue
-                for req in reqs[name]:
-                    req_name = req.split(" ")[0]
-                    if req_name not in reqs:
-                        extra_specs.append(req)
-                    elif req_name not in seen:
-                        to_process.add(req_name)
-
         m = parent_metadata.get_output_metadata(m.get_rendered_output(m.name()))
         build_unsat, host_unsat = add_upstream_pins(
-            m, permit_unsatisfiable_variants, exclude_pattern, extra_specs
+            m, permit_unsatisfiable_variants, exclude_pattern
         )
         # getting this AFTER add_upstream_pins is important, because that function adds deps
         #     to the metadata.
@@ -719,7 +679,6 @@ def finalize_metadata(
             m.config.variant,
             exclude_pattern=exclude_pattern,
             permit_unsatisfiable_variants=permit_unsatisfiable_variants,
-            extra_specs=extra_specs,
         )
         full_build_dep_versions = {
             dep.split()[0]: " ".join(dep.split()[1:]) for dep in full_build_deps
