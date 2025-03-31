@@ -414,6 +414,8 @@ def get_upstream_pins(m: MetaData, precs, env):
     if m.python_version_independent and not m.noarch:
         ignore_pkgs_list.append("python")
     ignore_list = utils.ensure_list(m.get_value("build/ignore_run_exports"))
+    if m.python_version_independent and not m.noarch:
+        ignore_list.append("python")
     additional_specs = {}
     for prec in precs:
         if any((prec.name == req.split(" ")[0]) for req in ignore_pkgs_list):
