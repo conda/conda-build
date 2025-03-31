@@ -10,7 +10,7 @@ build:
   number: {% block build_number -%}1{%- endblock %}
   script:
     - cd $RECIPE_DIR
-    - pip install --no-deps .
+    - pip install .
 
   {% block entry_points -%}
   entry_points: {{data.get('entry_points', {}).get('console_scripts', [])}}
