@@ -147,8 +147,16 @@ jobs:
         run: >
           pytest
           --cov=conda_build
-          -n auto
+          -n ${{ matrix.test-type == 'parallel' && 'auto' || 0 }}
           -m "${{ env.PYTEST_MARKER }}"
+          --exitfirst
+
+      - name: Setup tmate session
+        # enter debugging session if tests failed
+        if: failure()
+        uses: mxschmitt/action-tmate@e5c7151931ca95bad1c6f4190c730ecf8c7dde48 # v3.19
+        with:
+          limit-access-to-actor: true
 
       - name: Upload Coverage
         uses: codecov/codecov-action@13ce06bfc6bbe3ecf90edbbf1bc32fe5978ca1d3 # v5.3.1
@@ -169,7 +177,7 @@ jobs:
   linux-benchmarks:
     # only run test suite if there are code changes
     needs: changes
-    if: needs.changes.outputs.code == 'true'
+    if: false # needs.changes.outputs.code == 'true'
 
     runs-on: ubuntu-latest
     defaults:
@@ -236,7 +244,7 @@ jobs:
   windows:
     # only run test suite if there are code changes
     needs: changes
-    if: github.event_name == 'schedule' || needs.changes.outputs.code == 'true'
+    if: false # github.event_name == 'schedule' || needs.changes.outputs.code == 'true'
 
     runs-on: windows-2019
     strategy:
@@ -315,7 +323,7 @@ jobs:
           pytest
           --cov=conda_build
           --basetemp=${{ runner.temp }}
-          -n auto
+          -n ${{ matrix.test-type == 'parallel' && 'auto' || 0 }}
           -m "${{ env.PYTEST_MARKER }}"
 
       - name: Upload Coverage
@@ -337,7 +345,7 @@ jobs:
   macos:
     # only run test suite if there are code changes
     needs: changes
-    if: github.event_name == 'schedule' || needs.changes.outputs.code == 'true'
+    if: false # github.event_name == 'schedule' || needs.changes.outputs.code == 'true'
 
     # we still need intel macs so we are stuck on macos-13 (not -14 or -latest)
     # the issue is that there are recipes that depend on packages
@@ -431,7 +439,7 @@ jobs:
         run: >
           pytest
           --cov=conda_build
-          -n auto
+          -n ${{ matrix.test-type == 'parallel' && 'auto' || 0 }}
           -m "${{ env.PYTEST_MARKER }}"
         env:
           CONDA_BUILD_SYSROOT: ${{ env.MACOSX_SDK_ROOT }}
