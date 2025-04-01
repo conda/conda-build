@@ -276,14 +276,3 @@ def empty_channel(tmp_path_factory: pytest.TempPathFactory) -> Path:
     channel = tmp_path_factory.mktemp("empty_channel", numbered=False)
     update_index(channel)
     return channel
-
-
-@pytest.fixture(autouse=True)
-def unique_package_cache():
-    import tempfile
-
-    import conda.base.context
-
-    with tempfile.TemporaryDirectory() as tmpdir:
-        with conda.base.context.context._override("_pkgs_dirs", [str(tmpdir)]):
-            yield
