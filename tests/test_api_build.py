@@ -1442,7 +1442,7 @@ def test_recursion_layers(testing_config):
     reason="spaces break openssl prefix replacement on *nix",
 )
 @pytest.mark.skipif(
-    datetime.now() < datetime(2025, 3, 31),
+    datetime.now() < datetime(2025, 5, 31),
     reason="Unblock CI while https://github.com/mamba-org/mamba/issues/3730 gets a fix",
 )
 def test_croot_with_spaces(testing_metadata, testing_workdir):
