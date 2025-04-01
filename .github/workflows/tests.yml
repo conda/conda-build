@@ -147,6 +147,8 @@ jobs:
         run: >
           pytest
           --cov=conda_build
+          --reruns 3
+          --reruns-delay 1
           -n auto
           -m "${{ env.PYTEST_MARKER }}"
 
