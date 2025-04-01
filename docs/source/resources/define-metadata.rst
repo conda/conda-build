@@ -744,6 +744,7 @@ In order to support ABI3 with Python 3.9 and onwards and
 free-threaded builds you can do
 
 .. code-block:: yaml
+
    build:
      python_version_independent: true   # [py == 39]
      skip: true                         # [py > 39 and not python.endswith("t")]
