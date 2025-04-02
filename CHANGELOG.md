@@ -4,8 +4,7 @@
 
 ### Enhancements
 
-* Ignore run_exports of python from other packages when building with
-  ``python_version_independent: true`` (#5654).
+* Ignore `run_exports` of Python from other packages when building with `python_version_independent: true`. (#5654)
 
 ### Contributors
 
