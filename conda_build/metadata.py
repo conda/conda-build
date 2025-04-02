@@ -326,7 +326,7 @@ def eval_selector(selector_string, namespace, variants_in_place, unsafe=False):
     if unsafe:
         expression = selector_string
     else:
-        expression = Expr(selector_string, model=evalidate_model()).code
+        expression = Expr(selector_string.lstrip(), model=evalidate_model()).code
     try:
         return eval(expression, {}, namespace)
     except NameError as e:
