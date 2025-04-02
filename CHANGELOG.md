@@ -1,5 +1,18 @@
 [//]: # (current developments)
 
+## 25.3.2 (2025-04-02)
+
+### Enhancements
+
+* Ignore run_exports of python from other packages when building with
+  ``python_version_independent: true`` (#5654).
+
+### Contributors
+
+* @isuruf
+
+
+
 ## 25.3.1 (2025-03-24)
 
 ### Enhancements
