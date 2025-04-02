@@ -1,0 +1,19 @@
+### Enhancements
+
+* Use `evalidate` to evaluate selector logic. This restricts which operations are allowed as part of a selector. In particular, only `os.getenv` and `os.environ` are now allowed in the `os` module. (#5482)
+
+### Bug fixes
+
+* <news item>
+
+### Deprecations
+
+* <news item>
+
+### Docs
+
+* <news item>
+
+### Other
+
+* <news item>

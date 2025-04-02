@@ -9,6 +9,7 @@ from contextlib import nullcontext
 from itertools import product
 from typing import TYPE_CHECKING
 
+import evalidate
 import pytest
 from conda import __version__ as conda_version
 from conda.base.context import context
@@ -21,8 +22,10 @@ from conda_build.metadata import (
     FIELDS,
     OPTIONALLY_ITERABLE_FIELDS,
     MetaData,
+    OSModuleSubset,
     _hash_dependencies,
     check_bad_chrs,
+    eval_selector,
     get_selectors,
     sanitize,
     select_lines,
@@ -120,6 +123,53 @@ def test_select_lines():
             "",  # preserve trailing newline
         )
     )
+
+
+@pytest.mark.parametrize("unsafe", (True, False))
+def test_select_access_environ(testing_config, unsafe):
+    namespace = get_selectors(testing_config)
+    assert "NOTFOUND" == eval_selector(
+        "environ.get('DOESNOTEXIST', 'NOTFOUND')",
+        namespace,
+        variants_in_place=True,
+        unsafe=unsafe,
+    )
+    assert "NOTFOUND" == eval_selector(
+        "os.environ.get('DOESNOTEXIST', 'NOTFOUND')",
+        namespace,
+        variants_in_place=True,
+        unsafe=unsafe,
+    )
+
+
+def test_select_evalidate_model():
+    from evalidate.security import test_security
+
+    from conda_build.metadata import evalidate_model
+
+    assert test_security(model=evalidate_model())
+
+
+@pytest.mark.parametrize("unsafe", (True, False))
+@pytest.mark.parametrize(
+    "expression",
+    [
+        "__import__('os').system('echo BAD')",
+        "os.getenv.__globals__['system']('echo BAD')",
+        "getattr(os.getenv, '__globals__')['system']('echo BAD')",
+        "os.environ.update({'BLAH': 'BAD'})",
+        "os.environ.setdefault('BLAH', 'BAD')",
+    ],
+)
+def test_select_malicious(testing_config, expression, unsafe):
+    namespace = get_selectors(testing_config)
+    with nullcontext() if unsafe else pytest.raises(evalidate.ValidationException):
+        eval_selector(
+            expression,
+            namespace,
+            variants_in_place=True,
+            unsafe=unsafe,
+        )
 
 
 @pytest.mark.benchmark
@@ -518,7 +568,7 @@ def test_get_selectors(
         "lua": DEFAULT_VARIANTS["lua"],
         "luajit": DEFAULT_VARIANTS["lua"] == 2,
         "np": int(float(DEFAULT_VARIANTS["numpy"]) * 100),
-        "os": os,
+        "os": OSModuleSubset,
         "pl": DEFAULT_VARIANTS["perl"],
         "py": int(f"{sys.version_info.major}{sys.version_info.minor}"),
         "py26": sys.version_info[:2] == (2, 6),
@@ -533,7 +583,7 @@ def test_get_selectors(
         # default OS/arch values
         **{key: False for key in OS_ARCH},
         # environment variables
-        "environ": os.environ,
+        "environ": OSModuleSubset.environ,
         **os.environ,
         # override with True values
         **{key: True for key in expected},
