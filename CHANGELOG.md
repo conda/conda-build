@@ -6,6 +6,10 @@
 
 * Ignore `run_exports` of Python from other packages when building with `python_version_independent: true`. (#5654)
 
+### Bug fixes
+
+* Handle variants for transitive subpackage resolution. (#5644 & #5645 via #5651)
+
 ### Contributors
 
 * @isuruf
