@@ -121,6 +121,7 @@ jobs:
         with:
           condarc-file: .github/condarc
           run-post: false  # skip post cleanup
+          miniforge-version: latest
 
       - name: Conda Install
         run: >
@@ -203,6 +204,7 @@ jobs:
         with:
           condarc-file: .github/condarc
           run-post: false  # skip post cleanup
+          miniforge-version: latest
 
       - name: Conda Install
         run: >
@@ -285,6 +287,7 @@ jobs:
           run-post: false  # skip post cleanup
           pkgs-dirs: D:\conda_pkgs_dir
           installation-dir: D:\conda
+          miniforge-version: latest
 
       - name: Choco Install
         run: choco install visualstudio2017-workload-vctools
@@ -301,7 +304,7 @@ jobs:
 
       # TODO: how can we remove this step?
       - name: Install Self
-        run: pip install -e .
+        run: pip install -e . --no-deps
 
       - name: Conda Info
         # view test env info (not base)
