@@ -1,8 +1,9 @@
 beautifulsoup4
 chardet
 conda >=23.7.0
+conda-canary/label/conda-libmamba-solver-pr-640::conda-libmamba-solver
 conda-index >=0.4.0
-conda-libmamba-solver  # ensure we use libmamba
+# conda-libmamba-solver  # ensure we use libmamba
 conda-package-handling >=2.2.0
 evalidate >=2,<3.0a0
 filelock
