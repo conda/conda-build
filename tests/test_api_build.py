@@ -137,10 +137,6 @@ def test_recipe_builds(
         pytest.xfail("Issue related to #3754 on conda-build.")
     elif recipe.name == "unicode_all_over" and context.solver == "libmamba":
         pytest.xfail("Unicode package names not supported in libmamba.")
-    elif recipe.name == "transitive_subpackage":
-        pytest.xfail(
-            "Added as part of #5603, reverted in #5647. Fix needs to be reworked."
-        )
 
     # These variables are defined solely for testing purposes,
     # so they can be checked within build scripts
@@ -2156,6 +2152,8 @@ def test_build_strings_glob_match(testing_config: Config) -> None:
 
 @pytest.mark.skipif(not on_linux, reason="needs __glibc virtual package")
 def test_api_build_grpc_issue5645(tmp_path, testing_config):
+    if Version(conda_version) < Version("25.1.0"):
+        pytest.skip("needs conda 25.1.0")
     testing_config.channel_urls = ["conda-forge"]
     with tmp_path:
         api.build(str(metadata_path / "_grpc"), config=testing_config)

@@ -1,5 +1,21 @@
 [//]: # (current developments)
 
+## 25.3.2 (2025-04-02)
+
+### Enhancements
+
+* Ignore `run_exports` of Python from other packages when building with `python_version_independent: true`. (#5654)
+
+### Bug fixes
+
+* Handle variants for transitive subpackage resolution. (#5644 & #5645 via #5651)
+
+### Contributors
+
+* @isuruf
+
+
+
 ## 25.3.1 (2025-03-24)
 
 ### Enhancements
