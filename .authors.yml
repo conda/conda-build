@@ -565,7 +565,7 @@
   num_commits: 1
   first_commit: 2018-12-20 04:25:56
 - name: Sophia Castellarin
-  email: scastellarin@anaconda.com
+  email: scastellarin@quansight.com
   aliases:
   - sophia
   - soapy1
@@ -1508,3 +1508,12 @@
   github: woutdenolf
   num_commits: 1
   first_commit: 2025-02-27 10:06:02
+- name: Thomas Lam
+  email: 79589038+tl-hbk@users.noreply.github.com
+  github: tl-hbk
+- name: Matthew Feickert
+  email: matthew.feickert@cern.ch
+  github: matthewfeickert
+- name: Konstantin Malanchev
+  email: hombit@gmail.com
+  github: hombit
