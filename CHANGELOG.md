@@ -30,11 +30,11 @@
 * @isuruf
 * @jaimergp
 * @kenodegard
-* @hombit
-* @matthewfeickert
+* @hombit made their first contribution in https://github.com/conda/conda-build/pull/5656
+* @matthewfeickert made their first contribution in https://github.com/conda/conda-build/pull/5541
 * @beckermr
 * @soapy1
-* @tl-hbk
+* @tl-hbk made their first contribution in https://github.com/conda/conda-build/pull/5259
 * @dependabot[bot]
 * @pre-commit-ci[bot]
 
