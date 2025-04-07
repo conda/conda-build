@@ -5,13 +5,11 @@
 ### Enhancements
 
 * Use `evalidate` to evaluate selector logic. This restricts which operations are allowed as part of a selector. In particular, only `os.getenv` and `os.environ` are now allowed in the `os` module. (#5482)
-* Ignore run_exports of python from other packages when building with
-  ``python_version_independent: true`` (#5654).
+* Ignore run_exports of python from other packages when building with `python_version_independent: true`. (#5654)
 
 ### Bug fixes
 
 * Fix `get_conda_operation_locks` call to use correct arguments. (#4215 via #5259)
-*
 * Use `conda_build.utils.tar_xf` everywhere to avoid blind usage of `tar.extractall` in `conda render` and `conda convert`.
 
 ### Docs
@@ -20,9 +18,7 @@
 
 ### Other
 
-* Remove `--no-deps`, `--no-build-isolation`, and `--ignore-installed`
-  `pip install` options in example recipes as `conda-build` will enforce
-  all required `pip install` options itself at build time. (#5541)
+* Remove `--no-deps`, `--no-build-isolation`, and `--ignore-installed` `pip install` options in example recipes as `conda-build` will enforce all required `pip install` options itself at build time. (#5541)
 
 ### Contributors
 
