@@ -158,10 +158,20 @@ def reset_config(search_path=None):
     reset_context(search_path)
 
 
+# only adding this so it shows up in code searches; the decorator MUST NOT be added
+# @contextmanager
 def raises_after(datetime_args, *args, **kwargs):
     """
     Helper to check that a certain code raises a given exception after a set date.
     Useful to check deprecation cycles that should start raising errors at some point.
+
+    Note that this function returns context managers, so it can be used as a context manager
+    directly:
+
+    ```python
+    with raises_after((2025, 06, 01), Exception):
+        ...
+    ```
     """
     if datetime.now() >= datetime(*datetime_args):
         return pytest.raises(*args, **kwargs)
