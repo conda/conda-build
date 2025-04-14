@@ -15,7 +15,7 @@ from copy import copy
 from fnmatch import filter as fnmatch_filter
 from fnmatch import fnmatch
 from fnmatch import translate as fnmatch_translate
-from functools import cache, partial
+from functools import lru_cache, partial
 from os.path import (
     basename,
     dirname,
@@ -1697,7 +1697,7 @@ def check_menuinst_json(files, prefix) -> None:
         _check_one_menuinst_json(join(prefix, json_file))
 
 
-@cache
+@lru_cache(maxsize=128)
 def _build_validator(url):
     import jsonschema
     import requests
