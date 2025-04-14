@@ -75,7 +75,7 @@ def test_fix_shebang():
         f.write("\n")
     os.chmod(fname, 0o000)
     post.fix_shebang(fname, ".", "/test/python")
-    assert os.stat(fname).st_mode == 33277  # file with permissions 0o775
+    assert (os.stat(fname).st_mode & 0o777) == 0o775
 
 
 def test_postlink_script_in_output_explicit(testing_config):

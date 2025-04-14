@@ -39,6 +39,7 @@ dependencies = [
   "pytz",
   "pyyaml",
   "requests",
+  "evalidate >=2,<3",
   "tomli ; python_version<'3.11'",
   "tqdm",
 ]

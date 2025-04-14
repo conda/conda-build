@@ -22,7 +22,7 @@ All the metadata in the conda-build recipe is specified in the
     build:
       noarch: python
       number: 0
-      script: python -m pip install --no-deps --ignore-installed .
+      script: python -m pip install .
 
     requirements:
       host:
@@ -323,7 +323,9 @@ Build number and string
 The build number should be incremented for new builds of the same
 version. The number defaults to ``0``. The build string cannot
 contain "-". The string defaults to the default conda-build
-string plus the build number.
+string plus the build number. When redefining the default string,
+we strongly recommend following the convention of adding the build
+number at the end of the string, with a preceding underscore.
 
 .. code-block:: yaml
 
@@ -744,6 +746,7 @@ In order to support ABI3 with Python 3.9 and onwards and
 free-threaded builds you can do
 
 .. code-block:: yaml
+
    build:
      python_version_independent: true   # [py == 39]
      skip: true                         # [py > 39 and not python.endswith("t")]

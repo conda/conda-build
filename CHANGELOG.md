@@ -1,5 +1,40 @@
 [//]: # (current developments)
 
+## 25.3.2 (2025-04-02)
+
+### Enhancements
+
+* Ignore `run_exports` of Python from other packages when building with `python_version_independent: true`. (#5654)
+
+### Bug fixes
+
+* Handle variants for transitive subpackage resolution. (#5644 & #5645 via #5651)
+
+### Contributors
+
+* @isuruf
+
+
+
+## 25.3.1 (2025-03-24)
+
+### Enhancements
+
+* Add regression tests for issues #5644 and #5645. (#5648)
+
+### Bug fixes
+
+* Revert #5603 to avoid rendering regressions in multi-output recipes. (#5644, #5645 via #5647)
+* Use more adequate permissions for temporary build scripts written to `$SRC_DIR`.
+
+### Contributors
+
+* @jaimergp
+* @kenodegard
+* @beckermr
+
+
+
 ## 25.3.0 (2025-03-17)
 
 ### Enhancements
@@ -12,9 +47,10 @@
 * Fix subdirectory check for `conda_build.utils.merge_tree`. (#4976 via #4977)
 * Perform build string pin compatibility checks with glob matching instead of strict string equality. (#5600)
 * Warn about parsed and raw output block mismatches. This can cause issues with custom build strings, among others. The recommendation is to avoid Jinja flow control to build the output list. Use `skip: true` as necessary. (#5571 via #5601)
-* Fixes transitive subpackage dependency resolution issue #3308. (#5603)
+* Fix transitive subpackage dependency resolution issue #3308. (#5603)
 * Limit `patchelf` to `<0.18`. (#5607)
 * Use the `CONDA_EXE` as defined in `context.conda_exe_vars_dict` instead of defaulting to the one in the `base` env. (#5637)
+* Fix LIEF>=0.15 compatibility. (#5626 via #5627)
 
 ### Other
 

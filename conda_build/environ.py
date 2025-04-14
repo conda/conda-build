@@ -911,7 +911,9 @@ def get_install_actions(
                         or isinstance(exc, AssertionError)
                     ):
                         locks = utils.get_conda_operation_locks(
-                            locking, bldpkgs_dirs, timeout
+                            locking,
+                            bldpkgs_dirs,
+                            timeout,
                         )
                         with utils.try_acquire_locks(locks, timeout=timeout):
                             pkg_dir = str(exc)
@@ -1008,7 +1010,11 @@ def create_env(
             log.debug(str(specs_or_precs))
 
             if not locks:
-                locks = utils.get_conda_operation_locks(config)
+                locks = utils.get_conda_operation_locks(
+                    config.locking,
+                    config.bldpkgs_dirs,
+                    config.timeout,
+                )
             try:
                 with utils.try_acquire_locks(locks, timeout=config.timeout):
                     # input is a list of specs in MatchSpec format

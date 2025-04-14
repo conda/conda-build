@@ -21,6 +21,7 @@ from bs4 import UnicodeDammit
 from conda.base.context import locate_prefix_by_name
 from conda.gateways.disk.read import compute_sum
 from conda.models.match_spec import GlobLowerStrMatch, MatchSpec
+from evalidate import EvalException, Expr, base_eval_model
 from frozendict import deepfreeze
 
 from . import utils
@@ -133,6 +134,13 @@ numpy_compatible_re = re.compile(r"pin_\w+\([\'\"]numpy[\'\"]")
 used_vars_cache = {}
 
 
+class OSModuleSubset:
+    "Subset of os module names commonly used in selectors"
+
+    environ = os.environ
+    getenv = os.getenv
+
+
 def get_selectors(config: Config) -> dict[str, bool]:
     """Aggregates selectors for use in recipe templating.
 
@@ -147,6 +155,7 @@ def get_selectors(config: Config) -> dict[str, bool]:
     """
     # Remember to update the docs of any of this changes
     plat = config.host_subdir
+
     d = dict(
         linux32=bool(plat == "linux-32"),
         linux64=bool(plat == "linux-64"),
@@ -154,8 +163,8 @@ def get_selectors(config: Config) -> dict[str, bool]:
         unix=plat.startswith(("linux-", "osx-", "emscripten-")),
         win32=bool(plat == "win-32"),
         win64=bool(plat == "win-64"),
-        os=os,
-        environ=os.environ,
+        os=OSModuleSubset,
+        environ=OSModuleSubset.environ,
         nomkl=bool(int(os.environ.get("FEATURE_NOMKL", False))),
     )
 
@@ -263,31 +272,70 @@ sel_pat = re.compile(r"(.+?)\s*(#.*)?\[([^\[\]]+)\](?(2)[^\(\)]*)$")
 # this function extracts the variable name from a NameError exception, it has the form of:
 # "NameError: name 'var' is not defined", where var is the variable that is not defined. This gets
 #    returned
-def parseNameNotFound(error):
-    m = re.search("'(.+?)'", str(error))
-    if len(m.groups()) == 1:
-        return m.group(1)
-    else:
+def parseNameNotFound(error) -> str:
+    message = str(error)
+    if isinstance(error, EvalException):
+        if message.endswith("is not allowed"):
+            return message.split()[-4]
         return ""
+    else:  # assume NameError-like
+        m = re.search("'(.+?)'", message)
+        if len(m.groups()) == 1:
+            return m.group(1)
+        else:
+            return ""
+
+
+@cache
+def evalidate_model():
+    model = base_eval_model.clone()
+    model.nodes.extend(["Call", "Attribute"])
+    model.allowed_functions += [
+        "int",
+        "str",
+        "list",
+        "dict",
+        "tuple",
+    ]
+    model.attributes += [
+        # string methods
+        "endswith",
+        "index",
+        "lower",
+        "rsplit",
+        "split",
+        "startswith",
+        "strip",
+        "upper",
+        # dict methods
+        "get",
+        "items",
+        "keys",
+        "values",
+        # for legacy os.environ and os.getenv
+        "environ",
+        "getenv",
+    ]
+    return model
 
 
 # We evaluate the selector and return True (keep this line) or False (drop this line)
 # If we encounter a NameError (unknown variable in selector), then we replace it by False and
 #     re-run the evaluation
-def eval_selector(selector_string, namespace, variants_in_place):
+def eval_selector(selector_string, namespace, variants_in_place, unsafe=False):
+    if unsafe:
+        expression = selector_string
+    else:
+        expression = Expr(selector_string.lstrip(), model=evalidate_model()).code
     try:
-        # TODO: is there a way to do this without eval?  Eval allows arbitrary
-        #    code execution.
-        return eval(selector_string, namespace, {})
+        return eval(expression, {}, namespace)
     except NameError as e:
         missing_var = parseNameNotFound(e)
         if variants_in_place:
             log = utils.get_logger(__name__)
-            log.debug(
-                "Treating unknown selector '" + missing_var + "' as if it was False."
-            )
+            log.debug("Treating unknown selector '%s' as if it was False.", missing_var)
         next_string = selector_string.replace(missing_var, "False")
-        return eval_selector(next_string, namespace, variants_in_place)
+        return eval_selector(next_string, namespace, variants_in_place, unsafe=unsafe)
 
 
 @cache
