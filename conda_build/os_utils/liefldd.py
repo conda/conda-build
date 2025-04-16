@@ -1069,7 +1069,7 @@ def get_exports(filename, arch="native", enable_static=False):
                         print(
                             "WARNING :: Disagreement regarding static lib exports in "
                             f"{filename} between nm (nsyms={len(exports)}) and "
-                            "lielfldd (nsyms={len(exports2)}):"
+                            f"lielfldd (nsyms={len(exports2)}):"
                         )
                     print(
                         "\n".join(("** nm.diff(liefldd) [MISSING SYMBOLS] **", *diff1))
