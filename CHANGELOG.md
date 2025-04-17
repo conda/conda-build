@@ -11,6 +11,7 @@
 
 * Fix `get_conda_operation_locks` call to use correct arguments. (#4215 via #5259)
 * Use `conda_build.utils.tar_xf` everywhere to avoid blind usage of `tar.extractall` in `conda render` and `conda convert`.
+* Changed release upload workflow to use github event tag names. (#5686)
 
 ### Docs
 
