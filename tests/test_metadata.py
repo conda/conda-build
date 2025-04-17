@@ -90,7 +90,9 @@ def test_select_lines():
         )
     )
 
-    assert select_lines(lines, {"abc": True, "d": "b"}, variants_in_place=True) == "\n".join(
+    assert select_lines(
+        lines, {"abc": True, "d": "b"}, variants_in_place=True
+    ) == "\n".join(
         (
             "",  # preserve leading newline
             "test",
@@ -115,7 +117,9 @@ def test_select_lines():
             "",  # preserve trailing newline
         )
     )
-    assert select_lines(lines, {"abc": False, "d": "c"}, variants_in_place=True) == "\n".join(
+    assert select_lines(
+        lines, {"abc": False, "d": "c"}, variants_in_place=True
+    ) == "\n".join(
         (
             "",  # preserve leading newline
             "test",
