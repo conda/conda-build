@@ -83,9 +83,9 @@ def test_select_lines():
             "test {{ JINJA_VAR[:2] }} # stuff yes [abc]",
             "test {{ JINJA_VAR[:2] }} # [abc] stuff yes",
             '{{ environ["test"] }}  # [abc]',
-            '{{ environ["test"] }}  # [d in ("a", "b")]',
-            '{{ environ["test"] }}  # [d in ["a", "b"]]',
-            '{{ environ["test"] }}  # [d in {"a": 1, "b": 2}]',
+            '{{ environ["test-tuple"] }}  # [d in ("a", "b")]',
+            '{{ environ["test-list"] }}  # [d in list(("a", "b"))]',
+            '{{ environ["test-dict"] }}  # [d in {"a": 1, "b": 2}]',
             "",  # preserve trailing newline
         )
     )
@@ -111,9 +111,9 @@ def test_select_lines():
             "test {{ JINJA_VAR[:2] }}",
             "test {{ JINJA_VAR[:2] }}",
             '{{ environ["test"] }}',
-            '{{ environ["test"] }}',
-            '{{ environ["test"] }}',
-            '{{ environ["test"] }}',
+            '{{ environ["test-tuple"] }}',
+            '{{ environ["test-list"] }}',
+            '{{ environ["test-dict"] }}',
             "",  # preserve trailing newline
         )
     )
