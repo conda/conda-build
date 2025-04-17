@@ -289,7 +289,7 @@ def parseNameNotFound(error) -> str:
 @cache
 def evalidate_model():
     model = base_eval_model.clone()
-    model.nodes.extend(["Call", "Attribute"])
+    model.nodes.extend(["Call", "Attribute", "Tuple", "List", "Dict"])
     model.allowed_functions += [
         "int",
         "str",
