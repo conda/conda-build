@@ -1,5 +1,41 @@
 [//]: # (current developments)
 
+## 25.4.0 (2025-04-07)
+
+### Enhancements
+
+* Use `evalidate` to evaluate selector logic. This restricts which operations are allowed as part of a selector. In particular, only `os.getenv` and `os.environ` are now allowed in the `os` module. (#5482)
+* Ignore run_exports of python from other packages when building with `python_version_independent: true`. (#5654)
+
+### Bug fixes
+
+* Fix `get_conda_operation_locks` call to use correct arguments. (#4215 via #5259)
+* Use `conda_build.utils.tar_xf` everywhere to avoid blind usage of `tar.extractall` in `conda render` and `conda convert`.
+
+### Docs
+
+* Add recommendation to append build number to build string when overwriting build string. (#5676)
+
+### Other
+
+* Remove `--no-deps`, `--no-build-isolation`, and `--ignore-installed` `pip install` options in example recipes as `conda-build` will enforce all required `pip install` options itself at build time. (#5541)
+
+### Contributors
+
+* @conda-bot
+* @isuruf
+* @jaimergp
+* @kenodegard
+* @hombit made their first contribution in https://github.com/conda/conda-build/pull/5656
+* @matthewfeickert made their first contribution in https://github.com/conda/conda-build/pull/5541
+* @beckermr
+* @soapy1
+* @tl-hbk made their first contribution in https://github.com/conda/conda-build/pull/5259
+* @dependabot[bot]
+* @pre-commit-ci[bot]
+
+
+
 ## 25.3.2 (2025-04-02)
 
 ### Enhancements
