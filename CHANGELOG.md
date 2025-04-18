@@ -4,7 +4,7 @@
 
 ### Bug fixes
 
-* Fixed bug where selectors with lists, tuples, or dicts could not be processed. (#5690)
+* Fix bug where selectors with lists, tuples, or dicts could not be processed. (#5690)
 
 ### Contributors
 
