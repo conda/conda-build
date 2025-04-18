@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+import textwrap
 from contextlib import nullcontext
 from itertools import product
 from typing import TYPE_CHECKING
@@ -61,6 +62,20 @@ def test_uses_vcs_in_metadata(testing_workdir, testing_metadata):
         f.write("HG_WEEEEE")
     assert testing_metadata.uses_vcs_in_meta
     assert not testing_metadata.uses_vcs_in_build
+
+
+def test_select_lines_complicated_smoke():
+    # this snippet is from the conda-forge pinnings file
+    cfpinning = textwrap.dedent(
+        """
+        docker_image:                                       # [os.environ.get("BUILD_PLATFORM", "").startswith("linux-")]
+        # non-CUDA-enabled builds on AlmaLinux 8
+        - quay.io/condaforge/linux-anvil-x86_64:alma8     # [os.environ.get("BUILD_PLATFORM") == "linux-64" and os.environ.get("DEFAULT_LINUX_VERSION", "alma9") in ("alma8", "ubi8")]
+        - quay.io/condaforge/linux-anvil-aarch64:alma8    # [os.environ.get("BUILD_PLATFORM") == "linux-aarch64" and os.environ.get("DEFAULT_LINUX_VERSION", "alma9") in ("alma8", "ubi8")]
+        - quay.io/condaforge/linux-anvil-ppc64le:alma8    # [os.environ.get("BUILD_PLATFORM") == "linux-ppc64le" and os.environ.get("DEFAULT_LINUX_VERSION", "alma9") in ("alma8", "ubi8")]
+        """  # noqa: E501
+    )
+    select_lines(cfpinning, {"os": OSModuleSubset}, variants_in_place=True)
 
 
 def test_select_lines():
