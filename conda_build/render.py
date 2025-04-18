@@ -1027,7 +1027,7 @@ FIELDS = [
 
 # Next bit of stuff is to support YAML output in the order we expect.
 # http://stackoverflow.com/a/17310199/1170370
-@deprecated("24.5", "24.7")
+@deprecated("25.5", "25.7")
 class _MetaYaml(dict):
     fields = FIELDS
 
@@ -1035,18 +1035,18 @@ class _MetaYaml(dict):
         return [(field, self[field]) for field in _MetaYaml.fields if field in self]
 
 
-@deprecated("24.5", "24.7")
+@deprecated("25.5", "25.7")
 def _represent_omap(dumper, data):
     return dumper.represent_mapping("tag:yaml.org,2002:map", data.to_omap())
 
 
-@deprecated("24.5", "24.7")
+@deprecated("25.5", "25.7")
 def _unicode_representer(dumper, uni):
     node = yaml.ScalarNode(tag="tag:yaml.org,2002:str", value=uni)
     return node
 
 
-@deprecated("24.5", "24.7")
+@deprecated("25.5", "25.7")
 class _IndentDumper(yaml.Dumper):
     def increase_indent(self, flow=False, indentless=False):
         return super().increase_indent(flow, False)
