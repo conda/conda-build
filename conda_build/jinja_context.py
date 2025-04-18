@@ -10,24 +10,19 @@ import re
 import time
 from functools import partial
 from io import StringIO, TextIOBase
+from subprocess import CalledProcessError
+from typing import TYPE_CHECKING
 from warnings import warn
 
 import jinja2
 import yaml
-
-try:
-    import tomllib  # Python 3.11
-except:
-    import tomli as tomllib
-
-from typing import TYPE_CHECKING
+from frozendict import deepfreeze
 
 from . import _load_setup_py_data
 from .environ import get_dict as get_environ
 from .exceptions import CondaBuildException
 from .render import get_env_dependencies
 from .utils import (
-    HashableDict,
     apply_pin_expressions,
     check_call_env,
     copy_into,
@@ -37,6 +32,11 @@ from .utils import (
     rm_rf,
 )
 from .variants import DEFAULT_COMPILERS
+
+try:
+    import tomllib  # Python 3.11
+except:
+    import tomli as tomllib
 
 if TYPE_CHECKING:
     from typing import IO, Any
@@ -166,7 +166,12 @@ def load_setup_py_data(
             args.extend(["--recipe-dir", recipe_dir])
         if permit_undefined_jinja:
             args.append("--permit-undefined-jinja")
-        check_call_env(args, env=env)
+        try:
+            check_call_env(args, env=env)
+        except CalledProcessError as exc:
+            raise CondaBuildException(
+                "Could not run load_setup_py_data in subprocess"
+            ) from exc
         # this is a file that the subprocess will have written
         with open(
             os.path.join(m.config.work_dir, "conda_build_loaded_setup_py.json")
@@ -298,7 +303,7 @@ def pin_compatible(
         # There are two cases considered here (so far):
         # 1. Good packages that follow semver style (if not philosophy).  For example, 1.2.3
         # 2. Evil packages that cram everything alongside a single major version.  For example, 9b
-        key = (m.name(), HashableDict(m.config.variant))
+        key = (m.name(), deepfreeze(m.config.variant))
         if key in cached_env_dependencies:
             pins = cached_env_dependencies[key]
         else:

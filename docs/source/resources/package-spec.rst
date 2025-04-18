@@ -17,9 +17,9 @@ There are currently two formats of archives that are supported:
      - **Description**
 
    * - .tar.bz2
-     - The original format of conda packages.  Is the default output of conda-build.
+     - The original format of conda packages.
    * - .conda
-     - 2nd Gen.  This is a more compact and thus faster. Can be outputed from conda-build by setting output in ``.condarc`` file.
+     - 2nd Gen. This is a more compact and thus faster. Default since 25.1.
 
 The formats are identical across platforms and operating systems.
 During the install process, all files are extracted into the

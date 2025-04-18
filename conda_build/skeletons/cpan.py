@@ -4,6 +4,8 @@
 Tools for converting CPAN packages to conda recipes.
 """
 
+from __future__ import annotations
+
 import codecs
 import gzip
 import hashlib
@@ -13,27 +15,29 @@ import pickle
 import subprocess
 import sys
 import tempfile
-from functools import lru_cache, partial
+from functools import cache, partial
 from glob import glob
 from os import makedirs
 from os.path import basename, dirname, exists, join
 
 import requests
-from conda.core.index import get_index
 from conda.exceptions import CondaError, CondaHTTPError
+from conda.gateways.connection.download import TmpDownload, download
+from conda.gateways.disk.create import TemporaryDirectory
+from conda.models.match_spec import MatchSpec
+from conda.resolve import Resolve
 
 from .. import environ
-from ..conda_interface import (
-    MatchSpec,
-    Resolve,
-    TemporaryDirectory,
-    TmpDownload,
-    download,
-)
 from ..config import Config, get_or_merge_config
 from ..utils import check_call_env, on_linux, on_win
 from ..variants import get_default_variant
 from ..version import _parse as parse_version
+
+try:
+    from conda.core.index import Index
+except ImportError:
+    # FUTURE: remove for `conda >=24.9`
+    from conda_build.index import Index
 
 CPAN_META = """\
 {{% set name = "{packagename}" %}}
@@ -355,19 +359,22 @@ def install_perl_get_core_modules(version):
                 "my @modules = grep {Module::CoreList::is_core($_)} Module::CoreList->find_modules(qr/.*/); "
                 'print join "\n", @modules;',
             ]
-            all_core_modules = (
-                subprocess.check_output(args, shell=False)
-                .decode("utf-8")
-                .replace("\r\n", "\n")
-                .split("\n")
-            )
+            try:
+                all_core_modules = (
+                    subprocess.check_output(args, shell=False)
+                    .decode("utf-8")
+                    .replace("\r\n", "\n")
+                    .split("\n")
+                )
+            except Exception as e:
+                print(
+                    f"Failed to query perl={version} for core modules list, ran:\n"
+                    f"{' '.join(args)}"
+                )
+                print(e.message)
             return all_core_modules
     except Exception as e:
-        print(
-            "Failed to query perl={} for core modules list, attempted command was:\n{}".format(
-                version, " ".join(args)
-            )
-        )
+        print(f"Failed to query perl={version} for core modules list.")
         print(e.message)
 
     return []
@@ -384,15 +391,15 @@ def get_core_modules_for_this_perl_version(version, cache_dir):
 
 # meta_cpan_url="http://api.metacpan.org",
 def skeletonize(
-    packages,
-    output_dir=".",
-    version=None,
-    meta_cpan_url="https://fastapi.metacpan.org/v1",
-    recursive=False,
-    force=False,
-    config=None,
-    write_core=False,
-):
+    packages: list[str],
+    output_dir: str = ".",
+    version: str | None = None,
+    meta_cpan_url: str = "https://fastapi.metacpan.org/v1",
+    recursive: bool = False,
+    force: bool = False,
+    config: Config | None = None,
+    write_core: bool = False,
+) -> None:
     """
     Loops over packages, outputting conda recipes converted from CPAN metata.
     """
@@ -509,9 +516,7 @@ def skeletonize(
         # packages, unless we're newer than what's in core
         if metacpan_api_is_core_version(meta_cpan_url, package):
             if not write_core:
-                print(
-                    "We found core module %s. Skipping recipe creation." % packagename
-                )
+                print(f"We found core module {packagename}. Skipping recipe creation.")
                 continue
 
             d["useurl"] = "#"
@@ -575,12 +580,11 @@ def skeletonize(
         version = None
         if exists(dir_path) and not force:
             print(
-                "Directory %s already exists and you have not specified --force "
-                % dir_path
+                f"Directory {dir_path} already exists and you have not specified --force "
             )
             continue
         elif exists(dir_path) and force:
-            print("Directory %s already exists, but forcing recipe creation" % dir_path)
+            print(f"Directory {dir_path} already exists, but forcing recipe creation")
 
         try:
             d["homeurl"] = release_data["resources"]["homepage"]
@@ -635,7 +639,7 @@ def skeletonize(
                 f.write(CPAN_BLD_BAT.format(**d))
 
 
-@lru_cache(maxsize=None)
+@cache
 def is_core_version(core_version, version):
     if core_version is None:
         return False
@@ -691,12 +695,12 @@ def add_parser(repos):
     )
 
 
-@lru_cache(maxsize=None)
+@cache
 def latest_pkg_version(pkg):
     """
     :returns: the latest version of the specified conda package available
     """
-    r = Resolve(get_index())
+    r = Resolve(Index())
     try:
         pkg_list = sorted(r.get_pkgs(MatchSpec(pkg)))
     except:
@@ -754,7 +758,7 @@ def deps_for_package(
     }
     packages_to_append = set()
 
-    print("Processing dependencies for %s..." % package, end="")
+    print(f"Processing dependencies for {package}...", end="")
     sys.stdout.flush()
 
     if not release_data.get("dependency"):
@@ -1033,7 +1037,7 @@ def core_module_dict(core_modules, module):
     return None
 
 
-@lru_cache(maxsize=None)
+@cache
 def metacpan_api_is_core_version(cpan_url, module):
     if "FindBin" in module:
         print("debug")
@@ -1050,11 +1054,8 @@ def metacpan_api_is_core_version(cpan_url, module):
             return True
         else:
             sys.exit(
-                (
-                    "Error: Could not find module or distribution named"
-                    " %s on MetaCPAN."
-                )
-                % (module)
+                "Error: Could not find module or distribution named"
+                f" {module} on MetaCPAN."
             )
 
 

@@ -4,19 +4,20 @@ from __future__ import annotations
 
 import re
 import subprocess
-from functools import lru_cache
+from functools import cache
 from os.path import basename
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from ..conda_interface import untracked
+from conda.misc import untracked
+
 from ..utils import on_linux, on_mac
 from .macho import otool
 from .pyldd import codefile_class, inspect_linkages, machofile
 
 if TYPE_CHECKING:
     import os
-    from typing import Iterable
+    from collections.abc import Iterable
 
     from conda.models.records import PrefixRecord
 
@@ -43,7 +44,7 @@ def ldd(path):
             continue
         if "ld-linux" in line:
             continue
-        raise RuntimeError("Unexpected output from ldd: %s" % line)
+        raise RuntimeError(f"Unexpected output from ldd: {line}")
 
     return res
 
@@ -51,16 +52,16 @@ def ldd(path):
 def get_linkages(
     obj_files: Iterable[str],
     prefix: str | os.PathLike | Path,
-    sysroot,
+    sysroot: str,
 ) -> dict[str, list[tuple[str, str]]]:
     return _get_linkages(tuple(obj_files), Path(prefix), sysroot)
 
 
-@lru_cache(maxsize=None)
+@cache
 def _get_linkages(
     obj_files: tuple[str],
     prefix: Path,
-    sysroot,
+    sysroot: str,
 ) -> dict[str, list[tuple[str, str]]]:
     linkages = {}
     for file in obj_files:
@@ -110,7 +111,7 @@ def _get_linkages(
     return linkages
 
 
-@lru_cache(maxsize=None)
+@cache
 def get_package_obj_files(
     prec: PrefixRecord, prefix: str | os.PathLike | Path
 ) -> list[str]:
@@ -121,7 +122,7 @@ def get_package_obj_files(
     ]
 
 
-@lru_cache(maxsize=None)
+@cache
 def get_untracked_obj_files(prefix: str | os.PathLike | Path) -> list[str]:
     return [
         file

@@ -4,18 +4,24 @@
 Tools for converting conda packages
 """
 
+from __future__ import annotations
+
 import glob
 import hashlib
 import json
 import os
 import re
 import shutil
-import sys
 import tarfile
 import tempfile
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-from .utils import filter_info_files, walk
+from .exceptions import CondaBuildUserError
+from .utils import ensure_list, filter_info_files, tar_xf, walk
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
 
 
 def retrieve_c_extensions(file_path, show_imports=False):
@@ -125,9 +131,7 @@ def extract_temporary_directory(file_path):
     """
     temporary_directory = tempfile.mkdtemp()
 
-    source = tarfile.open(file_path)
-    source.extractall(temporary_directory)
-    source.close()
+    tar_xf(file_path, temporary_directory)
 
     return temporary_directory
 
@@ -776,31 +780,35 @@ def convert_from_windows_to_unix(
 
 
 def conda_convert(
-    file_path,
-    output_dir=".",
-    show_imports=False,
-    platforms=None,
-    force=False,
-    dependencies=None,
-    verbose=False,
-    quiet=False,
-    dry_run=False,
-):
+    file_path: str,
+    output_dir: str = ".",
+    show_imports: bool = False,
+    platforms: str | Iterable[str] | None = None,
+    force: bool = False,
+    dependencies: str | Iterable[str] | None = None,
+    verbose: bool = False,
+    quiet: bool = False,
+    dry_run: bool = False,
+) -> None:
     """Convert a conda package between different platforms and architectures.
 
     Positional arguments:
     file_path (str) -- the file path to the source package's tar file
     output_dir (str) -- the file path to where to output the converted tar file
     show_imports (bool) -- show all C extensions found in the source package
-    platforms (str) -- the platforms to convert to: 'win-64', 'win-32', 'linux-64',
+    platforms list[str] -- the platforms to convert to: 'win-64', 'win-32', 'linux-64',
         'linux-32', 'osx-64', or 'all'
     force (bool) -- force conversion of packages that contain C extensions
-    dependencies (List[str]) -- the new dependencies to add to the source package's
+    dependencies (list[str]) -- the new dependencies to add to the source package's
         existing dependencies
     verbose (bool) -- show output of items that are updated
     quiet (bool) -- hide all output except warnings and errors
     dry_run (bool) -- show which conversions will take place
     """
+
+    platforms = ensure_list(platforms)
+    dependencies = ensure_list(dependencies)
+
     if show_imports:
         imports = retrieve_c_extensions(file_path)
         if len(imports) == 0:
@@ -808,13 +816,15 @@ def conda_convert(
         else:
             for c_extension in imports:
                 print(c_extension)
-        sys.exit()
+        return
 
     if not show_imports and len(platforms) == 0:
-        sys.exit("Error: --platform option required for conda package conversion.")
+        raise CondaBuildUserError(
+            "Error: --platform option required for conda package conversion."
+        )
 
     if len(retrieve_c_extensions(file_path)) > 0 and not force:
-        sys.exit(
+        raise CondaBuildUserError(
             f"WARNING: Package {os.path.basename(file_path)} contains C extensions; skipping conversion. "
             "Use -f to force conversion."
         )
