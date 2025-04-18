@@ -1,5 +1,17 @@
 [//]: # (current developments)
 
+## 25.4.1 (2025-04-18)
+
+### Bug fixes
+
+* Fixed bug where selectors with lists, tuples, or dicts could not be processed. (#5690)
+
+### Contributors
+
+* @beckermr
+
+
+
 ## 25.4.0 (2025-04-07)
 
 ### Enhancements
