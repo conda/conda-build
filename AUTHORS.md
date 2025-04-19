@@ -130,6 +130,7 @@ Authors are sorted alphabetically.
 * Katherine Kinnaman
 * Ken Odegard
 * Klaus Zimmermann
+* Konstantin Malanchev
 * Korijn van Golen
 * Kurt Schelfthout
 * Kyle Leaders
@@ -153,6 +154,7 @@ Authors are sorted alphabetically.
 * Matt Hollingsworth
 * Matt Rendina
 * Matt Swain
+* Matthew Feickert
 * Matthew Harrigan
 * Matthew R. Becker
 * Matthias Gabriel
@@ -222,6 +224,7 @@ Authors are sorted alphabetically.
 * Thomas A Caswell
 * Thomas Holder
 * Thomas Kluyver
+* Thomas Lam
 * Tim Paine
 * Tim Snyder
 * Tobias Fischer
