@@ -139,6 +139,7 @@ class OSModuleSubset:
 
     environ = os.environ
     getenv = os.getenv
+    sep = os.sep
 
 
 def get_selectors(config: Config) -> dict[str, bool]:
@@ -312,9 +313,10 @@ def evalidate_model():
         "items",
         "keys",
         "values",
-        # for legacy os.environ and os.getenv
+        # for legacy os attributes
         "environ",
         "getenv",
+        "sep",
     ]
     return model
 
