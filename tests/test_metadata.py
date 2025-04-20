@@ -155,7 +155,7 @@ def test_select_lines():
             "test {{ JINJA_VAR[:2] }}",
             '{{ environ["test-sep"] }}',
             '{{ environ["test-join"] }}',
-            '{{ environ["test-replace"] }}',            
+            '{{ environ["test-replace"] }}',
             "",  # preserve trailing newline
         )
     )
