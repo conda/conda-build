@@ -139,6 +139,7 @@ class OSModuleSubset:
 
     environ = os.environ
     getenv = os.getenv
+    sep = os.sep
 
 
 def get_selectors(config: Config) -> dict[str, bool]:
@@ -292,6 +293,8 @@ def evalidate_model():
     model.nodes.extend(["Call", "Attribute", "Tuple", "List", "Dict"])
     model.allowed_functions += [
         "int",
+        "float",
+        "len",
         "str",
         "list",
         "dict",
@@ -307,14 +310,17 @@ def evalidate_model():
         "startswith",
         "strip",
         "upper",
+        "join",
+        "replace",
         # dict methods
         "get",
         "items",
         "keys",
         "values",
-        # for legacy os.environ and os.getenv
+        # for legacy os attributes
         "environ",
         "getenv",
+        "sep",
     ]
     return model
 
