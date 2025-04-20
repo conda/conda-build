@@ -293,6 +293,8 @@ def evalidate_model():
     model.nodes.extend(["Call", "Attribute", "Tuple", "List", "Dict"])
     model.allowed_functions += [
         "int",
+        "float",
+        "len",
         "str",
         "list",
         "dict",
@@ -308,6 +310,8 @@ def evalidate_model():
         "startswith",
         "strip",
         "upper",
+        "join",
+        "replace",
         # dict methods
         "get",
         "items",
