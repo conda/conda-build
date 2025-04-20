@@ -103,6 +103,8 @@ def test_select_lines():
             '{{ environ["test-dict"] }}  # [d in {"a": 1, "b": 2}]',
             '{{ environ["test-float"] }}  # [int(float(vc)) == 10]',
             '{{ environ["test-sep"] }}  # [len(os.sep) == 1]',
+            '{{ environ["test-join"] }}  # ["/".join("a", "b") == "a/b"]',
+            '{{ environ["test-replace"] }}  # ["acb".replace("c", "/") == "a/b"]',
             "",  # preserve trailing newline
         )
     )
@@ -133,6 +135,8 @@ def test_select_lines():
             '{{ environ["test-dict"] }}',
             '{{ environ["test-float"] }}',
             '{{ environ["test-sep"] }}',
+            '{{ environ["test-join"] }}',
+            '{{ environ["test-replace"] }}',
             "",  # preserve trailing newline
         )
     )
@@ -150,6 +154,8 @@ def test_select_lines():
             "",  # preserve comment line (but not the comment)
             "test {{ JINJA_VAR[:2] }}",
             '{{ environ["test-sep"] }}',
+            '{{ environ["test-join"] }}',
+            '{{ environ["test-replace"] }}',
             "",  # preserve trailing newline
         )
     )
