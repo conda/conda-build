@@ -149,8 +149,7 @@ def test_select_lines():
             "",  # preserve newline
             "",  # preserve comment line (but not the comment)
             "test {{ JINJA_VAR[:2] }}",
-            '{{ environ["test-sep"] }}'
-            "",  # preserve trailing newline
+            '{{ environ["test-sep"] }}',  # preserve trailing newline
         )
     )
 
