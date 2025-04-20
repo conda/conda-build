@@ -298,6 +298,7 @@ def evalidate_model():
         "list",
         "dict",
         "tuple",
+        "len",
     ]
     model.attributes += [
         # string methods
