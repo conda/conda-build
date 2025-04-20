@@ -310,6 +310,8 @@ def evalidate_model():
         "startswith",
         "strip",
         "upper",
+        "join",
+        "replace",
         # dict methods
         "get",
         "items",
