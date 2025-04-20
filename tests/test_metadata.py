@@ -102,15 +102,17 @@ def test_select_lines():
             '{{ environ["test-list"] }}  # [d in list(("a", "b"))]',
             '{{ environ["test-dict"] }}  # [d in {"a": 1, "b": 2}]',
             '{{ environ["test-float"] }}  # [int(float(vc)) == 10]',
-            '{{ environ["test-sep"] }}  # [len(os.sep) == 1]',
-            '{{ environ["test-join"] }}  # ["/".join("a", "b") == "a/b"]',
+            '{{ environ["test-sep"] }}  # [os.sep in ("/", "\\\\") and len(os.sep) == 1]',
+            '{{ environ["test-join"] }}  # ["/".join(("a", "b")) == "a/b"]',
             '{{ environ["test-replace"] }}  # ["acb".replace("c", "/") == "a/b"]',
             "",  # preserve trailing newline
         )
     )
 
     assert select_lines(
-        lines, {"abc": True, "d": "b", "vc": "10.4"}, variants_in_place=True
+        lines,
+        {"abc": True, "d": "b", "vc": "10.4", "os": OSModuleSubset},
+        variants_in_place=True,
     ) == "\n".join(
         (
             "",  # preserve leading newline
@@ -141,7 +143,9 @@ def test_select_lines():
         )
     )
     assert select_lines(
-        lines, {"abc": False, "d": "c", "vc": "11.4"}, variants_in_place=True
+        lines,
+        {"abc": False, "d": "c", "vc": "11.4", "os": OSModuleSubset},
+        variants_in_place=True,
     ) == "\n".join(
         (
             "",  # preserve leading newline
