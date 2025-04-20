@@ -292,6 +292,7 @@ def evalidate_model():
     model.nodes.extend(["Call", "Attribute", "Tuple", "List", "Dict"])
     model.allowed_functions += [
         "int",
+        "float",
         "str",
         "list",
         "dict",
