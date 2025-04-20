@@ -101,12 +101,16 @@ def test_select_lines():
             '{{ environ["test-tuple"] }}  # [d in ("a", "b")]',
             '{{ environ["test-list"] }}  # [d in list(("a", "b"))]',
             '{{ environ["test-dict"] }}  # [d in {"a": 1, "b": 2}]',
+            '{{ environ["test-float"] }}  # [int(float(vc)) == 10]',
+            '{{ environ["test-sep"] }}  # [len(os.sep) == 1]',
+            '{{ environ["test-join"] }}  # ["/".join("a", "b") == "a/b"]',
+            '{{ environ["test-replace"] }}  # ["acb".replace("c", "/") == "a/b"]',
             "",  # preserve trailing newline
         )
     )
 
     assert select_lines(
-        lines, {"abc": True, "d": "b"}, variants_in_place=True
+        lines, {"abc": True, "d": "b", "vc": "10.4"}, variants_in_place=True
     ) == "\n".join(
         (
             "",  # preserve leading newline
@@ -129,11 +133,15 @@ def test_select_lines():
             '{{ environ["test-tuple"] }}',
             '{{ environ["test-list"] }}',
             '{{ environ["test-dict"] }}',
+            '{{ environ["test-float"] }}',
+            '{{ environ["test-sep"] }}',
+            '{{ environ["test-join"] }}',
+            '{{ environ["test-replace"] }}',
             "",  # preserve trailing newline
         )
     )
     assert select_lines(
-        lines, {"abc": False, "d": "c"}, variants_in_place=True
+        lines, {"abc": False, "d": "c", "vc": "11.4"}, variants_in_place=True
     ) == "\n".join(
         (
             "",  # preserve leading newline
@@ -145,6 +153,9 @@ def test_select_lines():
             "",  # preserve newline
             "",  # preserve comment line (but not the comment)
             "test {{ JINJA_VAR[:2] }}",
+            '{{ environ["test-sep"] }}',
+            '{{ environ["test-join"] }}',
+            '{{ environ["test-replace"] }}',            
             "",  # preserve trailing newline
         )
     )
