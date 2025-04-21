@@ -8,7 +8,7 @@
   aliases:
   - Mike Sarahan
   - Michael Sarahan
-  num_commits: 2002
+  num_commits: 4004
   first_commit: 2015-09-04 21:31:08
 - name: Jonathan J. Helmus
   email: jjhelmus@gmail.com
@@ -64,7 +64,7 @@
   alternate_emails:
   - mandeep@users.noreply.github.com
   - mbhutani@continuum.io
-  num_commits: 43
+  num_commits: 86
   first_commit: 2017-05-17 23:54:01
   github: mandeep
 - name: Filipe Fernandes
@@ -118,7 +118,7 @@
   - heather999@users.noreply.github.com
   aliases:
   - heather999
-  num_commits: 2
+  num_commits: 4
   first_commit: 2016-04-11 12:02:50
   github: heather999
 - name: Ryan Grout
@@ -755,7 +755,7 @@
   alternate_emails:
   - kirkhamj@janelia.hhmi.org
   - jakirkham@gmail.com
-  num_commits: 74
+  num_commits: 148
   first_commit: 2015-04-21 13:26:39
   github: jakirkham
 - name: Anthony Scopatz
@@ -874,7 +874,7 @@
   alternate_emails:
   - 5738695+183amir@users.noreply.github.com
   - amir.mohammadi@idiap.ch
-  num_commits: 6
+  num_commits: 12
   first_commit: 2018-02-27 16:37:19
 - name: David Li
   email: li.davidm96@gmail.com
@@ -968,7 +968,7 @@
   first_commit: 2019-01-26 13:17:33
 - name: Rachel Rigdon
   email: rrigdon@anaconda.com
-  num_commits: 134
+  num_commits: 268
   first_commit: 2019-01-24 15:12:09
   github: rrigdon
   aliases:
@@ -1121,7 +1121,7 @@
   alternate_emails:
   - becker.mr@gmail.com
   - beckermr@users.noreply.github.com
-  num_commits: 34
+  num_commits: 70
   first_commit: 2019-10-17 23:05:16
   github: beckermr
 - name: Jinzhe Zeng
@@ -1202,7 +1202,7 @@
   alternate_emails:
   - clee@anaconda.com
 - name: Ken Odegard
-  num_commits: 239
+  num_commits: 240
   email: kodegard@anaconda.com
   first_commit: 2020-09-08 19:53:41
   github: kenodegard
@@ -1262,7 +1262,7 @@
   alternate_emails:
   - ad-team+condabot@anaconda.com
   - 18747875+conda-bot@users.noreply.github.com
-  num_commits: 75
+  num_commits: 150
   first_commit: 2022-01-17 18:09:22
 - name: Uwe L. Korn
   email: xhochy@users.noreply.github.com
