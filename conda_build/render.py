@@ -1173,13 +1173,66 @@ def _unicode_representer(dumper, uni):
     return node
 
 
-@deprecated("25.5", "25.7")
-class _IndentDumper(yaml.Dumper):
-    def increase_indent(self, flow=False, indentless=False):
-        return super().increase_indent(flow, False)
+class CustomDumper(yaml.Dumper):
+    def increase_indent(self, flow: bool = False, indentless: bool = False) -> None:
+        """Control indentation.
 
-    def ignore_aliases(self, data):
+        By default a mapping context is not indented:
+
+        ```yaml
+        key:
+        - item1
+        - item2
+        ```
+
+        But we want to force indentation:
+
+        ```yaml
+        key:
+          - item1
+          - item2
+        ```
+
+        Xref: https://github.com/yaml/pyyaml/issues/234
+        """
+        return super().increase_indent(flow, indentless=False)
+
+    def ignore_aliases(self, data: Any) -> bool:
+        """Control aliases and anchor points.
+
+        By default PyYAML uses anchors and aliases to avoid duplication:
+
+        ```yaml
+        key: &id
+          - item1
+          - item2
+        key2: *id
+        ```
+
+        But we want to avoid this:
+
+        ```yaml
+        key:
+          - item1
+          - item2
+        key2:
+          - item1
+          - item2
+        ```
+
+        Xref: https://github.com/yaml/pyyaml/issues/103
+        Xref: https://github.com/yaml/pyyaml/issues/535
+        """
         return True
+
+
+deprecated(
+    "25.5",
+    "25.7",
+    "_IndentDumper",
+    CustomDumper,
+    addendum="Use `conda_build.render.CustomDumper` instead.",
+)
 
 
 def output_yaml(
@@ -1194,6 +1247,7 @@ def output_yaml(
         del meta["outputs"]
     output = yaml.dump(
         meta,
+        Dumper=CustomDumper,
         default_flow_style=False,  # always serialize in the block style
         indent=2,
         sort_keys=False,  # preserve manual order
