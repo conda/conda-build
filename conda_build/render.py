@@ -1226,7 +1226,7 @@ class CustomDumper(yaml.Dumper):
         return True
 
 
-deprecated(
+deprecated.constant(
     "25.5",
     "25.7",
     "_IndentDumper",
