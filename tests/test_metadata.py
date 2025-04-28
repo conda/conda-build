@@ -5,9 +5,12 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+import textwrap
+from contextlib import nullcontext
 from itertools import product
 from typing import TYPE_CHECKING
 
+import evalidate
 import pytest
 from conda import __version__ as conda_version
 from conda.base.context import context
@@ -15,12 +18,17 @@ from packaging.version import Version
 
 from conda_build import api
 from conda_build.config import Config
+from conda_build.exceptions import CondaBuildUserError
 from conda_build.metadata import (
     FIELDS,
     OPTIONALLY_ITERABLE_FIELDS,
     MetaData,
+    OSModuleSubset,
     _hash_dependencies,
+    check_bad_chrs,
+    eval_selector,
     get_selectors,
+    sanitize,
     select_lines,
     yamlize,
 )
@@ -30,6 +38,8 @@ from conda_build.variants import DEFAULT_VARIANTS
 from .utils import metadata_dir, metadata_path, thisdir
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from pytest import MonkeyPatch
 
 
@@ -54,17 +64,31 @@ def test_uses_vcs_in_metadata(testing_workdir, testing_metadata):
     assert not testing_metadata.uses_vcs_in_build
 
 
+def test_select_lines_complicated_smoke():
+    # this snippet is from the conda-forge pinnings file
+    cfpinning = textwrap.dedent(
+        """
+        docker_image:                                       # [os.environ.get("BUILD_PLATFORM", "").startswith("linux-")]
+        # non-CUDA-enabled builds on AlmaLinux 8
+        - quay.io/condaforge/linux-anvil-x86_64:alma8     # [os.environ.get("BUILD_PLATFORM") == "linux-64" and os.environ.get("DEFAULT_LINUX_VERSION", "alma9") in ("alma8", "ubi8")]
+        - quay.io/condaforge/linux-anvil-aarch64:alma8    # [os.environ.get("BUILD_PLATFORM") == "linux-aarch64" and os.environ.get("DEFAULT_LINUX_VERSION", "alma9") in ("alma8", "ubi8")]
+        - quay.io/condaforge/linux-anvil-ppc64le:alma8    # [os.environ.get("BUILD_PLATFORM") == "linux-ppc64le" and os.environ.get("DEFAULT_LINUX_VERSION", "alma9") in ("alma8", "ubi8")]
+        """  # noqa: E501
+    )
+    select_lines(cfpinning, {"os": OSModuleSubset}, variants_in_place=True)
+
+
 def test_select_lines():
     lines = "\n".join(
         (
-            "",
+            "",  # preserve leading newline
             "test",
             "test [abc] no",
             "test [abc] # no",
             " ' test ' ",
             ' " test " ',
-            "",
-            "# comment line",
+            "",  # preserve newline
+            "# comment line",  # preserve comment line (but not the comment)
             "test [abc]",
             " 'quoted # [abc] '",
             ' "quoted # [abc] yes "',
@@ -74,19 +98,31 @@ def test_select_lines():
             "test {{ JINJA_VAR[:2] }} # stuff yes [abc]",
             "test {{ JINJA_VAR[:2] }} # [abc] stuff yes",
             '{{ environ["test"] }}  # [abc]',
-            "",  # trailing newline
+            '{{ environ["test-tuple"] }}  # [d in ("a", "b")]',
+            '{{ environ["test-list"] }}  # [d in list(("a", "b"))]',
+            '{{ environ["test-dict"] }}  # [d in {"a": 1, "b": 2}]',
+            '{{ environ["test-float"] }}  # [int(float(vc)) == 10]',
+            '{{ environ["test-sep"] }}  # [os.sep in ("/", "\\\\") and len(os.sep) == 1]',
+            '{{ environ["test-join"] }}  # ["/".join(("a", "b")) == "a/b"]',
+            '{{ environ["test-replace"] }}  # ["acb".replace("c", "/") == "a/b"]',
+            "",  # preserve trailing newline
         )
     )
 
-    assert select_lines(lines, {"abc": True}, variants_in_place=True) == "\n".join(
+    assert select_lines(
+        lines,
+        {"abc": True, "d": "b", "vc": "10.4", "os": OSModuleSubset},
+        variants_in_place=True,
+    ) == "\n".join(
         (
-            "",
+            "",  # preserve leading newline
             "test",
             "test [abc] no",
             "test [abc] # no",
             " ' test '",
             ' " test "',
-            "",
+            "",  # preserve newline
+            "",  # preserve comment line (but not the comment)
             "test",
             " 'quoted'",
             ' "quoted"',
@@ -96,22 +132,84 @@ def test_select_lines():
             "test {{ JINJA_VAR[:2] }}",
             "test {{ JINJA_VAR[:2] }}",
             '{{ environ["test"] }}',
-            "",  # trailing newline
+            '{{ environ["test-tuple"] }}',
+            '{{ environ["test-list"] }}',
+            '{{ environ["test-dict"] }}',
+            '{{ environ["test-float"] }}',
+            '{{ environ["test-sep"] }}',
+            '{{ environ["test-join"] }}',
+            '{{ environ["test-replace"] }}',
+            "",  # preserve trailing newline
         )
     )
-    assert select_lines(lines, {"abc": False}, variants_in_place=True) == "\n".join(
+    assert select_lines(
+        lines,
+        {"abc": False, "d": "c", "vc": "11.4", "os": OSModuleSubset},
+        variants_in_place=True,
+    ) == "\n".join(
         (
-            "",
+            "",  # preserve leading newline
             "test",
             "test [abc] no",
             "test [abc] # no",
             " ' test '",
             ' " test "',
-            "",
+            "",  # preserve newline
+            "",  # preserve comment line (but not the comment)
             "test {{ JINJA_VAR[:2] }}",
-            "",  # trailing newline
+            '{{ environ["test-sep"] }}',
+            '{{ environ["test-join"] }}',
+            '{{ environ["test-replace"] }}',
+            "",  # preserve trailing newline
         )
     )
+
+
+@pytest.mark.parametrize("unsafe", (True, False))
+def test_select_access_environ(testing_config, unsafe):
+    namespace = get_selectors(testing_config)
+    assert "NOTFOUND" == eval_selector(
+        "environ.get('DOESNOTEXIST', 'NOTFOUND')",
+        namespace,
+        variants_in_place=True,
+        unsafe=unsafe,
+    )
+    assert "NOTFOUND" == eval_selector(
+        "os.environ.get('DOESNOTEXIST', 'NOTFOUND')",
+        namespace,
+        variants_in_place=True,
+        unsafe=unsafe,
+    )
+
+
+def test_select_evalidate_model():
+    from evalidate.security import test_security
+
+    from conda_build.metadata import evalidate_model
+
+    assert test_security(model=evalidate_model())
+
+
+@pytest.mark.parametrize("unsafe", (True, False))
+@pytest.mark.parametrize(
+    "expression",
+    [
+        "__import__('os').system('echo BAD')",
+        "os.getenv.__globals__['system']('echo BAD')",
+        "getattr(os.getenv, '__globals__')['system']('echo BAD')",
+        "os.environ.update({'BLAH': 'BAD'})",
+        "os.environ.setdefault('BLAH', 'BAD')",
+    ],
+)
+def test_select_malicious(testing_config, expression, unsafe):
+    namespace = get_selectors(testing_config)
+    with nullcontext() if unsafe else pytest.raises(evalidate.ValidationException):
+        eval_selector(
+            expression,
+            namespace,
+            variants_in_place=True,
+            unsafe=unsafe,
+        )
 
 
 @pytest.mark.benchmark
@@ -198,6 +296,7 @@ def test_clobber_section_data(testing_metadata):
 
 
 @pytest.mark.serial
+@pytest.mark.filterwarnings("ignore", category=PendingDeprecationWarning)
 def test_build_bootstrap_env_by_name(testing_metadata):
     assert not any(
         "git" in pkg for pkg in testing_metadata.meta["requirements"].get("build", [])
@@ -216,6 +315,7 @@ def test_build_bootstrap_env_by_name(testing_metadata):
         subprocess.check_call(cmd.split())
 
 
+@pytest.mark.filterwarnings("ignore", category=PendingDeprecationWarning)
 def test_build_bootstrap_env_by_path(testing_metadata):
     assert not any(
         "git" in pkg for pkg in testing_metadata.meta["requirements"].get("build", [])
@@ -338,9 +438,9 @@ def test_hash_build_id(testing_metadata):
         if hdeps_tp == hdeps:
             found = True
             break
-    assert (
-        found
-    ), f"Did not find build that matched {hdeps} when testing each of DEFAULT_SUBDIRS"
+    assert found, (
+        f"Did not find build that matched {hdeps} when testing each of DEFAULT_SUBDIRS"
+    )
     assert testing_metadata.build_id() == hdeps + "_1"
 
 
@@ -508,7 +608,7 @@ def test_get_selectors(
         "lua": DEFAULT_VARIANTS["lua"],
         "luajit": DEFAULT_VARIANTS["lua"] == 2,
         "np": int(float(DEFAULT_VARIANTS["numpy"]) * 100),
-        "os": os,
+        "os": OSModuleSubset,
         "pl": DEFAULT_VARIANTS["perl"],
         "py": int(f"{sys.version_info.major}{sys.version_info.minor}"),
         "py26": sys.version_info[:2] == (2, 6),
@@ -523,7 +623,7 @@ def test_get_selectors(
         # default OS/arch values
         **{key: False for key in OS_ARCH},
         # environment variables
-        "environ": os.environ,
+        "environ": OSModuleSubset.environ,
         **os.environ,
         # override with True values
         **{key: True for key in expected},
@@ -547,3 +647,170 @@ def test_get_section(testing_metadata: MetaData):
             assert isinstance(section, list)
         else:
             assert isinstance(section, dict)
+
+
+def test_select_lines_invalid():
+    with pytest.raises(
+        CondaBuildUserError,
+        match=r"Invalid selector in meta\.yaml",
+    ):
+        select_lines("text # [{bad]", {}, variants_in_place=True)
+
+
+@pytest.mark.parametrize(
+    "keys,expected",
+    [
+        pytest.param([], {}, id="git_tag"),
+        pytest.param(["git_tag"], {"git_rev": "rev"}, id="git_tag"),
+        pytest.param(["git_branch"], {"git_rev": "rev"}, id="git_branch"),
+        pytest.param(["git_rev"], {"git_rev": "rev"}, id="git_rev"),
+        pytest.param(["git_tag", "git_branch"], None, id="git_tag + git_branch"),
+        pytest.param(["git_tag", "git_rev"], None, id="git_tag + git_rev"),
+        pytest.param(["git_branch", "git_rev"], None, id="git_branch + git_rev"),
+        pytest.param(
+            ["git_tag", "git_branch", "git_rev"],
+            None,
+            id="git_tag + git_branch + git_rev",
+        ),
+    ],
+)
+def test_sanitize_source(keys: list[str], expected: dict[str, str] | None) -> None:
+    with (
+        pytest.raises(
+            CondaBuildUserError,
+            match=r"Multiple git_revs:",
+        )
+        if expected is None
+        else nullcontext()
+    ):
+        assert sanitize({"source": {key: "rev" for key in keys}}) == {
+            "source": expected
+        }
+
+
+@pytest.mark.parametrize(
+    "value,field,invalid",
+    [
+        pytest.param("good", "field", None, id="valid field"),
+        pytest.param("!@d&;-", "field", "!&;@", id="invalid field"),
+        pytest.param("good", "package/version", None, id="valid package/version"),
+        pytest.param("!@d&;-", "package/version", "&-;@", id="invalid package/version"),
+        pytest.param("good", "build/string", None, id="valid build/string"),
+        pytest.param("!@d&;-", "build/string", "!&-;@", id="invalid build/string"),
+    ],
+)
+def test_check_bad_chrs(value: str, field: str, invalid: str) -> None:
+    with (
+        pytest.raises(
+            CondaBuildUserError,
+            match=rf"Bad character\(s\) \({invalid}\) in {field}: {value}\.",
+        )
+        if invalid
+        else nullcontext()
+    ):
+        check_bad_chrs(value, field)
+
+
+def test_parse_until_resolved(testing_metadata: MetaData, tmp_path: Path) -> None:
+    (recipe := tmp_path / (name := "meta.yaml")).write_text("{{ UNDEFINED[:2] }}")
+    testing_metadata._meta_path = recipe
+    testing_metadata._meta_name = name
+
+    with pytest.raises(
+        CondaBuildUserError,
+        match=("Failed to render jinja template"),
+    ):
+        testing_metadata.parse_until_resolved()
+
+
+def test_parse_until_resolved_skip_avoids_undefined_jinja(
+    testing_metadata: MetaData, tmp_path: Path
+) -> None:
+    (recipe := tmp_path / (name := "meta.yaml")).write_text(
+        """
+package:
+    name: dummy
+    version: {{version}}
+build:
+    skip: True
+"""
+    )
+    testing_metadata._meta_path = recipe
+    testing_metadata._meta_name = name
+
+    # because skip is True, we should not error out here - so no exception should be raised
+    try:
+        testing_metadata.parse_until_resolved()
+    except CondaBuildUserError:
+        pytest.fail(
+            "Undefined variable caused error, even though this build is skipped"
+        )
+
+
+@pytest.mark.parametrize("have_variant", [True, False])
+def test_parse_until_resolved_missing_jinja_in_spec(
+    testing_metadata: MetaData,
+    tmp_path: Path,
+    have_variant: bool,
+) -> None:
+    (recipe := tmp_path / (name := "meta.yaml")).write_text(
+        """
+package:
+    name: dummy
+    version: 1.0.0
+
+build:
+    noarch: python
+    number: 0
+
+requirements:
+    host:
+        - python ={{ python_min }}
+    run:
+        - python >={{ python_min }}
+"""
+    )
+    (tmp_path / "conda_build_config.yaml").write_text(
+        """
+python_min:
+    - 3.6
+"""
+    )
+    testing_metadata._meta_path = recipe
+    testing_metadata._meta_name = name
+    if have_variant:
+        testing_metadata.config.variant = {"python_min": "3.6"}
+    else:
+        delattr(testing_metadata.config, "variant")
+        delattr(testing_metadata.config, "variant_config_files")
+        delattr(testing_metadata.config, "variants")
+
+    try:
+        testing_metadata.parse_until_resolved()
+        if not have_variant:
+            pytest.fail("Undefined variable did NOT cause spec parsing error!")
+        else:
+            print("parsed OK!")
+    except (Exception, SystemExit):
+        if have_variant:
+            pytest.fail(
+                "Undefined variable caused spec parsing error even if we have the variant!"
+            )
+        else:
+            print("did not parse OK!")
+
+
+def test_extract_single_output_text_with_jinja_is_broken():
+    """
+    Given a recipe with three outputs 1, 2, and 3, where 2 is guarded by a falsy Jinja-if,
+    MetaData.extract_single_output_text() returns 2 when asked for 3.
+
+    This is a bug that should be fixed.
+    """
+    metadata = MetaData(os.path.join(metadata_dir, "_jinja_outputs"))
+    output = metadata.extract_single_output_text(
+        "output3", getattr(metadata, "type", None)
+    )
+    # We of course want to obtain output3, but the buggy behaviour gave us output2.
+    assert "output3" not in output
+    assert "output2" in output

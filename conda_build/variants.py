@@ -3,20 +3,27 @@
 """This file handles the parsing of feature specifications from files,
 ending up with a configuration matrix"""
 
+from __future__ import annotations
+
 import os.path
 import re
 import sys
 from collections import OrderedDict
 from copy import copy
-from functools import lru_cache
+from functools import cache
 from itertools import product
+from pathlib import Path
+from typing import TYPE_CHECKING
 
 import yaml
 from conda.base.context import context
 
-from .conda_interface import cc_conda_build
 from .utils import ensure_list, get_logger, islist, on_win, trim_empty_keys
 from .version import _parse as parse_version
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
+    from typing import Any
 
 DEFAULT_VARIANTS = {
     "python": f"{sys.version_info.major}.{sys.version_info.minor}",
@@ -97,7 +104,7 @@ SUFFIX_MAP = {
 }
 
 
-@lru_cache(maxsize=None)
+@cache
 def _get_default_compilers(platform, py_ver):
     compilers = DEFAULT_COMPILERS[platform].copy()
     if platform == "win":
@@ -224,8 +231,8 @@ def find_config_files(metadata_or_path, config):
 
     if not files and not config.ignore_system_variants:
         # user config
-        if cc_conda_build.get("config_file"):
-            cfg = resolve(cc_conda_build["config_file"])
+        if config_file := context.conda_build.get("config_file"):
+            cfg = resolve(config_file)
         else:
             cfg = resolve(os.path.join("~", "conda_build_config.yaml"))
         if os.path.isfile(cfg):
@@ -322,7 +329,7 @@ def _combine_spec_dictionaries(
                                     ) != len(ensure_list(v)):
                                         break
                                 else:
-                                    values[k] = v.copy()
+                                    values[k] = copy(v)
                                 missing_subvalues = [
                                     subvalue
                                     for subvalue in ensure_list(v)
@@ -498,7 +505,7 @@ def filter_by_key_value(variants, key, values, source_name):
     return reduced_variants
 
 
-@lru_cache(maxsize=None)
+@cache
 def _split_str(string, char):
     return string.split(char)
 
@@ -694,24 +701,29 @@ def get_package_variants(recipedir_or_metadata, config=None, variants=None):
     return filter_combined_spec_to_used_keys(combined_spec, specs=specs)
 
 
-def get_vars(variants, loop_only=False):
+def get_vars(
+    variants: Iterable[dict[str, Any]],
+    subset: set[str] | None = None,
+) -> set[str]:
     """For purposes of naming/identifying, provide a way of identifying which variables contribute
     to the matrix dimensionality"""
-    special_keys = {"pin_run_as_build", "zip_keys", "ignore_version"}
-    special_keys.update(set(ensure_list(variants[0].get("extend_keys"))))
-    loop_vars = [
-        k
-        for k in variants[0]
-        if k not in special_keys
-        and (
-            not loop_only
-            or any(variant[k] != variants[0][k] for variant in variants[1:])
-        )
-    ]
-    return loop_vars
+    first, *others = variants
+    special_keys = {
+        "pin_run_as_build",
+        "zip_keys",
+        "ignore_version",
+        *ensure_list(first.get("extend_keys")),
+    }
+    to_consider = set(first)
+    if subset is not None:
+        to_consider.intersection_update(subset)
+    to_consider.difference_update(special_keys)
+    return {
+        var for var in to_consider if any(first[var] != other[var] for other in others)
+    }
 
 
-@lru_cache(maxsize=None)
+@cache
 def find_used_variables_in_text(variant, recipe_text, selectors_only=False):
     used_variables = set()
     recipe_lines = recipe_text.splitlines()
@@ -729,6 +741,11 @@ def find_used_variables_in_text(variant, recipe_text, selectors_only=False):
             variant_lines = [
                 line for line in recipe_lines if v in line or target_lang in line
             ]
+        elif v.startswith("cdt_"):
+            variant_lines = [
+                line for line in recipe_lines if v in line or "cdt(" in line
+            ]
+            all_res.append(r"\{{\s*cdt\(")
         else:
             variant_lines = [
                 line for line in recipe_lines if v in line.replace("-", "_")
@@ -737,17 +754,43 @@ def find_used_variables_in_text(variant, recipe_text, selectors_only=False):
             continue
         v_regex = re.escape(v)
         v_req_regex = "[-_]".join(map(re.escape, v.split("_")))
-        variant_regex = r"\{\s*(?:pin_[a-z]+\(\s*?['\"])?%s[^'\"]*?\}\}" % v_regex
-        selector_regex = r"^[^#\[]*?\#?\s\[[^\]]*?(?<![_\w\d])%s[=\s<>!\]]" % v_regex
+        variant_regex = (
+            rf"\{{\s*(?:pin_[a-z]+\(\s*?['\"])?{v_regex}[^_0-9a-zA-Z].*?\}}\}}"
+        )
+        selector_regex = rf"^[^#\[]*?\#?\s\[[^\]]*?(?<![_\w\d]){v_regex}[=\s<>!\]]"
+        # NOTE: why use a regex instead of the jinja2 parser/AST?
+        # One can ask the jinja2 parser for undefined variables, but conda-build moves whole
+        # blocks of text around when searching for variables and applies selectors to the text.
+        # So the text that reaches this function is not necessarily valid jinja2 syntax. :/
         conditional_regex = (
             r"(?:^|[^\{])\{%\s*(?:el)?if\s*.*" + v_regex + r"\s*(?:[^%]*?)?%\}"
         )
+        # TODO: this `for` regex won't catch some common cases like lists of vars, multiline
+        # jinja2 blocks, if filters on the for loop, etc.
+        for_regex = (
+            r"(?:^|[^\{])\{%\s*for\s*.*\s*in\s*"
+            + v_regex
+            + r"(?![a-zA-Z_0-9])(?:[^%]*?)?%\}"
+        )
+        set_regex = (
+            r"(?:^|[^\{])\{%\s*set\s*.*\s*=\s*.*"
+            + v_regex
+            + r"(?![a-zA-Z_0-9])(?:[^%]*?)?%\}"
+        )
         # plain req name, no version spec.  Look for end of line after name, or comment or selector
-        requirement_regex = r"^\s+\-\s+%s\s*(?:\s[\[#]|$)" % v_req_regex
+        requirement_regex = rf"^\s+\-\s+{v_req_regex}\s*(?:\s[\[#]|$)"
         if selectors_only:
             all_res.insert(0, selector_regex)
         else:
-            all_res.extend([variant_regex, requirement_regex, conditional_regex])
+            all_res.extend(
+                [
+                    variant_regex,
+                    requirement_regex,
+                    conditional_regex,
+                    for_regex,
+                    set_regex,
+                ]
+            )
         # consolidate all re's into one big one for speedup
         all_res = r"|".join(all_res)
         if any(re.search(all_res, line) for line in variant_lines):
@@ -758,23 +801,39 @@ def find_used_variables_in_text(variant, recipe_text, selectors_only=False):
     return used_variables
 
 
-def find_used_variables_in_shell_script(variant, file_path):
-    with open(file_path) as f:
-        text = f.read()
-    used_variables = set()
-    for v in variant:
-        variant_regex = r"(^[^$]*?\$\{?\s*%s\s*[\s|\}])" % v
-        if re.search(variant_regex, text, flags=re.MULTILINE | re.DOTALL):
-            used_variables.add(v)
-    return used_variables
+def find_used_variables_in_shell_script(
+    variants: Iterable[str],
+    file_path: str | os.PathLike | Path,
+) -> set[str]:
+    text = Path(file_path).read_text()
+    return {
+        variant
+        for variant in variants
+        if (
+            variant in text  # str in str is faster than re.search
+            and re.search(
+                rf"(^[^$]*?\$\{{?\s*{re.escape(variant)}\s*[\s|\}}])",
+                text,
+                flags=re.MULTILINE | re.DOTALL,
+            )
+        )
+    }
 
 
-def find_used_variables_in_batch_script(variant, file_path):
-    with open(file_path) as f:
-        text = f.read()
-    used_variables = set()
-    for v in variant:
-        variant_regex = r"\%" + v + r"\%"
-        if re.search(variant_regex, text, flags=re.MULTILINE | re.DOTALL):
-            used_variables.add(v)
-    return used_variables
+def find_used_variables_in_batch_script(
+    variants: Iterable[str],
+    file_path: str | os.PathLike | Path,
+) -> set[str]:
+    text = Path(file_path).read_text()
+    return {
+        variant
+        for variant in variants
+        if (
+            variant in text  # str in str is faster than re.search
+            and re.search(
+                rf"\%{re.escape(variant)}\%",
+                text,
+                flags=re.MULTILINE | re.DOTALL,
+            )
+        )
+    }

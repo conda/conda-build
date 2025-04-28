@@ -72,11 +72,32 @@ def test_disallow_merge_conflicts(namespace_setup: os.PathLike):
 
 
 @pytest.mark.sanity
-def test_disallow_in_tree_merge(testing_workdir):
-    with open("testfile", "w") as f:
+def test_is_subdir(testing_workdir):
+    assert not utils.is_subdir(testing_workdir, testing_workdir)
+    assert utils.is_subdir(testing_workdir, testing_workdir, strict=False)
+    subdir = os.path.join(testing_workdir, "subdir")
+    assert utils.is_subdir(subdir, testing_workdir)
+    assert utils.is_subdir(subdir, testing_workdir, strict=False)
+
+
+@pytest.mark.sanity
+def test_disallow_down_tree_merge(testing_workdir):
+    src = testing_workdir
+    with open(os.path.join(src, "testfile"), "w") as f:
         f.write("test")
     with pytest.raises(AssertionError):
-        utils.merge_tree(testing_workdir, os.path.join(testing_workdir, "subdir"))
+        utils.merge_tree(src, testing_workdir)
+    with pytest.raises(AssertionError):
+        utils.merge_tree(src, os.path.join(testing_workdir, "subdir"))
+
+
+@pytest.mark.sanity
+def test_allow_up_tree_merge(testing_workdir):
+    src = os.path.join(testing_workdir, "subdir")
+    os.makedirs(src)
+    with open(os.path.join(src, "testfile"), "w") as f:
+        f.write("test")
+    utils.merge_tree(src, testing_workdir)
 
 
 def test_expand_globs(testing_workdir):
@@ -163,7 +184,7 @@ def test_logger_filtering(caplog, capfd):
     log.info("test info message")
     log.info("test duplicate message")
     log.info("test duplicate message")
-    log.warn("test warn message")
+    log.warning("test warn message")
     log.error("test error message")
     out, err = capfd.readouterr()
     assert "test debug message" in out
@@ -204,11 +225,14 @@ root:
   handlers: [console]
 """
         )
-    cc_conda_build = mocker.patch.object(utils, "cc_conda_build")
-    cc_conda_build.get.return_value = test_file
+    mocker.patch(
+        "conda.base.context.Context.conda_build",
+        new_callable=mocker.PropertyMock,
+        return_value={"log_config_file": test_file},
+    )
     log = utils.get_logger(__name__)
     # default log level is INFO, but our config file should set level to DEBUG
-    log.warn("test message")
+    log.warning("test message")
     # output should have gone to stdout according to config above.
     out, err = capfd.readouterr()
     assert "test message" in out
@@ -433,3 +457,25 @@ def test_is_conda_pkg(tmpdir, value: str, expected: bool, is_dir: bool, create: 
                 fp.write("test")
 
     assert utils.is_conda_pkg(value) == expected
+
+
+def test_prefix_files(tmp_path: Path):
+    # all files within the prefix are found
+    (prefix := tmp_path / "prefix1").mkdir()
+    (file1 := prefix / "file1").touch()
+    (dirA := prefix / "dirA").mkdir()
+    (file2 := dirA / "file2").touch()
+    (dirB := prefix / "dirB").mkdir()
+    (file3 := dirB / "file3").touch()
+
+    # files outside of the prefix are not found
+    (prefix2 := tmp_path / "prefix2").mkdir()
+    (prefix2 / "file4").touch()
+    (dirC := prefix2 / "dirC").mkdir()
+    (dirC / "file5").touch()
+
+    # even if they are symlinked
+    (link1 := prefix / "dirC").symlink_to(dirC)
+
+    paths = {str(path.relative_to(prefix)) for path in (file1, file2, file3, link1)}
+    assert paths == utils.prefix_files(str(prefix))

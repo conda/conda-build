@@ -5,10 +5,10 @@ import subprocess
 import tarfile
 
 import pytest
+from conda.gateways.disk.create import TemporaryDirectory
 from conda.gateways.disk.read import compute_sum
 
 from conda_build import source
-from conda_build.conda_interface import TemporaryDirectory
 from conda_build.source import download_to_cache
 from conda_build.utils import reset_deduplicator
 

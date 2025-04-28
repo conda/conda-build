@@ -2,6 +2,8 @@ import os
 
 out_path = os.path.join(os.environ['PREFIX'], 'subpackage_file_1')
 
+assert "PIP_NO_INDEX" in os.environ
+
 with open(out_path, 'w') as f:
     f.write("weeee")
 

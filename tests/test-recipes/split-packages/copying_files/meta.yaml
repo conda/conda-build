@@ -4,14 +4,44 @@ package:
 
 requirements:
   run:
-    - my_script_subpackage
+    - my_script_subpackage_files
+    - my_script_subpackage_include_exclude
 
 outputs:
-  - name: my_script_subpackage
+  - name: my_script_subpackage_files
+    build:
+      ignore_run_exports_from:
+        - libpng
+    requirements:
+      host:
+        - libpng=1.6.39
     files:
       - subpackage_file1
       - somedir
       - "*.ext"
+      # Libs should match because they are in the prefix
+      - "lib/libpng*"       # [unix]
+      - "Library/bin/libpng*"  # [win]
+    test:
+      script: subpackage_test.py
+      script_interpreter: python
+  - name: my_script_subpackage_include_exclude
+    build:
+      ignore_run_exports_from:
+        - dav1d
+    requirements:
+      host:
+        - dav1d=1.2.1
+    files:
+      include:
+        - subpackage_include_exclude1
+        - anotherdir
+        - "*.wav"
+        # Libs should not match because they come from a different package
+        - "lib/libdav1d*"       # [unix]
+        - "Library/bin/dav1d*"  # [win]
+      exclude:
+        - "*3.wav"
     test:
       script: subpackage_test.py
       script_interpreter: python

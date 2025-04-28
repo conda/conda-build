@@ -1,6 +1,7 @@
 *~
 *.pyc
 *.egg-info
+*.swp
 build/
 dist/
 docs/_build
@@ -24,3 +25,6 @@ conda-build-testing
 rever/
 **/.vscode
 **/_build
+
+# setuptools-scm
+conda_build/_version.py

@@ -234,8 +234,8 @@ def test_sympy(package: str, version: str | None, tmp_path: Path, testing_config
         config=testing_config,
         output_dir=tmp_path,
     )
-    m = api.render(str(tmp_path / "sympy" / "meta.yaml"))[0][0]
-    assert m.version() == "1.10"
+    metadata = api.render(str(tmp_path / "sympy" / "meta.yaml"))[0][0]
+    assert metadata.version() == "1.10"
 
 
 def test_get_entry_points(pylint_pkginfo, pylint_metadata):
@@ -350,8 +350,8 @@ def test_pypi_with_setup_options(tmp_path: Path, testing_config):
     )
 
     # Check that the setup option occurs in bld.bat and build.sh.
-    m = api.render(str(tmp_path / "photutils"))[0][0]
-    assert "--offline" in m.meta["build"]["script"]
+    metadata = api.render(str(tmp_path / "photutils"))[0][0]
+    assert "--offline" in metadata.meta["build"]["script"]
 
 
 def test_pypi_pin_numpy(tmp_path: Path, testing_config: Config):
@@ -377,8 +377,8 @@ def test_pypi_version_sorting(tmp_path: Path, testing_config: Config):
         config=testing_config,
         output_dir=tmp_path,
     )
-    m = api.render(str(tmp_path / "fasttext"))[0][0]
-    assert parse_version(m.version()) >= parse_version("0.9.2")
+    metadata = api.render(str(tmp_path / "fasttext"))[0][0]
+    assert parse_version(metadata.version()) >= parse_version("0.9.2")
 
 
 def test_list_skeletons():
@@ -387,15 +387,22 @@ def test_list_skeletons():
 
 
 def test_pypi_with_entry_points(tmp_path: Path):
-    api.skeletonize("planemo", repo="pypi", python_version="3.7", output_dir=tmp_path)
+    # planemo 0.75.29 dropped setup.py
+    api.skeletonize(
+        "planemo",
+        repo="pypi",
+        version="0.75.28",
+        python_version="3.12",
+        output_dir=tmp_path,
+    )
     assert (tmp_path / "planemo").is_dir()
 
 
 def test_pypi_with_version_arg(tmp_path: Path):
     # regression test for https://github.com/conda/conda-build/issues/1442
     api.skeletonize("PrettyTable", "pypi", version="0.7.2", output_dir=tmp_path)
-    m = api.render(str(tmp_path / "prettytable"))[0][0]
-    assert parse_version(m.version()) == parse_version("0.7.2")
+    metadata = api.render(str(tmp_path / "prettytable"))[0][0]
+    assert parse_version(metadata.version()) == parse_version("0.7.2")
 
 
 @pytest.mark.slow
@@ -415,10 +422,10 @@ def test_pypi_with_extra_specs(tmp_path: Path, testing_config):
         config=testing_config,
         output_dir=tmp_path,
     )
-    m = api.render(str(tmp_path / "bigfile"))[0][0]
-    assert parse_version(m.version()) == parse_version("0.1.24")
-    assert any("cython" in req for req in m.meta["requirements"]["host"])
-    assert any("mpi4py" in req for req in m.meta["requirements"]["host"])
+    metadata = api.render(str(tmp_path / "bigfile"))[0][0]
+    assert parse_version(metadata.version()) == parse_version("0.1.24")
+    assert any("cython" in req for req in metadata.meta["requirements"]["host"])
+    assert any("mpi4py" in req for req in metadata.meta["requirements"]["host"])
 
 
 @pytest.mark.slow
@@ -438,17 +445,17 @@ def test_pypi_with_version_inconsistency(tmp_path: Path, testing_config):
         config=testing_config,
         output_dir=tmp_path,
     )
-    m = api.render(str(tmp_path / "mpi4py_test"))[0][0]
-    assert parse_version(m.version()) == parse_version("0.0.10")
+    metadata = api.render(str(tmp_path / "mpi4py_test"))[0][0]
+    assert parse_version(metadata.version()) == parse_version("0.0.10")
 
 
 def test_pypi_with_basic_environment_markers(tmp_path: Path):
     # regression test for https://github.com/conda/conda-build/issues/1974
     api.skeletonize("coconut", "pypi", version="1.2.2", output_dir=tmp_path)
-    m = api.render(tmp_path / "coconut")[0][0]
+    metadata = api.render(tmp_path / "coconut")[0][0]
 
-    build_reqs = str(m.meta["requirements"]["host"])
-    run_reqs = str(m.meta["requirements"]["run"])
+    build_reqs = str(metadata.meta["requirements"]["host"])
+    run_reqs = str(metadata.meta["requirements"]["run"])
     # should include the right dependencies for the right version
     assert "futures" not in build_reqs
     assert "futures" not in run_reqs
@@ -458,8 +465,8 @@ def test_pypi_with_basic_environment_markers(tmp_path: Path):
 
 def test_setuptools_test_requirements(tmp_path: Path):
     api.skeletonize(packages="hdf5storage", repo="pypi", output_dir=tmp_path)
-    m = api.render(str(tmp_path / "hdf5storage"))[0][0]
-    assert m.meta["test"]["requires"] == ["nose >=1.0"]
+    metadata = api.render(str(tmp_path / "hdf5storage"))[0][0]
+    assert metadata.meta["test"]["requires"] == ["nose >=1.0"]
 
 
 @pytest.mark.skipif(sys.version_info < (3, 8), reason="sympy is python 3.8+")
@@ -485,7 +492,8 @@ def test_pypi_section_order_preserved(tmp_path: Path):
     ]
 
     # The loader below preserves the order of entries...
-    recipe = ruamel.yaml.load("\n".join(lines), Loader=ruamel.yaml.RoundTripLoader)
+    _yaml = ruamel.yaml.YAML(typ="rt")
+    recipe = _yaml.load("\n".join(lines))
 
     major_sections = list(recipe.keys())
     # Blank fields are omitted when skeletonizing, so prune any missing ones

@@ -47,10 +47,12 @@ Authors are sorted alphabetically.
 * Christopher Whelan
 * Conda Bot
 * Connor Martin
+* Cornelius Roemer
 * Crystal Soja
 * Dan Blanchard
 * Dan Lovell
 * Daniel Bast
+* Daniel Ching
 * Daniel Damiani
 * Daniel Holth
 * Daniel Petry
@@ -120,12 +122,15 @@ Authors are sorted alphabetically.
 * Juan Lasheras
 * Julian Rüth
 * Julien Schueller
+* Justin Wood (Callek)
 * Jürgen Gmach
 * Jędrzej Nowak
 * Kai Tietz
 * Kale Franz
 * Katherine Kinnaman
 * Ken Odegard
+* Klaus Zimmermann
+* Konstantin Malanchev
 * Korijn van Golen
 * Kurt Schelfthout
 * Kyle Leaders
@@ -134,6 +139,8 @@ Authors are sorted alphabetically.
 * Levi Naden
 * Lori Burns
 * Lukas Schrangl
+* M Bernt
+* Mahe Iram Khan
 * Mandeep Bhutani
 * Marcel Bargull
 * Marcelo Duarte Trevisani
@@ -147,6 +154,7 @@ Authors are sorted alphabetically.
 * Matt Hollingsworth
 * Matt Rendina
 * Matt Swain
+* Matthew Feickert
 * Matthew Harrigan
 * Matthew R. Becker
 * Matthias Gabriel
@@ -216,11 +224,15 @@ Authors are sorted alphabetically.
 * Thomas A Caswell
 * Thomas Holder
 * Thomas Kluyver
+* Thomas Lam
+* Tim Paine
 * Tim Snyder
+* Tobias Fischer
 * Todd Tomashek
 * Tom Davidson
 * Tom Pollard
 * Tom Schoonjans
+* Tony Kelman
 * Toon Verstraelen
 * Travis Hathaway
 * Travis Oliphant
@@ -230,11 +242,15 @@ Authors are sorted alphabetically.
 * Ullrich Koethe
 * Uwe L. Korn
 * Vlad Frolov
+* Vyas Ramasubramani
 * Wes Turner
 * Wim Glenn
 * Wolf Vollprecht
 * Wolfgang Ulmer
+* Wout De Nolf
 * Yann
+* Yannik Tausch
+* Yoann Cédric Pradat
 * Yoav Ram
 * Yu Feng
 * Zane Dufour

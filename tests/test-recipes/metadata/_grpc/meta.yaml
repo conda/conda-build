@@ -1,0 +1,151 @@
+# extracted from bug report https://github.com/conda/conda-build/issues/5645
+{% set version = "1.71.0" %}
+
+# core package & vendored libs use different version scheme than CPP libs, see
+# top of https://github.com/grpc/grpc/blob/v{{ version }}/CMakeLists.txt
+# as of 1.67 the pattern is not trivially deducible from the version anymore
+{% set core_version = "46.0.0" %}
+
+{% set core_libs = ["gpr", "grpc", "grpc_unsecure"] %}
+{% set core_cpp_libs = ["grpc++", "grpc++_unsecure"] %}
+{% set vendored_libs = ["address_sorting"] %}
+{% set binaries_plugin_langs = [
+    "cpp", "csharp", "node", "objective_c", "php", "python", "ruby"
+] %}
+
+package:
+  name: grpc-split
+  version: {{ version }}
+
+source:
+  - url: https://github.com/grpc/grpc/archive/v{{ version.replace(".pre", "-pre") }}.tar.gz
+    sha256: 0d631419e54ec5b29def798623ee3bf5520dac77abeab3284ef7027ec2363f91
+
+build:
+  number: 0
+
+outputs:
+  - name: libgrpc
+    build:
+      script:
+        - echo "built it" > ${PREFIX}/grpc_build_libgrpc.txt
+      run_exports:
+        - {{ pin_subpackage('libgrpc', max_pin='x.x') }}
+    requirements:
+      build:
+        - {{ stdlib('c') }}
+        - {{ compiler('c') }}
+        - {{ compiler('cxx') }}
+        - cmake
+        - ninja
+        - python *      # [win]
+        # for analysing total number of symbols in grpc.dll
+        - py-lief       # [win]
+        # During cross-compilation, we need to build the grpc_cpp_plugin for the
+        # architecture of the build agent (where it will be executed afterwards),
+        # thus we need the respective host dependencies also in the build env.
+        - c-ares        # [build_platform != target_platform]
+        - libabseil     # [build_platform != target_platform]
+        - libprotobuf   # [build_platform != target_platform]
+        - openssl       # [build_platform != target_platform]
+        - re2           # [build_platform != target_platform]
+        - zlib          # [build_platform != target_platform]
+      host:
+        - libabseil
+        - c-ares
+        - libprotobuf
+        - re2
+        - openssl
+        - zlib
+      run:
+        - ucrt  # [win]
+      run_constrained:
+        # make sure we don't co-install with old version of previous package name
+        - grpc-cpp ={{ version }}
+    test:
+      commands:
+        - echo "it works!"
+
+  - name: grpcio
+    build:
+      script:
+        - echo "built it" > ${PREFIX}/grpc_build_grpcio.txt
+    requirements:
+      build:
+        - python                                 # [build_platform != target_platform]
+        - cross-python_{{ target_platform }}     # [build_platform != target_platform]
+        - cython                                 # [build_platform != target_platform]
+        - {{ stdlib('c') }}
+        - {{ compiler('c') }}
+        - {{ compiler('cxx') }}
+      host:
+        - python
+        - pip
+        - setuptools
+        - cython
+        - {{ pin_subpackage('libgrpc', exact=True) }}
+        - pthread-stubs                               # [linux]
+        - zlib
+      run:
+        - python
+        - {{ pin_subpackage('libgrpc', exact=True) }}
+    test:
+      commands:
+        - echo "it works!"
+
+  - name: grpcio-tools
+    build:
+      script:
+        - echo "built it" > ${PREFIX}/grpc_build_grpcio_tools.txt
+    requirements:
+      build:
+        - python                                 # [build_platform != target_platform]
+        - cython                                 # [build_platform != target_platform]
+        - cross-python_{{ target_platform }}     # [build_platform != target_platform]
+        - {{ stdlib('c') }}
+        - {{ compiler('c') }}
+        - {{ compiler('cxx') }}
+      host:
+        - grpcio {{ version }}.* *_{{ PKG_BUILDNUM }}
+        - python
+        - cython
+        - pip
+        - setuptools
+        - libabseil
+        - libprotobuf
+      run:
+        - grpcio {{ version }}.* *_{{ PKG_BUILDNUM }}
+        - python
+        - protobuf
+        - setuptools
+    test:
+      commands:
+        - echo "it works!"
+
+about:
+  home: https://grpc.io/
+  license: Apache-2.0
+  license_family: APACHE
+  license_file: LICENSE
+  summary: gRPC - A high-performance, open-source universal RPC framework
+  description: |
+    gRPC is a modern, open source, high-performance remote procedure call
+    (RPC) framework that can run anywhere. gRPC enables client and server
+    applications to communicate transparently, and simplifies the building
+    of connected systems.
+
+    This package contains the gRPC C++ libraries and header files, as well
+    as the code generation plugins.
+  doc_url: https://grpc.io/docs/
+  dev_url: https://github.com/grpc/grpc
+
+extra:
+  recipe-maintainers:
+    - pitrou
+    - xhochy
+    - wesm
+    - h-vetinari
+    - mariusvniekerk
+    - jjerphan
+    - JohanMabille
+  feedstock-name: grpc-cpp

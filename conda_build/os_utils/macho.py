@@ -258,7 +258,7 @@ def _chmod(filename, mode):
         os.chmod(filename, mode)
     except (OSError, utils.PermissionError) as e:
         log = utils.get_logger(__name__)
-        log.warn(str(e))
+        log.warning(str(e))
 
 
 def install_name_tool(args, build_prefix=None, verbose=False):
@@ -286,7 +286,7 @@ def add_rpath(path, rpath, build_prefix=None, verbose=False):
     args = ["-add_rpath", rpath, path]
     code, _, stderr = install_name_tool(args, build_prefix)
     if "Mach-O dynamic shared library stub file" in stderr:
-        print("Skipping Mach-O dynamic shared library stub file %s\n" % path)
+        print(f"Skipping Mach-O dynamic shared library stub file {path}\n")
         return
     elif "would duplicate path, file already has LC_RPATH for:" in stderr:
         print("Skipping -add_rpath, file already has LC_RPATH set")
@@ -294,7 +294,7 @@ def add_rpath(path, rpath, build_prefix=None, verbose=False):
     else:
         print(stderr, file=sys.stderr)
         if code:
-            raise RuntimeError("install_name_tool failed with exit status %d" % code)
+            raise RuntimeError("install_name_tool failed with exit status %d" % code)  # noqa: UP031
 
 
 def delete_rpath(path, rpath, build_prefix=None, verbose=False):
@@ -304,7 +304,7 @@ def delete_rpath(path, rpath, build_prefix=None, verbose=False):
     args = ["-delete_rpath", rpath, path]
     code, _, stderr = install_name_tool(args, build_prefix)
     if "Mach-O dynamic shared library stub file" in stderr:
-        print("Skipping Mach-O dynamic shared library stub file %s\n" % path)
+        print(f"Skipping Mach-O dynamic shared library stub file {path}\n")
         return
     elif "no LC_RPATH load command with path:" in stderr:
         print("Skipping -delete_rpath, file doesn't contain that LC_RPATH")
@@ -312,7 +312,7 @@ def delete_rpath(path, rpath, build_prefix=None, verbose=False):
     else:
         print(stderr, file=sys.stderr)
         if code:
-            raise RuntimeError("install_name_tool failed with exit status %d" % code)
+            raise RuntimeError("install_name_tool failed with exit status %d" % code)  # noqa: UP031
 
 
 def install_name_change(path, build_prefix, cb_func, dylibs, verbose=False):
@@ -341,14 +341,14 @@ def install_name_change(path, build_prefix, cb_func, dylibs, verbose=False):
             args.extend(("-change", dylibs[index]["name"], new_name, path))
         code, _, stderr = install_name_tool(args, build_prefix)
         if "Mach-O dynamic shared library stub file" in stderr:
-            print("Skipping Mach-O dynamic shared library stub file %s" % path)
+            print(f"Skipping Mach-O dynamic shared library stub file {path}")
             ret = False
             continue
         else:
             print(stderr, file=sys.stderr)
         if code:
             raise RuntimeError(
-                "install_name_tool failed with exit status %d, stderr of:\n%s"
+                "install_name_tool failed with exit status %d, stderr of:\n%s"  # noqa: UP031
                 % (code, stderr)
             )
     return ret
