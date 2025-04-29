@@ -45,7 +45,7 @@ source:
 build:
   number: 2
   noarch: generic
-  missing_dso_whitelist:
+  missing_dso_allowlist:
     - '*'
 
 {depends}
