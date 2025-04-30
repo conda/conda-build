@@ -16,7 +16,6 @@ import tarfile
 import uuid
 from collections import OrderedDict
 from contextlib import nullcontext
-from datetime import datetime
 from glob import glob
 from pathlib import Path
 from shutil import which
