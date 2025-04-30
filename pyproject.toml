@@ -24,7 +24,7 @@ classifiers = [
 dependencies = [
   "beautifulsoup4",
   "chardet",
-  "conda >=23.7.0",
+  "conda >=24.11.0",
   # Disabled due to conda-index not being available on PyPI
   # "conda-index >=0.4.0",
   "conda-package-handling >=2.2.0",
