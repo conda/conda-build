@@ -24,4 +24,4 @@ echo "Installing dev dependencies"
     --file "$SRC_CONDA_BUILD/tests/requirements.txt" \
     --file "$SRC_CONDA_BUILD/tests/requirements-Linux.txt" \
     --file "$SRC_CONDA_BUILD/tests/requirements-ci.txt" \
-    "conda>=23.7.0"
+    "conda>=24.11.0"
