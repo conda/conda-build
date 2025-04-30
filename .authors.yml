@@ -21,7 +21,7 @@
   email: isuruf@gmail.com
   alternate_emails:
   - isuru.11@cse.mrt.ac.lk
-  num_commits: 91
+  num_commits: 92
   first_commit: 2017-06-16 15:14:34
   github: isuruf
 - name: Dan Blanchard
@@ -565,14 +565,14 @@
   num_commits: 1
   first_commit: 2018-12-20 04:25:56
 - name: Sophia Castellarin
-  email: scastellarin@anaconda.com
+  email: scastellarin@quansight.com
   aliases:
   - sophia
   - soapy1
   alternate_emails:
   - scastellarin95@gmail.com
   - scastellarin@anaconda.com
-  num_commits: 98
+  num_commits: 99
   first_commit: 2016-09-06 16:58:21
   github: soapy1
 - name: Bruno Oliveira
@@ -1118,10 +1118,11 @@
   aliases:
   - Matthew R Becker
   - Matthew R. Becker
+  - beckermr
   alternate_emails:
   - becker.mr@gmail.com
   - beckermr@users.noreply.github.com
-  num_commits: 31
+  num_commits: 35
   first_commit: 2019-10-17 23:05:16
   github: beckermr
 - name: Jinzhe Zeng
@@ -1202,7 +1203,7 @@
   alternate_emails:
   - clee@anaconda.com
 - name: Ken Odegard
-  num_commits: 236
+  num_commits: 240
   email: kodegard@anaconda.com
   first_commit: 2020-09-08 19:53:41
   github: kenodegard
@@ -1240,7 +1241,7 @@
   github: pre-commit-ci[bot]
   aliases:
   - pre-commit-ci[bot]
-  num_commits: 106
+  num_commits: 110
   first_commit: 2021-11-20 01:47:17
 - name: Jacob Walls
   email: jacobtylerwalls@gmail.com
@@ -1262,7 +1263,7 @@
   alternate_emails:
   - ad-team+condabot@anaconda.com
   - 18747875+conda-bot@users.noreply.github.com
-  num_commits: 73
+  num_commits: 75
   first_commit: 2022-01-17 18:09:22
 - name: Uwe L. Korn
   email: xhochy@users.noreply.github.com
@@ -1310,7 +1311,7 @@
 - name: dependabot[bot]
   email: 49699333+dependabot[bot]@users.noreply.github.com
   github: dependabot[bot]
-  num_commits: 41
+  num_commits: 42
   first_commit: 2022-05-31 04:34:40
 - name: Serhii Kupriienko
   email: 79282962+skupr-anaconda@users.noreply.github.com
@@ -1327,7 +1328,7 @@
 - name: Jaime Rodríguez-Guerra
   email: jaimergp@users.noreply.github.com
   github: jaimergp
-  num_commits: 28
+  num_commits: 30
   first_commit: 2022-11-02 19:34:51
 - name: Dave Clements
   email: tnabtaf@gmail.com
@@ -1508,3 +1509,18 @@
   github: woutdenolf
   num_commits: 1
   first_commit: 2025-02-27 10:06:02
+- name: Thomas Lam
+  email: 79589038+tl-hbk@users.noreply.github.com
+  github: tl-hbk
+  num_commits: 1
+  first_commit: 2025-03-29 07:38:11
+- name: Matthew Feickert
+  email: matthew.feickert@cern.ch
+  github: matthewfeickert
+  num_commits: 1
+  first_commit: 2025-03-31 14:22:43
+- name: Konstantin Malanchev
+  email: hombit@gmail.com
+  github: hombit
+  num_commits: 1
+  first_commit: 2025-04-01 08:51:57

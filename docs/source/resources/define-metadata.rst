@@ -323,7 +323,9 @@ Build number and string
 The build number should be incremented for new builds of the same
 version. The number defaults to ``0``. The build string cannot
 contain "-". The string defaults to the default conda-build
-string plus the build number.
+string plus the build number. When redefining the default string,
+we strongly recommend following the convention of adding the build
+number at the end of the string, with a preceding underscore.
 
 .. code-block:: yaml
 

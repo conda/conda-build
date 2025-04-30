@@ -33,7 +33,6 @@ dependencies = [
   "jinja2",
   "jsonschema >=4.19",
   "libarchive-c",
-  "menuinst >=2",
   "packaging",
   "pkginfo",
   "psutil",

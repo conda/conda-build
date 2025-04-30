@@ -9,7 +9,6 @@ filelock
 frozendict >=2.4.2
 jinja2
 jsonschema >=4.19
-menuinst >=2
 packaging
 pkginfo
 psutil
