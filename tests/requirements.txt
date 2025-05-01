@@ -19,6 +19,5 @@ pytz
 pyyaml
 requests
 ripgrep  # for faster grep
-setuptools !=80.0
 setuptools_scm  # needed for devenv version detection
 tqdm
