@@ -13,6 +13,7 @@ requirements:
   build:
     - python >={{ deps.get("python").lstrip("^") }}
     - pip
+    - setuptools
 
   run:
 {% for dep in deps -%}
