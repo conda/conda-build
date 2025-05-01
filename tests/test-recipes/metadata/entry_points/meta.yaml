@@ -17,8 +17,8 @@ build:
 requirements:
   build:
     - python
-    - pip =24
-    - setuptools <80
+    - pip
+    - setuptools
   run:
     - python
 
