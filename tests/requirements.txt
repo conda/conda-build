@@ -20,4 +20,5 @@ pyyaml
 requests
 ripgrep  # for faster grep
 setuptools_scm  # needed for devenv version detection
+setuptools !=80.0
 tqdm
