@@ -7,7 +7,8 @@ conda-package-handling >=2.2.0
 evalidate >=2,<3.0a0
 filelock
 frozendict >=2.4.2
-hatchling
+hatch-vcs >=0.2.0
+hatchling >=1.12.2
 jinja2
 jsonschema >=4.19
 packaging
