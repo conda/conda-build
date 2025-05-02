@@ -301,7 +301,7 @@ jobs:
 
       # TODO: how can we remove this step?
       - name: Install Self
-        run: pip install -e . --no-deps
+        run: pip install -e . --no-deps -vvv
 
       - name: Conda Info
         # view test env info (not base)
