@@ -31,7 +31,7 @@ requirements:
   run:
     - beautifulsoup4
     - chardet
-    - conda >=23.7.0
+    - conda >=24.11.0
     - conda-index >=0.4.0
     - conda-package-handling >=2.2.0
     - evalidate >=2,<3.0a0
