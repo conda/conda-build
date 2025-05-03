@@ -4,7 +4,7 @@
 
 ### Bug fixes
 
-* Require `conda-libmamba-solver` 25.4 or greater to fix issues with spaces in path. This bumps the minimum `conda` requirement to 24.11. (#5675)
+* Require `conda-libmamba-solver` 25.4 or greater to fix issues with spaces in `CONDA_BLD_PATH`. This bumps the minimum `conda` requirement to 24.11. (#5675)
 
 ### Deprecations
 
