@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+import textwrap
 from contextlib import nullcontext
 from itertools import product
 from typing import TYPE_CHECKING
@@ -63,6 +64,20 @@ def test_uses_vcs_in_metadata(testing_workdir, testing_metadata):
     assert not testing_metadata.uses_vcs_in_build
 
 
+def test_select_lines_complicated_smoke():
+    # this snippet is from the conda-forge pinnings file
+    cfpinning = textwrap.dedent(
+        """
+        docker_image:                                       # [os.environ.get("BUILD_PLATFORM", "").startswith("linux-")]
+        # non-CUDA-enabled builds on AlmaLinux 8
+        - quay.io/condaforge/linux-anvil-x86_64:alma8     # [os.environ.get("BUILD_PLATFORM") == "linux-64" and os.environ.get("DEFAULT_LINUX_VERSION", "alma9") in ("alma8", "ubi8")]
+        - quay.io/condaforge/linux-anvil-aarch64:alma8    # [os.environ.get("BUILD_PLATFORM") == "linux-aarch64" and os.environ.get("DEFAULT_LINUX_VERSION", "alma9") in ("alma8", "ubi8")]
+        - quay.io/condaforge/linux-anvil-ppc64le:alma8    # [os.environ.get("BUILD_PLATFORM") == "linux-ppc64le" and os.environ.get("DEFAULT_LINUX_VERSION", "alma9") in ("alma8", "ubi8")]
+        """  # noqa: E501
+    )
+    select_lines(cfpinning, {"os": OSModuleSubset}, variants_in_place=True)
+
+
 def test_select_lines():
     lines = "\n".join(
         (
@@ -83,11 +98,22 @@ def test_select_lines():
             "test {{ JINJA_VAR[:2] }} # stuff yes [abc]",
             "test {{ JINJA_VAR[:2] }} # [abc] stuff yes",
             '{{ environ["test"] }}  # [abc]',
+            '{{ environ["test-tuple"] }}  # [d in ("a", "b")]',
+            '{{ environ["test-list"] }}  # [d in list(("a", "b"))]',
+            '{{ environ["test-dict"] }}  # [d in {"a": 1, "b": 2}]',
+            '{{ environ["test-float"] }}  # [int(float(vc)) == 10]',
+            '{{ environ["test-sep"] }}  # [os.sep in ("/", "\\\\") and len(os.sep) == 1]',
+            '{{ environ["test-join"] }}  # ["/".join(("a", "b")) == "a/b"]',
+            '{{ environ["test-replace"] }}  # ["acb".replace("c", "/") == "a/b"]',
             "",  # preserve trailing newline
         )
     )
 
-    assert select_lines(lines, {"abc": True}, variants_in_place=True) == "\n".join(
+    assert select_lines(
+        lines,
+        {"abc": True, "d": "b", "vc": "10.4", "os": OSModuleSubset},
+        variants_in_place=True,
+    ) == "\n".join(
         (
             "",  # preserve leading newline
             "test",
@@ -106,10 +132,21 @@ def test_select_lines():
             "test {{ JINJA_VAR[:2] }}",
             "test {{ JINJA_VAR[:2] }}",
             '{{ environ["test"] }}',
+            '{{ environ["test-tuple"] }}',
+            '{{ environ["test-list"] }}',
+            '{{ environ["test-dict"] }}',
+            '{{ environ["test-float"] }}',
+            '{{ environ["test-sep"] }}',
+            '{{ environ["test-join"] }}',
+            '{{ environ["test-replace"] }}',
             "",  # preserve trailing newline
         )
     )
-    assert select_lines(lines, {"abc": False}, variants_in_place=True) == "\n".join(
+    assert select_lines(
+        lines,
+        {"abc": False, "d": "c", "vc": "11.4", "os": OSModuleSubset},
+        variants_in_place=True,
+    ) == "\n".join(
         (
             "",  # preserve leading newline
             "test",
@@ -120,6 +157,9 @@ def test_select_lines():
             "",  # preserve newline
             "",  # preserve comment line (but not the comment)
             "test {{ JINJA_VAR[:2] }}",
+            '{{ environ["test-sep"] }}',
+            '{{ environ["test-join"] }}',
+            '{{ environ["test-replace"] }}',
             "",  # preserve trailing newline
         )
     )

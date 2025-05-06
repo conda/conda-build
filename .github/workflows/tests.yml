@@ -84,10 +84,10 @@ jobs:
         include:
           # minimum Python/conda combo
           - python-version: '3.10'
-            conda-version: 23.9.0
+            conda-version: 23.11.0
             test-type: serial
           - python-version: '3.10'
-            conda-version: 23.9.0
+            conda-version: 23.11.0
             test-type: parallel
           # maximum Python/conda combo
           - python-version: '3.13'
@@ -301,7 +301,7 @@ jobs:
 
       # TODO: how can we remove this step?
       - name: Install Self
-        run: pip install -e .
+        run: pip install -e . --no-deps --no-build-isolation
 
       - name: Conda Info
         # view test env info (not base)
