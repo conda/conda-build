@@ -2121,10 +2121,9 @@ def test_api_build_inject_jinja2_vars_on_first_pass(testing_config):
     api.build(recipe_dir, config=testing_config)
 
 
-def test_ignore_run_exports_from_substr(tmp_path, capsys):
-    with tmp_path:
-        api.build(str(metadata_path / "ignore_run_exports_from_substr"))
-
+def test_ignore_run_exports_from_substr(monkeypatch, tmp_path, capsys):
+    monkeypatch.chdir(tmp_path)
+    api.build(str(metadata_path / "ignore_run_exports_from_substr"))
     assert "- python_abi " in capsys.readouterr().out
 
 
@@ -2146,18 +2145,19 @@ def test_build_strings_glob_match(testing_config: Config) -> None:
 
 
 @pytest.mark.skipif(not on_linux, reason="needs __glibc virtual package")
-def test_api_build_grpc_issue5645(tmp_path, testing_config):
+def test_api_build_grpc_issue5645(monkeypatch, tmp_path, testing_config):
     if Version(conda_version) < Version("25.1.0"):
         pytest.skip("needs conda 25.1.0")
     testing_config.channel_urls = ["conda-forge"]
-    with tmp_path:
-        api.build(str(metadata_path / "_grpc"), config=testing_config)
+
+    monkeypatch.chdir(tmp_path)
+    api.build(str(metadata_path / "_grpc"), config=testing_config)
 
 
 @pytest.mark.skipif(
     not on_mac, reason="needs to cross-compile from osx-64 to osx-arm64"
 )
-def test_api_build_pytorch_cpu_issue5644(tmp_path, testing_config):
+def test_api_build_pytorch_cpu_issue5644(monkeypatch, tmp_path, testing_config):
     # this test has to cross-compile from osx-64 to osx-arm64
     try:
         if "CONDA_SUBDIR" in os.environ:
@@ -2169,8 +2169,8 @@ def test_api_build_pytorch_cpu_issue5644(tmp_path, testing_config):
         os.environ["CONDA_SUBDIR"] = "osx-64"
 
         testing_config.channel_urls = ["conda-forge"]
-        with tmp_path:
-            api.build(str(metadata_path / "_pytorch_cpu"), config=testing_config)
+        monkeypatch.chdir(tmp_path)
+        api.build(str(metadata_path / "_pytorch_cpu"), config=testing_config)
     finally:
         if has_old_subdir:
             os.environ["CONDA_SUBDIR"] = old_subdir
