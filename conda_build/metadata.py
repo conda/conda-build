@@ -139,6 +139,7 @@ class OSModuleSubset:
 
     environ = os.environ
     getenv = os.getenv
+    pathsep = os.pathsep
     sep = os.sep
 
 
