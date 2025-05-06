@@ -321,6 +321,7 @@ def evalidate_model():
         # for legacy os attributes
         "environ",
         "getenv",
+        "pathsep",
         "sep",
     ]
     return model
