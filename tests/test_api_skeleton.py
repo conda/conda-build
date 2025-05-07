@@ -464,7 +464,9 @@ def test_pypi_with_basic_environment_markers(tmp_path: Path):
 
 
 def test_setuptools_test_requirements(tmp_path: Path):
-    api.skeletonize(packages="hdf5storage", repo="pypi", version="0.1.19", output_dir=tmp_path)
+    api.skeletonize(
+        packages="hdf5storage", repo="pypi", version="0.1.19", output_dir=tmp_path
+    )
     metadata = api.render(str(tmp_path / "hdf5storage"))[0][0]
     assert metadata.meta["test"]["requires"] == ["nose >=1.0"]
 
