@@ -139,6 +139,7 @@ class OSModuleSubset:
 
     environ = os.environ
     getenv = os.getenv
+    pathsep = os.pathsep
     sep = os.sep
 
 
@@ -320,6 +321,7 @@ def evalidate_model():
         # for legacy os attributes
         "environ",
         "getenv",
+        "pathsep",
         "sep",
     ]
     return model

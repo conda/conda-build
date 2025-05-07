@@ -102,6 +102,7 @@ def test_select_lines():
             '{{ environ["test-list"] }}  # [d in list(("a", "b"))]',
             '{{ environ["test-dict"] }}  # [d in {"a": 1, "b": 2}]',
             '{{ environ["test-float"] }}  # [int(float(vc)) == 10]',
+            '{{ environ["test-pathsep"] }}  # [os.pathsep in (":", ";") and len(os.pathsep) == 1]',
             '{{ environ["test-sep"] }}  # [os.sep in ("/", "\\\\") and len(os.sep) == 1]',
             '{{ environ["test-join"] }}  # ["/".join(("a", "b")) == "a/b"]',
             '{{ environ["test-replace"] }}  # ["acb".replace("c", "/") == "a/b"]',
@@ -136,6 +137,7 @@ def test_select_lines():
             '{{ environ["test-list"] }}',
             '{{ environ["test-dict"] }}',
             '{{ environ["test-float"] }}',
+            '{{ environ["test-pathsep"] }}',
             '{{ environ["test-sep"] }}',
             '{{ environ["test-join"] }}',
             '{{ environ["test-replace"] }}',
@@ -157,6 +159,7 @@ def test_select_lines():
             "",  # preserve newline
             "",  # preserve comment line (but not the comment)
             "test {{ JINJA_VAR[:2] }}",
+            '{{ environ["test-pathsep"] }}',
             '{{ environ["test-sep"] }}',
             '{{ environ["test-join"] }}',
             '{{ environ["test-replace"] }}',
