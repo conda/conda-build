@@ -16,4 +16,4 @@
 
 ### Other
 
-* Add ``.md`` extension to news entries. (#5705)
+* Add `.md` extension to news entries. (#5705)
