@@ -78,15 +78,15 @@ jobs:
       fail-fast: false
       matrix:
         # test all lower versions (w/ stable conda) and upper version (w/ canary conda)
-        python-version: ['3.10', '3.11', '3.12']
+        python-version: ['3.9', '3.10', '3.11', '3.12']
         conda-version: [release]
         test-type: [serial, parallel]
         include:
           # minimum Python/conda combo
-          - python-version: '3.10'
+          - python-version: '3.9'
             conda-version: 24.11.0
             test-type: serial
-          - python-version: '3.10'
+          - python-version: '3.9'
             conda-version: 24.11.0
             test-type: parallel
           # maximum Python/conda combo
@@ -245,7 +245,7 @@ jobs:
       fail-fast: false
       matrix:
         # test lower version (w/ stable conda) and upper version (w/ canary conda)
-        python-version: ['3.10']
+        python-version: ['3.9']
         conda-version: [release]
         test-type: [serial, parallel]
         include:
@@ -353,7 +353,7 @@ jobs:
       fail-fast: false
       matrix:
         # test lower version (w/ stable conda) and upper version (w/ canary conda)
-        python-version: ['3.10']
+        python-version: ['3.9']
         conda-version: [release]
         test-type: [serial, parallel]
         include:
