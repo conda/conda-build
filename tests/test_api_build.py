@@ -16,7 +16,6 @@ import tarfile
 import uuid
 from collections import OrderedDict
 from contextlib import nullcontext
-from datetime import datetime
 from glob import glob
 from pathlib import Path
 from shutil import which
@@ -1436,10 +1435,6 @@ def test_recursion_layers(testing_config):
 @pytest.mark.skipif(
     sys.platform != "win32",
     reason="spaces break openssl prefix replacement on *nix",
-)
-@pytest.mark.skipif(
-    datetime.now() < datetime(2025, 5, 31),
-    reason="Unblock CI while https://github.com/mamba-org/mamba/issues/3730 gets a fix",
 )
 def test_croot_with_spaces(testing_metadata, testing_workdir):
     testing_metadata.config.croot = os.path.join(testing_workdir, "space path")

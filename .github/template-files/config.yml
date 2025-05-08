@@ -53,4 +53,4 @@ conda/infrastructure:
   - src: templates/releases/rever.xsh
     dst: rever.xsh
   - src: templates/releases/TEMPLATE
-    dst: news/TEMPLATE
+    dst: news/TEMPLATE.md
