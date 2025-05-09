@@ -34,6 +34,7 @@ from conda.models.version import VersionOrder
 
 from . import environ, exceptions, source, utils
 from .config import CondaPkgFormat
+from .deprecations import deprecated
 from .exceptions import CondaBuildUserError, DependencyNeedsBuildingError
 from .index import get_build_index
 from .metadata import MetaData, MetaDataTuple, combine_top_level_metadata_with_output
@@ -1153,6 +1154,7 @@ FIELDS = [
 
 # Next bit of stuff is to support YAML output in the order we expect.
 # http://stackoverflow.com/a/17310199/1170370
+@deprecated("25.5", "25.7")
 class _MetaYaml(dict):
     fields = FIELDS
 
@@ -1160,26 +1162,77 @@ class _MetaYaml(dict):
         return [(field, self[field]) for field in _MetaYaml.fields if field in self]
 
 
+@deprecated("25.5", "25.7")
 def _represent_omap(dumper, data):
     return dumper.represent_mapping("tag:yaml.org,2002:map", data.to_omap())
 
 
+@deprecated("25.5", "25.7")
 def _unicode_representer(dumper, uni):
     node = yaml.ScalarNode(tag="tag:yaml.org,2002:str", value=uni)
     return node
 
 
-class _IndentDumper(yaml.Dumper):
-    def increase_indent(self, flow=False, indentless=False):
-        return super().increase_indent(flow, False)
+class CustomDumper(yaml.Dumper):
+    def increase_indent(self, flow: bool = False, indentless: bool = False) -> None:
+        """Control indentation.
 
-    def ignore_aliases(self, data):
+        By default a mapping context is not indented:
+
+        ```yaml
+        key:
+        - item1
+        - item2
+        ```
+
+        But we want to force indentation:
+
+        ```yaml
+        key:
+          - item1
+          - item2
+        ```
+
+        Xref: https://github.com/yaml/pyyaml/issues/234
+        """
+        return super().increase_indent(flow, indentless=False)
+
+    def ignore_aliases(self, data: Any) -> bool:
+        """Control aliases and anchor points.
+
+        By default PyYAML uses anchors and aliases to avoid duplication:
+
+        ```yaml
+        key: &id
+          - item1
+          - item2
+        key2: *id
+        ```
+
+        But we want to avoid this:
+
+        ```yaml
+        key:
+          - item1
+          - item2
+        key2:
+          - item1
+          - item2
+        ```
+
+        Xref: https://github.com/yaml/pyyaml/issues/103
+        Xref: https://github.com/yaml/pyyaml/issues/535
+        """
         return True
 
 
-yaml.add_representer(_MetaYaml, _represent_omap)
-yaml.add_representer(str, _unicode_representer)
-unicode = None  # silence pyflakes about unicode not existing in py3
+deprecated.constant(
+    "25.5",
+    "25.7",
+    "_IndentDumper",
+    CustomDumper,
+    addendum="Use `conda_build.render.CustomDumper` instead.",
+)
 
 
 def output_yaml(
@@ -1187,18 +1240,17 @@ def output_yaml(
     filename: str | os.PathLike | Path | None = None,
     suppress_outputs: bool = False,
 ) -> str:
-    local_metadata = metadata.copy()
-    if (
-        suppress_outputs
-        and local_metadata.is_output
-        and "outputs" in local_metadata.meta
-    ):
-        del local_metadata.meta["outputs"]
+    meta = metadata.meta
+    # create a manually ordered copy of the meta dict
+    meta = {field: meta[field] for field in FIELDS if field in meta}
+    if suppress_outputs and metadata.is_output and "outputs" in meta:
+        del meta["outputs"]
     output = yaml.dump(
-        _MetaYaml(local_metadata.meta),
-        Dumper=_IndentDumper,
-        default_flow_style=False,
+        meta,
+        Dumper=CustomDumper,
+        default_flow_style=False,  # always serialize in the block style
         indent=2,
+        sort_keys=False,  # preserve manual order
     )
     if filename:
         filename = Path(filename)
