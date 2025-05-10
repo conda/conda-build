@@ -4,7 +4,7 @@
 
 ### Bug fixes
 
-* Fix `get_conda_operation_locks` call to use correct arguments. (#4215 via #5259)
+* Fix regression so `os.pathsep` works in Jinja expressions. (#5705)
 
 ### Deprecations
 
@@ -16,4 +16,4 @@
 
 ### Other
 
-* <news item>
+* Add `.md` extension to news entries. (#5705)

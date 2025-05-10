@@ -121,6 +121,11 @@ if __name__ == '__main__':
 # filenames accepted as recipe meta files
 VALID_METAS = ("meta.yaml", "meta.yml", "conda.yaml", "conda.yml")
 
+VALID_SCHEMA_LOCATIONS = ("http://schemas.conda.org/", "https://schemas.conda.org/")
+FALLBACK_MENUINST_SCHEMA = (
+    "https://schemas.conda.org/menuinst/menuinst-1-1-0.schema.json"
+)
+
 
 @cache
 def stat_file(path):
