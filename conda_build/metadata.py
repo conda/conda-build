@@ -994,11 +994,10 @@ def get_output_dicts_from_metadata(
     metadata: MetaData,
     outputs: list[dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
-    outputs = outputs or metadata.get_section("outputs")
     # TODO: do we want to modify the original here?
     # I think not, but I cannot tell.
     # trying tests with a copy
-    outputs = [o for o in outputs]
+    outputs = outputs or [o for o in metadata.get_section("outputs") or []]
 
     if not outputs:
         outputs = [{"name": metadata.name()}]
