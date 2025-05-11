@@ -994,9 +994,6 @@ def get_output_dicts_from_metadata(
     metadata: MetaData,
     outputs: list[dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
-    # TODO: do we want to modify the original here?
-    # I think not, but I cannot tell.
-    # trying tests with a copy
     outputs = outputs or [o for o in metadata.get_section("outputs") or []]
 
     if not outputs:
