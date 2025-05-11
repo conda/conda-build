@@ -2962,11 +2962,14 @@ class MetaData:
                 ).replace(
                     self.extract_outputs_text(apply_selectors=apply_selectors).strip(),
                     "",
-                ) + self.extract_single_output_text(
-                    self.name(),
-                    getattr(self, "type", None),
-                    apply_selectors=apply_selectors,
                 )
+                # implicit metapackages do not have text in outputs block
+                if self.is_output:
+                    recipe_text += self.extract_single_output_text(
+                        self.name(),
+                        getattr(self, "type", None),
+                        apply_selectors=apply_selectors,
+                    )
             reqs_re = re.compile(
                 r"requirements:.+?(?=^\w|\Z|^\s+-\s(?=name|type))", flags=re.M | re.S
             )
