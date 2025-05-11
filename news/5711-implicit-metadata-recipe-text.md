@@ -4,7 +4,7 @@
 
 ### Bug fixes
 
-* Fixed bug in extracting recipe text for implicit metapackages. (#5711)
+* Fixed bug where recipe outputs lists was modified. (#5711)
 
 ### Deprecations
 
