@@ -994,7 +994,7 @@ def get_output_dicts_from_metadata(
     metadata: MetaData,
     outputs: list[dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
-    outputs = outputs or [o for o in metadata.get_section("outputs") or []]
+    outputs = outputs or [o for o in metadata.get_section("outputs")]
 
     if not outputs:
         outputs = [{"name": metadata.name()}]
