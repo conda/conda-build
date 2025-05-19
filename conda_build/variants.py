@@ -143,7 +143,7 @@ def parse_config_file(path, config):
     with open(path) as f:
         contents = f.read()
     contents = select_lines(contents, get_selectors(config), variants_in_place=False)
-    content = yaml.load(contents, Loader=yaml.loader.BaseLoader) or {}
+    content = yaml.load(contents, Loader=yaml.loader.SafeLoader) or {}
     trim_empty_keys(content)
     return content
 
