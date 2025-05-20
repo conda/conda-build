@@ -297,6 +297,9 @@ def test_per_output_tests_script(testing_config):
         api.build(recipe_dir, config=testing_config)
 
 
+@pytest.mark.xfail(
+    sys.version_info >= (3, 13), reason="Numpy build doesn't run on Python 3.13 yet."
+)
 def test_pin_compatible_in_outputs(testing_config):
     recipe_dir = os.path.join(subpackage_dir, "_pin_compatible_in_output")
     metadata = api.render(recipe_dir, config=testing_config)[0][0]
