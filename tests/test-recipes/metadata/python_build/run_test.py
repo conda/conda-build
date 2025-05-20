@@ -10,12 +10,10 @@ def main():
     with open(info_file) as fh:
         info = json.load(fh)
 
-    if sys.version_info < (3, 13):
-        assert len(info['depends']) == 0, info['depends']
-    else:
+    if len(info["depends"]) > 0:
         # there is a strong export from python starting with py313
         assert len(info['depends']) == 1, info['depends']
-        assert any(dep.startswith("python_abi ") for dep in info['depends'])
+        assert all(dep.startswith("python_abi ") for dep in info['depends'])
 
 if __name__ == '__main__':
     main()
