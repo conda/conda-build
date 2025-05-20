@@ -9,7 +9,7 @@ def main():
     assert len(info_files) == 1
 
     info = json.loads(info_files[0].read_text())
-    if sys.version_info.major < 13:
+    if sys.version_info[0:2] < (3, 13):
         assert len(info['depends']) == 1
 
         # python with version pin
