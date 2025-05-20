@@ -10,7 +10,7 @@ def main():
     with open(info_file) as fh:
         info = json.load(fh)
 
-    if sys.version_info[0:2] < (3, 13):
+    if sys.version_info < (3, 13):
         assert len(info['depends']) == 0, info['depends']
     else:
         # there is a strong export from python starting with py313
