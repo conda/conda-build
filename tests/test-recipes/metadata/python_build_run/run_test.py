@@ -1,6 +1,7 @@
 import os
 import json
 from pathlib import Path
+import sys
 
 
 def main():
@@ -8,11 +9,18 @@ def main():
     assert len(info_files) == 1
 
     info = json.loads(info_files[0].read_text())
-    assert len(info['depends']) == 1
+    if sys.version_info.major < 13:
+        assert len(info['depends']) == 1
 
-    # python with version pin
-    python, = info['depends']
-    assert python.startswith('python ')
+        # python with version pin
+        python, = info['depends']
+        assert python.startswith('python ')
+    else:
+        assert len(info['depends']) == 2
+
+        # python and python_abi with version pin
+        assert any(dep.startswith('python ') for dep in info['depends'])
+        assert any(dep.startswith('python_abi ') for dep in info['depends'])
 
 
 if __name__ == '__main__':
