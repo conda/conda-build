@@ -136,6 +136,10 @@ def test_recipe_builds(
         pytest.xfail("Issue related to #3754 on conda-build.")
     elif recipe.name == "unicode_all_over" and context.solver == "libmamba":
         pytest.xfail("Unicode package names not supported in libmamba.")
+    elif recipe.name == "numpy_build_run" and sys.version_info >= (3, 13):
+        pytest.xfail("Numpy build doesn't run on Python 3.13 yet.")
+    elif recipe.name == "numpy_build" and sys.version_info >= (3, 13):
+        pytest.xfail("Numpy build doesn't run on Python 3.13 yet.")
 
     # These variables are defined solely for testing purposes,
     # so they can be checked within build scripts
@@ -460,7 +464,7 @@ def test_checkout_tool_as_dependency(testing_workdir, testing_config, monkeypatc
 platforms = ["64" if sys.maxsize > 2**32 else "32"]
 if sys.platform == "win32":
     platforms = sorted({"32", *platforms})
-    compilers = ["3.10", "3.11", "3.12"]
+    compilers = ["3.10", "3.11", "3.12", "3.13"]
     msvc_vers = ["14.0"]
 else:
     msvc_vers = []
@@ -2121,10 +2125,9 @@ def test_api_build_inject_jinja2_vars_on_first_pass(testing_config):
     api.build(recipe_dir, config=testing_config)
 
 
-def test_ignore_run_exports_from_substr(tmp_path, capsys):
-    with tmp_path:
-        api.build(str(metadata_path / "ignore_run_exports_from_substr"))
-
+def test_ignore_run_exports_from_substr(monkeypatch, tmp_path, capsys):
+    monkeypatch.chdir(tmp_path)
+    api.build(str(metadata_path / "ignore_run_exports_from_substr"))
     assert "- python_abi " in capsys.readouterr().out
 
 
@@ -2146,18 +2149,19 @@ def test_build_strings_glob_match(testing_config: Config) -> None:
 
 
 @pytest.mark.skipif(not on_linux, reason="needs __glibc virtual package")
-def test_api_build_grpc_issue5645(tmp_path, testing_config):
+def test_api_build_grpc_issue5645(monkeypatch, tmp_path, testing_config):
     if Version(conda_version) < Version("25.1.0"):
         pytest.skip("needs conda 25.1.0")
     testing_config.channel_urls = ["conda-forge"]
-    with tmp_path:
-        api.build(str(metadata_path / "_grpc"), config=testing_config)
+
+    monkeypatch.chdir(tmp_path)
+    api.build(str(metadata_path / "_grpc"), config=testing_config)
 
 
 @pytest.mark.skipif(
     not on_mac, reason="needs to cross-compile from osx-64 to osx-arm64"
 )
-def test_api_build_pytorch_cpu_issue5644(tmp_path, testing_config):
+def test_api_build_pytorch_cpu_issue5644(monkeypatch, tmp_path, testing_config):
     # this test has to cross-compile from osx-64 to osx-arm64
     try:
         if "CONDA_SUBDIR" in os.environ:
@@ -2169,8 +2173,8 @@ def test_api_build_pytorch_cpu_issue5644(tmp_path, testing_config):
         os.environ["CONDA_SUBDIR"] = "osx-64"
 
         testing_config.channel_urls = ["conda-forge"]
-        with tmp_path:
-            api.build(str(metadata_path / "_pytorch_cpu"), config=testing_config)
+        monkeypatch.chdir(tmp_path)
+        api.build(str(metadata_path / "_pytorch_cpu"), config=testing_config)
     finally:
         if has_old_subdir:
             os.environ["CONDA_SUBDIR"] = old_subdir
