@@ -1356,6 +1356,8 @@ def _display_actions(prefix, precs):
     show_channel_urls = context.show_channel_urls
 
     def channel_str(rec):
+        if rec.get("channel_name"):
+            return rec["channel_name"]
         if rec.get("schannel"):
             return rec["schannel"]
         if rec.get("url"):
