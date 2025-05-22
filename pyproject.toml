@@ -119,6 +119,8 @@ filterwarnings = [
   # elevate conda's deprecated warning to an error
   "error::PendingDeprecationWarning:conda",
   "error::DeprecationWarning:conda",
+  # someone inserted a space...
+  "ignore:PendingDeprecationWarning: conda",
   # elevate conda-build's deprecated warning to an error
   "error::PendingDeprecationWarning:conda_build",
   "error::DeprecationWarning:conda_build",
