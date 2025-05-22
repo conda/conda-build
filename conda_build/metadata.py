@@ -330,7 +330,7 @@ def evalidate_model():
 def eval_selector(selector_string, namespace, variants_in_place, unsafe=False):
     """Evaluate the selector and return `True` (keep this line) or `False` (drop this line).
 
-    If a NameError (unknown variable in selector) is raised, replace it with `undefined` and
+    If a NameError (unknown variable in selector) is raised, replace it with `False` and
     re-run the evaluation.
     """
     if unsafe:
