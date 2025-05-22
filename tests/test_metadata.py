@@ -109,7 +109,7 @@ def test_select_lines():
             '{{ environ["test-isundefined"] }}  # [undefined is undefined]',
             '{{ environ["test-ismissing"] }}  # [missing is undefined]',
             '{{ environ["test-isnot"] }}  # [True is not undefined]',
-            '{{ environ["missing"] }}  # [missing]',
+            '{{ environ["test-missing"] }}  # [missing]',
             "",  # preserve trailing newline
         )
     )

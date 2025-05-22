@@ -5,7 +5,6 @@
 ### Bug fixes
 
 * Restore `is` and `is not` operators to selector minilanguage. (#5720 via #5721)
-* Replace unknown variables with `jinja`'s `undefined` object. (#5720 via #5721)
 
 ### Deprecations
 
