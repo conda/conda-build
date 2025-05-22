@@ -338,7 +338,7 @@ def eval_selector(selector_string, namespace, variants_in_place, unsafe=False):
     else:
         expression = Expr(selector_string.lstrip(), model=evalidate_model()).code
     try:
-        return eval(expression, {"undefined": jinja2.StrictUndefined()}, namespace)
+        return eval(expression, {"undefined": jinja2.Undefined()}, namespace)
     except NameError as e:
         missing_var = parseNameNotFound(e)
         if variants_in_place:
