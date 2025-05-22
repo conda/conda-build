@@ -119,7 +119,6 @@ filterwarnings = [
   # elevate conda's deprecated warning to an error
   "error::PendingDeprecationWarning:conda",
   "error::DeprecationWarning:conda",
-  "ignore:conda.trust is pending deprecation:PendingDeprecationWarning:conda",
   # elevate conda-build's deprecated warning to an error
   "error::PendingDeprecationWarning:conda_build",
   "error::DeprecationWarning:conda_build",
@@ -136,6 +135,7 @@ filterwarnings = [
   "ignore:conda.core.index._make_virtual_package is pending deprecation:PendingDeprecationWarning:conda",
   # ignore conda error
   "ignore:conda.plan is pending deprecation:PendingDeprecationWarning:conda",
+  "ignore:conda.trust is pending deprecation:PendingDeprecationWarning:conda",
   # ignore tarfile
   "ignore:Python 3.14 will, by default, filter extracted tar archives:DeprecationWarning",
 ]
