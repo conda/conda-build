@@ -291,7 +291,7 @@ def parseNameNotFound(error) -> str:
 @cache
 def evalidate_model():
     model = base_eval_model.clone()
-    model.nodes.extend(["Call", "Attribute", "Tuple", "List", "Dict"])
+    model.nodes.extend(["Call", "Attribute", "Tuple", "List", "Dict", "Is", "IsNot"])
     model.allowed_functions += [
         "int",
         "float",
@@ -327,10 +327,12 @@ def evalidate_model():
     return model
 
 
-# We evaluate the selector and return True (keep this line) or False (drop this line)
-# If we encounter a NameError (unknown variable in selector), then we replace it by False and
-#     re-run the evaluation
 def eval_selector(selector_string, namespace, variants_in_place, unsafe=False):
+    """Evaluate the selector and return `True` (keep this line) or `False` (drop this line).
+
+    If a NameError (unknown variable in selector) is raised, replace it with `False` and
+    re-run the evaluation.
+    """
     if unsafe:
         expression = selector_string
     else:

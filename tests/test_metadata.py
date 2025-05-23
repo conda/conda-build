@@ -106,6 +106,10 @@ def test_select_lines():
             '{{ environ["test-sep"] }}  # [os.sep in ("/", "\\\\") and len(os.sep) == 1]',
             '{{ environ["test-join"] }}  # ["/".join(("a", "b")) == "a/b"]',
             '{{ environ["test-replace"] }}  # ["acb".replace("c", "/") == "a/b"]',
+            '{{ environ["test-isundefined"] }}  # [undefined is undefined]',
+            '{{ environ["test-ismissing"] }}  # [missing is undefined]',
+            '{{ environ["test-isnot"] }}  # [True is not undefined]',
+            '{{ environ["test-missing"] }}  # [missing]',
             "",  # preserve trailing newline
         )
     )
@@ -141,6 +145,9 @@ def test_select_lines():
             '{{ environ["test-sep"] }}',
             '{{ environ["test-join"] }}',
             '{{ environ["test-replace"] }}',
+            '{{ environ["test-isundefined"] }}',
+            '{{ environ["test-ismissing"] }}',
+            '{{ environ["test-isnot"] }}',
             "",  # preserve trailing newline
         )
     )
@@ -163,6 +170,9 @@ def test_select_lines():
             '{{ environ["test-sep"] }}',
             '{{ environ["test-join"] }}',
             '{{ environ["test-replace"] }}',
+            '{{ environ["test-isundefined"] }}',
+            '{{ environ["test-ismissing"] }}',
+            '{{ environ["test-isnot"] }}',
             "",  # preserve trailing newline
         )
     )
