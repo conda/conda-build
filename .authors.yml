@@ -755,7 +755,7 @@
   alternate_emails:
   - kirkhamj@janelia.hhmi.org
   - jakirkham@gmail.com
-  num_commits: 74
+  num_commits: 77
   first_commit: 2015-04-21 13:26:39
   github: jakirkham
 - name: Anthony Scopatz
@@ -1122,7 +1122,7 @@
   alternate_emails:
   - becker.mr@gmail.com
   - beckermr@users.noreply.github.com
-  num_commits: 35
+  num_commits: 38
   first_commit: 2019-10-17 23:05:16
   github: beckermr
 - name: Jinzhe Zeng
@@ -1203,7 +1203,7 @@
   alternate_emails:
   - clee@anaconda.com
 - name: Ken Odegard
-  num_commits: 240
+  num_commits: 242
   email: kodegard@anaconda.com
   first_commit: 2020-09-08 19:53:41
   github: kenodegard
@@ -1226,7 +1226,7 @@
   first_commit: 2020-11-19 10:46:41
 - name: Jannis Leidel
   email: jannis@leidel.info
-  num_commits: 36
+  num_commits: 37
   github: jezdez
   first_commit: 2020-11-19 10:46:41
 - name: Christof Kaufmann
@@ -1241,7 +1241,7 @@
   github: pre-commit-ci[bot]
   aliases:
   - pre-commit-ci[bot]
-  num_commits: 110
+  num_commits: 116
   first_commit: 2021-11-20 01:47:17
 - name: Jacob Walls
   email: jacobtylerwalls@gmail.com
@@ -1282,7 +1282,7 @@
 - name: Travis Hathaway
   email: travis.j.hathaway@gmail.com
   github: travishathaway
-  num_commits: 9
+  num_commits: 10
   first_commit: 2022-05-12 05:53:02
 - name: Kyle Leaders
   email: remkade@users.noreply.github.com
@@ -1311,7 +1311,7 @@
 - name: dependabot[bot]
   email: 49699333+dependabot[bot]@users.noreply.github.com
   github: dependabot[bot]
-  num_commits: 42
+  num_commits: 43
   first_commit: 2022-05-31 04:34:40
 - name: Serhii Kupriienko
   email: 79282962+skupr-anaconda@users.noreply.github.com
@@ -1328,7 +1328,7 @@
 - name: Jaime Rodríguez-Guerra
   email: jaimergp@users.noreply.github.com
   github: jaimergp
-  num_commits: 30
+  num_commits: 32
   first_commit: 2022-11-02 19:34:51
 - name: Dave Clements
   email: tnabtaf@gmail.com
@@ -1524,3 +1524,7 @@
   github: hombit
   num_commits: 1
   first_commit: 2025-04-01 08:51:57
+- name: Emmanuel Ferdman
+  email: emmanuelferdman@gmail.com
+  num_commits: 1
+  first_commit: 2025-05-11 13:14:57
