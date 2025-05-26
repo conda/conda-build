@@ -8,9 +8,7 @@
 * Require `conda-libmamba-solver` 25.4 or greater to fix issues with spaces in `CONDA_BLD_PATH`. This bumps the minimum `conda` requirement to 24.11. (#5675)
 * Fix warning formatting in liefldd. (#5683)
 * Fix regression so `os.pathsep` works in Jinja expressions. (#5705)
-* Fix bug where recipe outputs lists was modified during parsing. This
-  caused false-positive warnings about inconsistent recipe outputs due to
-  jinja2 structures and crashes when getting the recipe text. (#5711)
+* Fix bug where recipe outputs lists was modified during parsing. This caused false-positive warnings about inconsistent recipe outputs due to jinja2 structures and crashes when getting the recipe text. (#5711)
 * Restore `is` and `is not` operators to selector minilanguage. (#5720 via #5721)
 * Remove usage of the `schannel` attribute which is deprecated in `conda`. (#5722)
 
