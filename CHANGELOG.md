@@ -39,6 +39,9 @@
 * @dependabot[bot]
 * @pre-commit-ci[bot]
 
+### New Contributors
+
+* @emmanuel-ferdman made their first contribution in https://github.com/conda/conda-build/pull/5683
 
 
 ## 25.4.2 (2025-04-21)
