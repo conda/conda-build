@@ -6,7 +6,7 @@
 
 * Validate menuinst JSON documents using the included `$schema` value. (#5569)
 * Require `conda-libmamba-solver` 25.4 or greater to fix issues with spaces in `CONDA_BLD_PATH`. This bumps the minimum `conda` requirement to 24.11. (#5675)
-* Fix warning formatting in liefldd (#5683)
+* Fix warning formatting in liefldd. (#5683)
 * Fix regression so `os.pathsep` works in Jinja expressions. (#5705)
 * Fix bug where recipe outputs lists was modified during parsing. This
   caused false-positive warnings about inconsistent recipe outputs due to
