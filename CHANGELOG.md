@@ -1,5 +1,47 @@
 [//]: # (current developments)
 
+## 25.5.0 (2025-05-26)
+
+### Bug fixes
+
+* Validate menuinst JSON documents using the included `$schema` value. (#5569)
+* Require `conda-libmamba-solver` 25.4 or greater to fix issues with spaces in `CONDA_BLD_PATH`. This bumps the minimum `conda` requirement to 24.11. (#5675)
+* Fix warning formatting in liefldd. (#5683)
+* Fix regression so `os.pathsep` works in Jinja expressions. (#5705)
+* Fix bug where recipe outputs lists was modified during parsing. This caused false-positive warnings about inconsistent recipe outputs due to jinja2 structures and crashes when getting the recipe text. (#5711)
+* Restore `is` and `is not` operators to selector minilanguage. (#5720 via #5721)
+* Remove usage of the `schannel` attribute which is deprecated in `conda`. (#5722)
+
+### Deprecations
+
+* Deprecate `conda_build.render._IndentDumper`. Use `conda_build.render.CustomDumper` instead.  (#5282)
+* Deprecate `conda_build.render._MetaYaml`. Unused.  (#5282)
+* Deprecate `conda_build.render._represent_omap`. Unused.  (#5282)
+* Deprecate `conda_build.render._unicode_representer`. Unused.  (#5282)
+* Menuinst validation warnings will be raised as errors in 25.11. (#5569)
+
+### Other
+
+* `menuinst` is no longer a dependency. (#5569)
+* Add `.md` extension to news entries. (#5705)
+
+### Contributors
+
+* @emmanuel-ferdman
+* @jaimergp
+* @jezdez
+* @jakirkham
+* @kenodegard
+* @beckermr
+* @travishathaway
+* @dependabot[bot]
+* @pre-commit-ci[bot]
+
+### New Contributors
+
+* @emmanuel-ferdman made their first contribution in https://github.com/conda/conda-build/pull/5683
+
+
 ## 25.4.2 (2025-04-21)
 
 ### Bug fixes

@@ -70,6 +70,7 @@ Authors are sorted alphabetically.
 * Ed Campbell
 * Eli Rykoff
 * Elliot Hughes
+* Emmanuel Ferdman
 * Eric Dill
 * Ernst Luring
 * Evan Hubinger
