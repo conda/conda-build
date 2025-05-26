@@ -16,10 +16,10 @@
 
 ### Deprecations
 
+* Deprecate `conda_build.render._IndentDumper`. Use `conda_build.render.CustomDumper` instead.  (#5282)
 * Deprecate `conda_build.render._MetaYaml`. Unused.  (#5282)
 * Deprecate `conda_build.render._represent_omap`. Unused.  (#5282)
 * Deprecate `conda_build.render._unicode_representer`. Unused.  (#5282)
-* Deprecate `conda_build.render._IndentDumper`. Use `conda_build.render.CustomDumper` instead.  (#5282)
 * Menuinst validation warnings will be raised as errors in 25.11. (#5569)
 
 ### Other
