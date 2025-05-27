@@ -68,7 +68,6 @@ from conda.models.records import PackageRecord
 from conda.models.version import VersionOrder
 from conda.utils import unix_path_to_win
 
-from .deprecations import deprecated
 from .exceptions import BuildLockError
 
 if TYPE_CHECKING:
@@ -86,12 +85,6 @@ on_mac = sys.platform == "darwin"
 on_linux = sys.platform == "linux"
 
 codec = getpreferredencoding() or "utf-8"
-deprecated.constant(
-    "25.3",
-    "25.5",
-    "root_script_dir",
-    os.path.join(context.root_prefix, "Scripts" if on_win else "bin"),
-)
 mmap_MAP_PRIVATE = 0 if on_win else mmap.MAP_PRIVATE
 mmap_PROT_READ = 0 if on_win else mmap.PROT_READ
 mmap_PROT_WRITE = 0 if on_win else mmap.PROT_WRITE
