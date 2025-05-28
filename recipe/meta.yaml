@@ -54,7 +54,6 @@ requirements:
     - pytz
     - pyyaml
     - requests
-    - evalidate >=2,<3.0a0
     - tomli                        # [py<311]
     - tqdm
   run_constrained:
