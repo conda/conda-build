@@ -260,7 +260,7 @@ jobs:
           - python-version: '3.13'
             conda-version: canary
             test-type: parallel
-            basetemp: 'pytest with spaces'
+            basetemp: pytest with spaces
     env:
       ErrorActionPreference: Stop  # powershell exit on first error
       CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'defaults' }}
@@ -323,10 +323,9 @@ jobs:
         run: >
           pytest
           --cov=conda_build
-          --basetemp=${{ runner.temp }}
+          --basetemp=${{ runner.temp }}\${{ matrix.basetemp }}
           -n auto
           -m "${{ env.PYTEST_MARKER }}"
-          --basetemp ${env:TEMP}\${{ matrix.basetemp }}
         shell: pwsh
 
       - name: Upload Coverage
