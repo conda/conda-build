@@ -286,8 +286,8 @@ jobs:
           pkgs-dirs: D:\conda_pkgs_dir
           installation-dir: D:\conda
 
-      - name: Choco Install
-        run: choco install visualstudio2017-workload-vctools
+      - name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
 
       - name: Conda Install
         run: >
