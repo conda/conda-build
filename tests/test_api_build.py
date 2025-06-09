@@ -469,7 +469,7 @@ else:
 
 @pytest.mark.skipif(not on_win, reason="MSVC only on windows")
 @pytest.mark.parametrize("msvc_ver", msvc_vers)
-def test_build_msvc_compiler(msvc_ver, monkeypatch):
+def test_build_msvc_compiler(msvc_ver: str, monkeypatch: MonkeyPatch) -> None:
     # verify that the correct compiler is available
     cl_versions = {"9.0": 15, "10.0": 16, "11.0": 17, "12.0": 18, "14.0": 19}
 
