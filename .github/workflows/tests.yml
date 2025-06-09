@@ -248,7 +248,7 @@ jobs:
         python-version: ['3.9']
         conda-version: [release]
         test-type: [serial, parallel]
-        basetemp: pytest
+        basetemp: [pytest]
         include:
           - python-version: '3.13'
             conda-version: canary
