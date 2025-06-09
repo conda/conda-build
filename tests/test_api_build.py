@@ -358,9 +358,7 @@ def test_build_with_activate_does_activate():
 
 
 @pytest.mark.sanity
-@pytest.mark.skipif(
-    sys.platform == "win32", reason="no binary prefix manipulation done on windows."
-)
+@pytest.mark.skipif(on_win, reason="no binary prefix manipulation done on windows.")
 def test_binary_has_prefix_files(testing_config):
     api.build(
         os.path.join(metadata_dir, "_binary_has_prefix_files"), config=testing_config
@@ -369,9 +367,7 @@ def test_binary_has_prefix_files(testing_config):
 
 @pytest.mark.xfail
 @pytest.mark.sanity
-@pytest.mark.skipif(
-    sys.platform == "win32", reason="no binary prefix manipulation done on windows."
-)
+@pytest.mark.skipif(on_win, reason="no binary prefix manipulation done on windows.")
 def test_binary_has_prefix_files_non_utf8(testing_config):
     api.build(
         os.path.join(metadata_dir, "_binary_has_utf_non_8"), config=testing_config
@@ -416,10 +412,10 @@ def test_dirty_variable_available_in_build_scripts(testing_config):
 
 def dummy_executable(folder, exename):
     # empty prefix by default - extra bit at beginning of file
-    if sys.platform == "win32":
+    if on_win:
         exename = exename + ".bat"
     dummyfile = os.path.join(folder, exename)
-    if sys.platform == "win32":
+    if on_win:
         prefix = "@echo off\n"
     else:
         prefix = "#!/bin/bash\nexec 1>&2\n"
@@ -433,7 +429,7 @@ def dummy_executable(folder, exename):
     exit -1
     """
         )
-    if sys.platform != "win32":
+    if not on_win:
         import stat
 
         st = os.stat(dummyfile)
@@ -462,7 +458,7 @@ def test_checkout_tool_as_dependency(testing_workdir, testing_config, monkeypatc
 
 
 platforms = ["64" if sys.maxsize > 2**32 else "32"]
-if sys.platform == "win32":
+if on_win:
     platforms = sorted({"32", *platforms})
     compilers = ["3.10", "3.11", "3.12", "3.13"]
     msvc_vers = ["14.0"]
@@ -471,7 +467,7 @@ else:
     compilers = [".".join([str(sys.version_info.major), str(sys.version_info.minor)])]
 
 
-@pytest.mark.skipif(sys.platform != "win32", reason="MSVC only on windows")
+@pytest.mark.skipif(not on_win, reason="MSVC only on windows")
 @pytest.mark.parametrize("msvc_ver", msvc_vers)
 def test_build_msvc_compiler(msvc_ver, monkeypatch):
     # verify that the correct compiler is available
@@ -500,7 +496,7 @@ def test_cmake_generator(platform, target_compiler, testing_config):
     api.build(os.path.join(metadata_dir, "_cmake_generator"), config=testing_config)
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="No windows symlinks")
+@pytest.mark.skipif(on_win, reason="No windows symlinks")
 def test_symlink_fail(testing_config):
     with pytest.raises((SystemExit, FileNotFoundError)):
         api.build(os.path.join(fail_dir, "symlinks"), config=testing_config)
@@ -855,9 +851,7 @@ def test_disable_pip(testing_metadata):
 
 
 @pytest.mark.sanity
-@pytest.mark.skipif(
-    sys.platform.startswith("win"), reason="rpath fixup not done on Windows."
-)
+@pytest.mark.skipif(on_win, reason="rpath fixup not done on Windows.")
 def test_rpath_unix(testing_config, variants_conda_build_sysroot):
     testing_config.activate = True
     api.build(
@@ -1184,7 +1178,7 @@ def test_workdir_removal_warning(testing_config, caplog):
 
 
 @pytest.mark.sanity
-@pytest.mark.skipif(sys.platform != "darwin", reason="relevant to mac only")
+@pytest.mark.skipif(not on_mac, reason="relevant to mac only")
 def test_append_python_app_osx(testing_config, conda_build_test_recipe_envvar: str):
     """Recipes that use osx_is_app need to have python.app in their runtime requirements.
 
@@ -1437,7 +1431,7 @@ def test_recursion_layers(testing_config):
 
 @pytest.mark.sanity
 @pytest.mark.skipif(
-    sys.platform != "win32",
+    not on_win,
     reason="spaces break openssl prefix replacement on *nix",
 )
 def test_croot_with_spaces(testing_metadata, testing_workdir):
@@ -1834,7 +1828,7 @@ def test_sysroots_detection(testing_config, variants_conda_build_sysroot):
     api.build(recipe, config=testing_config, variants=variants_conda_build_sysroot)
 
 
-@pytest.mark.skipif(sys.platform != "darwin", reason="macOS-only test (at present)")
+@pytest.mark.skipif(not on_mac, reason="macOS-only test (at present)")
 def test_macos_tbd_handling(testing_config, variants_conda_build_sysroot):
     """
     Test path handling after installation... The test case uses a Hello World
