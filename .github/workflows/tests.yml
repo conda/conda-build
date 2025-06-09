@@ -323,7 +323,7 @@ jobs:
         run: >
           pytest
           --cov=conda_build
-          --basetemp=${{ runner.temp }}\${{ matrix.basetemp }}
+          --basetemp="${{ runner.temp }}\${{ matrix.basetemp }}"
           -n auto
           -m "${{ env.PYTEST_MARKER }}"
         shell: pwsh
