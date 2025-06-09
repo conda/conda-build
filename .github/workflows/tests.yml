@@ -248,6 +248,7 @@ jobs:
         python-version: ['3.9']
         conda-version: [release]
         test-type: [serial, parallel]
+        basetemp: pytest
         include:
           - python-version: '3.13'
             conda-version: canary
@@ -255,6 +256,11 @@ jobs:
           - python-version: '3.13'
             conda-version: canary
             test-type: parallel
+            basetemp: pytest
+          - python-version: '3.13'
+            conda-version: canary
+            test-type: parallel
+            basetemp: 'pytest with spaces'
     env:
       ErrorActionPreference: Stop  # powershell exit on first error
       CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'defaults' }}
@@ -281,6 +287,7 @@ jobs:
       - name: Setup Miniconda
         uses: conda-incubator/setup-miniconda@505e6394dae86d6a5c7fbb6e3fb8938e3e863830 # v3.1.1
         with:
+          activate-environment: ${{ matrix.activate-environment }}
           condarc-file: .github\condarc
           run-post: false  # skip post cleanup
           pkgs-dirs: D:\conda_pkgs_dir
@@ -319,6 +326,8 @@ jobs:
           --basetemp=${{ runner.temp }}
           -n auto
           -m "${{ env.PYTEST_MARKER }}"
+          --basetemp ${env:TEMP}\${{ matrix.basetemp }}
+        shell: pwsh
 
       - name: Upload Coverage
         uses: codecov/codecov-action@18283e04ce6e62d37312384ff67231eb8fd56d24 # v5.4.3
