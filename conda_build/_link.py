@@ -112,7 +112,8 @@ def create_script(fn):
         shutil.copy2(src, dst + "-script.py")
         FILES.append(f"Scripts/{fn}-script.py")
         shutil.copy2(
-            join(THIS_DIR, "cli-%d.exe" % (8 * tuple.__itemsize__)), dst + ".exe"
+            join(THIS_DIR, "cli-%d.exe" % (8 * tuple.__itemsize__)),  # noqa: UP031
+            dst + ".exe",
         )
         FILES.append(f"Scripts/{fn}.exe")
     else:

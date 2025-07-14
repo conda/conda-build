@@ -9,6 +9,7 @@ import yaml
 
 from conda_build import api
 from conda_build.cli import main_inspect
+from conda_build.exceptions import CondaBuildUserError
 from conda_build.utils import on_win
 
 from ..utils import metadata_dir
@@ -23,7 +24,7 @@ def test_inspect_linkages(testing_workdir, capfd):
     # get a package that has known object output
     args = ["linkages", "python"]
     if on_win:
-        with pytest.raises(SystemExit) as exc:
+        with pytest.raises(CondaBuildUserError) as exc:
             main_inspect.execute(args)
             assert "conda inspect linkages is only implemented in Linux and OS X" in exc
     else:
@@ -36,7 +37,7 @@ def test_inspect_objects(testing_workdir, capfd):
     # get a package that has known object output
     args = ["objects", "python"]
     if sys.platform != "darwin":
-        with pytest.raises(SystemExit) as exc:
+        with pytest.raises(CondaBuildUserError) as exc:
             main_inspect.execute(args)
             assert "conda inspect objects is only implemented in OS X" in exc
     else:
@@ -51,7 +52,9 @@ def test_inspect_prefix_length(testing_workdir, capfd):
 
     # build our own known-length package here
     test_base = os.path.expanduser("~/cbtmp")
-    config = api.Config(croot=test_base, anaconda_upload=False, verbose=True)
+    config = api.Config(
+        croot=test_base, anaconda_upload=False, verbose=True, conda_pkg_format=1
+    )
     recipe_path = os.path.join(metadata_dir, "has_prefix_files")
     config.prefix_length = 80
     outputs = api.build(recipe_path, config=config, notest=True)

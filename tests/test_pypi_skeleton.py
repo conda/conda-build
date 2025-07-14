@@ -58,7 +58,7 @@ def test_print_dict():
         },
         "build": {
             "number": 0,
-            "script": "{{ PYTHON }} -m pip install . -vv --no-deps --no-build-isolation",
+            "script": "{{ PYTHON }} -m pip install . -vv",
         },
     }
     recipe_order = ["package", "source", "build", "about"]
@@ -74,7 +74,7 @@ def test_print_dict():
 
         build:
           number: 0
-          script: "{{ PYTHON }} -m pip install . -vv --no-deps --no-build-isolation"
+          script: "{{ PYTHON }} -m pip install . -vv"
 
         about:
           home: "https://conda.io"

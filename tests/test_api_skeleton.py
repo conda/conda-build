@@ -387,7 +387,14 @@ def test_list_skeletons():
 
 
 def test_pypi_with_entry_points(tmp_path: Path):
-    api.skeletonize("planemo", repo="pypi", python_version="3.7", output_dir=tmp_path)
+    # planemo 0.75.29 dropped setup.py
+    api.skeletonize(
+        "planemo",
+        repo="pypi",
+        version="0.75.28",
+        python_version="3.12",
+        output_dir=tmp_path,
+    )
     assert (tmp_path / "planemo").is_dir()
 
 
@@ -457,7 +464,9 @@ def test_pypi_with_basic_environment_markers(tmp_path: Path):
 
 
 def test_setuptools_test_requirements(tmp_path: Path):
-    api.skeletonize(packages="hdf5storage", repo="pypi", output_dir=tmp_path)
+    api.skeletonize(
+        packages="hdf5storage", repo="pypi", version="0.1.19", output_dir=tmp_path
+    )
     metadata = api.render(str(tmp_path / "hdf5storage"))[0][0]
     assert metadata.meta["test"]["requires"] == ["nose >=1.0"]
 
@@ -485,7 +494,8 @@ def test_pypi_section_order_preserved(tmp_path: Path):
     ]
 
     # The loader below preserves the order of entries...
-    recipe = ruamel.yaml.load("\n".join(lines), Loader=ruamel.yaml.RoundTripLoader)
+    _yaml = ruamel.yaml.YAML(typ="rt")
+    recipe = _yaml.load("\n".join(lines))
 
     major_sections = list(recipe.keys())
     # Blank fields are omitted when skeletonizing, so prune any missing ones

@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from __future__ import annotations
 
+import functools
 import json
 import os
 import random
@@ -12,7 +13,6 @@ import sys
 import tarfile
 from collections import OrderedDict, defaultdict
 from contextlib import contextmanager
-from functools import lru_cache
 from os.path import (
     isabs,
     isdir,
@@ -33,13 +33,15 @@ from conda.models.records import PackageRecord
 from conda.models.version import VersionOrder
 
 from . import environ, exceptions, source, utils
-from .exceptions import DependencyNeedsBuildingError
+from .config import CondaPkgFormat
+from .deprecations import deprecated
+from .exceptions import CondaBuildUserError, DependencyNeedsBuildingError
 from .index import get_build_index
 from .metadata import MetaData, MetaDataTuple, combine_top_level_metadata_with_output
 from .utils import (
     CONDA_PACKAGE_EXTENSION_V1,
-    CONDA_PACKAGE_EXTENSION_V2,
     package_record_to_requirement,
+    tar_xf,
 )
 from .variants import (
     filter_by_key_value,
@@ -49,7 +51,8 @@ from .variants import (
 
 if TYPE_CHECKING:
     import os
-    from typing import Any, Iterable, Iterator
+    from collections.abc import Iterable, Iterator
+    from typing import Any
 
     from .config import Config
 
@@ -70,21 +73,21 @@ def bldpkg_path(m: MetaData) -> str:
     subdir = "noarch" if m.noarch or m.noarch_python else m.config.host_subdir
 
     if not hasattr(m, "type"):
-        if m.config.conda_pkg_format == "2":
-            pkg_type = "conda_v2"
+        if m.config.conda_pkg_format == CondaPkgFormat.V2:
+            pkg_type = CondaPkgFormat.V2
         else:
-            pkg_type = "conda"
+            pkg_type = CondaPkgFormat.V1
     else:
         pkg_type = m.type
 
     # the default case will switch over to conda_v2 at some point
-    if pkg_type == "conda":
+    if pkg_type == CondaPkgFormat.V1:
         path = join(
-            m.config.output_folder, subdir, f"{m.dist()}{CONDA_PACKAGE_EXTENSION_V1}"
+            m.config.output_folder, subdir, f"{m.dist()}{CondaPkgFormat.V1.ext}"
         )
-    elif pkg_type == "conda_v2":
+    elif pkg_type == CondaPkgFormat.V2:
         path = join(
-            m.config.output_folder, subdir, f"{m.dist()}{CONDA_PACKAGE_EXTENSION_V2}"
+            m.config.output_folder, subdir, f"{m.dist()}{CondaPkgFormat.V2.ext}"
         )
     else:
         path = (
@@ -129,7 +132,9 @@ def get_env_dependencies(
     exclude_pattern=None,
     permit_unsatisfiable_variants=False,
     merge_build_host_on_same_platform=True,
+    extra_specs=None,
 ):
+    extra_specs = extra_specs or []
     specs = m.get_depends_top_and_out(env)
     # replace x.x with our variant's numpy version, or else conda tries to literally go get x.x
     if env in ("build", "host"):
@@ -147,6 +152,8 @@ def get_env_dependencies(
     )
 
     dependencies = set(dependencies)
+    if extra_specs:
+        dependencies |= set(extra_specs)
     unsat = None
     random_string = "".join(
         random.choice(string.ascii_uppercase + string.digits) for _ in range(10)
@@ -209,7 +216,7 @@ def get_pin_from_build(m, dep, build_dep_versions):
     if (
         version
         and dep_name in m.config.variant.get("pin_run_as_build", {})
-        and not (dep_name == "python" and (m.noarch or m.noarch_python))
+        and not (dep_name == "python" and m.python_version_independent)
         and dep_name in build_dep_versions
     ):
         pin_cfg = m.config.variant["pin_run_as_build"][dep_name]
@@ -281,7 +288,7 @@ def find_pkg_dir_or_file_in_pkgs_dirs(
     return None
 
 
-@lru_cache(maxsize=None)
+@functools.cache
 def _read_specs_from_package(pkg_loc, pkg_dist):
     specs = {}
     if pkg_loc and isdir(pkg_loc):
@@ -334,8 +341,6 @@ def execute_download_actions(m, precs, env, package_subset=None, require_files=F
         channel_urls=m.config.channel_urls,
         debug=m.config.debug,
         verbose=m.config.verbose,
-        locking=m.config.locking,
-        timeout=m.config.timeout,
     )
 
     # this should be just downloading packages.  We don't need to extract them -
@@ -408,10 +413,14 @@ def get_upstream_pins(m: MetaData, precs, env):
     precs = [prec for prec in precs if prec.name in explicit_specs]
 
     ignore_pkgs_list = utils.ensure_list(m.get_value("build/ignore_run_exports_from"))
+    if m.python_version_independent and not m.noarch:
+        ignore_pkgs_list.append("python")
     ignore_list = utils.ensure_list(m.get_value("build/ignore_run_exports"))
+    if m.python_version_independent and not m.noarch:
+        ignore_list.append("python")
     additional_specs = {}
     for prec in precs:
-        if any(prec.name in req.split(" ")[0] for req in ignore_pkgs_list):
+        if any((prec.name == req.split(" ")[0]) for req in ignore_pkgs_list):
             continue
         run_exports = None
         if m.config.use_channeldata:
@@ -440,6 +449,7 @@ def _read_upstream_pin_files(
     env,
     permit_unsatisfiable_variants,
     exclude_pattern,
+    extra_specs,
 ):
     deps, precs, unsat = get_env_dependencies(
         m,
@@ -447,6 +457,7 @@ def _read_upstream_pin_files(
         m.config.variant,
         exclude_pattern,
         permit_unsatisfiable_variants=permit_unsatisfiable_variants,
+        extra_specs=extra_specs,
     )
     # extend host deps with strong build run exports.  This is important for things like
     #    vc feature activation to work correctly in the host env.
@@ -458,12 +469,18 @@ def _read_upstream_pin_files(
     )
 
 
-def add_upstream_pins(m: MetaData, permit_unsatisfiable_variants, exclude_pattern):
+def add_upstream_pins(
+    m: MetaData, permit_unsatisfiable_variants, exclude_pattern, extra_specs
+):
     """Applies run_exports from any build deps to host and run sections"""
     # if we have host deps, they're more important than the build deps.
     requirements = m.get_section("requirements")
     build_deps, build_unsat, extra_run_specs_from_build = _read_upstream_pin_files(
-        m, "build", permit_unsatisfiable_variants, exclude_pattern
+        m,
+        "build",
+        permit_unsatisfiable_variants,
+        exclude_pattern,
+        [] if m.is_cross else extra_specs,
     )
 
     # is there a 'host' section?
@@ -489,7 +506,7 @@ def add_upstream_pins(m: MetaData, permit_unsatisfiable_variants, exclude_patter
         host_reqs.extend(extra_run_specs_from_build.get("strong", []))
 
         host_deps, host_unsat, extra_run_specs_from_host = _read_upstream_pin_files(
-            m, "host", permit_unsatisfiable_variants, exclude_pattern
+            m, "host", permit_unsatisfiable_variants, exclude_pattern, extra_specs
         )
         if m.noarch or m.noarch_python:
             extra_run_specs = set(extra_run_specs_from_host.get("noarch", []))
@@ -593,6 +610,21 @@ def _simplify_to_exact_constraints(metadata):
     metadata.meta["requirements"] = requirements
 
 
+def _strip_variant(variant: dict, used_vars: list[str]) -> dict:
+    return {k: v for k, v in variant.items() if k in used_vars}
+
+
+def _variants_match(first: dict, second: dict) -> bool:
+    extend_keys = first.get("extend_keys", set()) | second.get("extend_keys", set())
+    for k, first_val in first.items():
+        if k in extend_keys or k == "extend_keys":
+            continue
+        if second_val := second.get(k):
+            if first_val != second_val:
+                return False
+    return True
+
+
 def finalize_metadata(
     m: MetaData,
     parent_metadata=None,
@@ -646,9 +678,50 @@ def finalize_metadata(
             utils.insert_variant_versions(requirements, m.config.variant, "build")
             utils.insert_variant_versions(requirements, m.config.variant, "host")
 
+        host_requirements = requirements.get("host" if m.is_cross else "build", [])
+        host_requirement_names = [req.split(" ")[0] for req in host_requirements]
+        extra_specs = []
+        if output and output_excludes and not is_top_level and host_requirement_names:
+            reqs = {}
+
+            other_output_names = [name for (name, _) in m.other_outputs]
+            # we first make a mapping of output -> requirements
+            for (name, _), (_, other_meta) in m.other_outputs.items():
+                if name == m.name():
+                    continue
+                if not _variants_match(
+                    _strip_variant(m.config.variant, m.get_used_vars()),
+                    _strip_variant(
+                        other_meta.config.variant, other_meta.get_used_vars()
+                    ),
+                ):
+                    continue
+                other_meta_reqs = other_meta.meta.get("requirements", {}).get("run", [])
+                reqs[name] = set(other_meta_reqs)
+
+            seen = set()
+            # for each subpackage that is a dependency we add its dependencies
+            # and transitive dependencies if the dependency of the subpackage
+            # is a subpackage.
+            to_process = set(
+                name for (name, _) in m.other_outputs if name in host_requirement_names
+            )
+            while to_process:
+                name = to_process.pop()
+                if name == m.name():
+                    continue
+                if name not in reqs:
+                    continue
+                for req in reqs[name]:
+                    req_name = req.split(" ")[0]
+                    if req_name not in other_output_names:
+                        extra_specs.append(req)
+                    elif req_name not in seen:
+                        to_process.add(req_name)
+
         m = parent_metadata.get_output_metadata(m.get_rendered_output(m.name()))
         build_unsat, host_unsat = add_upstream_pins(
-            m, permit_unsatisfiable_variants, exclude_pattern
+            m, permit_unsatisfiable_variants, exclude_pattern, extra_specs
         )
         # getting this AFTER add_upstream_pins is important, because that function adds deps
         #     to the metadata.
@@ -676,6 +749,7 @@ def finalize_metadata(
             m.config.variant,
             exclude_pattern=exclude_pattern,
             permit_unsatisfiable_variants=permit_unsatisfiable_variants,
+            extra_specs=extra_specs,
         )
         full_build_dep_versions = {
             dep.split()[0]: " ".join(dep.split()[1:]) for dep in full_build_deps
@@ -835,12 +909,20 @@ def distribute_variants(
     used_variables = metadata.get_used_loop_vars(force_global=False)
     top_loop = metadata.get_reduced_variant_set(used_variables)
 
+    # defer potentially expensive copy of input variants list
+    # until after reduction of the list for each variant
+    # since the initial list can be very long
+    all_variants = metadata.config.variants
+    metadata.config.variants = []
+
     for variant in top_loop:
         from .build import get_all_replacements
 
         get_all_replacements(variant)
         mv = metadata.copy()
         mv.config.variant = variant
+        # start with shared list:
+        mv.config.variants = all_variants
 
         pin_run_as_build = variant.get("pin_run_as_build", {})
         if mv.numpy_xx and "numpy" not in pin_run_as_build:
@@ -860,6 +942,9 @@ def distribute_variants(
                 )
                 or mv.config.variants
             )
+        # copy variants before we start modifying them,
+        # but after we've reduced the list via the conform_dict filter
+        mv.config.variants = mv.config.copy_variants()
         get_all_replacements(mv.config.variants)
         pin_run_as_build = variant.get("pin_run_as_build", {})
         if mv.numpy_xx and "numpy" not in pin_run_as_build:
@@ -884,7 +969,7 @@ def distribute_variants(
                 allow_no_other_outputs=allow_no_other_outputs,
                 bypass_env_check=bypass_env_check,
             )
-        except SystemExit:
+        except (SystemExit, CondaBuildUserError):
             pass
         need_source_download = not mv.needs_source_for_render or not mv.source_provided
 
@@ -933,8 +1018,8 @@ def open_recipe(recipe: str | os.PathLike | Path) -> Iterator[Path]:
         yield recipe
     elif recipe.suffixes in [[".tar"], [".tar", ".gz"], [".tgz"], [".tar", ".bz2"]]:
         # extract the recipe to a temporary directory
-        with TemporaryDirectory() as tmp, tarfile.open(recipe, "r:*") as tar:
-            tar.extractall(path=tmp)
+        with TemporaryDirectory() as tmp:
+            tar_xf(recipe, tmp)
             yield Path(tmp)
     elif recipe.suffix == ".yaml":
         # read the recipe from the parent directory
@@ -1069,6 +1154,7 @@ FIELDS = [
 
 # Next bit of stuff is to support YAML output in the order we expect.
 # http://stackoverflow.com/a/17310199/1170370
+@deprecated("25.5", "25.7")
 class _MetaYaml(dict):
     fields = FIELDS
 
@@ -1076,26 +1162,77 @@ class _MetaYaml(dict):
         return [(field, self[field]) for field in _MetaYaml.fields if field in self]
 
 
+@deprecated("25.5", "25.7")
 def _represent_omap(dumper, data):
     return dumper.represent_mapping("tag:yaml.org,2002:map", data.to_omap())
 
 
+@deprecated("25.5", "25.7")
 def _unicode_representer(dumper, uni):
     node = yaml.ScalarNode(tag="tag:yaml.org,2002:str", value=uni)
     return node
 
 
-class _IndentDumper(yaml.Dumper):
-    def increase_indent(self, flow=False, indentless=False):
-        return super().increase_indent(flow, False)
+class CustomDumper(yaml.Dumper):
+    def increase_indent(self, flow: bool = False, indentless: bool = False) -> None:
+        """Control indentation.
 
-    def ignore_aliases(self, data):
+        By default a mapping context is not indented:
+
+        ```yaml
+        key:
+        - item1
+        - item2
+        ```
+
+        But we want to force indentation:
+
+        ```yaml
+        key:
+          - item1
+          - item2
+        ```
+
+        Xref: https://github.com/yaml/pyyaml/issues/234
+        """
+        return super().increase_indent(flow, indentless=False)
+
+    def ignore_aliases(self, data: Any) -> bool:
+        """Control aliases and anchor points.
+
+        By default PyYAML uses anchors and aliases to avoid duplication:
+
+        ```yaml
+        key: &id
+          - item1
+          - item2
+        key2: *id
+        ```
+
+        But we want to avoid this:
+
+        ```yaml
+        key:
+          - item1
+          - item2
+        key2:
+          - item1
+          - item2
+        ```
+
+        Xref: https://github.com/yaml/pyyaml/issues/103
+        Xref: https://github.com/yaml/pyyaml/issues/535
+        """
         return True
 
 
-yaml.add_representer(_MetaYaml, _represent_omap)
-yaml.add_representer(str, _unicode_representer)
-unicode = None  # silence pyflakes about unicode not existing in py3
+deprecated.constant(
+    "25.5",
+    "25.7",
+    "_IndentDumper",
+    CustomDumper,
+    addendum="Use `conda_build.render.CustomDumper` instead.",
+)
 
 
 def output_yaml(
@@ -1103,18 +1240,17 @@ def output_yaml(
     filename: str | os.PathLike | Path | None = None,
     suppress_outputs: bool = False,
 ) -> str:
-    local_metadata = metadata.copy()
-    if (
-        suppress_outputs
-        and local_metadata.is_output
-        and "outputs" in local_metadata.meta
-    ):
-        del local_metadata.meta["outputs"]
+    meta = metadata.meta
+    # create a manually ordered copy of the meta dict
+    meta = {field: meta[field] for field in FIELDS if field in meta}
+    if suppress_outputs and metadata.is_output and "outputs" in meta:
+        del meta["outputs"]
     output = yaml.dump(
-        _MetaYaml(local_metadata.meta),
-        Dumper=_IndentDumper,
-        default_flow_style=False,
+        meta,
+        Dumper=CustomDumper,
+        default_flow_style=False,  # always serialize in the block style
         indent=2,
+        sort_keys=False,  # preserve manual order
     )
     if filename:
         filename = Path(filename)

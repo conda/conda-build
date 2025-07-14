@@ -5,8 +5,8 @@ Integrative tests of the CRAN skeleton that start from
 conda_build.api.skeletonize and check the output files
 """
 
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Sequence
 
 import pytest
 

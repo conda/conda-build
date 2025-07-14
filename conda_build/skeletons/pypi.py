@@ -50,7 +50,7 @@ from ..utils import (
 from ..version import _parse as parse_version
 
 if TYPE_CHECKING:
-    from typing import Iterable
+    from collections.abc import Iterable
 
 pypi_example = """
 Examples:
@@ -121,7 +121,7 @@ DISTUTILS_PATCH = '''\
 diff core.py core.py
 --- core.py
 +++ core.py
-@@ -166,5 +167,40 @@ def setup (**attrs):
+@@ -166,5 +167,42 @@ def setup (**attrs):
  \n
 +# ====== BEGIN CONDA SKELETON PYPI PATCH ======
 +
@@ -154,7 +154,9 @@ diff core.py core.py
 +    data['classifiers'] = kwargs.get('classifiers', None)
 +    data['version'] = kwargs.get('version', '??PACKAGE-VERSION-UNKNOWN??')
 +    with io.open(os.path.join("{}", "pkginfo.yaml"), 'w', encoding='utf-8') as fn:
-+        fn.write(yaml.safe_dump(data, encoding=None))
++        _yaml = yaml.YAML(typ='safe', pure=True)
++        _yaml.encoding = None
++        _yaml.dump(data, fn)
 +
 +
 +# ======= END CONDA SKELETON PYPI PATCH ======
@@ -324,7 +326,7 @@ def skeletonize(
 
             if pypi_resp.status_code != 200:
                 sys.exit(
-                    "Request to fetch %s failed with status: %d"
+                    "Request to fetch %s failed with status: %d"  # noqa: UP031
                     % (package_pypi_url, pypi_resp.status_code)
                 )
 
@@ -429,9 +431,7 @@ def skeletonize(
             if noarch_python:
                 ordered_recipe["build"]["noarch"] = "python"
 
-            recipe_script_cmd = [
-                "{{ PYTHON }} -m pip install . -vv --no-deps --no-build-isolation"
-            ]
+            recipe_script_cmd = ["{{ PYTHON }} -m pip install . -vv"]
             ordered_recipe["build"]["script"] = " ".join(
                 recipe_script_cmd + setup_options
             )
@@ -558,7 +558,18 @@ def add_parser(repos):
         action="store",
         default=context.default_python,
         help="""Version of Python to use to run setup.py. Default is %(default)s.""",
-        choices=["2.7", "3.5", "3.6", "3.7", "3.8", "3.9", "3.10", "3.11", "3.12"],
+        choices=[
+            "2.7",
+            "3.5",
+            "3.6",
+            "3.7",
+            "3.8",
+            "3.9",
+            "3.10",
+            "3.11",
+            "3.12",
+            "3.13",
+        ],
     )
 
     pypi.add_argument(
@@ -593,8 +604,7 @@ def add_parser(repos):
     pypi.add_argument(
         "--pin-numpy",
         action="store_true",
-        help="Ensure that the generated recipe pins the version of numpy"
-        "to CONDA_NPY.",
+        help="Ensure that the generated recipe pins the version of numpyto CONDA_NPY.",
     )
 
     pypi.add_argument(
@@ -656,7 +666,7 @@ def get_download_data(
         if manual_url:
             for i, url in enumerate(urls):
                 print(
-                    "%d: %s (%s) %s"
+                    "%d: %s (%s) %s"  # noqa: UP031
                     % (i, url["url"], human_bytes(url["size"]), url["comment_text"])
                 )
             n = int(input("which version should i use? "))
@@ -929,9 +939,9 @@ def get_dependencies(requires, setuptools_enabled=True):
             return name + cc.replace("=", " ")
         elif pc:
             if pc.startswith("~= "):
-                assert (
-                    pc.count("~=") == 1
-                ), f"Overly complex 'Compatible release' spec not handled {line}"
+                assert pc.count("~=") == 1, (
+                    f"Overly complex 'Compatible release' spec not handled {line}"
+                )
                 assert pc.count("."), f"No '.' in 'Compatible release' version {line}"
                 ver = pc.replace("~= ", "")
                 ver2 = ".".join(ver.split(".")[:-1]) + ".*"

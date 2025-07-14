@@ -5,10 +5,16 @@ from __future__ import annotations
 import shutil
 import sys
 from os.path import abspath, exists, expanduser, isdir, join
+from pathlib import Path
+from typing import TYPE_CHECKING
 
+from .exceptions import CondaBuildUserError
 from .os_utils.external import find_executable
 from .post import mk_relative_osx
 from .utils import check_call_env, get_site_packages, on_mac, rec_glob
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def relink_sharedobjects(pkg_path, build_prefix):
@@ -56,13 +62,13 @@ def write_to_conda_pth(sp_dir, pkg_path):
             print("added " + pkg_path)
 
 
-def get_setup_py(path_):
-    """Return full path to setup.py or exit if not found"""
+def get_setup_py(path_: Path) -> Path:
+    """Return full path to setup.py or raise error if not found"""
     # build path points to source dir, builds are placed in the
     setup_py = join(path_, "setup.py")
 
     if not exists(setup_py):
-        sys.exit(f"No setup.py found in {path_}. Exiting.")
+        raise CondaBuildUserError(f"No setup.py found in {path_}.")
 
     return setup_py
 
@@ -136,12 +142,10 @@ def execute(
     uninstall: bool = False,
 ) -> None:
     if not isdir(prefix):
-        sys.exit(
-            f"""\
-Error: environment does not exist: {prefix}
-#
-# Use 'conda create' to create the environment first.
-#"""
+        raise CondaBuildUserError(
+            f"Error: environment does not exist: {prefix}\n"
+            f"\n"
+            f"Use 'conda create' to create the environment first."
         )
 
     assert find_executable("python", prefix=prefix)
