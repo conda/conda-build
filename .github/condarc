@@ -1,5 +1,5 @@
 auto_update_conda: False
-auto_activate_base: True
+auto_activate: True
 notify_outdated_conda: False
 changeps1: False
 always_yes: True
