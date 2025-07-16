@@ -288,6 +288,9 @@ jobs:
 
       - name: Setup MSVC
         uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
+        with:
+          arch: "x64"
+          vsversion: "2017"
 
       - name: Conda Install
         run: >
