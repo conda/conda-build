@@ -487,6 +487,7 @@ def test_build_msvc_compiler(msvc_ver: str, monkeypatch: MonkeyPatch) -> None:
 @pytest.mark.parametrize("platform", platforms)
 @pytest.mark.parametrize("target_compiler", compilers)
 @pytest.mark.flaky(reruns=5, reruns_delay=2)
+@pytest.mark.serial
 def test_cmake_generator(platform, target_compiler, testing_config):
     testing_config.variant["python"] = target_compiler
     testing_config.activate = True
