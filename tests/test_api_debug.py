@@ -63,6 +63,7 @@ SHELL_CMD = ("cmd.exe", "/d", "/c") if on_win else ("bash", "-c")
         ),
     ],
 )
+@pytest.mark.serial
 def test_debug(
     recipe: Path,
     path: bool,
