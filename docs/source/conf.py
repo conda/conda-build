@@ -43,6 +43,7 @@ release = conda_build.__version__ or "dev"
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    "conda_sphinx_theme.version_anchors",
     "myst_parser",
     "sphinx.ext.autodoc",
     "sphinx.ext.doctest",
