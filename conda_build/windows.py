@@ -79,15 +79,16 @@ def build_vcvarsall_vs_path(version):
     Microsoft Visual Studio vcvarsall.bat file.
     Expected versions are of the form {9.0, 10.0, 12.0, 14.0}
     """
-    # Set up a load of paths that can be imported from the tests
-    if "ProgramFiles(x86)" in os.environ:
-        PROGRAM_FILES_PATH = os.environ["ProgramFiles(x86)"]
-    else:
-        PROGRAM_FILES_PATH = os.environ["ProgramFiles"]
-
     flatversion = str(version).replace(".", "")
     vstools = f"VS{flatversion}COMNTOOLS"
+
     if float(version) < 15:
+        # Set up a load of paths that can be imported from the tests
+        if "ProgramFiles(x86)" in os.environ:
+            PROGRAM_FILES_PATH = os.environ["ProgramFiles(x86)"]
+        else:
+            PROGRAM_FILES_PATH = os.environ["ProgramFiles"]
+
         if vstools in os.environ:
             return os.path.join(os.environ[vstools], "..\\..\\VC\\vcvarsall.bat")
         else:
@@ -99,9 +100,12 @@ def build_vcvarsall_vs_path(version):
                 "vcvarsall.bat",
             )
     else:
-        if vstools in os.environ:
-            return os.path.join(os.environ[vstools], "..\\..\\VC\\vcvarsall.bat")
-        else:
+        # For VS 2017+ (version 15.0+), use ProgramFiles instead of ProgramFiles(x86)
+        PROGRAM_FILES_PATH = os.environ["ProgramFiles"]
+
+        # For VS 2022 (17.0), always use the explicit path as the environment variable
+        # might point to the wrong location
+        if version == "17.0" or vstools not in os.environ:
             return os.path.join(
                 PROGRAM_FILES_PATH,
                 "Microsoft Visual Studio",
@@ -112,6 +116,8 @@ def build_vcvarsall_vs_path(version):
                 "Build",
                 "vcvarsall.bat",
             )
+        else:
+            return os.path.join(os.environ[vstools], "..\\..\\VC\\vcvarsall.bat")
 
 
 
