@@ -461,7 +461,7 @@ platforms = ["64" if sys.maxsize > 2**32 else "32"]
 if on_win:
     platforms = sorted({"32", *platforms})
     compilers = ["3.10", "3.11", "3.12", "3.13"]
-    msvc_vers = ["14.0"]
+    msvc_vers = ["17.0"]
 else:
     msvc_vers = []
     compilers = [".".join([str(sys.version_info.major), str(sys.version_info.minor)])]
@@ -471,7 +471,7 @@ else:
 @pytest.mark.parametrize("msvc_ver", msvc_vers)
 def test_build_msvc_compiler(msvc_ver: str, monkeypatch: MonkeyPatch) -> None:
     # verify that the correct compiler is available
-    cl_versions = {"9.0": 15, "10.0": 16, "11.0": 17, "12.0": 18, "14.0": 19}
+    cl_versions = {"9.0": 15, "10.0": 16, "11.0": 17, "12.0": 18, "14.0": 19, "17.0": 22}
 
     monkeypatch.setenv("CONDATEST_MSVC_VER", msvc_ver)
     monkeypatch.setenv("CL_EXE_VERSION", str(cl_versions[msvc_ver]))
