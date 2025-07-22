@@ -287,10 +287,7 @@ jobs:
           installation-dir: D:\conda
 
       - name: Choco Install
-        run: choco install  visualstudio2017-workload-vctools
-
-      - name: Choco Install
-        run: choco install visualstudio2022buildtools
+        run: choco install visualstudio2017buildtools
 
       - name: Conda Install
         run: >

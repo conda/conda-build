@@ -87,17 +87,32 @@ def build_vcvarsall_vs_path(version):
 
     flatversion = str(version).replace(".", "")
     vstools = f"VS{flatversion}COMNTOOLS"
-
-    if vstools in os.environ:
-        return os.path.join(os.environ[vstools], "..\\..\\VC\\vcvarsall.bat")
+    if float(version) < 15:
+        if vstools in os.environ:
+            return os.path.join(os.environ[vstools], "..\\..\\VC\\vcvarsall.bat")
+        else:
+            # prefer looking at env var; fall back to program files defaults
+            return os.path.join(
+                PROGRAM_FILES_PATH,
+                f"Microsoft Visual Studio {version}",
+                "VC",
+                "vcvarsall.bat",
+            )
     else:
-        # prefer looking at env var; fall back to program files defaults
-        return os.path.join(
-            PROGRAM_FILES_PATH,
-            f"Microsoft Visual Studio {version}",
-            "VC",
-            "vcvarsall.bat",
-        )
+        if vstools in os.environ:
+            return os.path.join(os.environ[vstools], "..\\..\\VC\\vcvarsall.bat")
+        else:
+            return os.path.join(
+                PROGRAM_FILES_PATH,
+                "Microsoft Visual Studio",
+                VS_VERSION_STRING[version].split()[-1],
+                "BuildTools",
+                "VC",
+                "Auxiliary",
+                "Build",
+                "vcvarsall.bat",
+            )
+
 
 
 def msvc_env_cmd(bits, config, override=None):
