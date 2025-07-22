@@ -34,7 +34,6 @@ from conda.models.version import VersionOrder
 
 from . import environ, exceptions, source, utils
 from .config import CondaPkgFormat
-from .deprecations import deprecated
 from .exceptions import CondaBuildUserError, DependencyNeedsBuildingError
 from .index import get_build_index
 from .metadata import MetaData, MetaDataTuple, combine_top_level_metadata_with_output
@@ -1152,27 +1151,6 @@ FIELDS = [
 ]
 
 
-# Next bit of stuff is to support YAML output in the order we expect.
-# http://stackoverflow.com/a/17310199/1170370
-@deprecated("25.5", "25.7")
-class _MetaYaml(dict):
-    fields = FIELDS
-
-    def to_omap(self):
-        return [(field, self[field]) for field in _MetaYaml.fields if field in self]
-
-
-@deprecated("25.5", "25.7")
-def _represent_omap(dumper, data):
-    return dumper.represent_mapping("tag:yaml.org,2002:map", data.to_omap())
-
-
-@deprecated("25.5", "25.7")
-def _unicode_representer(dumper, uni):
-    node = yaml.ScalarNode(tag="tag:yaml.org,2002:str", value=uni)
-    return node
-
-
 class CustomDumper(yaml.Dumper):
     def increase_indent(self, flow: bool = False, indentless: bool = False) -> None:
         """Control indentation.
@@ -1224,15 +1202,6 @@ class CustomDumper(yaml.Dumper):
         Xref: https://github.com/yaml/pyyaml/issues/535
         """
         return True
-
-
-deprecated.constant(
-    "25.5",
-    "25.7",
-    "_IndentDumper",
-    CustomDumper,
-    addendum="Use `conda_build.render.CustomDumper` instead.",
-)
 
 
 def output_yaml(
