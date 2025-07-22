@@ -182,7 +182,7 @@ def msvc_env_cmd(bits, config, override=None):
 
     def build_vcvarsall_cmd(cmd, arch=arch_selector):
         # Default argument `arch_selector` is defined above
-        return f'call "{cmd}" {arch}'
+        return f'if exist "{cmd}" (call "{cmd}" {arch}) else (echo "Warning: Visual Studio not found at {cmd}")'
 
     vs_major = version.split(".")[0]
     msvc_env_lines.append(f'set "VS_VERSION={version}"')
