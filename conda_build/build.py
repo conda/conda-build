@@ -27,10 +27,10 @@ import conda_package_handling.api
 import yaml
 from bs4 import UnicodeDammit
 from conda import __version__ as conda_version
+from conda.auxlib.entity import EntityEncoder
 from conda.base.constants import PREFIX_PLACEHOLDER
 from conda.base.context import context, reset_context
 from conda.core.prefix_data import PrefixData
-from conda.common.serialize.json import CondaJSONEncoder
 from conda.exceptions import CondaError, NoPackagesFoundError, UnsatisfiableError
 from conda.gateways.disk.create import TemporaryDirectory
 from conda.models.channel import Channel
@@ -1595,7 +1595,7 @@ def create_info_files_json_v1(m, info_dir, prefix, files, files_with_prefix):
                 sort_keys=True,
                 indent=2,
                 separators=(",", ": "),
-                cls=CondaJSONEncoder,
+                cls=EntityEncoder,
             )
     # Return a dict of file: sha1sum. We could (but currently do not)
     # use this to detect overlap and mutated overlap.
