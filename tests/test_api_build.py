@@ -460,8 +460,8 @@ def test_checkout_tool_as_dependency(testing_workdir, testing_config, monkeypatc
 platforms = ["64" if sys.maxsize > 2**32 else "32"]
 if on_win:
     platforms = sorted({"32", *platforms})
-    compilers = ["3.10", "3.11", "3.12", "3.13"]
-    msvc_vers = ["15.0"]
+    compilers = ["3.9", "3.10", "3.11", "3.12", "3.13"]
+    msvc_vers = ["17.0"]
 else:
     msvc_vers = []
     compilers = [".".join([str(sys.version_info.major), str(sys.version_info.minor)])]
