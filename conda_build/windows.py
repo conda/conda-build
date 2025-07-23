@@ -120,7 +120,6 @@ def build_vcvarsall_vs_path(version):
             return os.path.join(os.environ[vstools], "..\\..\\VC\\vcvarsall.bat")
 
 
-
 def msvc_env_cmd(bits, config, override=None):
     # TODO: this function will likely break on `win-arm64`. However, unless
     # there's clear user demand, it's not clear that we should invest the

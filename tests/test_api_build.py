@@ -471,7 +471,14 @@ else:
 @pytest.mark.parametrize("msvc_ver", msvc_vers)
 def test_build_msvc_compiler(msvc_ver: str, monkeypatch: MonkeyPatch) -> None:
     # verify that the correct compiler is available
-    cl_versions = {"9.0": 15, "10.0": 16, "11.0": 17, "12.0": 18, "14.0": 19, "17.0": 22}
+    cl_versions = {
+        "9.0": 15,
+        "10.0": 16,
+        "11.0": 17,
+        "12.0": 18,
+        "14.0": 19,
+        "17.0": 22,
+    }
 
     monkeypatch.setenv("CONDATEST_MSVC_VER", msvc_ver)
     monkeypatch.setenv("CL_EXE_VERSION", str(cl_versions[msvc_ver]))
