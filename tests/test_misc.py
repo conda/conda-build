@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 import pytest
-from conda.auxlib.entity import EntityEncoder
+from conda.common.serialize.json import CondaJSONEncoder
 from conda.models.enums import PathType
 
 from conda_build._link import pyc_f
@@ -36,7 +36,7 @@ def test_pathtype():
 def test_entity_encoder(tmp_path):
     test_file = tmp_path / "test-file"
     test_json = {"a": PathType("hardlink"), "b": 1}
-    test_file.write_text(json.dumps(test_json, cls=EntityEncoder))
+    test_file.write_text(json.dumps(test_json, cls=CondaJSONEncoder))
 
     json_file = json.loads(test_file.read_text())
     assert json_file == {"a": "hardlink", "b": 1}
