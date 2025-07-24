@@ -1994,11 +1994,13 @@ def expand_reqs(reqs_entry):
 
 
 def sha256_checksum(filename, buffersize=65536):
-    if islink(filename) and not isfile(filename):
+    is_link = islink(filename)
+    is_file = isfile(filename)
+    if is_link and not is_file:
         # symlink to nowhere so an empty file
         # this is the sha256 hash of an empty file
         return "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-    if not isfile(filename):
+    if not is_file:
         return None
     sha256 = hashlib.sha256()
     with open(filename, "rb") as f:
