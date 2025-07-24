@@ -5,16 +5,19 @@ from __future__ import annotations
 import os
 import shlex
 import sys
+from contextlib import nullcontext
+from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import pytest
 from conda.base.context import reset_context
 from conda.common.compat import on_mac
 
 from conda_build.metadata import MetaData
 
 if TYPE_CHECKING:
-    from typing import Generator
+    from collections.abc import Generator
 
 tests_path = Path(__file__).parent
 metadata_path = tests_path / "test-recipes" / "metadata"
@@ -153,3 +156,24 @@ def get_noarch_python_meta(meta):
 
 def reset_config(search_path=None):
     reset_context(search_path)
+
+
+# only adding this so it shows up in code searches; the decorator MUST NOT be added
+# @contextmanager
+def raises_after(datetime_args, *args, **kwargs):
+    """
+    Helper to check that a certain code raises a given exception after a set date.
+    Useful to check deprecation cycles that should start raising errors at some point.
+
+    Note that this function returns context managers, so it can be used as a context manager
+    directly:
+
+    ```python
+    with raises_after((2025, 06, 01), Exception):
+        ...
+    ```
+    """
+    if datetime.now() >= datetime(*datetime_args):
+        return pytest.raises(*args, **kwargs)
+    else:
+        return nullcontext()

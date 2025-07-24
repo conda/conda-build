@@ -44,21 +44,6 @@ class UnableToParse(YamlParsingError):
         return f"Error Message:\n--> {indent(orig)}\n\n"
 
 
-class UnableToParseMissingJinja2(UnableToParse):
-    def error_body(self):
-        return "\n".join(
-            [
-                super().error_body(),
-                indent(
-                    """\
-                It appears you are missing jinja2.  Please install that
-                package, then attempt to build.
-            """
-                ),
-            ]
-        )
-
-
 class MissingDependency(CondaBuildException):
     pass
 

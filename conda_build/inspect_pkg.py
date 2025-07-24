@@ -16,7 +16,6 @@ from typing import TYPE_CHECKING
 from conda.api import Solver
 from conda.base.context import context
 from conda.cli.common import specs_from_args
-from conda.core.index import get_index
 from conda.core.prefix_data import PrefixData
 from conda.models.records import PrefixRecord
 
@@ -38,8 +37,15 @@ from .utils import (
     package_has_file,
 )
 
+try:
+    from conda.core.index import Index
+except ImportError:
+    # FUTURE: remove for `conda >=24.9`
+    from conda_build.index import Index
+
 if TYPE_CHECKING:
-    from typing import Iterable, Literal
+    from collections.abc import Iterable
+    from typing import Literal
 
 log = get_logger(__name__)
 
@@ -173,7 +179,7 @@ def test_installable(channel: str = "defaults") -> bool:
     success = True
     for subdir in ["osx-64", "linux-32", "linux-64", "win-32", "win-64"]:
         log.info("######## Testing subdir %s ########", subdir)
-        for prec in get_index(channel_urls=[channel], prepend=False, platform=subdir):
+        for prec in Index(channels=[channel], prepend=False, platform=subdir):
             name = prec["name"]
             if name in {"conda", "conda-build"}:
                 # conda can only be installed in the root environment

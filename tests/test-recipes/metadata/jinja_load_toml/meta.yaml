@@ -13,6 +13,7 @@ requirements:
   build:
     - python >={{ deps.get("python").lstrip("^") }}
     - pip
+    - setuptools
 
   run:
 {% for dep in deps -%}
@@ -26,5 +27,5 @@ requirements:
 {% endfor %}
 
 build:
-  script: {{ PYTHON }} -m pip install --no-deps --ignore-installed .
+  script: {{ PYTHON }} -m pip install .
   noarch: python

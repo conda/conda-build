@@ -15,7 +15,7 @@ from copy import copy
 from fnmatch import filter as fnmatch_filter
 from fnmatch import fnmatch
 from fnmatch import translate as fnmatch_translate
-from functools import partial
+from functools import lru_cache, partial
 from os.path import (
     basename,
     dirname,
@@ -61,7 +61,13 @@ from .os_utils.pyldd import (
     elffile,
     machofile,
 )
-from .utils import on_mac, on_win, prefix_files
+from .utils import (
+    FALLBACK_MENUINST_SCHEMA,
+    VALID_SCHEMA_LOCATIONS,
+    on_mac,
+    on_win,
+    prefix_files,
+)
 
 if TYPE_CHECKING:
     from typing import Literal
@@ -1325,7 +1331,11 @@ def check_overlinking_impl(
     precs.append(pkg_vendored_dist)
     ignore_list = utils.ensure_list(ignore_run_exports)
     if subdir.startswith("linux"):
+        # libgcc-ng is the defaults & old conda-forge package name
         ignore_list.append("libgcc-ng")
+        # conda-forge::libgcc-ng was renamed 08/27/2024
+        # see https://github.com/conda-forge/ctng-compilers-feedstock/pull/148
+        ignore_list.append("libgcc")
 
     package_nature = {prec: library_nature(prec, run_prefix) for prec in precs}
     lib_packages = {
@@ -1683,46 +1693,86 @@ def check_menuinst_json(files, prefix) -> None:
         return
 
     print("Validating Menu/*.json files")
+    for json_file in json_files:
+        _check_one_menuinst_json(join(prefix, json_file))
+
+
+@lru_cache(maxsize=128)
+def _build_validator(url):
+    import jsonschema
+    import requests
+
+    log = utils.get_logger(__name__, dedupe=False)
+
+    if not url.startswith(VALID_SCHEMA_LOCATIONS):
+        log.warning(
+            "JSON Schema at '%s' URL doesn't match any of the valid locations: %s. "
+            "This will be an error in 25.11.",  # FUTURE: Raise in 25.11
+            url,
+            VALID_SCHEMA_LOCATIONS,
+        )
     log = utils.get_logger(__name__, dedupe=False)
     try:
-        import jsonschema
-        from menuinst.utils import data_path
-    except ImportError as exc:
-        log.warning(
-            "Found 'Menu/*.json' files but couldn't validate: %s",
-            ", ".join(json_files),
-            exc_info=exc,
-        )
+        r = requests.get(url)
+        r.raise_for_status()
+    except requests.exceptions.HTTPError as exc:
+        log.debug("requests exception", exc_info=exc)
+        log.warning("Could not fetch '%s', status code %s", url, r.status_code)
         return
+
+    schema = r.json()
+    try:
+        ValidatorClass = jsonschema.validators.validator_for(schema)
+        return ValidatorClass(schema)
+    except (jsonschema.SchemaError, json.JSONDecodeError, OSError) as exc:
+        log.debug("jsonschema exception", exc_info=exc)
+        log.warning("'%s' is not a valid menuinst schema.", url)
+        return
+
+
+def _check_one_menuinst_json(json_file):
+    import jsonschema
+
+    log = utils.get_logger(__name__, dedupe=False)
 
     try:
-        schema_path = data_path("menuinst.schema.json")
-        with open(schema_path) as f:
-            schema = json.load(f)
-        ValidatorClass = jsonschema.validators.validator_for(schema)
-        validator = ValidatorClass(schema)
-    except (jsonschema.SchemaError, json.JSONDecodeError, OSError) as exc:
-        log.warning("'%s' is not a valid menuinst schema", schema_path, exc_info=exc)
-        return
-
-    for json_file in json_files:
-        try:
-            with open(join(prefix, json_file)) as f:
-                text = f.read()
-            if "$schema" not in text:
-                log.warning(
-                    "menuinst v1 JSON document '%s' won't be validated.", json_file
-                )
-                continue
-            validator.validate(json.loads(text))
-        except (jsonschema.ValidationError, json.JSONDecodeError, OSError) as exc:
+        with open(json_file) as f:
+            text = f.read()
+        if "$schema" not in text:
+            log.info("menuinst v1 JSON document '%s' won't be validated.", json_file)
+            return
+        loaded = json.loads(text)
+        schema_url = loaded.get("$schema")
+        if not schema_url:
             log.warning(
-                "'%s' is not a valid menuinst JSON document!",
+                "Invalid empty value for $schema. '%s' won't be validated. "
+                "This will be an error in 25.11.",  # FUTURE: Raise in 25.11
                 json_file,
-                exc_info=exc,
             )
-        else:
-            log.info("'%s' is a valid menuinst JSON document", json_file)
+            return
+        elif schema_url == "https://json-schema.org/draft-07/schema":
+            # This is for compatibility with menuinst files built as per the wrong
+            # recommendations of menuinst >=2,<=2.2
+            log.warning(
+                "Known wrong value for $schema, defaulting to '%s'",
+                FALLBACK_MENUINST_SCHEMA,
+            )
+            schema_url = FALLBACK_MENUINST_SCHEMA
+        validator = _build_validator(schema_url)
+        if validator is None:
+            # FUTURE: Raise in 25.11
+            log.warning("Could not build validator. This will be an error in 25.11.")
+            return
+        validator.validate(loaded)
+    except (jsonschema.ValidationError, json.JSONDecodeError, OSError) as exc:
+        log.warning(
+            # FUTURE: Raise in 25.11
+            "'%s' is not a valid menuinst JSON document! This will be an error in 25.11.",
+            json_file,
+            exc_info=exc,
+        )
+    else:
+        log.info("'%s' is a valid menuinst JSON document", json_file)
 
 
 def post_build(m, files, build_python, host_prefix=None, is_already_linked=False):

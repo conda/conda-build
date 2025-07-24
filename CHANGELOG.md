@@ -1,5 +1,368 @@
 [//]: # (current developments)
 
+## 25.5.0 (2025-05-26)
+
+### Bug fixes
+
+* Validate menuinst JSON documents using the included `$schema` value. (#5569)
+* Require `conda-libmamba-solver` 25.4 or greater to fix issues with spaces in `CONDA_BLD_PATH`. This bumps the minimum `conda` requirement to 24.11. (#5675)
+* Fix warning formatting in liefldd. (#5683)
+* Fix regression so `os.pathsep` works in Jinja expressions. (#5705)
+* Fix bug where recipe outputs lists was modified during parsing. This caused false-positive warnings about inconsistent recipe outputs due to jinja2 structures and crashes when getting the recipe text. (#5711)
+* Restore `is` and `is not` operators to selector minilanguage. (#5720 via #5721)
+* Remove usage of the `schannel` attribute which is deprecated in `conda`. (#5722)
+
+### Deprecations
+
+* Deprecate `conda_build.render._IndentDumper`. Use `conda_build.render.CustomDumper` instead.  (#5282)
+* Deprecate `conda_build.render._MetaYaml`. Unused.  (#5282)
+* Deprecate `conda_build.render._represent_omap`. Unused.  (#5282)
+* Deprecate `conda_build.render._unicode_representer`. Unused.  (#5282)
+* Menuinst validation warnings will be raised as errors in 25.11. (#5569)
+* Remove `conda_build.utils.root_script_dir`. (#5726)
+
+### Other
+
+* `menuinst` is no longer a dependency. (#5569)
+* Add `.md` extension to news entries. (#5705)
+
+### Contributors
+
+* @emmanuel-ferdman
+* @jaimergp
+* @jezdez
+* @jakirkham
+* @kenodegard
+* @beckermr
+* @travishathaway
+* @dependabot[bot]
+* @pre-commit-ci[bot]
+
+### New Contributors
+
+* @emmanuel-ferdman made their first contribution in https://github.com/conda/conda-build/pull/5683
+
+
+## 25.4.2 (2025-04-21)
+
+### Bug fixes
+
+* Added `len`, `replace`, `float`, and `join` functions/methods for selectors. (#5695)
+* Added `os.sep` to allowed attributes for jinja2 and selectors. (#5695)
+
+### Contributors
+
+* @beckermr
+
+
+
+## 25.4.1 (2025-04-18)
+
+### Bug fixes
+
+* Fix bug where selectors with lists, tuples, or dicts could not be processed. (#5690)
+
+### Contributors
+
+* @beckermr
+
+
+
+## 25.4.0 (2025-04-07)
+
+### Enhancements
+
+* Use `evalidate` to evaluate selector logic. This restricts which operations are allowed as part of a selector. In particular, only `os.getenv` and `os.environ` are now allowed in the `os` module. (#5482)
+* Ignore run_exports of python from other packages when building with `python_version_independent: true`. (#5654)
+
+### Bug fixes
+
+* Fix `get_conda_operation_locks` call to use correct arguments. (#4215 via #5259)
+* Use `conda_build.utils.tar_xf` everywhere to avoid blind usage of `tar.extractall` in `conda render` and `conda convert`.
+* Fix release upload workflow to use GitHub event tag names. (#5686)
+
+### Docs
+
+* Add recommendation to append build number to build string when overwriting build string. (#5676)
+
+### Other
+
+* Remove `--no-deps`, `--no-build-isolation`, and `--ignore-installed` `pip install` options in example recipes as `conda-build` will enforce all required `pip install` options itself at build time. (#5541)
+
+### Contributors
+
+* @conda-bot
+* @isuruf
+* @jaimergp
+* @kenodegard
+* @hombit made their first contribution in https://github.com/conda/conda-build/pull/5656
+* @matthewfeickert made their first contribution in https://github.com/conda/conda-build/pull/5541
+* @beckermr
+* @soapy1
+* @tl-hbk made their first contribution in https://github.com/conda/conda-build/pull/5259
+* @dependabot[bot]
+* @pre-commit-ci[bot]
+
+
+
+## 25.3.2 (2025-04-02)
+
+### Enhancements
+
+* Ignore `run_exports` of Python from other packages when building with `python_version_independent: true`. (#5654)
+
+### Bug fixes
+
+* Handle variants for transitive subpackage resolution. (#5644 & #5645 via #5651)
+
+### Contributors
+
+* @isuruf
+
+
+
+## 25.3.1 (2025-03-24)
+
+### Enhancements
+
+* Add regression tests for issues #5644 and #5645. (#5648)
+
+### Bug fixes
+
+* Revert #5603 to avoid rendering regressions in multi-output recipes. (#5644, #5645 via #5647)
+* Use more adequate permissions for temporary build scripts written to `$SRC_DIR`.
+
+### Contributors
+
+* @jaimergp
+* @kenodegard
+* @beckermr
+
+
+
+## 25.3.0 (2025-03-17)
+
+### Enhancements
+
+* Add recipe option `build.python_version_independent` to support building ABI3 for one CPython version and using the package in any later version. (#5456)
+* Add `cdt_arch` and `cdt_name` as used vars when cdt jinja is used. (#5599)
+
+### Bug fixes
+
+* Fix subdirectory check for `conda_build.utils.merge_tree`. (#4976 via #4977)
+* Perform build string pin compatibility checks with glob matching instead of strict string equality. (#5600)
+* Warn about parsed and raw output block mismatches. This can cause issues with custom build strings, among others. The recommendation is to avoid Jinja flow control to build the output list. Use `skip: true` as necessary. (#5571 via #5601)
+* Fix transitive subpackage dependency resolution issue #3308. (#5603)
+* Limit `patchelf` to `<0.18`. (#5607)
+* Use the `CONDA_EXE` as defined in `context.conda_exe_vars_dict` instead of defaulting to the one in the `base` env. (#5637)
+* Fix LIEF>=0.15 compatibility. (#5626 via #5627)
+
+### Other
+
+* Add `flaky` marker to tests that fail randomly. (#5623)
+
+### Contributors
+
+* @conda-bot
+* @isuruf
+* @jaimergp
+* @jezdez
+* @kenodegard
+* @bernt-matthias made their first contribution in https://github.com/conda/conda-build/pull/5627
+* @ForgottenProgramme
+* @beckermr
+* @travishathaway
+* @vyasr made their first contribution in https://github.com/conda/conda-build/pull/5575
+* @woutdenolf made their first contribution in https://github.com/conda/conda-build/pull/4977
+* @dependabot[bot]
+* @pre-commit-ci[bot]
+
+
+
+## 25.1.2 (2025-02-05)
+
+### Enhancements
+
+* Fix LIEF>=0.15 compatibility. (#5594 via #5595)
+
+### Contributors
+
+* @tkelman
+
+
+
+## 25.1.1 (2025-01-14)
+
+### Deprecations
+
+* Remove `conda_build.exceptions.UnableToParseMissingJinja2`. (#5587)
+* Remove `conda_build.index.get_build_index(locking)`. (#5587)
+* Remove `conda_build.index.get_build_index(timeout)`. (#5587)
+
+### Contributors
+
+* @kenodegard
+
+
+
+## 25.1.0 (2025-01-13)
+
+### Enhancements
+
+* Add SHA224, SHA384 and SHA512 support for validating downloaded sources. (#4793)
+* Add new hashing methods (`content_sha256`, `content_sha384`, `content_sha512`) to calculate the
+  checksum of the extracted contents of the downloaded source artifacts. (#4821 via #5277)
+* Make `.conda` the new default package format. `.tar.bz2` files can still be generated with `--package-format=1` and/or `conda_build.pkg_format: 1` in your `.condarc` file. (#5183 via #5527)
+* Add compatibility for LIEF=0.15. (#5564 via #5565)
+
+### Bug fixes
+
+* Verify all source hashes when multiple are defined (not just the first one). (#4793)
+* Fix a bug where some ``CondaBuildUserError`` exceptions that were formally ``SystemExit`` exceptions
+  were not being caught properly. (#5538)
+* Fix a bug where bad match specs from intermediate parsing results would cause parsing to fail. (#5555)
+* Fix `KeyError` when an inconsistent `build.pkg_type` value is specified in `meta.yaml`. (#5560)
+
+### Other
+
+* Demote logging message about glob finding no matches from error to warning (#5472)
+
+### Contributors
+
+* @conda-bot
+* @carterbox
+* @jaimergp
+* @ForgottenProgramme
+* @beckermr
+* @tttc3
+* @tkelman made their first contribution in https://github.com/conda/conda-build/pull/5565
+* @ypradat made their first contribution in https://github.com/conda/conda-build/pull/5560
+* @dependabot[bot]
+* @pre-commit-ci[bot]
+
+
+
+## 24.11.2 (2024-11-26)
+
+### Bug fixes
+
+* Fix bug where `.copy()` was used on a string instead of `copy()` when processing variants. (#5417)
+
+### Contributors
+
+* @corneliusroemer made their first contribution in https://github.com/conda/conda-build/pull/5417
+* @kenodegard
+
+
+
+## 24.11.1 (2024-11-21)
+
+### Bug fixes
+
+* Fix `TypeError` when no CLI arguments are passed. (#5549 via #5550)
+
+### Contributors
+
+* @beeankha
+* @kenodegard
+
+
+
+## 24.11.0 (2024-11-15)
+
+### Enhancements
+
+* Introduce `--package-format` as a command line argument. (#4890 via #5209)
+  * This takes precedence over default value and `condarc`.
+  * Normalization occurs so `1`, `"1"`, `tar.bz2`,`.tar.bz2`, `2`, `"2"`, `conda`, `.conda` are all recognized and mapped appropriately.
+  * Other options are rejected.
+* Add  support for [CEP-17](https://github.com/conda/ceps/blob/main/cep-0017.md) that allows specifying the location of the site-packages directory with the `python_site_packages_path` build option for any packages named `python`. (#5502)
+
+### Bug fixes
+
+* Fix regex for Jinja2 `set` / `for` statements to be more specific. (#5514)
+* Fix `ruamel.yaml` usage to use supported APIs. (#5517)
+* Fix bug variant variables were not defined for the first parsing pass of a recipe. (#5528)
+* Fix a bug where variants were incorrectly found as being used when they matched a leading substring of
+  another variant. (#5535)
+* Fix a bug where variants were not found when variables were used in `pin_*` statements. (#5535)
+
+### Deprecations
+
+* Deprecate `conda_build.exceptions.UnableToParseMissingJinja2`. (#5497)
+* Deprecate `conda_build.index.get_build_index(locking)`. (#5508)
+* Deprecate `conda_build.index.get_build_index(timeout)`. (#5508)
+* Require Python 3.9 or greater. (#5525)
+* The default value for `--package-format` and `conda_pkg_format` will become `.conda` in 25.1. (#5534)
+
+### Docs
+
+* Better document `run_test.r`. (#5479)
+* Fix bug in docs build by pinning `conda-sphinx-theme` version to 0.2.2. (#5518)
+
+### Contributors
+
+* @beeankha
+* @conda-bot
+* @jaimergp
+* @jezdez
+* @jdblischak
+* @jjhelmus
+* @kenodegard
+* @zklaus
+* @beckermr
+* @ryanskeith
+* @dependabot[bot]
+* @pre-commit-ci[bot]
+
+
+
+## 24.9.0 (2024-09-18)
+
+### Enhancements
+
+* Reduce render time when there is a large number of unused variants. (#5392)
+
+### Bug fixes
+
+* Ensure variables mentioned in `script_env` are undefined in the multi-output build environment
+  if they are undefined in the environment that `conda-build` is invoked from. (#5322)
+* Variables used in single-line jinja2 `for` and `set` statements are now properly included in the variant
+  matrix for some edge cases. (#5447)
+* Allow undefined jinja variables when a particular metadata block evaluates as skipped. (#5458)
+
+### Deprecations
+
+* Remove `conda_build.build.check_external`. `patchelf` is an explicit conda-build dependency on Linux, so it will always be installed. (#5441)
+* Remove `conda_build.metadata._get_env_path`. Use `conda.base.context.locate_prefix_by_name` instead. (#5441)
+* Remove `conda_build.build._construct_metadata_for_test_from_recipe`. Test built packages instead, not recipes (e.g., `conda build --test package` instead of `conda build --test recipe/`). (#5478)
+
+### Contributors
+
+* @beeankha
+* @conda-bot
+* @jameslamb
+* @kenodegard
+* @beckermr
+* @msarahan
+* @minrk
+* @dependabot[bot]
+* @pre-commit-ci[bot]
+
+
+
+## 24.7.1 (2024-07-30)
+
+### Bug fixes
+
+* Check for WSL existence before calling `os.stat`. (#5433 via #5434)
+
+### Contributors
+
+* @kenodegard
+
+
+
 ## 24.7.0 (2024-07-18)
 
 ### Enhancements

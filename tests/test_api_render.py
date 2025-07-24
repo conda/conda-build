@@ -7,6 +7,7 @@ should go in test_render.py
 
 import os
 import re
+import textwrap
 from itertools import count, islice
 
 import pytest
@@ -15,6 +16,7 @@ from conda.base.context import context
 from conda.common.compat import on_win
 
 from conda_build import api, render
+from conda_build.exceptions import CondaBuildUserError
 from conda_build.variants import validate_spec
 
 from .utils import metadata_dir, variants_dir
@@ -68,7 +70,7 @@ def test_get_output_file_paths(testing_workdir, testing_metadata):
     assert build_path == os.path.join(
         testing_metadata.config.croot,
         testing_metadata.config.host_subdir,
-        "test_get_output_file_paths-1.0-1.tar.bz2",
+        "test_get_output_file_paths-1.0-1.conda",
     )
 
 
@@ -78,7 +80,7 @@ def test_get_output_file_paths_metadata_object(testing_metadata):
     assert build_path == os.path.join(
         testing_metadata.config.croot,
         testing_metadata.config.host_subdir,
-        "test_get_output_file_paths_metadata_object-1.0-1.tar.bz2",
+        "test_get_output_file_paths_metadata_object-1.0-1.conda",
     )
 
 
@@ -102,7 +104,7 @@ def test_get_output_file_paths_jinja2(testing_config):
     assert build_path == os.path.join(
         testing_config.croot,
         testing_config.host_subdir,
-        f"conda-build-test-source-git-jinja2-1.20.2-py{python}{_hash}_0_g262d444.tar.bz2",
+        f"conda-build-test-source-git-jinja2-1.20.2-py{python}{_hash}_0_g262d444.conda",
     )
 
 
@@ -118,6 +120,16 @@ def test_pin_compatible_semver(testing_config):
     recipe_dir = os.path.join(metadata_dir, "_pin_compatible")
     metadata = api.render(recipe_dir, config=testing_config)[0][0]
     assert "zlib >=1.2.11,<2.0a0" in metadata.get_value("requirements/run")
+
+
+def test_transitive_subpackage_dependency(testing_config):
+    recipe_dir = os.path.join(metadata_dir, "transitive_subpackage")
+    metadata = api.render(recipe_dir, config=testing_config)[1][0]
+    assert not metadata.get_value("requirements/run")
+    assert any(
+        req.startswith("openssl 1.0.2")
+        for req in metadata.get_value("requirements/host")
+    )
 
 
 @pytest.mark.slow
@@ -341,3 +353,46 @@ def test_pin_subpackage_benchmark(testing_config):
         recipe, config=testing_config, channels=[], variants=create_variants()
     )
     assert len(metadata_tuples) == 11 - 3  # omits libarrow-all, pyarrow, pyarrow-tests
+
+
+def test_api_render_missing_jinja2(testing_config, testing_workdir):
+    with open(os.path.join(testing_workdir, "meta.yaml"), "w") as f:
+        f.write(
+            textwrap.dedent(
+                """
+            package:
+              name: blah-{{ foo }}
+              version: 0.1
+
+            build:
+              number: 0
+
+            requirements:
+              host:
+                - python {{ python_min }}
+              run:
+                - python
+            """
+            )
+        )
+
+    meta = api.render(
+        testing_workdir,
+        finalize=False,
+        bypass_env_check=True,
+        trim_skip=False,
+    )
+    assert meta is not None
+    assert any("python" in val for val in meta[0][0].get_value("requirements/host"))
+    assert not any(
+        "{{ python_min }}" in val for val in meta[0][0].get_value("requirements/run")
+    )
+    assert meta[0][0].get_value("package/name") == "blah-"
+
+    with pytest.raises(CondaBuildUserError):
+        api.render(
+            testing_workdir,
+            finalize=True,
+            bypass_env_check=True,
+            trim_skip=False,
+        )

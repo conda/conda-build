@@ -11,6 +11,7 @@ import logging.config
 import mmap
 import os
 import re
+import secrets
 import shutil
 import stat
 import subprocess
@@ -21,7 +22,8 @@ import time
 import urllib.parse as urlparse
 import urllib.request as urllib
 from collections import OrderedDict, defaultdict
-from functools import lru_cache
+from collections.abc import Iterable
+from functools import cache, partial
 from glob import glob
 from io import StringIO
 from itertools import filterfalse
@@ -42,7 +44,7 @@ from os.path import (
 )
 from pathlib import Path
 from threading import Thread
-from typing import TYPE_CHECKING, Iterable, overload
+from typing import TYPE_CHECKING, overload
 
 import conda_package_handling.api
 import filelock
@@ -69,7 +71,8 @@ from conda.utils import unix_path_to_win
 from .exceptions import BuildLockError
 
 if TYPE_CHECKING:
-    from typing import Mapping, TypeVar
+    from collections.abc import Mapping
+    from typing import TypeVar
 
     from .metadata import MetaData
 
@@ -82,7 +85,6 @@ on_mac = sys.platform == "darwin"
 on_linux = sys.platform == "linux"
 
 codec = getpreferredencoding() or "utf-8"
-root_script_dir = os.path.join(context.root_prefix, "Scripts" if on_win else "bin")
 mmap_MAP_PRIVATE = 0 if on_win else mmap.MAP_PRIVATE
 mmap_PROT_READ = 0 if on_win else mmap.PROT_READ
 mmap_PROT_WRITE = 0 if on_win else mmap.PROT_WRITE
@@ -112,8 +114,13 @@ if __name__ == '__main__':
 # filenames accepted as recipe meta files
 VALID_METAS = ("meta.yaml", "meta.yml", "conda.yaml", "conda.yml")
 
+VALID_SCHEMA_LOCATIONS = ("http://schemas.conda.org/", "https://schemas.conda.org/")
+FALLBACK_MENUINST_SCHEMA = (
+    "https://schemas.conda.org/menuinst/menuinst-1-1-0.schema.json"
+)
 
-@lru_cache(maxsize=None)
+
+@cache
 def stat_file(path):
     return os.stat(path)
 
@@ -668,6 +675,17 @@ def copytree(src, dst, symlinks=False, ignore=None, dry_run=False):
     return dst_lst
 
 
+def is_subdir(child, parent, strict=True):
+    """
+    Check whether child is a (strict) subdirectory of parent.
+    """
+    parent = Path(parent).resolve()
+    child = Path(child).resolve()
+    if strict:
+        return parent in child.parents
+    return child == parent or parent in child.parents
+
+
 def merge_tree(
     src, dst, symlinks=False, timeout=900, lock=None, locking=True, clobber=False
 ):
@@ -678,9 +696,7 @@ def merge_tree(
     Like copytree(src, dst), but raises an error if merging the two trees
     would overwrite any files.
     """
-    dst = os.path.normpath(os.path.normcase(dst))
-    src = os.path.normpath(os.path.normcase(src))
-    assert not dst.startswith(src), (
+    assert not is_subdir(dst, src, strict=False), (
         "Can't merge/copy source into subdirectory of itself.  "
         "Please create separate spaces for these things.\n"
         f"  src: {src}\n"
@@ -1058,6 +1074,7 @@ def iter_entry_points(items):
 
 
 def create_entry_point(path, module, func, config):
+    """Creates an entry point for legacy noarch_python builds"""
     import_name = func.split(".")[0]
     pyscript = PY_TMPL % {"module": module, "func": func, "import_name": import_name}
     if on_win:
@@ -1081,6 +1098,7 @@ def create_entry_point(path, module, func, config):
 
 
 def create_entry_points(items, config):
+    """Creates entry points for legacy noarch_python builds"""
     if not items:
         return
     bin_dir = join(config.host_prefix, bin_dirname)
@@ -1128,7 +1146,7 @@ def convert_path_for_cygwin_or_msys2(exe, path):
 def get_skip_message(m: MetaData) -> str:
     return (
         f"Skipped: {m.name()} from {m.path} defines build/skip for this configuration "
-        f"({({k: m.config.variant[k] for k in m.get_used_vars()})})."
+        f"({ ({k: m.config.variant[k] for k in m.get_used_vars()}) })."
     )
 
 
@@ -1139,9 +1157,13 @@ def package_has_file(package_path, file_path, refresh_mode="modified"):
             conda_package_handling.api.extract(
                 package_path, dest_dir=td, components="info"
             )
-        else:
+        elif package_path.endswith(".tar.bz2"):
             conda_package_handling.api.extract(
                 package_path, dest_dir=td, components=file_path
+            )
+        else:
+            conda_package_handling.api.extract(
+                package_path, dest_dir=td, components="pkg"
             )
         resolved_file_path = os.path.join(td, file_path)
         if os.path.exists(resolved_file_path):
@@ -1275,7 +1297,7 @@ def expand_globs(
             glob_files = glob(path, recursive=True)
             if not glob_files:
                 log = get_logger(__name__)
-                log.error(f"Glob {path} did not match in root_dir {root_dir}")
+                log.warning(f"Glob {path} did not match in root_dir {root_dir}")
             # https://docs.python.org/3/library/glob.html#glob.glob states that
             # "whether or not the results are sorted depends on the file system".
             # Avoid this potential ambiguity by sorting. (see #4185)
@@ -1580,12 +1602,12 @@ def filter_info_files(files_list, prefix):
     )
 
 
-def rm_rf(path):
+def rm_rf(path: str | os.PathLike) -> None:
     from conda.core.prefix_data import delete_prefix_from_linked_data
-    from conda.gateways.disk.delete import rm_rf as rm_rf
+    from conda.gateways.disk.delete import rm_rf
 
-    rm_rf(path)
-    delete_prefix_from_linked_data(path)
+    rm_rf(str(path))
+    delete_prefix_from_linked_data(str(path))
 
 
 # https://stackoverflow.com/a/31459386/1170370
@@ -1987,10 +2009,110 @@ def sha256_checksum(filename, buffersize=65536):
     return sha256.hexdigest()
 
 
+def compute_content_hash(
+    directory: str | Path, algorithm="sha256", skip: Iterable[str] = ()
+) -> str:
+    """
+    Given a directory, recursively scan all its contents (without following symlinks) and sort them
+    by their full path. For each entry in the contents table, compute the hash for the concatenated
+    bytes of:
+
+    - UTF-8 encoded path, relative to the input directory. Backslashes are normalized
+      to forward slashes before encoding.
+    - Then, depending on the type:
+        - For regular files, the UTF-8 bytes of an `F` separator, followed by:
+          - UTF-8 bytes of the line-ending normalized text (`\r\n` to `\n`), if the file is text.
+          - The raw bytes of the file contents, if binary.
+          - If it can't be read, error out.
+        - For a directory, the UTF-8 bytes of a `D` separator, and nothing else.
+        - For a symlink, the UTF-8 bytes of an `L` separator, followed by the UTF-8 encoded bytes
+          for the path it points to. Backslashes MUST be normalized to forward slashes before
+          encoding.
+        - For any other types, error out.
+    - UTF-8 encoded bytes of the string `-`, as separator.
+
+    Parameters
+    ----------
+    directory: The path whose contents will be hashed
+    algorithm: Name of the algorithm to be used, as expected by `hashlib.new()`
+    skip: iterable of paths that should not be checked. If a path ends with a slash, it's
+          interpreted as a directory that won't be traversed. It matches the relative paths
+          already slashed-normalized (i.e. backwards slashes replaced with forward slashes).
+
+    Returns
+    -------
+    str
+        The hexdigest of the computed hash, as described above.
+    """
+    hasher = hashlib.new(algorithm)
+    for path in sorted(Path(directory).rglob("*"), key=str):
+        relpath = path.relative_to(directory)
+        relpathstr = str(relpath).replace("\\", "/")
+        if skip and any(
+            (
+                # Skip directories like .git/
+                skip_item.endswith("/")
+                and relpathstr.startswith(skip_item)
+                or f"{relpathstr}/" == skip_item
+            )
+            # Skip full relpath match
+            or relpathstr == skip_item
+            for skip_item in skip
+        ):
+            continue
+        # encode the relative path to directory, for files, dirs and others
+        hasher.update(relpathstr.encode("utf-8"))
+        if path.is_symlink():
+            hasher.update(b"L")
+            hasher.update(str(path.readlink()).replace("\\", "/").encode("utf-8"))
+        elif path.is_dir():
+            hasher.update(b"D")
+        elif path.is_file():
+            hasher.update(b"F")
+            # We need to normalize line endings for Windows-Unix compat
+            # Attempt normalized line-by-line hashing (text mode). If
+            # Python fails to open in text mode, then it's binary and we hash
+            # the raw bytes directly.
+            try:
+                try:
+                    ten_mb = 10 * 1024 * 1024
+                    with tempfile.SpooledTemporaryFile(max_size=ten_mb) as tmp:
+                        with open(path) as fh:
+                            for line in fh:
+                                # Accumulate all line-ending normalized lines first
+                                # to make sure the whole file is read. This prevents
+                                # partial updates to the hash with hybrid text/binary
+                                # files (e.g. like the constructor shell installers).
+                                tmp.write(line.replace("\r\n", "\n").encode("utf-8"))
+                        tmp.flush()
+                        tmp.seek(0)
+                        for chunk in iter(partial(tmp.read, 8192), b""):
+                            hasher.update(chunk)
+                except UnicodeDecodeError:
+                    # file must be binary, read the bytes directly
+                    with open(path, "rb") as fh:
+                        for chunk in iter(partial(fh.read, 8192), b""):
+                            hasher.update(chunk)
+            except OSError as exc:
+                raise RuntimeError(
+                    f"Could not read file '{relpath}' in directory '{directory}'. "
+                    f"Content hash verification cannot continue. Error: {exc}"
+                )
+        else:
+            raise RuntimeError(
+                f"Can't detect type for path '{relpath}' in directory '{directory}'. "
+                "Content hash verification cannot continue."
+            )
+        hasher.update(b"-")
+    return hasher.hexdigest()
+
+
 def write_bat_activation_text(file_handle, m):
     from .os_utils.external import find_executable
 
-    file_handle.write(f'call "{root_script_dir}\\..\\condabin\\conda_hook.bat"\n')
+    file_handle.write(f'call "{context.root_prefix}\\condabin\\conda_hook.bat"\n')
+    for key, value in context.conda_exe_vars_dict.items():
+        file_handle.write(f'set "{key}={value or ""}"\n')
     if m.is_cross:
         # HACK: we need both build and host envs "active" - i.e. on PATH,
         #     and with their activate.d scripts sourced. Conda only
@@ -2015,12 +2137,12 @@ def write_bat_activation_text(file_handle, m):
             open(history_file, "a").close()
 
         file_handle.write(
-            f'call "{root_script_dir}\\..\\condabin\\conda.bat" activate "{m.config.host_prefix}"\n'
+            f'call "{context.root_prefix}\\condabin\\conda.bat" activate "{m.config.host_prefix}"\n'
         )
 
     # Write build prefix activation AFTER host prefix, so that its executables come first
     file_handle.write(
-        f'call "{root_script_dir}\\..\\condabin\\conda.bat" activate --stack "{m.config.build_prefix}"\n'
+        f'call "{context.root_prefix}\\condabin\\conda.bat" activate --stack "{m.config.build_prefix}"\n'
     )
 
     ccache = find_executable("ccache", m.config.build_prefix, False)
@@ -2139,3 +2261,39 @@ def is_conda_pkg(pkg_path: str) -> bool:
 
 def package_record_to_requirement(prec: PackageRecord) -> str:
     return f"{prec.name} {prec.version} {prec.build}"
+
+
+@contextlib.contextmanager
+def set_umask(mask: int = 0) -> Iterable[None]:
+    current = os.umask(mask)
+    yield
+    os.umask(current)
+
+
+@contextlib.contextmanager
+def create_file_with_permissions(path: str, permissions: int):
+    """
+    Opens a new file for writing, with permissions set from creation time.
+    This is achieved by creating a temporary directory in the same parent
+    directory, opening a new file inside with the right permissions,
+    yielding the descriptor so the caller can add the necessary contents,
+    and then moving the temporary file to the target location, with preserved
+    permissions.
+
+    The umask is temporarily reset during this process, and then restored.
+    This is needed so permissions can be applied as intended. Without a zeroed
+    umask, the system umask might filter the passed value to a different one.
+    For example, given a system umask=022, passing 666 will result in a file
+    with permissions 644.
+    """
+
+    def opener(path, flags):
+        return os.open(path, flags, mode=permissions)
+
+    dirname = os.path.dirname(path)
+    with set_umask(), TemporaryDirectory(dir=dirname) as tmpdir:
+        tmp_path = os.path.join(tmpdir, secrets.token_urlsafe(64))
+        with open(tmp_path, "w", opener=opener) as fh:
+            yield fh
+
+        shutil.move(tmp_path, path)
