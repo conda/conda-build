@@ -92,7 +92,6 @@ def build_vcvarsall_vs_path(version):
     if "ProgramFiles" in os.environ:
         program_files_paths.append(os.environ["ProgramFiles"])
 
-
     if float(version) < 15:
         for program_files_path in program_files_paths:
             # prefer looking at env var; fall back to program files defaults
@@ -116,7 +115,9 @@ def build_vcvarsall_vs_path(version):
 
     vs_code_sub_folders = ["BuildTools", "Community", "Professional", "Enterprise"]
     year = VS_VERSION_STRING[version].split()[-1]
-    for program_files_path, sub_folder in product(program_files_paths, vs_code_sub_folders):
+    for program_files_path, sub_folder in product(
+        program_files_paths, vs_code_sub_folders
+    ):
         vcvarsall_path = os.path.join(
             program_files_path,
             "Microsoft Visual Studio",
@@ -139,7 +140,8 @@ def build_vcvarsall_vs_path(version):
         "Auxiliary",
         "Build",
         "vcvarsall.bat",
-        )
+    )
+
 
 def msvc_env_cmd(bits, config, override=None):
     # TODO: this function will likely break on `win-arm64`. However, unless
