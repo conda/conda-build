@@ -2295,3 +2295,20 @@ def create_file_with_permissions(path: str, permissions: int):
             yield fh
 
         shutil.move(tmp_path, path)
+
+
+def get_json_encoder():
+    """
+    Get the appropriate JSON encoder for conda objects.
+
+    Tries to use the new CondaJSONEncoder if available (conda >=26.9),
+    otherwise falls back to EntityEncoder.
+    """
+    try:
+        # Try to import the new encoder first
+        from conda.common.serialize.json import CondaJSONEncoder
+        return CondaJSONEncoder
+    except ImportError:
+        # Fall back to the old encoder
+        from conda.auxlib.entity import EntityEncoder
+        return EntityEncoder
