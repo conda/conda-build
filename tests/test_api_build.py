@@ -461,7 +461,7 @@ platforms = ["64" if sys.maxsize > 2**32 else "32"]
 if on_win:
     platforms = sorted({"32", *platforms})
     compilers = ["3.10", "3.11", "3.12", "3.13"]
-    msvc_vers = ["11.0"]
+    msvc_vers = ["17.0"]
 else:
     msvc_vers = []
     compilers = [".".join([str(sys.version_info.major), str(sys.version_info.minor)])]
@@ -471,13 +471,16 @@ else:
 @pytest.mark.parametrize("msvc_ver", msvc_vers)
 def test_build_msvc_compiler(msvc_ver: str, monkeypatch: MonkeyPatch) -> None:
     # verify that the correct compiler is available
+    # Remember this is the version of the compiler, not the version of the VS installation
     cl_versions = {
         "9.0": 15,
         "10.0": 16,
         "11.0": 17,
         "12.0": 18,
         "14.0": 19,
-        "17.0": 22,
+        "15.0": 19,
+        "16.0": 19,
+        "17.0": 19,
     }
 
     monkeypatch.setenv("CONDATEST_MSVC_VER", msvc_ver)
