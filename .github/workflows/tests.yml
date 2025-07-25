@@ -240,7 +240,7 @@ jobs:
     needs: changes
     if: github.event_name == 'schedule' || needs.changes.outputs.code == 'true'
 
-    runs-on: windows-2019
+    runs-on: windows-latest
     strategy:
       fail-fast: false
       matrix:
@@ -287,6 +287,7 @@ jobs:
           installation-dir: D:\conda
 
       - name: Choco Install
+        # We may need the complete tooling so that cmake tests pass on windows
         run: choco install visualstudio2017-workload-vctools
 
       - name: Conda Install

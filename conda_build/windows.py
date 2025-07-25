@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 import os
 import pprint
+from itertools import product
 from os.path import dirname, isdir, isfile, join
 
 # importing setuptools patches distutils so that it knows how to find VC for python 2.7
@@ -35,6 +36,9 @@ VS_VERSION_STRING = {
     "11.0": "Visual Studio 11 2012",
     "12.0": "Visual Studio 12 2013",
     "14.0": "Visual Studio 14 2015",
+    "15.0": "Visual Studio 15 2017",
+    "16.0": "Visual Studio 16 2019",
+    "17.0": "Visual Studio 17 2022",
 }
 
 
@@ -74,27 +78,69 @@ def build_vcvarsall_vs_path(version):
     """
     Given the Visual Studio version, returns the default path to the
     Microsoft Visual Studio vcvarsall.bat file.
-    Expected versions are of the form {9.0, 10.0, 12.0, 14.0}
+    Expected versions are of the form {9.0, 10.0, 12.0, 14.0, 15.0, 16.0, 17.0}
     """
-    # Set up a load of paths that can be imported from the tests
-    if "ProgramFiles(x86)" in os.environ:
-        PROGRAM_FILES_PATH = os.environ["ProgramFiles(x86)"]
-    else:
-        PROGRAM_FILES_PATH = os.environ["ProgramFiles"]
-
     flatversion = str(version).replace(".", "")
     vstools = f"VS{flatversion}COMNTOOLS"
 
     if vstools in os.environ:
         return os.path.join(os.environ[vstools], "..\\..\\VC\\vcvarsall.bat")
-    else:
-        # prefer looking at env var; fall back to program files defaults
+
+    program_files_paths = []
+    if "ProgramFiles(x86)" in os.environ:
+        program_files_paths.append(os.environ["ProgramFiles(x86)"])
+    if "ProgramFiles" in os.environ:
+        program_files_paths.append(os.environ["ProgramFiles"])
+
+    if float(version) < 15:
+        for program_files_path in program_files_paths:
+            # prefer looking at env var; fall back to program files defaults
+            vcvarsall_path = os.path.join(
+                program_files_path,
+                f"Microsoft Visual Studio {version}",
+                "VC",
+                "vcvarsall.bat",
+            )
+            if os.path.exists(vcvarsall_path):
+                return vcvarsall_path
+
         return os.path.join(
-            PROGRAM_FILES_PATH,
+            program_files_paths[0],
             f"Microsoft Visual Studio {version}",
             "VC",
             "vcvarsall.bat",
         )
+
+    # For VS 15 (2017) and above, the path structure is different
+
+    vs_code_sub_folders = ["BuildTools", "Community", "Professional", "Enterprise"]
+    year = VS_VERSION_STRING[version].split()[-1]
+    for program_files_path, sub_folder in product(
+        program_files_paths, vs_code_sub_folders
+    ):
+        vcvarsall_path = os.path.join(
+            program_files_path,
+            "Microsoft Visual Studio",
+            year,
+            sub_folder,
+            "VC",
+            "Auxiliary",
+            "Build",
+            "vcvarsall.bat",
+        )
+        if os.path.exists(vcvarsall_path):
+            return vcvarsall_path
+
+    return os.path.join(
+        program_files_paths[0],
+        "Microsoft Visual Studio",
+        VS_VERSION_STRING[version].split()[-1],
+        "BuildTools",
+        "VC",
+        "Auxiliary",
+        "Build",
+        "vcvarsall.bat",
+    )
 
 
 def msvc_env_cmd(bits, config, override=None):
@@ -141,7 +187,7 @@ def msvc_env_cmd(bits, config, override=None):
         if int(py_ver[0]) >= 3:
             if int(py_ver.split(".")[1]) < 5:
                 version = "10.0"
-            version = "14.0"
+            version = "17.0"
         else:
             version = "9.0"
 
@@ -158,7 +204,7 @@ def msvc_env_cmd(bits, config, override=None):
 
     def build_vcvarsall_cmd(cmd, arch=arch_selector):
         # Default argument `arch_selector` is defined above
-        return f'call "{cmd}" {arch}'
+        return f'if exist "{cmd}" (call "{cmd}" {arch}) else (echo "Warning: Visual Studio not found at {cmd}")'
 
     vs_major = version.split(".")[0]
     msvc_env_lines.append(f'set "VS_VERSION={version}"')
