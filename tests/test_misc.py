@@ -7,7 +7,12 @@ import pytest
 from conda.models.enums import PathType
 
 from conda_build._link import pyc_f
-from conda_build.utils import get_json_encoder
+
+try:
+    from conda.common.serialize.json import CondaJSONEncoder
+except ImportError:
+    # FUTURE: remove for `conda>=25.9`
+    from conda.auxlib.entity import EntityEncoder as CondaJSONEncoder
 
 
 @pytest.mark.parametrize(
@@ -36,7 +41,7 @@ def test_pathtype():
 def test_entity_encoder(tmp_path):
     test_file = tmp_path / "test-file"
     test_json = {"a": PathType("hardlink"), "b": 1}
-    test_file.write_text(json.dumps(test_json, cls=get_json_encoder()))
+    test_file.write_text(json.dumps(test_json, cls=CondaJSONEncoder))
 
     json_file = json.loads(test_file.read_text())
     assert json_file == {"a": "hardlink", "b": 1}

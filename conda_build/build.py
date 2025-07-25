@@ -37,6 +37,12 @@ from conda.models.enums import FileMode, PathType
 from conda.models.match_spec import MatchSpec
 from conda.utils import url_path
 
+try:
+    from conda.common.serialize.json import CondaJSONEncoder
+except ImportError:
+    # FUTURE: remove for `conda>=25.9`
+    from conda.auxlib.entity import EntityEncoder as CondaJSONEncoder
+
 from . import __version__ as conda_build_version
 from . import environ, noarch_python, source, tarcheck, utils
 from .config import CondaPkgFormat, Config
@@ -1594,7 +1600,7 @@ def create_info_files_json_v1(m, info_dir, prefix, files, files_with_prefix):
                 sort_keys=True,
                 indent=2,
                 separators=(",", ": "),
-                cls=utils.get_json_encoder(),
+                cls=CondaJSONEncoder,
             )
     # Return a dict of file: sha1sum. We could (but currently do not)
     # use this to detect overlap and mutated overlap.
