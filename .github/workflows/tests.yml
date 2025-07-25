@@ -287,7 +287,7 @@ jobs:
           installation-dir: D:\conda
 
       - name: Choco Install
-      # We may need the complete tooling so that cmake tests pass on windows
+        # We may need the complete tooling so that cmake tests pass on windows
         run: choco install visualstudio2017-workload-vctools
 
       - name: Conda Install
