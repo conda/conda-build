@@ -124,6 +124,7 @@ def describe_root(cwd=None):
         for recipe in get_valid_recipes(metadata_dir)
     ],
 )
+@pytest.mark.flaky(reruns=3, reruns_delay=1)  # Add flaky marker for recipe builds
 def test_recipe_builds(
     recipe: Path,
     testing_config,

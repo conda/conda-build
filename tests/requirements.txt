@@ -21,6 +21,7 @@ python >=3.9
 python-libarchive-c
 pytz
 pyyaml
+pytest-rerunfailures  # for handling flaky tests
 requests
 ripgrep  # for faster grep
 setuptools
