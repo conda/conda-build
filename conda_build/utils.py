@@ -2307,8 +2307,10 @@ def get_json_encoder():
     try:
         # Try to import the new encoder first
         from conda.common.serialize.json import CondaJSONEncoder
+
         return CondaJSONEncoder
     except ImportError:
         # Fall back to the old encoder
         from conda.auxlib.entity import EntityEncoder
+
         return EntityEncoder
