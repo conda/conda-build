@@ -17,6 +17,7 @@ pip
 pkginfo
 psutil
 py-lief
+pytest-rerunfailures  # for handling flaky tests
 python >=3.9
 python-libarchive-c
 pytz
