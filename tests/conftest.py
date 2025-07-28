@@ -1,17 +1,18 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
+
 import os
 import subprocess
 import sys
 import tempfile
 from collections import defaultdict
-from collections.abc import Iterator
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 from conda.common.compat import on_mac, on_win
 from conda_index.api import update_index
-from pytest import MonkeyPatch
 
 import conda_build
 import conda_build.config
@@ -31,6 +32,11 @@ from conda_build.config import (
 from conda_build.metadata import MetaData
 from conda_build.utils import check_call_env, copy_into, prepend_bin_path
 from conda_build.variants import get_default_variant
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+
+    from pytest import FixtureRequest, MonkeyPatch
 
 
 @pytest.hookimpl
@@ -153,7 +159,7 @@ def default_testing_config(testing_config, monkeypatch, request):
 
 
 @pytest.fixture(scope="function")
-def testing_metadata(request, testing_config):
+def testing_metadata(request: FixtureRequest, testing_config: Config) -> MetaData:
     d = defaultdict(dict)
     d["package"]["name"] = request.function.__name__
     d["package"]["version"] = "1.0"
