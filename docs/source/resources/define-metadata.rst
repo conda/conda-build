@@ -331,7 +331,7 @@ number at the end of the string, with a preceding underscore.
 
    build:
      number: 1
-     string: abc
+     string: abc_h{{ PKG_HASH }}_{{ PKG_BUILDNUM }}
 
 A hash will appear when the package is affected by one or more variables from
 the conda_build_config.yaml file. The hash is made up from the "used" variables
