@@ -8,18 +8,15 @@ package:
 build:
   skip: true  # [not (linux or osx)]
   rpaths_patcher: {{ rpaths_patcher }}
-  script:
-    - mkdir -p "${PREFIX}/lib"
-    - >
-      < /dev/null ${CC} ${CPPFLAGS} ${CFLAGS} ${LDFLAGS}
-      -x c - -nostdlib -s -o "${PREFIX}/lib/{{ lib_file }}" "-Wl,-rpath,${PREFIX}/lib"
-      -shared -Wl,-soname,libthing.so.1  # [linux]
-      -dynamiclib -install_name libthing.1.dylib  # [osx]
-    - ln -s "${PREFIX}/lib/{{ lib_file }}" "${PREFIX}/lib/libthing.so.1"  # [linux]
-    - ln -s "${PREFIX}/lib/{{ lib_file }}" "${PREFIX}/lib/libthing.1.dylib"  # [osx]
-    - mkdir -p "${PREFIX}/lib/subfolder"
-    - ln -s "${PREFIX}/lib/{{ lib_file }}" "${PREFIX}/lib/subfolder/libthing-link.so"  # [linux]
-    - ln -s "${PREFIX}/lib/{{ lib_file }}" "${PREFIX}/lib/subfolder/libthing-link.dylib"  # [osx]
+  script: |
+    mkdir -p "${PREFIX}/lib"
+    < /dev/null ${CC} ${CPPFLAGS} ${CFLAGS} ${LDFLAGS} -x c - -nostdlib -s -o "${PREFIX}/lib/{{ lib_file }}" "-Wl,-rpath,${PREFIX}/lib" -shared -Wl,-soname,libthing.so.1  # [linux]
+    < /dev/null ${CC} ${CPPFLAGS} ${CFLAGS} ${LDFLAGS} -x c - -o "${PREFIX}/lib/{{ lib_file }}" "-Wl,-rpath,${PREFIX}/lib" -dynamiclib -install_name libthing.1.dylib  # [osx]
+    ln -s "${PREFIX}/lib/{{ lib_file }}" "${PREFIX}/lib/libthing.so.1"  # [linux]
+    ln -s "${PREFIX}/lib/{{ lib_file }}" "${PREFIX}/lib/libthing.1.dylib"  # [osx]
+    mkdir -p "${PREFIX}/lib/subfolder"
+    ln -s "${PREFIX}/lib/{{ lib_file }}" "${PREFIX}/lib/subfolder/libthing-link.so"  # [linux]
+    ln -s "${PREFIX}/lib/{{ lib_file }}" "${PREFIX}/lib/subfolder/libthing-link.dylib"  # [osx]
 
 requirements:
   build:
