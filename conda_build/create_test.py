@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from os.path import basename, exists, isfile, join
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -16,6 +17,41 @@ from .utils import copy_into, ensure_list, on_win, rm_rf
 
 if TYPE_CHECKING:
     from .metadata import MetaData
+
+
+def _normalize_path_separators_in_command(cmd: str, is_windows: bool) -> str:
+    """
+    Normalize path separators in test commands to ensure consistency.
+
+    This function handles the issue where SP_DIR contains backslashes on Windows,
+    but pytest commands may use forward slashes, creating mixed separators.
+
+    Args:
+        cmd: The command string to normalize
+        is_windows: Whether this is running on Windows
+
+    Returns:
+        The command with normalized path separators
+    """
+    if not is_windows:
+        return cmd
+
+    # For Windows, we need to handle cases where SP_DIR is used in paths
+    # SP_DIR contains backslashes, but commands may use forward slashes
+    # We normalize to use backslashes consistently for Windows paths
+
+    # Pattern to match SP_DIR followed by a path
+    # This matches %SP_DIR%/path or %SP_DIR%\\path
+    sp_dir_pattern = r"%SP_DIR%([/\\])"
+
+    def replace_sp_dir_path(match):
+        # Always use backslash for Windows paths when SP_DIR is involved
+        return "%SP_DIR%\\"
+
+    # Replace SP_DIR path separators to use backslashes consistently
+    normalized_cmd = re.sub(sp_dir_pattern, replace_sp_dir_path, cmd)
+
+    return normalized_cmd
 
 
 def create_files(m: MetaData, test_dir: Path) -> bool:
@@ -83,7 +119,9 @@ def create_shell_files(m: MetaData, test_dir: os.PathLike) -> list[str]:
                     f.write("set -ex\n\n")
                 f.write("\n\n")
                 for cmd in commands:
-                    f.write(cmd)
+                    # Normalize path separators for consistent handling
+                    normalized_cmd = _normalize_path_separators_in_command(cmd, status)
+                    f.write(normalized_cmd)
                     f.write("\n")
                     if status:
                         f.write("IF %ERRORLEVEL% NEQ 0 exit /B 1\n")
