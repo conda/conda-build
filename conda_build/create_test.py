@@ -23,8 +23,9 @@ def _normalize_path_separators_in_command(cmd: str, is_windows: bool) -> str:
     """
     Normalize path separators in test commands to ensure consistency.
 
-    This function handles the issue where SP_DIR contains backslashes on Windows,
-    but pytest commands may use forward slashes, creating mixed separators.
+    This function handles the issue where environment variables containing paths
+    (like SP_DIR, PREFIX, BUILD_PREFIX, SRC_DIR, STDLIB_DIR) contain backslashes
+    on Windows, but commands may use forward slashes, creating mixed separators.
 
     Args:
         cmd: The command string to normalize
@@ -36,20 +37,35 @@ def _normalize_path_separators_in_command(cmd: str, is_windows: bool) -> str:
     if not is_windows:
         return cmd
 
-    # For Windows, we need to handle cases where SP_DIR is used in paths
-    # SP_DIR contains backslashes, but commands may use forward slashes
-    # We normalize to use backslashes consistently for Windows paths
+    # Common environment variables that contain paths and need normalization
+    # These variables are set with backslashes on Windows but commands may use forward slashes
+    path_env_vars = [
+        "SP_DIR",
+        "PREFIX",
+        "BUILD_PREFIX",
+        "SRC_DIR",
+        "STDLIB_DIR",
+        "RECIPE_DIR",
+        "LIBRARY_PREFIX",
+        "LIBRARY_BIN",
+        "LIBRARY_INC",
+        "LIBRARY_LIB",
+        "SCRIPTS",
+        "SYS_PREFIX",
+        "ROOT",
+    ]
 
-    # Pattern to match SP_DIR followed by a path
-    # This matches %SP_DIR%/path or %SP_DIR%\\path
-    sp_dir_pattern = r"%SP_DIR%([/\\])"
+    # Pattern to match any of these environment variables followed by a path separator
+    # This matches %VAR%/path or %VAR%\\path for any VAR in the list
+    env_pattern = r"(%" + "|%".join(f"{var}%" for var in path_env_vars) + r")([/\\])"
 
-    def replace_sp_dir_path(match):
-        # Always use backslash for Windows paths when SP_DIR is involved
-        return "%SP_DIR%\\"
+    def replace_env_path(match):
+        env_var = match.group(1)
+        # Always use backslash for Windows paths when environment variables are involved
+        return f"{env_var}\\"
 
-    # Replace SP_DIR path separators to use backslashes consistently
-    normalized_cmd = re.sub(sp_dir_pattern, replace_sp_dir_path, cmd)
+    # Replace environment variable path separators to use backslashes consistently
+    normalized_cmd = re.sub(env_pattern, replace_env_path, cmd)
 
     return normalized_cmd
 
