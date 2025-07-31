@@ -1,5 +1,32 @@
 [//]: # (current developments)
 
+## 25.7.0 (2025-07-31)
+
+### Deprecations
+
+* Remove `conda_build.render._MetaYaml`. (#5755)
+* Remove `conda_build.render._represent_omap`. (#5755)
+* Remove `conda_build.render._unicode_representer`. (#5755)
+* Remove `conda_build.render._IndentDumper` according to deprecation policy. Use `conda_build.render.CustomDumper` instead. (#5755)
+
+### Contributors
+
+* @nicoddemus
+* @emmanuel-ferdman
+* @jaimergp
+* @jezdez
+* @jakirkham
+* @kathatherine
+* @kenodegard
+* @beckermr
+* @ryanskeith
+* @soapy1
+* @travishathaway
+* @dependabot[bot]
+* @pre-commit-ci[bot]
+
+
+
 ## 25.5.0 (2025-05-26)
 
 ### Bug fixes
