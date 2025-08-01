@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from os.path import basename, exists, isfile, join
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -16,6 +17,60 @@ from .utils import copy_into, ensure_list, on_win, rm_rf
 
 if TYPE_CHECKING:
     from .metadata import MetaData
+
+
+def _normalize_path_separators_in_command(cmd: str, is_windows: bool) -> str:
+    """
+    Normalize path separators in test commands to ensure consistency.
+
+    This function handles the issue where environment variables containing paths
+    (like SP_DIR, PREFIX, BUILD_PREFIX, SRC_DIR, STDLIB_DIR) contain backslashes
+    on Windows, but commands may use forward slashes, creating mixed separators.
+
+    Args:
+        cmd: The command string to normalize
+        is_windows: Whether this is running on Windows
+
+    Returns:
+        The command with normalized path separators
+    """
+    if not is_windows:
+        return cmd
+
+    # Common environment variables that contain paths and need normalization
+    # These variables are set with backslashes on Windows but commands may use forward slashes
+    path_env_vars = [
+        "SP_DIR",
+        "PREFIX",
+        "BUILD_PREFIX",
+        "SRC_DIR",
+        "STDLIB_DIR",
+        "RECIPE_DIR",
+        "LIBRARY_PREFIX",
+        "LIBRARY_BIN",
+        "LIBRARY_INC",
+        "LIBRARY_LIB",
+        "SCRIPTS",
+        "SYS_PREFIX",
+        "ROOT",
+    ]
+
+    # Pattern to match any of these environment variables followed by a path
+    # This matches %VAR%/path or %VAR%\\path for any VAR in the list
+    # We capture the entire path after the environment variable
+    env_pattern = r"(%" + "|%".join(f"{var}%" for var in path_env_vars) + r")([/\\].*)"
+
+    def replace_env_path(match):
+        env_var = match.group(1)
+        path_part = match.group(2)
+        # Normalize all separators in the path part to backslashes
+        normalized_path = path_part.replace("/", "\\")
+        return f"{env_var}{normalized_path}"
+
+    # Replace environment variable paths to use backslashes consistently
+    normalized_cmd = re.sub(env_pattern, replace_env_path, cmd)
+
+    return normalized_cmd
 
 
 def create_files(m: MetaData, test_dir: Path) -> bool:
@@ -83,7 +138,9 @@ def create_shell_files(m: MetaData, test_dir: os.PathLike) -> list[str]:
                     f.write("set -ex\n\n")
                 f.write("\n\n")
                 for cmd in commands:
-                    f.write(cmd)
+                    # Normalize path separators for consistent handling
+                    normalized_cmd = _normalize_path_separators_in_command(cmd, status)
+                    f.write(normalized_cmd)
                     f.write("\n")
                     if status:
                         f.write("IF %ERRORLEVEL% NEQ 0 exit /B 1\n")
