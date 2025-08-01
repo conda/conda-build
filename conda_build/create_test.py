@@ -55,16 +55,19 @@ def _normalize_path_separators_in_command(cmd: str, is_windows: bool) -> str:
         "ROOT",
     ]
 
-    # Pattern to match any of these environment variables followed by a path separator
+    # Pattern to match any of these environment variables followed by a path
     # This matches %VAR%/path or %VAR%\\path for any VAR in the list
-    env_pattern = r"(%" + "|%".join(f"{var}%" for var in path_env_vars) + r")([/\\])"
+    # We capture the entire path after the environment variable
+    env_pattern = r"(%" + "|%".join(f"{var}%" for var in path_env_vars) + r")([/\\].*)"
 
     def replace_env_path(match):
         env_var = match.group(1)
-        # Always use backslash for Windows paths when environment variables are involved
-        return f"{env_var}\\"
+        path_part = match.group(2)
+        # Normalize all separators in the path part to backslashes
+        normalized_path = path_part.replace("/", "\\")
+        return f"{env_var}{normalized_path}"
 
-    # Replace environment variable path separators to use backslashes consistently
+    # Replace environment variable paths to use backslashes consistently
     normalized_cmd = re.sub(env_pattern, replace_env_path, cmd)
 
     return normalized_cmd
