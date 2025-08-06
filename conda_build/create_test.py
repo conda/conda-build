@@ -18,6 +18,59 @@ if TYPE_CHECKING:
     from .metadata import MetaData
 
 
+def _normalize_path_separators_in_command(cmd: str, is_windows: bool) -> str:
+    """
+    Normalize path separators in test commands to ensure consistency.
+
+    This function detects the separator used in environment variables and matches
+    the path separators accordingly, rather than assuming Windows = backslashes.
+    Only normalizes the specific parts containing environment variables.
+    """
+    path_env_vars = [
+        "SP_DIR",
+        "PREFIX",
+        "BUILD_PREFIX",
+        "SRC_DIR",
+        "STDLIB_DIR",
+        "RECIPE_DIR",
+        "LIBRARY_PREFIX",
+        "LIBRARY_BIN",
+        "LIBRARY_INC",
+        "LIBRARY_LIB",
+        "SCRIPTS",
+        "SYS_PREFIX",
+        "ROOT",
+    ]
+
+    if not is_windows:
+        return cmd
+
+    # Find which environment variables are present in the command
+    cmd_path_env_vars = [var for var in path_env_vars if f"%{var}%" in cmd]
+
+    if not cmd_path_env_vars:
+        return cmd
+
+    # Determine the expected separator for each environment variable
+    envs_separator = {}
+    for env_var in cmd_path_env_vars:
+        env_value = os.environ.get(env_var, "")
+        envs_separator[env_var] = (
+            "/" if env_value.count("/") > env_value.count("\\") else "\\"
+        )
+
+    # Process each part of the command to normalize the path separators
+    for part in cmd.split():
+        for env_var in cmd_path_env_vars:
+            if env_var in part:
+                part_separator = "/" if part.count("/") > part.count("\\") else "\\"
+                if part_separator != envs_separator[env_var]:
+                    changed_part = part.replace(part_separator, envs_separator[env_var])
+                    cmd = cmd.replace(part, changed_part)
+
+    return cmd
+
+
 def create_files(m: MetaData, test_dir: Path) -> bool:
     """
     Copy all test files from recipe over into testing directory.
@@ -83,7 +136,9 @@ def create_shell_files(m: MetaData, test_dir: os.PathLike) -> list[str]:
                     f.write("set -ex\n\n")
                 f.write("\n\n")
                 for cmd in commands:
-                    f.write(cmd)
+                    # Normalize path separators for consistent handling
+                    normalized_cmd = _normalize_path_separators_in_command(cmd, status)
+                    f.write(normalized_cmd)
                     f.write("\n")
                     if status:
                         f.write("IF %ERRORLEVEL% NEQ 0 exit /B 1\n")

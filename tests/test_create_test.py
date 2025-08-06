@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from conda_build.create_test import (
+    _normalize_path_separators_in_command,
     create_lua_files,
     create_pl_files,
     create_py_files,
@@ -149,3 +150,25 @@ def test_create_run_test(
     for ext in unexpected:
         test_file = Path(testing_metadata.config.test_dir, "run_test").with_suffix(ext)
         assert not test_file.exists()
+
+
+def test_path_separator_normalization():
+    """Test that path separators are normalized correctly in test commands."""
+    # Test with forward slash environment variable
+    import os
+
+    os.environ["PREFIX"] = "C:/path/to/prefix"
+    cmd1 = "pytest -v --ignore=%PREFIX%\\tests"
+    result1 = _normalize_path_separators_in_command(cmd1, True)
+    assert result1 == "pytest -v --ignore=%PREFIX%/tests"
+
+    # Test with backslash environment variable
+    os.environ["PREFIX"] = "C:\\path\\to\\prefix"
+    cmd2 = "pytest -v --ignore=%PREFIX%/tests"
+    result2 = _normalize_path_separators_in_command(cmd2, True)
+    assert result2 == "pytest -v --ignore=%PREFIX%\\tests"
+
+    # Test that non-Windows commands are unchanged
+    cmd3 = "pytest -v --ignore=${PREFIX}/tests"
+    result3 = _normalize_path_separators_in_command(cmd3, False)
+    assert result3 == "pytest -v --ignore=${PREFIX}/tests"
