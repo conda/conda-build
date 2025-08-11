@@ -152,23 +152,31 @@ def test_create_run_test(
         assert not test_file.exists()
 
 
-def test_path_separator_normalization():
+@pytest.mark.parametrize(
+    "prefix,cmd,is_windows,expected",
+    [
+        (
+            "C:/path/to/prefix",
+            "pytest -v --ignore=%PREFIX%\\tests",
+            True,
+            "pytest -v --ignore=%PREFIX%/tests",
+        ),  # forward slash environment variable
+        (
+            "C:\\path\\to\\prefix",
+            "pytest -v --ignore=%PREFIX%/tests",
+            True,
+            "pytest -v --ignore=%PREFIX%\\tests",
+        ),  # backslash environment variable
+        (
+            "/path/to/prefix",
+            "pytest -v --ignore=${PREFIX}/tests",
+            False,
+            "pytest -v --ignore=${PREFIX}/tests",
+        ),  # non-windows command is unchanged
+    ],
+)
+def test_path_separator_normalization(prefix, cmd, is_windows, expected, monkeypatch):
     """Test that path separators are normalized correctly in test commands."""
-    # Test with forward slash environment variable
-    import os
-
-    os.environ["PREFIX"] = "C:/path/to/prefix"
-    cmd1 = "pytest -v --ignore=%PREFIX%\\tests"
-    result1 = _normalize_path_separators_in_command(cmd1, True)
-    assert result1 == "pytest -v --ignore=%PREFIX%/tests"
-
-    # Test with backslash environment variable
-    os.environ["PREFIX"] = "C:\\path\\to\\prefix"
-    cmd2 = "pytest -v --ignore=%PREFIX%/tests"
-    result2 = _normalize_path_separators_in_command(cmd2, True)
-    assert result2 == "pytest -v --ignore=%PREFIX%\\tests"
-
-    # Test that non-Windows commands are unchanged
-    cmd3 = "pytest -v --ignore=${PREFIX}/tests"
-    result3 = _normalize_path_separators_in_command(cmd3, False)
-    assert result3 == "pytest -v --ignore=${PREFIX}/tests"
+    monkeypatch.setenv("PREFIX", prefix)
+    result = _normalize_path_separators_in_command(cmd, is_windows)
+    assert result == expected
