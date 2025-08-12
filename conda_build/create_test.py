@@ -137,8 +137,9 @@ def create_shell_files(m: MetaData, test_dir: os.PathLike) -> list[str]:
                 f.write("\n\n")
                 for cmd in commands:
                     # Normalize path separators for consistent handling
-                    normalized_cmd = _normalize_path_separators_in_command(cmd, status)
-                    f.write(normalized_cmd)
+                    if status:
+                        cmd = _normalize_path_separators_in_command(cmd)
+                    f.write(cmd)
                     f.write("\n")
                     if status:
                         f.write("IF %ERRORLEVEL% NEQ 0 exit /B 1\n")
