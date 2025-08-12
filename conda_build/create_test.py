@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+import shlex
 from os.path import basename, exists, isfile, join
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -17,8 +18,22 @@ from .utils import copy_into, ensure_list, on_win, rm_rf
 if TYPE_CHECKING:
     from .metadata import MetaData
 
+WINDOWS_PATH_ENV_VARS = [
+    "SP_DIR",
+    "PREFIX",
+    "BUILD_PREFIX",
+    "SRC_DIR",
+    "STDLIB_DIR",
+    "RECIPE_DIR",
+    "LIBRARY_BIN",
+    "LIBRARY_INC",
+    "LIBRARY_LIB",
+    "LIBRARY_PREFIX",
+    "SCRIPTS",
+]
 
-def _normalize_path_separators_in_command(cmd: str, is_windows: bool) -> str:
+
+def _normalize_path_separators_in_command(cmd: str) -> str:
     """
     Normalize path separators in test commands to ensure consistency.
 
@@ -26,44 +41,34 @@ def _normalize_path_separators_in_command(cmd: str, is_windows: bool) -> str:
     the path separators accordingly, rather than assuming Windows = backslashes.
     Only normalizes the specific parts containing environment variables.
     """
-    path_env_vars = [
-        "SP_DIR",
-        "PREFIX",
-        "BUILD_PREFIX",
-        "SRC_DIR",
-        "STDLIB_DIR",
-        "RECIPE_DIR",
-        "LIBRARY_PREFIX",
-        "LIBRARY_BIN",
-        "LIBRARY_INC",
-        "LIBRARY_LIB",
-        "SCRIPTS",
-        "SYS_PREFIX",
-        "ROOT",
-    ]
-
-    if not is_windows:
-        return cmd
 
     # Find which environment variables are present in the command
-    cmd_path_env_vars = [var for var in path_env_vars if f"%{var}%" in cmd]
+    cmd_path_env_vars = [
+        var
+        for var in WINDOWS_PATH_ENV_VARS
+        if f"%{var}%" in cmd or f"%{var.lower()}%" in cmd
+    ]
 
     if not cmd_path_env_vars:
         return cmd
+
+    # Guess the separator used in the command by counting the number of forward and backslashes
+    # NOTE: This default to forward slash because of Windows, but this may prove to be wrong.
+    guess_separator = (
+        lambda a_str: "/" if a_str.count("/") > a_str.count("\\") else "\\"
+    )
 
     # Determine the expected separator for each environment variable
     envs_separator = {}
     for env_var in cmd_path_env_vars:
         env_value = os.environ.get(env_var, "")
-        envs_separator[env_var] = (
-            "/" if env_value.count("/") > env_value.count("\\") else "\\"
-        )
+        envs_separator[env_var] = guess_separator(env_value)
 
     # Process each part of the command to normalize the path separators
-    for part in cmd.split():
+    for part in shlex.split(cmd, posix=False):
         for env_var in cmd_path_env_vars:
             if env_var in part:
-                part_separator = "/" if part.count("/") > part.count("\\") else "\\"
+                part_separator = guess_separator(part)
                 if part_separator != envs_separator[env_var]:
                     changed_part = part.replace(part_separator, envs_separator[env_var])
                     cmd = cmd.replace(part, changed_part)
