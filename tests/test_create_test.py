@@ -153,30 +153,32 @@ def test_create_run_test(
 
 
 @pytest.mark.parametrize(
-    "prefix,cmd,is_windows,expected",
+    "prefix,cmd,expected",
     [
+        (
+            "C:\\path\\to\\prefix",
+            "pytest -v --ignore=%PREFIX%/tests",
+            "pytest -v --ignore=%PREFIX%\\tests",
+        ),  # backslash environment variable -> normal windows path
         (
             "C:/path/to/prefix",
             "pytest -v --ignore=%PREFIX%\\tests",
-            True,
             "pytest -v --ignore=%PREFIX%/tests",
         ),  # forward slash environment variable
         (
             "C:\\path\\to\\prefix",
-            "pytest -v --ignore=%PREFIX%/tests",
-            True,
-            "pytest -v --ignore=%PREFIX%\\tests",
-        ),  # backslash environment variable
+            'pytest -v --ignore="%PREFIX%/test dir with spaces/test"',
+            'pytest -v --ignore="%PREFIX%\\test dir with spaces\\test"',
+        ),
         (
-            "/path/to/prefix",
-            "pytest -v --ignore=${PREFIX}/tests",
-            False,
-            "pytest -v --ignore=${PREFIX}/tests",
-        ),  # non-windows command is unchanged
+            "C:/path/to/prefix",
+            'pytest -v --ignore="%PREFIX%\\test dir with spaces\\test"',
+            'pytest -v --ignore="%PREFIX%/test dir with spaces/test"',
+        ),
     ],
 )
-def test_path_separator_normalization(prefix, cmd, is_windows, expected, monkeypatch):
+def test_path_separator_normalization(prefix, cmd, expected, monkeypatch):
     """Test that path separators are normalized correctly in test commands."""
     monkeypatch.setenv("PREFIX", prefix)
-    result = _normalize_path_separators_in_command(cmd, is_windows)
+    result = _normalize_path_separators_in_command(cmd)
     assert result == expected

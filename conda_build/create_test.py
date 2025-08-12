@@ -65,15 +65,52 @@ def _normalize_path_separators_in_command(cmd: str) -> str:
         envs_separator[env_var] = guess_separator(env_value)
 
     # Process each part of the command to normalize the path separators
-    for part in shlex.split(cmd, posix=False):
+    # shlex.split does not handle quoted strings correctly (see docs), so we need to handle them manually
+    parts = shlex.split(cmd, posix=False)
+
+    # Process each part to assure they are complete and then normalize
+    corrected_parts = []
+    corrected_parts.append(
+        parts[0]
+    )  # Shlex does ok with the first part of a command in windows
+
+    i = 1
+    while i < len(parts):
+        part = parts[i]
+
+        # If part has a quote but does not end with a quote, we need to find the next quote and join the parts
+        # This is the case where we have a --option="value with spaces"
+        if '"' in part and not part.endswith('"'):
+            quoted_part = [part]
+            i += 1
+
+            while i < len(parts) and not parts[i].endswith('"'):
+                quoted_part.append(parts[i])
+                i += 1
+
+            # Added last part ending with a quote
+            if i < len(parts):
+                quoted_part.append(parts[i])
+
+            corrected_parts.append(" ".join(quoted_part))
+            i += 1
+        else:
+            corrected_parts.append(part)
+            i += 1
+
+    new_cmd_parts = []
+    for part in corrected_parts:
         for env_var in cmd_path_env_vars:
-            if env_var in part:
+            if env_var in part or env_var.lower() in part:
                 part_separator = guess_separator(part)
                 if part_separator != envs_separator[env_var]:
                     changed_part = part.replace(part_separator, envs_separator[env_var])
-                    cmd = cmd.replace(part, changed_part)
+                    new_cmd_parts.append(changed_part)
+            else:
+                new_cmd_parts.append(part)
+    new_cmd = " ".join(new_cmd_parts)
 
-    return cmd
+    return new_cmd
 
 
 def create_files(m: MetaData, test_dir: Path) -> bool:
