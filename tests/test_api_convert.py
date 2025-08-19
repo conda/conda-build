@@ -10,6 +10,7 @@ import pytest
 from conda.gateways.connection.download import download
 
 from conda_build import api
+from conda_build.exceptions import CondaBuildUserError
 from conda_build.utils import on_win, package_has_file
 
 from .utils import assert_package_consistency, metadata_dir
@@ -60,8 +61,7 @@ def test_show_imports(base_platform, package, capfd):
     download(f, fn)
 
     for platform in platforms:
-        with pytest.raises(SystemExit):
-            api.convert(fn, platforms=platform, show_imports=True)
+        api.convert(fn, platforms=platform, show_imports=True)
 
         output, error = capfd.readouterr()
 
@@ -80,8 +80,7 @@ def test_no_imports_found(base_platform, package, capfd):
     fn = f"{package_name}-py36_0.tar.bz2"
     download(f, fn)
 
-    with pytest.raises(SystemExit):
-        api.convert(fn, platforms=None, show_imports=True)
+    api.convert(fn, platforms=None, show_imports=True)
 
     output, error = capfd.readouterr()
     assert "No imports found." in output
@@ -96,12 +95,11 @@ def test_no_platform(base_platform, package):
     fn = f"{package_name}-py36_0.tar.bz2"
     download(f, fn)
 
-    with pytest.raises(SystemExit) as e:
+    with pytest.raises(
+        CondaBuildUserError,
+        match="Error: --platform option required for conda package conversion.",
+    ):
         api.convert(fn, platforms=None)
-
-    assert "Error: --platform option required for conda package conversion." in str(
-        e.value
-    )
 
 
 @pytest.mark.parametrize("base_platform", ["linux", "win", "osx"])
@@ -121,13 +119,12 @@ def test_c_extension_error(base_platform, package):
     download(f, fn)
 
     for platform in platforms:
-        with pytest.raises(SystemExit) as e:
+        with pytest.raises(
+            CondaBuildUserError,
+            match=f"WARNING: Package {fn} contains C extensions; skipping conversion. "
+            "Use -f to force conversion.",
+        ):
             api.convert(fn, platforms=platform)
-
-    assert (
-        f"WARNING: Package {fn} contains C extensions; skipping conversion. "
-        "Use -f to force conversion."
-    ) in str(e.value)
 
 
 @pytest.mark.parametrize("base_platform", ["linux", "win", "osx"])
@@ -183,6 +180,7 @@ def test_convert_platform_to_others(base_platform, package):
     on_win, reason="we create the pkg to be converted in *nix; don't run on win."
 )
 def test_convert_from_unix_to_win_creates_entry_points(testing_config, request):
+    testing_config.conda_pkg_format = 1
     recipe_dir = os.path.join(metadata_dir, "entry_points")
     # Recipe "entry_points" is used in other test -> add test-specific variant
     # (change build hash) to avoid clashes in package cache from other tests.

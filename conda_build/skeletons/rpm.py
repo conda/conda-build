@@ -21,7 +21,7 @@ from ..utils import ensure_list
 from .cran import yaml_quote_string
 
 if TYPE_CHECKING:
-    from typing import Iterable
+    from collections.abc import Iterable
 
     from ..config import Config
 
@@ -333,9 +333,9 @@ def get_repo_dict(repomd_url, data_type, dict_massager, cdt, src_cache):
             cached_path, cached_csum = cache_file(
                 src_cache, xmlgz_file, None, cdt["checksummer"]
             )
-            assert (
-                csum == cached_csum
-            ), f"Checksum for {xmlgz_file} does not match value in {repomd_url}"
+            assert csum == cached_csum, (
+                f"Checksum for {xmlgz_file} does not match value in {repomd_url}"
+            )
             with gzip.open(cached_path, "rb") as gz:
                 xml_content = gz.read()
                 xml_csum = cdt["checksummer"]()

@@ -188,7 +188,7 @@ class fileview:
         self._pos = 0
 
     def __repr__(self):
-        return "<fileview [%d, %d] %r>" % (self._start, self._end, self._fileobj)
+        return "<fileview [%d, %d] %r>" % (self._start, self._end, self._fileobj)  # noqa: UP031
 
     def tell(self):
         return self._pos
@@ -196,7 +196,7 @@ class fileview:
     def _checkwindow(self, seekto, op):
         if not (self._start <= seekto <= self._end):
             raise OSError(
-                "%s to offset %d is outside window [%d, %d]"
+                "%s to offset %d is outside window [%d, %d]"  # noqa: UP031
                 % (op, seekto, self._start, self._end)
             )
 
@@ -1263,9 +1263,9 @@ def main_maybe_test():
             else:
                 that = this
             print("\n".join(this))
-            assert (
-                set(this) == set(that)
-            ), f"py-ldd result incorrect for {codefile}, this:\n{set(this)}\nvs that:\n{set(that)}"
+            assert set(this) == set(that), (
+                f"py-ldd result incorrect for {codefile}, this:\n{set(this)}\nvs that:\n{set(that)}"
+            )
     else:
         return main(sys.argv)
 

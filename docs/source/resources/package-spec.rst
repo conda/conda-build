@@ -17,9 +17,9 @@ There are currently two formats of archives that are supported:
      - **Description**
 
    * - .tar.bz2
-     - The original format of conda packages.  Is the default output of conda-build.
+     - The original format of conda packages.
    * - .conda
-     - 2nd Gen.  This is a more compact and thus faster. Can be outputed from conda-build by setting output in ``.condarc`` file.
+     - 2nd Gen. This is a more compact and thus faster. Default since 25.1.
 
 The formats are identical across platforms and operating systems.
 During the install process, all files are extracted into the
@@ -125,6 +125,13 @@ conda package is composed of the first 3 values, as in:
 
        See :ref:`repo-si`.
 
+info/paths.json
+---------------
+
+Combines information from ``info/files``, ``info/has_prefix``, and
+``info/no_link`` into a single file. The older files are ignored by
+conda when ``paths.json`` is present. Introduced in 2016.
+
 info/files
 ----------
 
@@ -178,17 +185,17 @@ EXAMPLE: On macOS or Linux::
    delimiter. On Windows, the placeholder and path always appear
    in quotes to support paths with spaces.
 
-info/license.txt
-----------------
-
-Optional file. The software license for the package.
-
 info/no_link
 ------------
 
 Optional file. Lists all files that cannot be linked---either
 soft-linked or hard-linked---into environments and are copied
 instead.
+
+info/license.txt
+----------------
+
+Optional file. The software license for the package.
 
 info/about.json
 ---------------

@@ -1,0 +1,14 @@
+package:
+  name: pkg
+  version: 1.0.0
+
+build:
+  number: 0
+  ignore_run_exports_from:
+    - i-like-python
+
+requirements:
+  host:
+    - conda-forge::python
+  run:
+    - numpy

@@ -15,9 +15,10 @@ from __future__ import annotations
 #    to conda-build's functionality.
 import os
 import sys
+from collections.abc import Iterable
 from os.path import dirname, expanduser, join
 from pathlib import Path
-from typing import TYPE_CHECKING, Iterable
+from typing import TYPE_CHECKING
 
 # make the Config class available in the api namespace
 from .config import DEFAULT_PREFIX_LENGTH as _prefix_length
@@ -166,6 +167,7 @@ def check(
     return all(m[0].check_fields() for m in metadata)
 
 
+# UP007 can be exception can be dropped when Python 3.10 is minimum version.
 def build(
     recipe_paths_or_metadata: str | os.PathLike | Path | MetaData,
     post: bool | None = None,
@@ -229,7 +231,7 @@ def test(
     """Run tests on either packages (.tar.bz2 or extracted) or recipe folders
 
     For a recipe folder, it renders the recipe enough to know what package to download, and obtains
-    it from your currently configuured channels."""
+    it from your currently configured channels."""
     from .build import test as run_test
 
     if hasattr(recipedir_or_package_or_metadata, "config"):
@@ -426,14 +428,14 @@ def inspect_prefix_length(packages, min_prefix_length=_prefix_length):
     prefix_lengths = check_prefix_lengths(packages, config)
     if prefix_lengths:
         print(
-            "Packages with binary prefixes shorter than %d characters:"
+            "Packages with binary prefixes shorter than %d characters:"  # noqa: UP031
             % min_prefix_length
         )
         for fn, length in prefix_lengths.items():
             print(f"{fn} ({length} chars)")
     else:
         print(
-            "No packages found with binary prefixes shorter than %d characters."
+            "No packages found with binary prefixes shorter than %d characters."  # noqa: UP031
             % min_prefix_length
         )
     return len(prefix_lengths) == 0

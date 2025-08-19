@@ -1,0 +1,29 @@
+package:
+  name: python_version_independent_test_package
+  version: "1.0"
+
+source:
+  path: ../_noarch_python_with_tests/noarch_python_test_package
+
+build:
+  script: python setup.py install --single-version-externally-managed --record=record.txt
+  python_version_independent: true
+  entry_points:
+    - noarch_python_test_package_script = noarch_python_test_package:main
+
+requirements:
+  build:
+    - cross-python_{{ target_platform }}   # [build_platform != target_platform]
+  host:
+    - python 3.11.*
+    - setuptools
+  run:
+    - python >=3.11
+
+test:
+  requires:
+    - python 3.12.*
+  imports:
+    - noarch_python_test_package
+  commands:
+    - noarch_python_test_package_script

@@ -15,7 +15,7 @@ from .main_render import get_render_parser
 
 if TYPE_CHECKING:
     from argparse import ArgumentParser
-    from typing import Sequence
+    from collections.abc import Sequence
 
 logging.basicConfig(level=logging.INFO)
 

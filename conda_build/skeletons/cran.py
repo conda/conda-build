@@ -115,8 +115,8 @@ test:
     - $R -e "library('{cran_packagename}')"           # [not win]
     - "\\"%R%\\" -e \\"library('{cran_packagename}')\\""  # [win]
 
-  # You can also put a file called run_test.py, run_test.sh, or run_test.bat
-  # in the recipe that will be run at test time.
+  # You can also put a file called run_test.r, run_test.py, run_test.sh,
+  # or run_test.bat in the recipe that will be run at test time.
 
   # requires:
     # Put any additional test requirements here.
@@ -1577,10 +1577,10 @@ def skeletonize(
                                 inputs_dict = package_to_inputs_dict(
                                     output_dir, output_suffix, git_tag, lower_name, None
                                 )
-                                assert (
-                                    lower_name == inputs_dict["pkg-name"]
-                                ), "name {} != inputs_dict['pkg-name'] {}".format(
-                                    name, inputs_dict["pkg-name"]
+                                assert lower_name == inputs_dict["pkg-name"], (
+                                    "name {} != inputs_dict['pkg-name'] {}".format(
+                                        name, inputs_dict["pkg-name"]
+                                    )
                                 )
                                 assert lower_name not in package_list
                                 package_dicts.update(
