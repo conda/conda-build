@@ -9,10 +9,10 @@ as the meta.yaml file. The following scripts can be added:
   indicated by a nonzero exit and causes conda to stop and causes the
   installation to fail.
 * ``post-link``---Executed after the package is installed. An error is
-  indicated by a nonzero exist and causes installation to fail. If there is an
+  indicated by a nonzero exit and causes installation to fail. If there is an
   error, conda does not write any package metadata.
 * ``pre-unlink``---Executed before the package is removed. An error is
-  indicated by a nonzero exist and causes the removal to fail.
+  indicated by a nonzero exit and causes the removal to fail.
 
 In addition to being co-located with the meta.yaml file, they must be named simply ``post-link.sh`` or ``post-link.bat``. Conda-build will rename them to .<name>-<action>.sh (or .bat) where ``<name>`` is the package name and ``<action>`` is one of the preceeding actions.
 
