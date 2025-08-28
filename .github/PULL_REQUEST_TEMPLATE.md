@@ -14,7 +14,7 @@
      please either tick them or use ~strikethrough~ so we know you've gone
      through the checklist. -->
 
-- [ ] Add a file to the `news` directory ([using the template](https://github.com/conda/conda-build/blob/main/news/TEMPLATE.md)) for the next release's release notes?
+- [ ] Add a file to the `news` directory ([using the template](https://github.com/conda/conda-build/blob/main/news/TEMPLATE)) for the next release's release notes?
      <!-- All "significant" changes should get an entry:
             - user-facing changes or enhancements
             - bug fixes
