@@ -142,6 +142,8 @@ filterwarnings = [
   "ignore:conda.auxlib.entity.EntityEncoder is pending deprecation:PendingDeprecationWarning:conda",
   # ignore tarfile
   "ignore:Python 3.14 will, by default, filter extracted tar archives:DeprecationWarning",
+  # TEMPORARY: Remove once CLS is released with https://github.com/conda/conda-libmamba-solver/pull/691
+  "ignore:conda.plugins.CondaSolver is pending deprecation:PendingDeprecationWarning:conda",
 ]
 markers = [
   "serial: execute test serially (to avoid race conditions)",
