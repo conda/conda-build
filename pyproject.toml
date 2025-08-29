@@ -143,7 +143,8 @@ filterwarnings = [
   # ignore tarfile
   "ignore:Python 3.14 will, by default, filter extracted tar archives:DeprecationWarning",
   # TEMPORARY: Remove once CLS is released with https://github.com/conda/conda-libmamba-solver/pull/691
-  "ignore:conda.plugins.CondaSolver is pending deprecation:PendingDeprecationWarning:conda",
+  "ignore:conda.plugins.CondaSolver:PendingDeprecationWarning",
+  "ignore:conda.plugins.CondaSolver:DeprecationWarning",
 ]
 markers = [
   "serial: execute test serially (to avoid race conditions)",
