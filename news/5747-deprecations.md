@@ -4,7 +4,7 @@
 
 ### Bug fixes
 
-* Import `CondaSubCommand` from its new location but fallback to its previous one for backwards compatibility. (#5747)
+* Import `CondaSubCommand` from its canonical location to avoid deprecation warnings. (#5747)
 
 ### Deprecations
 
