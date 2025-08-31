@@ -77,6 +77,7 @@ from .render import (
 from .utils import (
     CONDA_PACKAGE_EXTENSIONS,
     MAX_CMD_LINE_LENGTH,
+    chunks,
     create_file_with_permissions,
     env_var,
     glob,
@@ -85,7 +86,6 @@ from .utils import (
     shutil_move_more_retrying,
     tmp_chdir,
     write_bat_activation_text,
-    chunks,
 )
 from .variants import (
     dict_of_lists_to_list_of_dicts,

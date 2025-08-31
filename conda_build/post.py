@@ -63,12 +63,12 @@ from .os_utils.pyldd import (
 )
 from .utils import (
     FALLBACK_MENUINST_SCHEMA,
+    MAX_CMD_LINE_LENGTH,
     VALID_SCHEMA_LOCATIONS,
+    chunks,
     on_mac,
     on_win,
     prefix_files,
-    chunks,
-    MAX_CMD_LINE_LENGTH,
 )
 
 if TYPE_CHECKING:

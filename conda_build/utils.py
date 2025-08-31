@@ -2308,11 +2308,11 @@ def chunks(line: list[str], n: int, len_padding: int = 3, use_len: bool = True) 
         Args:
             line (list of strings): a list of strings (e.g., a command line argument list)
             n (int): max chunk size
-            len_padding (int): if use_len=True, add this to each of the string lengths. 
+            len_padding (int): if use_len=True, add this to each of the string lengths.
                 (default is 3 in case a shell is used: 1 space and 2 quotes.)
-            use_len (bool): If True (default), the string lengths are used. If False, 
-                then the number of strings is used. It may be that when using the list 
-                form of passing args to subprocess what matters is the number of arguments 
+            use_len (bool): If True (default), the string lengths are used. If False,
+                then the number of strings is used. It may be that when using the list
+                form of passing args to subprocess what matters is the number of arguments
                 rather than the accumulated string length. We should test this!
 
         Returns:
