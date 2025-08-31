@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import conda.plugins
-
 from conda.plugins.types import CondaSubcommand
 
 if TYPE_CHECKING:
