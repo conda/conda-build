@@ -72,11 +72,32 @@ def test_disallow_merge_conflicts(namespace_setup: os.PathLike):
 
 
 @pytest.mark.sanity
-def test_disallow_in_tree_merge(testing_workdir):
-    with open("testfile", "w") as f:
+def test_is_subdir(testing_workdir):
+    assert not utils.is_subdir(testing_workdir, testing_workdir)
+    assert utils.is_subdir(testing_workdir, testing_workdir, strict=False)
+    subdir = os.path.join(testing_workdir, "subdir")
+    assert utils.is_subdir(subdir, testing_workdir)
+    assert utils.is_subdir(subdir, testing_workdir, strict=False)
+
+
+@pytest.mark.sanity
+def test_disallow_down_tree_merge(testing_workdir):
+    src = testing_workdir
+    with open(os.path.join(src, "testfile"), "w") as f:
         f.write("test")
     with pytest.raises(AssertionError):
-        utils.merge_tree(testing_workdir, os.path.join(testing_workdir, "subdir"))
+        utils.merge_tree(src, testing_workdir)
+    with pytest.raises(AssertionError):
+        utils.merge_tree(src, os.path.join(testing_workdir, "subdir"))
+
+
+@pytest.mark.sanity
+def test_allow_up_tree_merge(testing_workdir):
+    src = os.path.join(testing_workdir, "subdir")
+    os.makedirs(src)
+    with open(os.path.join(src, "testfile"), "w") as f:
+        f.write("test")
+    utils.merge_tree(src, testing_workdir)
 
 
 def test_expand_globs(testing_workdir):
@@ -163,7 +184,7 @@ def test_logger_filtering(caplog, capfd):
     log.info("test info message")
     log.info("test duplicate message")
     log.info("test duplicate message")
-    log.warn("test warn message")
+    log.warning("test warn message")
     log.error("test error message")
     out, err = capfd.readouterr()
     assert "test debug message" in out
@@ -211,7 +232,7 @@ root:
     )
     log = utils.get_logger(__name__)
     # default log level is INFO, but our config file should set level to DEBUG
-    log.warn("test message")
+    log.warning("test message")
     # output should have gone to stdout according to config above.
     out, err = capfd.readouterr()
     assert "test message" in out

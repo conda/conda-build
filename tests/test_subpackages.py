@@ -11,6 +11,7 @@ import pytest
 from conda.base.context import context
 
 from conda_build import api, utils
+from conda_build.exceptions import BuildScriptException, CondaBuildUserError
 from conda_build.metadata import MetaDataTuple
 from conda_build.render import finalize_metadata
 
@@ -123,9 +124,9 @@ def test_intradependencies(testing_config):
     outputs2 = api.build(recipe, config=testing_config)
     assert len(outputs2) == 11
     outputs2_set = {os.path.basename(p) for p in outputs2}
-    assert (
-        outputs1_set == outputs2_set
-    ), f"pkgs differ :: get_output_file_paths()={outputs1_set} but build()={outputs2_set}"
+    assert outputs1_set == outputs2_set, (
+        f"pkgs differ :: get_output_file_paths()={outputs1_set} but build()={outputs2_set}"
+    )
 
 
 def test_git_in_output_version(testing_config, conda_build_test_recipe_envvar: str):
@@ -292,10 +293,13 @@ def test_per_output_tests(testing_config):
 @pytest.mark.sanity
 def test_per_output_tests_script(testing_config):
     recipe_dir = os.path.join(subpackage_dir, "_output_test_script")
-    with pytest.raises(SystemExit):
+    with pytest.raises(CondaBuildUserError):
         api.build(recipe_dir, config=testing_config)
 
 
+@pytest.mark.xfail(
+    sys.version_info >= (3, 13), reason="Numpy build doesn't run on Python 3.13 yet."
+)
 def test_pin_compatible_in_outputs(testing_config):
     recipe_dir = os.path.join(subpackage_dir, "_pin_compatible_in_output")
     metadata = api.render(recipe_dir, config=testing_config)[0][0]
@@ -351,6 +355,18 @@ def test_build_script_and_script_env_warn_empty_script_env(testing_config):
         match="The environment variable 'TEST_FN_DOESNT_EXIST' specified in script_env is undefined",
     ):
         api.build(recipe, config=testing_config)
+
+
+@pytest.mark.sanity
+def test_build_script_does_not_set_env_from_script_env_if_missing(
+    testing_config, capfd, monkeypatch
+):
+    monkeypatch.delenv("TEST_FN_DOESNT_EXIST", raising=False)
+    recipe = os.path.join(subpackage_dir, "_build_script_relying_on_missing_var")
+    with pytest.raises(BuildScriptException):
+        api.build(recipe, config=testing_config)
+    captured = capfd.readouterr()
+    assert "KeyError: 'TEST_FN_DOESNT_EXIST'" in captured.err
 
 
 @pytest.mark.sanity
@@ -435,12 +451,12 @@ def test_inherit_build_number(testing_config):
     recipe = os.path.join(subpackage_dir, "_inherit_build_number")
     metadata_tuples = api.render(recipe, config=testing_config)
     for metadata, _, _ in metadata_tuples:
-        assert (
-            "number" in metadata.meta["build"]
-        ), "build number was not inherited at all"
-        assert (
-            int(metadata.meta["build"]["number"]) == 1
-        ), "build number should have been inherited as '1'"
+        assert "number" in metadata.meta["build"], (
+            "build number was not inherited at all"
+        )
+        assert int(metadata.meta["build"]["number"]) == 1, (
+            "build number should have been inherited as '1'"
+        )
 
 
 def test_circular_deps_cross(testing_config):
@@ -456,9 +472,7 @@ def test_loops_do_not_remove_earlier_packages(testing_config):
 
     api.build(recipe, config=testing_config)
     assert len(output_files) == len(
-        glob(
-            os.path.join(testing_config.croot, testing_config.host_subdir, "*.tar.bz2")
-        )
+        glob(os.path.join(testing_config.croot, testing_config.host_subdir, "*.conda"))
     )
 
 
@@ -471,8 +485,8 @@ def test_build_string_does_not_incorrectly_add_hash(testing_config):
     recipe = os.path.join(subpackage_dir, "_build_string_with_variant")
     output_files = api.get_output_file_paths(recipe, config=testing_config)
     assert len(output_files) == 4
-    assert any("clang_variant-1.0-cling.tar.bz2" in f for f in output_files)
-    assert any("clang_variant-1.0-default.tar.bz2" in f for f in output_files)
+    assert any("clang_variant-1.0-cling.conda" in f for f in output_files)
+    assert any("clang_variant-1.0-default.conda" in f for f in output_files)
 
 
 def test_multi_outputs_without_package_version(testing_config):
@@ -480,9 +494,9 @@ def test_multi_outputs_without_package_version(testing_config):
     recipe = os.path.join(subpackage_dir, "_multi_outputs_without_package_version")
     outputs = api.build(recipe, config=testing_config)
     assert len(outputs) == 3
-    assert outputs[0].endswith("a-1-0.tar.bz2")
-    assert outputs[1].endswith("b-2-0.tar.bz2")
-    assert outputs[2].endswith("c-3-0.tar.bz2")
+    assert outputs[0].endswith("a-1-0.conda")
+    assert outputs[1].endswith("b-2-0.conda")
+    assert outputs[2].endswith("c-3-0.conda")
 
 
 def test_empty_outputs_requires_package_version(testing_config):

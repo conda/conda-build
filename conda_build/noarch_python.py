@@ -1,46 +1,47 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
+
 import json
 import locale
 import logging
 import os
 import shutil
-import sys
 from os.path import basename, dirname, isfile, join
+from pathlib import Path
 
-from .utils import on_win
+from .exceptions import CondaBuildUserError
+from .utils import bin_dirname, on_win, rm_rf
 
 
-def rewrite_script(fn, prefix):
+def rewrite_script(fn: str, prefix: str | os.PathLike) -> str:
     """Take a file from the bin directory and rewrite it into the python-scripts
     directory with the same permissions after it passes some sanity checks for
     noarch pacakges"""
 
     # Load and check the source file for not being a binary
-    src = join(prefix, "Scripts" if on_win else "bin", fn)
+    src = Path(prefix, bin_dirname, fn)
     encoding = locale.getpreferredencoding()
     # if default locale is ascii, allow UTF-8 (a reasonably modern ASCII extension)
     if encoding == "ANSI_X3.4-1968":
         encoding = "UTF-8"
-    with open(src, encoding=encoding) as fi:
-        try:
-            data = fi.read()
-        except UnicodeDecodeError:  # file is binary
-            sys.exit(f"[noarch_python] Noarch package contains binary script: {fn}")
-    src_mode = os.stat(src).st_mode
-    os.unlink(src)
+    try:
+        data = src.read_text(encoding=encoding)
+    except UnicodeDecodeError:  # binary file
+        raise CondaBuildUserError(f"Noarch package contains binary script: {fn}")
+    src_mode = src.stat().st_mode
+    rm_rf(src)
 
     # Get rid of '-script.py' suffix on Windows
     if on_win and fn.endswith("-script.py"):
         fn = fn[:-10]
 
     # Rewrite the file to the python-scripts directory
-    dst_dir = join(prefix, "python-scripts")
-    os.makedirs(dst_dir, exist_ok=True)
-    dst = join(dst_dir, fn)
-    with open(dst, "w") as fo:
-        fo.write(data)
-    os.chmod(dst, src_mode)
+    dst_dir = Path(prefix, "python-scripts")
+    dst_dir.mkdir(exist_ok=True)
+    dst = dst_dir / fn
+    dst.write_text(data)
+    dst.chmod(src_mode)
     return fn
 
 

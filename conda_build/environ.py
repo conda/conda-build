@@ -12,7 +12,7 @@ import subprocess
 import sys
 import warnings
 from collections import defaultdict
-from functools import lru_cache
+from functools import cache
 from glob import glob
 from logging import getLogger
 from os.path import join, normpath
@@ -58,8 +58,9 @@ from .utils import (
 from .variants import get_default_variant
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
     from pathlib import Path
-    from typing import Any, Iterable, TypedDict
+    from typing import Any, TypedDict
 
     from .config import Config
     from .metadata import MetaData
@@ -120,7 +121,7 @@ def get_lua_include_dir(config):
     return join(config.host_prefix, "include")
 
 
-@lru_cache(maxsize=None)
+@cache
 def verify_git_repo(
     git_exe, git_dir, git_url, git_commits_since_tag, debug=False, expected_rev="HEAD"
 ):
@@ -602,7 +603,7 @@ def meta_vars(meta: MetaData, skip_build_id=False):
     return d
 
 
-@lru_cache(maxsize=None)
+@cache
 def get_cpu_count():
     if on_mac:
         # multiprocessing.cpu_count() is not reliable on OSX
@@ -724,7 +725,7 @@ def osx_vars(m, get_default, prefix):
     get_default("BUILD", BUILD)
 
 
-@lru_cache(maxsize=None)
+@cache
 def _machine_and_architecture():
     return platform.machine(), platform.architecture()
 
@@ -865,8 +866,6 @@ def get_install_actions(
         channel_urls=channel_urls,
         debug=debug,
         verbose=verbose,
-        locking=locking,
-        timeout=timeout,
     )
     specs = tuple(
         utils.ensure_valid_spec(spec) for spec in specs if not str(spec).endswith("@")
@@ -888,7 +887,8 @@ def get_install_actions(
         with utils.LoggingContext(conda_log_level):
             with capture():
                 try:
-                    precs = _install_actions(prefix, index, specs)["LINK"]
+                    _actions = _install_actions(prefix, index, specs, subdir=subdir)
+                    precs = _actions["LINK"]
                 except (NoPackagesFoundError, UnsatisfiableError) as exc:
                     raise DependencyNeedsBuildingError(exc, subdir=subdir)
                 except (
@@ -901,7 +901,7 @@ def get_install_actions(
                     BuildLockError,
                 ) as exc:
                     if "lock" in str(exc):
-                        log.warn(
+                        log.warning(
                             "failed to get package records, retrying.  exception was: %s",
                             str(exc),
                         )
@@ -911,7 +911,9 @@ def get_install_actions(
                         or isinstance(exc, AssertionError)
                     ):
                         locks = utils.get_conda_operation_locks(
-                            locking, bldpkgs_dirs, timeout
+                            locking,
+                            bldpkgs_dirs,
+                            timeout,
                         )
                         with utils.try_acquire_locks(locks, timeout=timeout):
                             pkg_dir = str(exc)
@@ -922,7 +924,7 @@ def get_install_actions(
                             ):
                                 pkg_dir = os.path.dirname(pkg_dir)
                                 folder += 1
-                            log.warn(
+                            log.warning(
                                 "I think conda ended up with a partial extraction for %s. "
                                 "Removing the folder and retrying",
                                 pkg_dir,
@@ -930,7 +932,7 @@ def get_install_actions(
                             if pkg_dir in context.pkgs_dirs and os.path.isdir(pkg_dir):
                                 utils.rm_rf(pkg_dir)
                     if retries < max_env_retry:
-                        log.warn(
+                        log.warning(
                             "failed to get package records, retrying.  exception was: %s",
                             str(exc),
                         )
@@ -1008,7 +1010,11 @@ def create_env(
             log.debug(str(specs_or_precs))
 
             if not locks:
-                locks = utils.get_conda_operation_locks(config)
+                locks = utils.get_conda_operation_locks(
+                    config.locking,
+                    config.bldpkgs_dirs,
+                    config.timeout,
+                )
             try:
                 with utils.try_acquire_locks(locks, timeout=config.timeout):
                     # input is a list of specs in MatchSpec format
@@ -1037,8 +1043,6 @@ def create_env(
                         channel_urls=config.channel_urls,
                         debug=config.debug,
                         verbose=config.verbose,
-                        locking=config.locking,
-                        timeout=config.timeout,
                     )
                     _display_actions(prefix, precs)
                     if utils.on_win:
@@ -1063,20 +1067,20 @@ def create_env(
                     or isinstance(exc, PaddingError)
                 ) and config.prefix_length > 80:
                     if config.prefix_length_fallback:
-                        log.warn(
+                        log.warning(
                             "Build prefix failed with prefix length %d",
                             config.prefix_length,
                         )
-                        log.warn("Error was: ")
-                        log.warn(str(exc))
-                        log.warn(
+                        log.warning("Error was: ")
+                        log.warning(str(exc))
+                        log.warning(
                             "One or more of your package dependencies needs to be rebuilt "
                             "with a longer prefix length."
                         )
-                        log.warn(
+                        log.warning(
                             "Falling back to legacy prefix length of 80 characters."
                         )
-                        log.warn(
+                        log.warning(
                             "Your package will not install into prefixes > 80 characters."
                         )
                         config.prefix_length = 80
@@ -1098,7 +1102,7 @@ def create_env(
                         raise
                 elif "lock" in str(exc):
                     if retry < config.max_env_retry:
-                        log.warn(
+                        log.warning(
                             "failed to create env, retrying.  exception was: %s",
                             str(exc),
                         )
@@ -1124,7 +1128,7 @@ def create_env(
                         ):
                             pkg_dir = os.path.dirname(pkg_dir)
                             folder += 1
-                        log.warn(
+                        log.warning(
                             "I think conda ended up with a partial extraction for %s.  "
                             "Removing the folder and retrying",
                             pkg_dir,
@@ -1132,7 +1136,7 @@ def create_env(
                         if os.path.isdir(pkg_dir):
                             utils.rm_rf(pkg_dir)
                     if retry < config.max_env_retry:
-                        log.warn(
+                        log.warning(
                             "failed to create env, retrying.  exception was: %s",
                             str(exc),
                         )
@@ -1163,7 +1167,7 @@ def create_env(
                 if isinstance(exc, AssertionError):
                     with utils.try_acquire_locks(locks, timeout=config.timeout):
                         pkg_dir = os.path.dirname(os.path.dirname(str(exc)))
-                        log.warn(
+                        log.warning(
                             "I think conda ended up with a partial extraction for %s.  "
                             "Removing the folder and retrying",
                             pkg_dir,
@@ -1171,7 +1175,7 @@ def create_env(
                         if os.path.isdir(pkg_dir):
                             utils.rm_rf(pkg_dir)
                 if retry < config.max_env_retry:
-                    log.warn(
+                    log.warning(
                         "failed to create env, retrying.  exception was: %s", str(exc)
                     )
                     create_env(
@@ -1256,14 +1260,19 @@ def install_actions(
     prefix: str | os.PathLike | Path,
     index,
     specs: Iterable[str | MatchSpec],
+    subdir: str | None = None,
 ) -> InstallActionsType:
     # This is copied over from https://github.com/conda/conda/blob/23.11.0/conda/plan.py#L471
     # but reduced to only the functionality actually used within conda-build.
+    subdir_kwargs = {}
+    if subdir not in (None, "", "noarch"):
+        subdir_kwargs["CONDA_SUBDIR"] = subdir
 
     with env_vars(
         {
             "CONDA_ALLOW_NON_CHANNEL_URLS": "true",
             "CONDA_SOLVER_IGNORE_TIMESTAMPS": "false",
+            **subdir_kwargs,
         },
         callback=reset_context,
     ):
@@ -1347,6 +1356,8 @@ def _display_actions(prefix, precs):
     show_channel_urls = context.show_channel_urls
 
     def channel_str(rec):
+        if rec.get("channel_name"):
+            return rec["channel_name"]
         if rec.get("schannel"):
             return rec["schannel"]
         if rec.get("url"):

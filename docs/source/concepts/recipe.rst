@@ -19,7 +19,7 @@ is a flat directory that contains the following files:
 * ``bld.bat`` — The build script that installs the files for the
   package on Windows. It is executed using ``cmd``.
 
-* ``run_test.[py,pl,sh,bat]`` — An optional Python test file, a
+* ``run_test.[py,pl,sh,bat,r]`` — An optional Python test file, a
   test script that runs automatically if it is part of the recipe.
 
 * Optional patches that are applied to the source.
@@ -105,9 +105,9 @@ Templates
 When you build a conda package, conda-build renders the package
 by reading a template in the ``meta.yaml``. See :ref:`jinja-templates`.
 
-Templates are filled in using your ``conda build config``,
+Templates are filled in using your conda-build configuration,
 which shows the matrix of things to build against. The
-``conda build config`` determines how many builds it has to do.
+conda-build configuration determines how many builds it has to do.
 For example, defining a ``conda_build_config.yaml`` of the form
 and filling it defines a matrix of 4 packages to build::
 
@@ -119,7 +119,7 @@ and filling it defines a matrix of 4 packages to build::
      - 1.4.0
 
 After this, conda-build determines what the outputs will be.
-For example, if your ``conda build config`` indicates that you
+For example, if your conda-build configuration indicates that you
 want 2 different versions of Python, conda-build will show
 you the rendering for each Python version.
 

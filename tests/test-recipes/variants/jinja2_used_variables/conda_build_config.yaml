@@ -1,0 +1,27 @@
+CLANG_VERSION:
+  - 16.0.6
+  - 17.0.6
+  - 18.1.8
+  - 19.1.0.rc1
+
+VCVER:
+  - 14.3
+  - 14.2
+CL_VERSION:
+  - 19.40.33808
+  - 19.29.30139
+
+BLAH:
+  - a
+  - b
+
+FOO:
+  - cdf
+
+FOOBAR:
+  - hgf
+
+zip_keys:
+  -
+    - VCVER
+    - CL_VERSION

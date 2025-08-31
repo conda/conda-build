@@ -9,17 +9,22 @@ from __future__ import annotations
 import copy
 import math
 import os
+import pickle
 import re
 import shutil
 import time
 from collections import namedtuple
+from enum import Enum
 from os.path import abspath, expanduser, expandvars, join
 from typing import TYPE_CHECKING
 
+from conda.base.constants import (
+    CONDA_PACKAGE_EXTENSION_V1,
+    CONDA_PACKAGE_EXTENSION_V2,  # noqa: F401
+)
 from conda.base.context import context
 from conda.utils import url_path
 
-from .deprecations import deprecated
 from .utils import (
     get_build_folders,
     get_conda_operation_locks,
@@ -31,7 +36,9 @@ from .variants import get_default_variant
 
 if TYPE_CHECKING:
     from pathlib import Path
-    from typing import Any
+    from typing import Any, TypeVar
+
+    T = TypeVar("T")
 
 invocation_time = ""
 
@@ -44,6 +51,42 @@ def set_invocation_time():
 set_invocation_time()
 
 
+class CondaPkgFormat(Enum):
+    """Conda Package Format class
+
+    Conda Package Version 1 => 'tar.bz2'
+    Conda Package Version 2 => '.conda'
+    """
+
+    V1 = CONDA_PACKAGE_EXTENSION_V1
+    V2 = CONDA_PACKAGE_EXTENSION_V2
+
+    @classmethod
+    def normalize(cls, input) -> CondaPkgFormat:
+        if isinstance(input, cls):
+            return input
+        if not cls.is_acceptable(input):
+            raise ValueError(
+                f'{input} is not valid. Acceptable values [1, "1", ".tar.bz2", 2, "2", ".conda"]'
+            )
+        if input in (1, "1", "tar.bz2", ".tar.bz2", cls.V1):
+            return cls.V1
+        elif input in (2, "2", "conda", ".conda", cls.V2):
+            return cls.V2
+
+    @staticmethod
+    def acceptable():
+        return (1, "1", "tar.bz2", ".tar.bz2", 2, "2", "conda", ".conda")
+
+    @classmethod
+    def is_acceptable(cls, value):
+        return value in cls.acceptable()
+
+    @property
+    def ext(self):
+        return self.value
+
+
 # Don't "save" an attribute of this module for later, like build_prefix =
 # conda_build.config.config.build_prefix, as that won't reflect any mutated
 # changes.
@@ -54,12 +97,11 @@ filename_hashing_default = "true"
 _src_cache_root_default = None
 error_overlinking_default = "false"
 error_overdepending_default = "false"
-deprecated.constant("24.5", "24.7", "noarch_python_build_age_default", 0)
 enable_static_default = "false"
 no_rewrite_stdout_env_default = "false"
 ignore_verify_codes_default = []
 exit_on_verify_error_default = False
-conda_pkg_format_default = None
+conda_pkg_format_default = CondaPkgFormat.V2
 zstd_compression_level_default = 19
 
 
@@ -231,10 +273,11 @@ def _get_default_settings():
                 "zstd_compression_level", zstd_compression_level_default
             ),
         ),
-        # this can be set to different values (currently only 2 means anything) to use package formats
         Setting(
             "conda_pkg_format",
-            context.conda_build.get("pkg_format", conda_pkg_format_default),
+            CondaPkgFormat.normalize(
+                context.conda_build.get("pkg_format", conda_pkg_format_default)
+            ),
         ),
         Setting("suppress_variables", False),
         Setting("build_id_pat", context.conda_build.get("build_id_pat", "{n}_{t}")),
@@ -326,7 +369,7 @@ class Config:
     @arch.setter
     def arch(self, value):
         log = get_logger(__name__)
-        log.warn(
+        log.warning(
             "Setting build arch. This is only useful when pretending to be on another "
             "arch, such as for rendering necessary dependencies on a non-native arch. "
             "I trust that you know what you're doing."
@@ -342,7 +385,7 @@ class Config:
     @platform.setter
     def platform(self, value):
         log = get_logger(__name__)
-        log.warn(
+        log.warning(
             "Setting build platform. This is only useful when "
             "pretending to be on another platform, such as "
             "for rendering necessary dependencies on a non-native "
@@ -777,17 +820,6 @@ class Config:
     def subdirs_same(self):
         return self.host_subdir == self.build_subdir
 
-    @property
-    @deprecated(
-        "24.5",
-        "24.7",
-        addendum="Defer to `conda.base.context.context.channels` instead.",
-    )
-    def override_channels(self) -> bool:
-        return bool(
-            context._argparse_args and context._argparse_args.get("override_channels")
-        )
-
     def clean(self, remove_folders=True):
         # build folder is the whole burrito containing envs and source folders
         #   It will only exist if we download source, or create a build or test environment
@@ -823,7 +855,11 @@ class Config:
                 "\n\n",
             )
 
-        for lock in get_conda_operation_locks(self.locking, self.bldpkgs_dirs):
+        for lock in get_conda_operation_locks(
+            self.locking,
+            self.bldpkgs_dirs,
+            self.timeout,
+        ):
             if os.path.isfile(lock.lock_file):
                 rm_rf(lock.lock_file)
 
@@ -833,10 +869,22 @@ class Config:
 
     def copy(self) -> Config:
         new = copy.copy(self)
-        new.variant = copy.deepcopy(self.variant)
+        new.variant = self._copy_variants(self.variant)
         if hasattr(self, "variants"):
-            new.variants = copy.deepcopy(self.variants)
+            new.variants = self.copy_variants()
         return new
+
+    def _copy_variants(self, variant_or_list: T) -> T:
+        """Efficient deep copy used for variant dicts and lists"""
+        # Use pickle.loads(pickle.dumps(...) as a faster copy.deepcopy alternative.
+        return pickle.loads(pickle.dumps(variant_or_list, pickle.HIGHEST_PROTOCOL))
+
+    def copy_variants(self) -> list[dict] | None:
+        """Return deep copy of the variants list, if any"""
+        if getattr(self, "variants", None) is not None:
+            return self._copy_variants(self.variants)
+        else:
+            return None
 
     # context management - automatic cleanup if self.dirty or self.keep_old_work is not True
     def __enter__(self):

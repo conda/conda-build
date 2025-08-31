@@ -18,7 +18,8 @@ def test_skeleton_pypi():
     """published in docs at https://docs.conda.io/projects/conda-build/en/latest/user-guide/tutorials/build-pkgs-skeleton.html"""
     conda_path = os.path.join(sys.prefix, BIN_DIRECTORY, "conda")
 
-    check_call_env([conda_path, "skeleton", "pypi", "click"])
+    # 8.1.7 is the last version with 'setup.py', which is required
+    check_call_env([conda_path, "skeleton", "pypi", "click", "--version", "8.1.7"])
     check_call_env([conda_path, "build", "click"])
 
 

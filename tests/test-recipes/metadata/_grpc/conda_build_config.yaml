@@ -1,0 +1,103 @@
+c_ares:
+- '1'
+c_compiler:
+- conda-forge::gcc
+c_compiler_version:
+- '13'
+c_stdlib:
+- sysroot
+c_stdlib_version:
+- '2.17'
+cdt_name:
+- conda
+channel_sources:
+- conda-forge
+channel_targets:
+- conda-forge main
+cxx_compiler:
+- conda-forge::gxx
+cxx_compiler_version:
+- '13'
+docker_image:
+- quay.io/condaforge/linux-anvil-x86_64:alma9
+libabseil:
+- '20250127'
+libgrpc:
+- '1.71'
+libprotobuf:
+- 5.29.3
+openssl:
+- '3'
+pin_run_as_build:
+  python:
+    min_pin: x.x
+    max_pin: x.x
+python:
+- 3.10.* *_cpython
+- 3.11.* *_cpython
+- 3.12.* *_cpython
+- 3.13.* *_cp313
+- 3.9.* *_cpython
+re2:
+- 2024.07.02
+target_platform:
+- linux-64
+zip_keys:
+- - c_compiler_version
+  - cxx_compiler_version
+zlib:
+- '1'
+
+# osx-arm64 version for local testing
+# MACOSX_DEPLOYMENT_TARGET:
+# - '11.0'
+# MACOSX_SDK_VERSION:
+# - '11.0'
+# c_ares:
+# - '1'
+# c_compiler:
+# - clang
+# c_compiler_version:
+# - '18'
+# c_stdlib:
+# - macosx_deployment_target
+# c_stdlib_version:
+# - '11.0'
+# channel_sources:
+# - conda-forge
+# channel_targets:
+# - conda-forge main
+# cxx_compiler:
+# - clangxx
+# cxx_compiler_version:
+# - '18'
+# libabseil:
+# - '20250127'
+# libgrpc:
+# - '1.71'
+# libprotobuf:
+# - 5.29.3
+# macos_machine:
+# - arm64-apple-darwin20.0.0
+# openssl:
+# - '3'
+# pin_run_as_build:
+#   python:
+#     min_pin: x.x
+#     max_pin: x.x
+# python:
+# - 3.10.* *_cpython
+# - 3.11.* *_cpython
+# - 3.12.* *_cpython
+# - 3.13.* *_cp313
+# - 3.9.* *_cpython
+# re2:
+# - 2024.07.02
+# target_platform:
+# - osx-arm64
+# zip_keys:
+# - - c_compiler_version
+#   - cxx_compiler_version
+# zlib:
+# - '1'
+

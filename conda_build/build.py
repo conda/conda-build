@@ -27,7 +27,6 @@ import conda_package_handling.api
 import yaml
 from bs4 import UnicodeDammit
 from conda import __version__ as conda_version
-from conda.auxlib.entity import EntityEncoder
 from conda.base.constants import PREFIX_PLACEHOLDER
 from conda.base.context import context, reset_context
 from conda.core.prefix_data import PrefixData
@@ -38,14 +37,20 @@ from conda.models.enums import FileMode, PathType
 from conda.models.match_spec import MatchSpec
 from conda.utils import url_path
 
+try:
+    from conda.common.serialize.json import CondaJSONEncoder
+except ImportError:
+    # FUTURE: remove for `conda>=25.9`
+    from conda.auxlib.entity import EntityEncoder as CondaJSONEncoder
+
 from . import __version__ as conda_build_version
 from . import environ, noarch_python, source, tarcheck, utils
-from .config import Config
+from .config import CondaPkgFormat, Config
 from .create_test import create_all_test_files
-from .deprecations import deprecated
 from .exceptions import (
     BuildScriptException,
     CondaBuildException,
+    CondaBuildUserError,
     DependencyNeedsBuildingError,
 )
 from .index import _delegated_update_index, get_build_index
@@ -64,18 +69,17 @@ from .render import (
     execute_download_actions,
     expand_outputs,
     output_yaml,
+    render_metadata_tuples,
     render_recipe,
     reparse,
     try_download,
 )
 from .utils import (
-    CONDA_PACKAGE_EXTENSION_V1,
-    CONDA_PACKAGE_EXTENSION_V2,
     CONDA_PACKAGE_EXTENSIONS,
     MAX_CMD_LINE_LENGTH,
+    create_file_with_permissions,
     env_var,
     glob,
-    on_linux,
     on_mac,
     on_win,
     shutil_move_more_retrying,
@@ -93,7 +97,8 @@ if on_win:
     from . import windows
 
 if TYPE_CHECKING:
-    from typing import Any, Iterable
+    from collections.abc import Iterable
+    from typing import Any
 
 if "bsd" in sys.platform:
     shell_path = "/bin/sh"
@@ -274,9 +279,9 @@ def regex_files_rg(
                     # match_line_number = match['data']['line_number']
                     # match_absolute_offset = match['data']['absolute_offset']
                     if old_stage == "begin":
-                        assert (
-                            match_filename_begin == match_filename
-                        ), f"{match_filename_begin} != \n {match_filename}"
+                        assert match_filename_begin == match_filename, (
+                            f"{match_filename_begin} != \n {match_filename}"
+                        )
                     if match_filename not in match_records:
                         if debug_this:
                             # We could add: #'line': match_line, 'line_number': match_line_number but it would
@@ -755,12 +760,12 @@ def copy_recipe(m):
             yaml.dump(m.config.variant, f)
 
 
-def copy_readme(m):
+def copy_readme(m: MetaData):
     readme = m.get_value("about/readme")
     if readme:
         src = join(m.config.work_dir, readme)
         if not isfile(src):
-            sys.exit(f"Error: no readme file: {readme}")
+            raise CondaBuildUserError(f"`about/readme` file ({readme}) doesn't exist")
         dst = join(m.config.info_dir, readme)
         utils.copy_into(src, dst, m.config.timeout, locking=m.config.locking)
         if os.path.split(readme)[1] not in {"README.md", "README.rst", "README"}:
@@ -905,7 +910,7 @@ def copy_test_source_files(m, destination):
                         )
                     except OSError as e:
                         log = utils.get_logger(__name__)
-                        log.warn(
+                        log.warning(
                             f"Failed to copy {f} into test files.  Error was: {str(e)}"
                         )
                 for ext in ".pyc", ".pyo":
@@ -957,21 +962,21 @@ def get_all_replacements(variant):
         return []
 
     repl = variant["replacements"]
-    assert isinstance(
-        repl, dict
-    ), f"Found 'replacements' ({repl}), but it is not a dict"
-    assert (
-        "all_replacements" in repl
-    ), f"Found 'replacements' ({repl}), but it doesn't contain 'all_replacements'"
+    assert isinstance(repl, dict), (
+        f"Found 'replacements' ({repl}), but it is not a dict"
+    )
+    assert "all_replacements" in repl, (
+        f"Found 'replacements' ({repl}), but it doesn't contain 'all_replacements'"
+    )
 
     repl = repl["all_replacements"]
-    assert isinstance(
-        repl, list
-    ), f"Found 'all_replacements' ({repl}), but it is not a list"
+    assert isinstance(repl, list), (
+        f"Found 'all_replacements' ({repl}), but it is not a list"
+    )
     if repl:
-        assert isinstance(
-            repl[0], dict
-        ), f"Found 'all_replacements[0]' ({repl[0]}), but it is not a dict"
+        assert isinstance(repl[0], dict), (
+            f"Found 'all_replacements[0]' ({repl[0]}), but it is not a dict"
+        )
 
     return repl
 
@@ -1229,8 +1234,11 @@ def write_info_files_file(m, files):
 def write_link_json(m):
     package_metadata = OrderedDict()
     noarch_type = m.get_value("build/noarch")
-    if noarch_type:
-        noarch_type_str = str(noarch_type)
+    if noarch_type or m.python_version_independent:
+        if noarch_type:
+            noarch_type_str = str(noarch_type)
+        elif m.python_version_independent:
+            noarch_type_str = "python"
         noarch_dict = OrderedDict(type=noarch_type_str)
         if noarch_type_str.lower() == "python":
             entry_points = m.get_value("build/entry_points")
@@ -1423,13 +1431,14 @@ def create_info_files(m, replacements, files, prefix):
 
 
 def get_short_path(m, target_file):
+    if m.python_version_independent:
+        if (site_packages_idx := target_file.find("site-packages")) >= 0:
+            return target_file[site_packages_idx:]
     if m.noarch == "python":
         entry_point_script_names = get_entry_point_script_names(
             m.get_value("build/entry_points")
         )
-        if target_file.find("site-packages") >= 0:
-            return target_file[target_file.find("site-packages") :]
-        elif target_file.startswith("bin") and (
+        if target_file.startswith("bin") and (
             target_file not in entry_point_script_names
         ):
             return target_file.replace("bin", "python-scripts")
@@ -1572,7 +1581,7 @@ def create_info_files_json_v1(m, info_dir, prefix, files, files_with_prefix):
                 sort_keys=True,
                 indent=2,
                 separators=(",", ": "),
-                cls=EntityEncoder,
+                cls=CondaJSONEncoder,
             )
     # Return a dict of file: sha1sum. We could (but currently do not)
     # use this to detect overlap and mutated overlap.
@@ -1626,27 +1635,9 @@ def post_process_files(m: MetaData, initial_prefix_files):
     # The post processing may have deleted some files (like easy-install.pth)
     current_prefix_files = utils.prefix_files(prefix=host_prefix)
     new_files = sorted(current_prefix_files - initial_prefix_files)
-    """
-    if m.noarch == 'python' and m.config.subdir == 'win-32':
-        # Delete any PIP-created .exe launchers and fix entry_points.txt
-        # .. but we need to provide scripts instead here.
-        from .post import caseless_sepless_fnmatch
-        exes = caseless_sepless_fnmatch(new_files, 'Scripts/*.exe')
-        for ff in exes:
-            os.unlink(os.path.join(m.config.host_prefix, ff))
-            new_files.remove(ff)
-    """
+
+    # filter_files will remove .git, trash directories, and conda-meta directories
     new_files = utils.filter_files(new_files, prefix=host_prefix)
-    meta_dir = m.config.meta_dir
-    if any(meta_dir in join(host_prefix, f) for f in new_files):
-        meta_files = (
-            tuple(f for f in new_files if m.config.meta_dir in join(host_prefix, f)),
-        )
-        sys.exit(
-            f"Error: Untracked file(s) {meta_files} found in conda-meta directory. This error usually comes "
-            "from using conda in the build script. Avoid doing this, as it can lead to packages "
-            "that include their dependencies."
-        )
     post_build(m, new_files, build_python=python)
 
     entry_point_script_names = get_entry_point_script_names(
@@ -1665,6 +1656,9 @@ def post_process_files(m: MetaData, initial_prefix_files):
         noarch_python.populate_files(
             m, pkg_files, host_prefix, entry_point_script_names
         )
+    elif m.python_version_independent:
+        # For non noarch: python ones, we don't need to handle entry points in a special way.
+        noarch_python.populate_files(m, pkg_files, host_prefix, [])
 
     current_prefix_files = utils.prefix_files(prefix=host_prefix)
     new_files = current_prefix_files - initial_prefix_files
@@ -1673,7 +1667,14 @@ def post_process_files(m: MetaData, initial_prefix_files):
     return new_files
 
 
-def bundle_conda(output, metadata: MetaData, env, stats, **kw):
+def bundle_conda(
+    output,
+    metadata: MetaData,
+    env,
+    stats,
+    new_prefix_files: set[str] = set(),
+    **kw,
+):
     log = utils.get_logger(__name__)
     log.info("Packaging %s", metadata.dist())
     get_all_replacements(metadata.config)
@@ -1725,13 +1726,19 @@ def bundle_conda(output, metadata: MetaData, env, stats, **kw):
                     output["script"],
                     args[0],
                 )
-            if "system32" in args[0] and "bash" in args[0]:
-                print(
-                    "ERROR :: WSL bash.exe detected, this will not work (PRs welcome!). Please\n"
-                    "         use MSYS2 packages. Add `m2-base` and more (depending on what your"
-                    "         script needs) to `requirements/build` instead."
+            if (
+                # WSL bash is always the same path, it is an alias to the default
+                # distribution as configured by the user
+                on_win
+                # check if WSL is installed before calling Path.samefile/os.stat
+                and (wsl_bash := Path("C:\\Windows\\System32\\bash.exe")).exists()
+                and wsl_bash.samefile(args[0])
+            ):
+                raise CondaBuildUserError(
+                    "WSL bash.exe is not supported. Please use MSYS2 packages. Add "
+                    "`m2-base` and more (depending on what your script needs) to "
+                    "`requirements/build` instead."
                 )
-                sys.exit(1)
         else:
             args = interpreter.split(" ")
 
@@ -1744,19 +1751,19 @@ def bundle_conda(output, metadata: MetaData, env, stats, **kw):
         env_output["RECIPE_DIR"] = metadata.path
         env_output["MSYS2_PATH_TYPE"] = "inherit"
         env_output["CHERE_INVOKING"] = "1"
+        _set_env_variables_for_build(metadata, env_output)
         for var in utils.ensure_list(metadata.get_value("build/script_env")):
             if "=" in var:
                 val = var.split("=", 1)[1]
                 var = var.split("=", 1)[0]
+                env_output[var] = val
             elif var not in os.environ:
                 warnings.warn(
                     f"The environment variable '{var}' specified in script_env is undefined.",
                     UserWarning,
                 )
-                val = ""
             else:
-                val = os.environ[var]
-            env_output[var] = val
+                env_output[var] = os.environ[var]
         dest_file = os.path.join(metadata.config.work_dir, output["script"])
         utils.copy_into(os.path.join(metadata.path, output["script"]), dest_file)
         from os import stat
@@ -1783,10 +1790,26 @@ def bundle_conda(output, metadata: MetaData, env, stats, **kw):
     if files:
         # Files is specified by the output
         # we exclude the list of files that we want to keep, so post-process picks them up as "new"
-        keep_files = {
-            os.path.normpath(pth)
-            for pth in utils.expand_globs(files, metadata.config.host_prefix)
-        }
+        if isinstance(files, dict):
+            # When file matching with include/exclude lists, only
+            # new_prefix_files are considered. Files in the PREFIX from other
+            # recipes (dependencies) are ignored
+            include = files.get("include") or []
+            exclude = files.get("exclude") or []
+            exclude_files = {
+                os.path.normpath(pth)
+                for pth in utils.expand_globs(exclude, metadata.config.host_prefix)
+            }
+            keep_files = {
+                os.path.normpath(pth)
+                for pth in utils.expand_globs(include, metadata.config.host_prefix)
+            }
+            keep_files = new_prefix_files.intersection(keep_files) - exclude_files
+        else:
+            keep_files = {
+                os.path.normpath(pth)
+                for pth in utils.expand_globs(files, metadata.config.host_prefix)
+            }
         pfx_files = set(utils.prefix_files(metadata.config.host_prefix))
         initial_files = {
             item
@@ -1797,7 +1820,7 @@ def bundle_conda(output, metadata: MetaData, env, stats, **kw):
         }
     elif not output.get("script"):
         if not metadata.always_include_files():
-            log.warn(
+            log.warning(
                 "No files or script found for output {}".format(output.get("name"))
             )
             build_deps = metadata.get_value("requirements/build")
@@ -1835,7 +1858,9 @@ def bundle_conda(output, metadata: MetaData, env, stats, **kw):
                 initial_files.remove(f)
                 has_matches = True
         if not has_matches:
-            log.warn("Glob %s from always_include_files does not match any files", pat)
+            log.warning(
+                "Glob %s from always_include_files does not match any files", pat
+            )
     files = post_process_files(metadata, initial_files)
 
     if output.get("name") and output.get("name") != "conda":
@@ -1865,9 +1890,12 @@ def bundle_conda(output, metadata: MetaData, env, stats, **kw):
     tmp_archives = []
     final_outputs = []
     cph_kwargs = {}
-    ext = CONDA_PACKAGE_EXTENSION_V1
-    if output.get("type") == "conda_v2" or metadata.config.conda_pkg_format == "2":
-        ext = CONDA_PACKAGE_EXTENSION_V2
+    ext = CondaPkgFormat.V1.ext
+    if (
+        output.get("type") == CondaPkgFormat.V2
+        or metadata.config.conda_pkg_format == CondaPkgFormat.V2
+    ):
+        ext = CondaPkgFormat.V2.ext
         cph_kwargs["compression_tuple"] = (
             ".tar.zst",
             "zstd",
@@ -1885,7 +1913,7 @@ def bundle_conda(output, metadata: MetaData, env, stats, **kw):
 
         # we're done building, perform some checks
         for tmp_path in tmp_archives:
-            if tmp_path.endswith(CONDA_PACKAGE_EXTENSION_V1):
+            if tmp_path.endswith(CondaPkgFormat.V1.ext):
                 tarcheck.check_all(tmp_path, metadata.config)
             output_filename = os.path.basename(tmp_path)
 
@@ -1894,7 +1922,7 @@ def bundle_conda(output, metadata: MetaData, env, stats, **kw):
                 from conda_verify.verify import Verify
             except ImportError:
                 Verify = None
-                log.warn(
+                log.warning(
                     "Importing conda-verify failed.  Please be sure to test your packages.  "
                     "conda install conda-verify to make this message go away."
                 )
@@ -1911,7 +1939,7 @@ def bundle_conda(output, metadata: MetaData, env, stats, **kw):
                         exit_on_error=metadata.config.exit_on_verify_error,
                     )
                 except KeyError as e:
-                    log.warn(
+                    log.warning(
                         "Package doesn't have necessary files.  It might be too old to inspect."
                         f"Legacy noarch packages are known to fail.  Full message was {e}"
                     )
@@ -1961,7 +1989,13 @@ def bundle_conda(output, metadata: MetaData, env, stats, **kw):
     return final_outputs
 
 
-def bundle_wheel(output, metadata: MetaData, env, stats):
+def bundle_wheel(
+    output,
+    metadata: MetaData,
+    env,
+    stats,
+    new_prefix_files: set[str] = set(),
+):
     ext = ".bat" if utils.on_win else ".sh"
     with TemporaryDirectory() as tmpdir, utils.tmp_chdir(metadata.config.work_dir):
         dest_file = os.path.join(metadata.config.work_dir, "wheel_output" + ext)
@@ -2021,8 +2055,8 @@ def scan_metadata(path):
 
 
 bundlers = {
-    "conda": bundle_conda,
-    "conda_v2": bundle_conda,
+    CondaPkgFormat.V1: bundle_conda,
+    CondaPkgFormat.V2: bundle_conda,
     "wheel": bundle_wheel,
 }
 
@@ -2138,7 +2172,7 @@ def _write_activation_text(script_path, m):
             _write_sh_activation_text(fh, m)
         else:
             log = utils.get_logger(__name__)
-            log.warn(
+            log.warning(
                 f"not adding activation to {script_path} - I don't know how to do so for "
                 "this file type"
             )
@@ -2356,7 +2390,7 @@ def build(
                 ):
                     specs.append(vcs_source)
 
-                    log.warn(
+                    log.warning(
                         "Your recipe depends on %s at build time (for templates), "
                         "but you have not listed it as a build dependency.  Doing "
                         "so for this build.",
@@ -2393,7 +2427,7 @@ def build(
                     exclude_pattern = re.compile(
                         r"|".join(rf"(?:^{exc}(?:\s|$|\Z))" for exc in excludes)
                     )
-            add_upstream_pins(m, False, exclude_pattern)
+            add_upstream_pins(m, False, exclude_pattern, [])
 
         create_build_envs(top_level_pkg, notest)
 
@@ -2414,6 +2448,24 @@ def build(
         # Write out metadata for `conda debug`, making it obvious that this is what it is, must be done
         # after try_download()
         output_yaml(m, os.path.join(m.config.work_dir, "metadata_conda_debug.yaml"))
+        if m.config.verbose:
+            m_copy = m.copy()
+            for om, _, _ in render_metadata_tuples(
+                [(m_copy, False, False)], m_copy.config
+            ):
+                print(
+                    "",
+                    "Rendered as:",
+                    "```yaml",
+                    output_yaml(om).rstrip(),
+                    "```",
+                    "",
+                    sep="\n",
+                )
+                # Each iteration returns the whole meta yaml, and then we are supposed to remove
+                # the outputs we don't want. Instead we just take the first and print it fully
+                break
+            del m_copy
 
         # get_dir here might be just work, or it might be one level deeper,
         #    dependening on the source.
@@ -2596,9 +2648,9 @@ def build(
                         os.path.join(m.config.work_dir, test_script),
                     )
 
-                assert (
-                    output_d.get("type") != "conda" or m.final
-                ), f"output metadata for {m.dist()} is not finalized"
+                assert output_d.get("type") != "conda" or m.final, (
+                    f"output metadata for {m.dist()} is not finalized"
+                )
                 pkg_path = bldpkg_path(m)
                 if pkg_path not in built_packages and pkg_path not in new_pkgs:
                     log.info(f"Packaging {m.name()}")
@@ -2687,8 +2739,8 @@ def build(
                     # This is wrong, files has not been expanded at this time and could contain
                     # wildcards.  Also well, I just do not understand this, because when this
                     # does contain wildcards, the files in to_remove will slip back in.
-                    if "files" in output_d:
-                        output_d["files"] = set(output_d["files"]) - to_remove
+                    if (files := output_d.get("files")) and not isinstance(files, dict):
+                        output_d["files"] = set(files) - to_remove
 
                     # copies the backed-up new prefix files into the newly created host env
                     for f in new_prefix_files:
@@ -2702,8 +2754,13 @@ def build(
                     #    can be different from the env for the top level build.
                     with utils.path_prepended(m.config.build_prefix):
                         env = environ.get_dict(m=m)
-                    pkg_type = "conda" if not hasattr(m, "type") else m.type
-                    newly_built_packages = bundlers[pkg_type](output_d, m, env, stats)
+                    pkg_type = (
+                        getattr(m, "type", m.config.conda_pkg_format)
+                        or CondaPkgFormat.V2
+                    )
+                    newly_built_packages = bundlers[pkg_type](
+                        output_d, m, env, stats, new_prefix_files
+                    )
                     # warn about overlapping files.
                     if "checksums" in output_d:
                         for file, csum in output_d["checksums"].items():
@@ -2739,8 +2796,6 @@ def build(
                             channel_urls=m.config.channel_urls,
                             debug=m.config.debug,
                             verbose=m.config.verbose,
-                            locking=m.config.locking,
-                            timeout=m.config.timeout,
                             clear_cache=True,
                             omit_defaults=False,
                         )
@@ -2751,8 +2806,6 @@ def build(
                         channel_urls=m.config.channel_urls,
                         debug=m.config.debug,
                         verbose=m.config.verbose,
-                        locking=m.config.locking,
-                        timeout=m.config.timeout,
                         clear_cache=True,
                         omit_defaults=False,
                     )
@@ -2810,28 +2863,6 @@ def warn_on_use_of_SRC_DIR(metadata):
             )
 
 
-def _construct_metadata_for_test_from_recipe(recipe_dir, config):
-    config.need_cleanup = False
-    config.recipe_dir = None
-    hash_input = {}
-    metadata = expand_outputs(
-        render_recipe(recipe_dir, config=config, reset_build_id=False)
-    )[0][1]
-    log = utils.get_logger(__name__)
-    log.warn(
-        "Testing based on recipes is deprecated as of conda-build 3.16.0.  Please adjust "
-        "your code to pass your desired conda package to test instead."
-    )
-
-    utils.rm_rf(metadata.config.test_dir)
-
-    if metadata.meta.get("test", {}).get("source_files"):
-        if not metadata.source_provided:
-            try_download(metadata, no_download_source=False)
-
-    return metadata, hash_input
-
-
 def _construct_metadata_for_test_from_package(package, config):
     recipe_dir, need_cleanup = utils.get_recipe_abspath(package)
     config.need_cleanup = need_cleanup
@@ -2868,7 +2899,7 @@ def _construct_metadata_for_test_from_package(package, config):
             is_channel = True
 
     if not is_channel:
-        log.warn(
+        log.warning(
             "Copying package to conda-build croot.  No packages otherwise alongside yours will"
             " be available unless you specify -c local.  To avoid this warning, your package "
             "must reside in a channel structure with platform-subfolders.  See more info on "
@@ -2971,27 +3002,10 @@ def _extract_test_files_from_package(metadata):
 
 
 def construct_metadata_for_test(recipedir_or_package, config):
-    if (
-        os.path.isdir(recipedir_or_package)
-        or os.path.basename(recipedir_or_package) == "meta.yaml"
-    ):
-        m, hash_input = _construct_metadata_for_test_from_recipe(
-            recipedir_or_package, config
-        )
-    else:
-        m, hash_input = _construct_metadata_for_test_from_package(
-            recipedir_or_package, config
-        )
-    return m, hash_input
+    return _construct_metadata_for_test_from_package(recipedir_or_package, config)
 
 
-def write_build_scripts(m, script, build_file):
-    # TODO: Prepending the prefixes here should probably be guarded by
-    #         if not m.activate_build_script:
-    #       Leaving it as is, for now, since we need a quick, non-disruptive patch release.
-    with utils.path_prepended(m.config.host_prefix, False):
-        with utils.path_prepended(m.config.build_prefix, False):
-            env = environ.get_dict(m=m)
+def _set_env_variables_for_build(m, env):
     env["CONDA_BUILD_STATE"] = "BUILD"
 
     # hard-code this because we never want pip's build isolation
@@ -3016,33 +3030,44 @@ def write_build_scripts(m, script, build_file):
     # locally, and if we don't, it's a problem.
     env["PIP_NO_INDEX"] = True
 
-    if m.noarch == "python":
+    if m.python_version_independent:
         env["PYTHONDONTWRITEBYTECODE"] = True
 
     # The stuff in replacements is not parsable in a shell script (or we need to escape it)
     if "replacements" in env:
         del env["replacements"]
 
+
+def write_build_scripts(m, script, build_file):
+    # TODO: Prepending the prefixes here should probably be guarded by
+    #         if not m.activate_build_script:
+    #       Leaving it as is, for now, since we need a quick, non-disruptive patch release.
+    with utils.path_prepended(m.config.host_prefix, False):
+        with utils.path_prepended(m.config.build_prefix, False):
+            env = environ.get_dict(m=m)
+
+    _set_env_variables_for_build(m, env)
+
     work_file = join(m.config.work_dir, "conda_build.sh")
     env_file = join(m.config.work_dir, "build_env_setup.sh")
-    with open(env_file, "w") as bf:
+
+    with create_file_with_permissions(env_file, 0o600) as bf:
         for k, v in env.items():
             if v != "" and v is not None:
                 bf.write(f'export {k}="{v}"\n')
-
         if m.activate_build_script:
             _write_sh_activation_text(bf, m)
-    with open(work_file, "w") as bf:
+
+    with create_file_with_permissions(work_file, 0o700) as bf:
         # bf.write('set -ex\n')
         bf.write("if [ -z ${CONDA_BUILD+x} ]; then\n")
-        bf.write(f"    source {env_file}\n")
+        bf.write(f"    source '{env_file}'\n")
         bf.write("fi\n")
         if script:
             bf.write(script)
         if isfile(build_file) and not script:
-            bf.write(open(build_file).read())
+            bf.write(Path(build_file).read_text())
 
-    os.chmod(work_file, 0o766)
     return work_file, env_file
 
 
@@ -3122,7 +3147,7 @@ def _write_test_run_script(
                         tf.write(f'call "{shell_file}"\n')
                         tf.write("IF %ERRORLEVEL% NEQ 0 exit /B 1\n")
                     else:
-                        log.warn(
+                        log.warning(
                             "Found sh test file on windows.  Ignoring this for now (PRs welcome)"
                         )
                 elif os.path.splitext(shell_file)[1] == ".sh":
@@ -3307,7 +3332,7 @@ def test(
             # Needs to come after create_files in case there's test/source_files
             shutil_move_more_retrying(config.work_dir, dest, "work")
     else:
-        log.warn(
+        log.warning(
             "Not moving work directory after build.  Your package may depend on files "
             "in the work directory that are not included with your package"
         )
@@ -3371,7 +3396,7 @@ def test(
         CondaError,
         AssertionError,
     ) as exc:
-        log.warn(
+        log.warning(
             "failed to get package records, retrying.  exception was: %s", str(exc)
         )
         tests_failed(
@@ -3478,7 +3503,12 @@ def test(
     return True
 
 
-def tests_failed(package_or_metadata, move_broken, broken_dir, config):
+def tests_failed(
+    package_or_metadata: str | os.PathLike | Path | MetaData,
+    move_broken: bool,
+    broken_dir: str | os.PathLike | Path,
+    config: Config,
+) -> None:
     """
     Causes conda to exit if any of the given package's tests failed.
 
@@ -3498,7 +3528,7 @@ def tests_failed(package_or_metadata, move_broken, broken_dir, config):
         log = utils.get_logger(__name__)
         try:
             shutil.move(pkg, dest)
-            log.warn(
+            log.warning(
                 f"Tests failed for {os.path.basename(pkg)} - moving package to {broken_dir}"
             )
         except OSError:
@@ -3506,25 +3536,7 @@ def tests_failed(package_or_metadata, move_broken, broken_dir, config):
         _delegated_update_index(
             os.path.dirname(os.path.dirname(pkg)), verbose=config.debug, threads=1
         )
-    sys.exit("TESTS FAILED: " + os.path.basename(pkg))
-
-
-@deprecated(
-    "24.7",
-    "24.9",
-    addendum="`patchelf` is an explicit conda-build dependency on Linux so it will always be installed.",
-)
-def check_external():
-    if on_linux:
-        patchelf = external.find_executable("patchelf")
-        if patchelf is None:
-            sys.exit(
-                "Error:\n"
-                f"    Did not find 'patchelf' in: {os.pathsep.join(external.dir_paths)}\n"
-                "    'patchelf' is necessary for building conda packages on Linux with\n"
-                "    relocatable ELF libraries.  You can install patchelf using conda install\n"
-                "    patchelf.\n"
-            )
+    raise CondaBuildUserError("TESTS FAILED: " + os.path.basename(pkg))
 
 
 def build_tree(
@@ -3668,7 +3680,7 @@ def build_tree(
                             # downstreams can be a dict, for adding capability for worker labels
                             if hasattr(downstreams, "keys"):
                                 downstreams = list(downstreams.keys())
-                                log.warn(
+                                log.warning(
                                     "Dictionary keys for downstreams are being "
                                     "ignored right now.  Coming soon..."
                                 )
@@ -3707,7 +3719,7 @@ def build_tree(
                                     UnsatisfiableError,
                                     DependencyNeedsBuildingError,
                                 ) as e:
-                                    log.warn(
+                                    log.warning(
                                         f"Skipping downstream test for spec {dep}; was "
                                         f"unsatisfiable.  Error was {e}"
                                     )
@@ -3902,7 +3914,10 @@ def build_tree(
     return list(built_packages.keys())
 
 
-def handle_anaconda_upload(paths, config):
+def handle_anaconda_upload(
+    paths: Iterable[str | os.PathLike | Path],
+    config: Config,
+) -> None:
     from .os_utils.external import find_executable
 
     paths = utils.ensure_list(paths)
@@ -3936,7 +3951,7 @@ def handle_anaconda_upload(paths, config):
             "# To have conda build upload to anaconda.org automatically, use\n"
             f"# {prompter}conda config --set anaconda_upload yes\n"
         )
-        no_upload_message += f"anaconda upload{joiner}" + joiner.join(paths)
+        no_upload_message += f"anaconda upload{joiner}" + joiner.join(map(str, paths))
 
     if not upload:
         print(no_upload_message)
@@ -3944,7 +3959,7 @@ def handle_anaconda_upload(paths, config):
 
     if not anaconda:
         print(no_upload_message)
-        sys.exit(
+        raise CondaBuildUserError(
             "Error: cannot locate anaconda command (required for upload)\n"
             "# Try:\n"
             f"# {prompter}conda install anaconda-client"
@@ -4001,11 +4016,11 @@ def handle_pypi_upload(wheels, config):
             try:
                 utils.check_call_env(args + [f])
             except:
-                utils.get_logger(__name__).warn(
+                utils.get_logger(__name__).warning(
                     "wheel upload failed - is twine installed?"
                     "  Is this package registered?"
                 )
-                utils.get_logger(__name__).warn(f"Wheel file left in {f}")
+                utils.get_logger(__name__).warning(f"Wheel file left in {f}")
 
     else:
         print(f"anaconda_upload is not set.  Not uploading wheels: {wheels}")

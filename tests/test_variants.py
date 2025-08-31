@@ -19,6 +19,7 @@ from conda_build.variants import (
     filter_combined_spec_to_used_keys,
     find_used_variables_in_batch_script,
     find_used_variables_in_shell_script,
+    find_used_variables_in_text,
     get_package_variants,
     get_vars,
     validate_spec,
@@ -423,7 +424,40 @@ def test_get_used_loop_vars():
         "zlib",
         "pthread_stubs",
         "target_platform",
+        "cdt_name",
+        "cdt_arch",
     }
+
+
+def test_get_used_loop_vars_jinja2():
+    metadata = api.render(
+        os.path.join(variants_dir, "jinja2_used_variables"),
+        finalize=False,
+        bypass_env_check=True,
+    )
+    # 4 CLANG_VERSION values x 2 VCVER values - one skipped because of jinja2 conditionals
+    assert len(metadata) == 7
+    for m, _, _ in metadata:
+        assert m.get_used_loop_vars(force_top_level=False) == {"CLANG_VERSION", "VCVER"}
+        assert m.get_used_loop_vars(force_top_level=True) == {
+            "CL_VERSION",
+            "CLANG_VERSION",
+            "VCVER",
+        }
+        assert m.get_used_vars(force_top_level=False) == {
+            "CLANG_VERSION",
+            "VCVER",
+            "FOO",
+            "target_platform",
+        }
+        assert m.get_used_vars(force_top_level=True) == {
+            "CLANG_VERSION",
+            "CL_VERSION",
+            "VCVER",
+            "FOO",
+            "FOOBAR",
+            "target_platform",
+        }
 
 
 def test_reprovisioning_source():
@@ -437,11 +471,12 @@ def test_reduced_hashing_behavior(testing_config):
         finalize=False,
         bypass_env_check=True,
     )[0][0]
-    assert (
-        "c_compiler" in metadata.get_hash_contents()
-    ), "hash contents should contain c_compiler"
+    assert "c_compiler" in metadata.get_hash_contents(), (
+        "hash contents should contain c_compiler"
+    )
     assert re.search(
-        "h[0-9a-f]{%d}" % testing_config.hash_length, metadata.build_id()
+        "h[0-9a-f]{%d}" % testing_config.hash_length,  # noqa: UP031
+        metadata.build_id(),
     ), "hash should be present when compiler jinja2 function is used"
 
     # recipes that use some variable in conda_build_config.yaml to control what
@@ -454,7 +489,7 @@ def test_reduced_hashing_behavior(testing_config):
         bypass_env_check=True,
     )[0][0]
     assert "zlib" in metadata.get_hash_contents()
-    assert re.search("h[0-9a-f]{%d}" % testing_config.hash_length, metadata.build_id())
+    assert re.search("h[0-9a-f]{%d}" % testing_config.hash_length, metadata.build_id())  # noqa: UP031
 
     # anything else does not get a hash
     metadata = api.render(
@@ -464,7 +499,8 @@ def test_reduced_hashing_behavior(testing_config):
     )[0][0]
     assert not metadata.get_hash_contents()
     assert not re.search(
-        "h[0-9a-f]{%d}" % testing_config.hash_length, metadata.build_id()
+        "h[0-9a-f]{%d}" % testing_config.hash_length,  # noqa: UP031
+        metadata.build_id(),
     )
 
 
@@ -785,13 +821,72 @@ def test_get_vars():
     assert get_vars(variants) == {"nodejs"}
 
 
+@pytest.mark.parametrize(
+    "vars,text,found_vars",
+    [
+        # basic tests
+        (
+            ("python", "python_min"),
+            "{{ python }}",
+            {"python"},
+        ),
+        (
+            ("python", "python_min"),
+            "{{ python_min }}",
+            {"python_min"},
+        ),
+        # filters and other text
+        (
+            ("python", "python_min"),
+            "python {{ python_min }}",
+            {"python_min"},
+        ),
+        (
+            ("python", "python_min"),
+            "python {{ python }}",
+            {"python"},
+        ),
+        (
+            ("python", "python_min"),
+            "python {{ python|lower }}",
+            {"python"},
+        ),
+        (
+            ("python", "python_min"),
+            "{{ python_min|lower }}",
+            {"python_min"},
+        ),
+        # pin_* statements
+        (
+            ("python", "python_min"),
+            "{{ pin_compatible('python') }}",
+            {"python"},
+        ),
+        (
+            ("python", "python_min"),
+            "{{ pin_compatible('python', max_pin='x.x') }}",
+            {"python"},
+        ),
+        (
+            ("python", "python_min"),
+            "{{ pin_compatible('python_min') }}",
+            {"python_min"},
+        ),
+        (
+            ("python", "python_min"),
+            "{{ pin_compatible('python_min', max_pin='x.x') }}",
+            {"python_min"},
+        ),
+    ],
+)
+def test_find_used_variables_in_text(vars, text, found_vars):
+    assert find_used_variables_in_text(vars, text) == found_vars
+
+
 def test_find_used_variables_in_shell_script(tmp_path: Path) -> None:
     variants = ("FOO", "BAR", "BAZ", "QUX")
     (script := tmp_path / "script.sh").write_text(
-        f"${variants[0]}\n"
-        f"${{{variants[1]}}}\n"
-        f"${{{{{variants[2]}}}}}\n"
-        f"$${variants[3]}\n"
+        f"${variants[0]}\n${{{variants[1]}}}\n${{{{{variants[2]}}}}}\n$${variants[3]}\n"
     )
     assert find_used_variables_in_shell_script(variants, script) == {"FOO", "BAR"}
 
@@ -799,9 +894,167 @@ def test_find_used_variables_in_shell_script(tmp_path: Path) -> None:
 def test_find_used_variables_in_batch_script(tmp_path: Path) -> None:
     variants = ("FOO", "BAR", "BAZ", "QUX")
     (script := tmp_path / "script.sh").write_text(
-        f"%{variants[0]}%\n"
-        f"%%{variants[1]}%%\n"
-        f"${variants[2]}\n"
-        f"${{{variants[3]}}}\n"
+        f"%{variants[0]}%\n%%{variants[1]}%%\n${variants[2]}\n${{{variants[3]}}}\n"
     )
     assert find_used_variables_in_batch_script(variants, script) == {"FOO", "BAR"}
+
+
+def test_combine_specs_zip_lengths():
+    from collections import OrderedDict
+
+    # test case extracted from issue #5416
+    specs = OrderedDict(
+        [
+            (
+                "internal_defaults",
+                {
+                    "c_compiler": "gcc",
+                    "cpu_optimization_target": "nocona",
+                    "cran_mirror": "https://cran.r-project.org",
+                    "cxx_compiler": "gxx",
+                    "extend_keys": [
+                        "pin_run_as_build",
+                        "ignore_version",
+                        "ignore_build_only_deps",
+                        "extend_keys",
+                    ],
+                    "fortran_compiler": "gfortran",
+                    "ignore_build_only_deps": ["python", "numpy"],
+                    "ignore_version": [],
+                    "lua": "5",
+                    "numpy": "1.23",
+                    "perl": "5.26.2",
+                    "pin_run_as_build": {
+                        "python": {"max_pin": "x.x", "min_pin": "x.x"},
+                        "r-base": {"max_pin": "x.x", "min_pin": "x.x"},
+                    },
+                    "python": "3.11",
+                    "r_base": "3.5",
+                    "target_platform": "linux-64",
+                },
+            ),
+            (
+                "/tmp/tmp0wue6mdn/info/recipe/conda_build_config.yaml",
+                {
+                    "VERBOSE_AT": "V=1",
+                    "VERBOSE_CM": "VERBOSE=1",
+                    "blas_impl": "openblas",
+                    "boost": "1.82",
+                    "boost_cpp": "1.82",
+                    "bzip2": "1.0",
+                    "c_compiler": "gcc",
+                    "c_compiler_version": "11.2.0",
+                    "cairo": "1.16",
+                    "channel_targets": "defaults",
+                    "clang_variant": "clang",
+                    "cpu_optimization_target": "nocona",
+                    "cran_mirror": "https://mran.microsoft.com/snapshot/2018-01-01",
+                    "cuda_compiler": "cuda-nvcc",
+                    "cuda_compiler_version": "12.4",
+                    "cudatoolkit": "11.8",
+                    "cudnn": "8.9.2.26",
+                    "cxx_compiler": "gxx",
+                    "cxx_compiler_version": "11.2.0",
+                    "cyrus_sasl": "2.1.28",
+                    "dbus": "1",
+                    "expat": "2",
+                    "extend_keys": [
+                        "pin_run_as_build",
+                        "extend_keys",
+                        "ignore_build_only_deps",
+                        "ignore_version",
+                    ],
+                    "fontconfig": "2.14",
+                    "fortran_compiler": "gfortran",
+                    "fortran_compiler_version": "11.2.0",
+                    "freetype": "2.10",
+                    "g2clib": "1.6",
+                    "geos": "3.8.0",
+                    "giflib": "5",
+                    "glib": "2",
+                    "gmp": "6.2",
+                    "gnu": "2.12.2",
+                    "gpu_variant": "cuda-11",
+                    "gst_plugins_base": "1.14",
+                    "gstreamer": "1.14",
+                    "harfbuzz": "4.3.0",
+                    "hdf4": "4.2",
+                    "hdf5": "1.12.1",
+                    "hdfeos2": "2.20",
+                    "hdfeos5": "5.1",
+                    "icu": "73",
+                    "ignore_build_only_deps": ["python", "numpy"],
+                    "jpeg": "9",
+                    "libcurl": "8.1.1",
+                    "libdap4": "3.19",
+                    "libffi": "3.4",
+                    "libgd": "2.3.3",
+                    "libgdal": "3.6.2",
+                    "libgsasl": "1.10",
+                    "libkml": "1.3",
+                    "libnetcdf": "4.8",
+                    "libpng": "1.6",
+                    "libprotobuf": "3.20.3",
+                    "libtiff": "4.2",
+                    "libwebp": "1.3.2",
+                    "libxml2": "2.10",
+                    "libxslt": "1.1",
+                    "llvm_variant": "llvm",
+                    "lua": "5",
+                    "lzo": "2",
+                    "mkl": "2023.*",
+                    "mpfr": "4",
+                    "numpy": "1.21",
+                    "openblas": "0.3.21",
+                    "openjpeg": "2.3",
+                    "openssl": "3.0",
+                    "perl": "5.34",
+                    "pin_run_as_build": {
+                        "libboost": {"max_pin": "x.x.x"},
+                        "python": {"max_pin": "x.x", "min_pin": "x.x"},
+                        "r-base": {"max_pin": "x.x", "min_pin": "x.x"},
+                    },
+                    "pixman": "0.40",
+                    "proj": "9.3.1",
+                    "proj4": "5.2.0",
+                    "python": "3.9",
+                    "python_impl": "cpython",
+                    "python_implementation": "cpython",
+                    "r_base": "3.5",
+                    "r_implementation": "r-base",
+                    "r_version": "3.5.0",
+                    "readline": "8.1",
+                    "rust_compiler": "rust",
+                    "rust_compiler_version": "1.71.1",
+                    "sqlite": "3",
+                    "target_platform": "linux-64",
+                    "tk": "8.6",
+                    "xz": "5",
+                    "zip_keys": [["python", "numpy"]],
+                    "zlib": "1.2",
+                    "zstd": "1.5.2",
+                },
+            ),
+            (
+                "config.variant",
+                {
+                    "__cuda": "__cuda >=11.8",
+                    "blas_impl": "openblas",
+                    "c_compiler": "gcc",
+                    "c_compiler_version": "11.2.0",
+                    "channel_targets": "defaults",
+                    "cudatoolkit": "11.8",
+                    "cudnn": "8.9.2.26",
+                    "cxx_compiler": "gxx",
+                    "cxx_compiler_version": "11.2.0",
+                    "gpu_variant": "cuda-11",
+                    "libprotobuf": "3.20.3",
+                    "numpy": "1.21",
+                    "openblas": "0.3.21",
+                    "target_platform": "linux-64",
+                },
+            ),
+        ]
+    )
+
+    combine_specs(specs, log_output=True)

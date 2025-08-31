@@ -39,6 +39,25 @@ try:
     except AttributeError:
         # Fallback for lief<0.14.
         EXE_FORMATS = lief.EXE_FORMATS
+    try:
+        ELF_DYNAMIC_TAGS = lief.ELF.DynamicEntry.TAG
+    except AttributeError:
+        # Fallback for lief<0.15.
+        ELF_DYNAMIC_TAGS = lief.ELF.DYNAMIC_TAGS
+    try:
+        LOAD_COMMAND_TYPES = lief.MachO.LoadCommand.TYPE
+    except AttributeError:
+        # Fallback for lief<0.15.
+        LOAD_COMMAND_TYPES = lief.MachO.LOAD_COMMAND_TYPES
+    try:
+        ELF64 = lief.ELF.Header.CLASS.ELF64
+        ELF32 = lief.ELF.Header.CLASS.ELF32
+    except AttributeError:
+        # Fallback for lief<0.15.
+        ELF64 = lief.ELF.ELF_CLASS.CLASS64
+        ELF32 = lief.ELF.ELF_CLASS.CLASS32
+
+
 except ImportError:
     have_lief = False
 
@@ -129,7 +148,7 @@ def get_libraries(file):
                 binary_name = [
                     command.name
                     for command in binary.commands
-                    if command.command == lief.MachO.LOAD_COMMAND_TYPES.ID_DYLIB
+                    if command.command == LOAD_COMMAND_TYPES.ID_DYLIB
                 ]
                 binary_name = binary_name[0] if len(binary_name) else None
                 result = [
@@ -155,7 +174,7 @@ def _set_elf_rpathy_thing(binary, old_matching, new_rpath, set_rpath, set_runpat
     for e in dynamic_entries:
         if (
             set_runpath
-            and e.tag == lief.ELF.DYNAMIC_TAGS.RUNPATH
+            and e.tag == ELF_DYNAMIC_TAGS.RUNPATH
             and fnmatch(e.runpath, old_matching)
             and e.runpath != new_rpath
         ):
@@ -163,7 +182,7 @@ def _set_elf_rpathy_thing(binary, old_matching, new_rpath, set_rpath, set_runpat
             changed = True
         elif (
             set_rpath
-            and e.tag == lief.ELF.DYNAMIC_TAGS.RPATH
+            and e.tag == ELF_DYNAMIC_TAGS.RPATH
             and fnmatch(e.rpath, old_matching)
             and e.rpath != new_rpath
         ):
@@ -188,21 +207,18 @@ if have_lief:
             binary_format = binary.format
             if binary_format == EXE_FORMATS.ELF:
                 binary_type = binary.type
-                if (
-                    binary_type == lief.ELF.ELF_CLASS.CLASS32
-                    or binary_type == lief.ELF.ELF_CLASS.CLASS64
-                ):
+                if binary_type == ELF32 or binary_type == ELF64:
                     rpaths = _get_elf_rpathy_thing(binary, elf_attribute, elf_dyn_tag)
             elif (
                 binary_format == EXE_FORMATS.MACHO
                 and binary.has_rpath
-                and elf_dyn_tag == lief.ELF.DYNAMIC_TAGS.RPATH
+                and elf_dyn_tag == ELF_DYNAMIC_TAGS.RPATH
             ):
                 rpaths.extend(
                     [
                         command.path
                         for command in binary.commands
-                        if command.command == lief.MachO.LOAD_COMMAND_TYPES.RPATH
+                        if command.command == LOAD_COMMAND_TYPES.RPATH
                     ]
                 )
         return rpaths, binary_format, binary_type
@@ -210,12 +226,12 @@ if have_lief:
     get_runpaths_raw = partial(
         get_rpathy_thing_raw_partial,
         elf_attribute="runpath",
-        elf_dyn_tag=lief.ELF.DYNAMIC_TAGS.RUNPATH,
+        elf_dyn_tag=ELF_DYNAMIC_TAGS.RUNPATH,
     )
     get_rpaths_raw = partial(
         get_rpathy_thing_raw_partial,
         elf_attribute="rpath",
-        elf_dyn_tag=lief.ELF.DYNAMIC_TAGS.RPATH,
+        elf_dyn_tag=ELF_DYNAMIC_TAGS.RPATH,
     )
 else:
 
@@ -245,8 +261,7 @@ def set_rpath(old_matching, new_rpath, file):
     if not binary:
         return
     if binary.format == EXE_FORMATS.ELF and (
-        binary.type == lief.ELF.ELF_CLASS.CLASS32
-        or binary.type == lief.ELF.ELF_CLASS.CLASS64
+        binary.type == ELF32 or binary.type == ELF64
     ):
         if _set_elf_rpathy_thing(
             binary, old_matching, new_rpath, set_rpath=True, set_runpath=False
@@ -334,7 +349,7 @@ def from_os_varnames(binary_format, binary_type, input_):
             .replace("@rpath", "$RPATH")
         )
     elif binary_format == EXE_FORMATS.ELF:
-        if binary_type == lief.ELF.ELF_CLASS.CLASS64:
+        if binary_type == ELF64:
             libdir = "/lib64"
         else:
             libdir = "/lib"
@@ -353,24 +368,21 @@ def _get_path_dirs(prefix):
     yield "/".join((prefix, "bin"))
 
 
-def get_uniqueness_key(file):
+def get_uniqueness_key(filename, file):
     binary = ensure_binary(file)
     if not binary:
         return EXE_FORMATS.UNKNOWN
     elif binary.format == EXE_FORMATS.MACHO:
-        return str(file)
+        return filename
     elif binary.format == EXE_FORMATS.ELF and (  # noqa
-        binary.type == lief.ELF.ELF_CLASS.CLASS32
-        or binary.type == lief.ELF.ELF_CLASS.CLASS64
+        binary.type == ELF32 or binary.type == ELF64
     ):
         dynamic_entries = binary.dynamic_entries
-        result = [
-            e.name for e in dynamic_entries if e.tag == lief.ELF.DYNAMIC_TAGS.SONAME
-        ]
+        result = [e.name for e in dynamic_entries if e.tag == ELF_DYNAMIC_TAGS.SONAME]
         if result:
             return result[0]
-        return str(file)
-    return str(file)
+        return filename
+    return filename
 
 
 def _get_resolved_location(
@@ -480,7 +492,7 @@ def inspect_linkages_lief(
     if not binary:
         default_paths = []
     elif binary.format == EXE_FORMATS.ELF:
-        if binary.type == lief.ELF.ELF_CLASS.CLASS64:
+        if binary.type == ELF64:
             default_paths = [
                 "$SYSROOT/lib64",
                 "$SYSROOT/usr/lib64",
@@ -505,13 +517,13 @@ def inspect_linkages_lief(
         for element in todo:
             todo.pop(0)
             filename2 = element[0]
-            binary = element[1]
-            if not binary:
+            binary2 = element[1]
+            if not binary2:
                 continue
-            uniqueness_key = get_uniqueness_key(binary)
+            uniqueness_key = get_uniqueness_key(filename2, binary2)
             if uniqueness_key not in already_seen:
                 parent_exe_dirname = None
-                if binary.format == EXE_FORMATS.PE:
+                if binary2.format == EXE_FORMATS.PE:
                     tmp_filename = filename2
                     while tmp_filename:
                         if (
@@ -527,17 +539,17 @@ def inspect_linkages_lief(
                 if ".pyd" in filename2 or (os.sep + "DLLs" + os.sep) in filename2:
                     parent_exe_dirname = envroot.replace(os.sep, "/") + "/DLLs"
                 rpaths_by_binary[filename2] = get_rpaths(
-                    binary, parent_exe_dirname, envroot.replace(os.sep, "/"), sysroot
+                    binary2, parent_exe_dirname, envroot.replace(os.sep, "/"), sysroot
                 )
                 tmp_filename = filename2
                 rpaths_transitive = []
-                if binary.format == EXE_FORMATS.PE:
+                if binary2.format == EXE_FORMATS.PE:
                     rpaths_transitive = rpaths_by_binary[tmp_filename]
                 else:
                     while tmp_filename:
                         rpaths_transitive[:0] = rpaths_by_binary[tmp_filename]
                         tmp_filename = parents_by_filename[tmp_filename]
-                libraries = get_libraries(binary)
+                libraries = get_libraries(binary2)
                 if filename2 in libraries:  # Happens on macOS, leading to cycles.
                     libraries.remove(filename2)
                 # RPATH is implicit everywhere except macOS, make it explicit to simplify things.
@@ -546,14 +558,14 @@ def inspect_linkages_lief(
                         "$RPATH/" + lib
                         if not lib.startswith("/")
                         and not lib.startswith("$")
-                        and binary.format != EXE_FORMATS.MACHO  # noqa
+                        and binary2.format != EXE_FORMATS.MACHO  # noqa
                         else lib
                     )
                     for lib in libraries
                 ]
                 for lib, orig in zip(libraries, these_orig):
                     resolved = _get_resolved_location(
-                        binary,
+                        binary2,
                         orig,
                         exedir,
                         exedir,
@@ -568,7 +580,7 @@ def inspect_linkages_lief(
                     # can be run case-sensitively if the user wishes.
                     #
                     """
-                    if binary.format == EXE_FORMATS.PE:
+                    if binary2.format == EXE_FORMATS.PE:
                         import random
                         path_fixed = (
                             os.path.dirname(path_fixed)
@@ -596,7 +608,7 @@ def inspect_linkages_lief(
                     if recurse:
                         if os.path.exists(resolved[0]):
                             todo.append([resolved[0], lief.parse(resolved[0])])
-                already_seen.add(get_uniqueness_key(binary))
+                already_seen.add(uniqueness_key)
     return results
 
 
@@ -769,7 +781,7 @@ def get_static_lib_exports(file):
                 obj_ends.add(offsets[i])
                 if debug_static_archives:
                     print(
-                        f"symname {syms[i]}, offset {offsets[i]}, name {name}, elf? {content[index2:index2 + 4]}"
+                        f"symname {syms[i]}, offset {offsets[i]}, name {name}, elf? {content[index2 : index2 + 4]}"
                     )
         elif name.startswith(b"__.SYMDEF"):
             # Reference:
@@ -1057,7 +1069,7 @@ def get_exports(filename, arch="native", enable_static=False):
                         print(
                             "WARNING :: Disagreement regarding static lib exports in "
                             f"{filename} between nm (nsyms={len(exports)}) and "
-                            "lielfldd (nsyms={len(exports2)}):"
+                            f"lielfldd (nsyms={len(exports2)}):"
                         )
                     print(
                         "\n".join(("** nm.diff(liefldd) [MISSING SYMBOLS] **", *diff1))
@@ -1174,6 +1186,10 @@ class memoized_by_arg0_filehash:
                         if not data:
                             break
                         sha1.update(data)
+                # update with file name, if its a different
+                # file with the same contents, we don't want
+                # to treat it as cached
+                sha1.update(os.path.realpath(arg).encode("utf-8"))
                 arg = sha1.hexdigest()
             if isinstance(arg, list):
                 newargs.append(tuple(arg))

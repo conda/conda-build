@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import os
-import sys
 from typing import TYPE_CHECKING
 
 import pytest
@@ -17,6 +16,10 @@ from ..utils import metadata_dir
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+    from pytest import CaptureFixture
+
+    from conda_build.metadata import MetaData
 
 
 def test_render_add_channel(tmp_path: Path) -> None:
@@ -44,9 +47,9 @@ def test_render_add_channel(tmp_path: Path) -> None:
         "Expected version number on successful "
         f"rendering, but got only {required_package_details}"
     )
-    assert (
-        required_package_details[1] == "1.0"
-    ), f"Expected version number 1.0 on successful rendering, but got {required_package_details[1]}"
+    assert required_package_details[1] == "1.0", (
+        f"Expected version number 1.0 on successful rendering, but got {required_package_details[1]}"
+    )
 
 
 def test_render_with_empty_channel_fails(tmp_path: Path, empty_channel: Path) -> None:
@@ -70,7 +73,7 @@ def test_render_output_build_path(
     test_path = os.path.join(
         testing_config.croot,
         testing_metadata.config.host_subdir,
-        "test_render_output_build_path-1.0-1.tar.bz2",
+        "test_render_output_build_path-1.0-1.conda",
     )
     output, error = capfd.readouterr()
     assert output.rstrip() == test_path, error
@@ -87,7 +90,7 @@ def test_render_output_build_path_and_file(
     test_path = os.path.join(
         testing_config.croot,
         testing_metadata.config.host_subdir,
-        "test_render_output_build_path_and_file-1.0-1.tar.bz2",
+        "test_render_output_build_path_and_file-1.0-1.conda",
     )
     output, error = capfd.readouterr()
     assert output.rstrip() == test_path, error
@@ -97,14 +100,15 @@ def test_render_output_build_path_and_file(
     assert rendered_meta["package"]["name"] == "test_render_output_build_path_and_file"
 
 
-def test_render_output_build_path_set_python(testing_workdir, testing_metadata, capfd):
+@pytest.mark.parametrize("version", ["2.7", "3.12"])
+def test_render_output_build_path_set_python(
+    testing_workdir: str,
+    testing_metadata: MetaData,
+    capfd: CaptureFixture,
+    version: str,
+):
     testing_metadata.meta["requirements"] = {"host": ["python"], "run": ["python"]}
     api.output_yaml(testing_metadata, "meta.yaml")
-    # build the other major thing, whatever it is
-    if sys.version_info.major == 3:
-        version = "2.7"
-    else:
-        version = "3.5"
 
     api.output_yaml(testing_metadata, "meta.yaml")
     metadata = api.render(testing_workdir, python=version)[0][0]
@@ -112,14 +116,13 @@ def test_render_output_build_path_set_python(testing_workdir, testing_metadata, 
     args = ["--output", testing_workdir, "--python", version]
     main_render.execute(args)
 
-    _hash = metadata.hash_dependencies()
+    major, minor = version.split(".")
+    hash_ = metadata.hash_dependencies()
     test_path = (
-        "test_render_output_build_path_set_python-1.0-py{}{}{}_1.tar.bz2".format(
-            version.split(".")[0], version.split(".")[1], _hash
-        )
+        f"test_render_output_build_path_set_python-1.0-py{major}{minor}{hash_}_1.conda"
     )
     output, error = capfd.readouterr()
-    assert os.path.basename(output.rstrip()) == test_path, error
+    assert os.path.basename(output.strip()) == test_path, error
 
 
 @pytest.mark.slow

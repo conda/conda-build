@@ -1,17 +1,18 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
+
 import os
 import subprocess
 import sys
 import tempfile
 from collections import defaultdict
 from pathlib import Path
-from typing import Iterator
+from typing import TYPE_CHECKING
 
 import pytest
 from conda.common.compat import on_mac, on_win
 from conda_index.api import update_index
-from pytest import MonkeyPatch
 
 import conda_build
 import conda_build.config
@@ -31,6 +32,11 @@ from conda_build.config import (
 from conda_build.metadata import MetaData
 from conda_build.utils import check_call_env, copy_into, prepend_bin_path
 from conda_build.variants import get_default_variant
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+
+    from pytest import FixtureRequest, MonkeyPatch
 
 
 @pytest.hookimpl
@@ -105,7 +111,15 @@ def testing_config(testing_workdir):
         exit_on_verify_error=exit_on_verify_error_default,
         conda_pkg_format=conda_pkg_format_default,
     )
-    result = Config(variant=None, **testing_config_kwargs)
+
+    if on_mac and "CONDA_BUILD_SYSROOT" in os.environ:
+        var_dict = {
+            "CONDA_BUILD_SYSROOT": [os.environ["CONDA_BUILD_SYSROOT"]],
+        }
+    else:
+        var_dict = None
+
+    result = Config(variant=var_dict, **testing_config_kwargs)
     result._testing_config_kwargs = testing_config_kwargs
     assert result.no_rewrite_stdout_env is False
     assert result._src_cache_root is None
@@ -145,7 +159,7 @@ def default_testing_config(testing_config, monkeypatch, request):
 
 
 @pytest.fixture(scope="function")
-def testing_metadata(request, testing_config):
+def testing_metadata(request: FixtureRequest, testing_config: Config) -> MetaData:
     d = defaultdict(dict)
     d["package"]["name"] = request.function.__name__
     d["package"]["version"] = "1.0"
@@ -204,24 +218,35 @@ def variants_conda_build_sysroot(monkeypatch, request):
     if not on_mac:
         return {}
 
-    monkeypatch.setenv(
-        "CONDA_BUILD_SYSROOT",
-        subprocess.run(
-            ["xcrun", "--sdk", "macosx", "--show-sdk-path"],
-            check=True,
-            capture_output=True,
-            text=True,
-        ).stdout.strip(),
-    )
-    monkeypatch.setenv(
-        "MACOSX_DEPLOYMENT_TARGET",
-        subprocess.run(
+    # if we do not speciy a custom sysroot, we get what the
+    # current SDK has
+    if "CONDA_BUILD_SYSROOT" not in os.environ:
+        monkeypatch.setenv(
+            "CONDA_BUILD_SYSROOT",
+            subprocess.run(
+                ["xcrun", "--sdk", "macosx", "--show-sdk-path"],
+                check=True,
+                capture_output=True,
+                text=True,
+            ).stdout.strip(),
+        )
+
+        mdt = subprocess.run(
             ["xcrun", "--sdk", "macosx", "--show-sdk-version"],
             check=True,
             capture_output=True,
             text=True,
-        ).stdout.strip(),
-    )
+        ).stdout.strip()
+    else:
+        # custom sysroots always have names like MacOSX<version>.sdk
+        mdt = (
+            os.path.basename(os.environ["CONDA_BUILD_SYSROOT"])
+            .replace("MacOSX", "")
+            .replace(".sdk", "")
+        )
+
+    monkeypatch.setenv("MACOSX_DEPLOYMENT_TARGET", mdt)
+
     return request.param
 
 

@@ -26,7 +26,7 @@ the general conda recommendation not to use the ``base`` env for normal work;
 see `Conda Managing Environments`_ for instance. However, conda-build is better
 viewed as part of the conda infrastructure, and not as a normal package. Hence,
 installing it in the ``base`` env makes more sense. More information:
-`Must conda-build be installed in the base envt?`_
+`Must conda-build be installed in the base env?`_
 
 Other considerations
 --------------------
@@ -37,7 +37,7 @@ Other considerations
   the first place via the Miniconda or Anaconda installers). For example, on
   Windows that might mean an account with administrator privileges.
 
-* `conda-verfiy`_ is a useful package that can also be added to the base
+* `conda-verify`_ is a useful package that can also be added to the base
   environment in order to remove some warnings generated when conda-build runs.
 
 * For critical CI/CD projects, you might want to pin to an explicit (but recent)
@@ -77,5 +77,5 @@ page <https://github.com/conda/conda-build/releases>`_.
 
 
 .. _`Conda Managing Environments`:                      https://conda.io/projects/conda/en/latest/user-guide/getting-started.html#managing-environments
-.. _`conda-verfiy`:                                     https://github.com/conda/conda-verify
-.. _`Must conda-build be installed in the base envt?`:  https://github.com/conda/conda-build/issues/4995
+.. _`conda-verify`:                                     https://github.com/conda/conda-verify
+.. _`Must conda-build be installed in the base env?`:  https://github.com/conda/conda-build/issues/4995

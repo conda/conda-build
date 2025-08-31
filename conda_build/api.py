@@ -15,9 +15,10 @@ from __future__ import annotations
 #    to conda-build's functionality.
 import os
 import sys
+from collections.abc import Iterable
 from os.path import dirname, expanduser, join
 from pathlib import Path
-from typing import TYPE_CHECKING, Iterable
+from typing import TYPE_CHECKING
 
 # make the Config class available in the api namespace
 from .config import DEFAULT_PREFIX_LENGTH as _prefix_length
@@ -52,11 +53,7 @@ def render(
        templates evaluated.
 
     Returns a list of (metadata, need_download, need_reparse in env) tuples"""
-
-    from conda.exceptions import NoPackagesFoundError
-
-    from .exceptions import DependencyNeedsBuildingError
-    from .render import finalize_metadata, render_recipe
+    from .render import render_metadata_tuples, render_recipe
 
     config = get_or_merge_config(config, **kwargs)
 
@@ -68,50 +65,13 @@ def render(
         variants=variants,
         permit_unsatisfiable_variants=permit_unsatisfiable_variants,
     )
-    output_metas: dict[tuple[str, str, tuple[tuple[str, str], ...]], MetaDataTuple] = {}
-    for meta, download, render_in_env in metadata_tuples:
-        if not meta.skip() or not config.trim_skip:
-            for od, om in meta.get_output_metadata_set(
-                permit_unsatisfiable_variants=permit_unsatisfiable_variants,
-                permit_undefined_jinja=not finalize,
-                bypass_env_check=bypass_env_check,
-            ):
-                if not om.skip() or not config.trim_skip:
-                    if "type" not in od or od["type"] == "conda":
-                        if finalize and not om.final:
-                            try:
-                                om = finalize_metadata(
-                                    om,
-                                    permit_unsatisfiable_variants=permit_unsatisfiable_variants,
-                                )
-                            except (DependencyNeedsBuildingError, NoPackagesFoundError):
-                                if not permit_unsatisfiable_variants:
-                                    raise
-
-                        # remove outputs section from output objects for simplicity
-                        if not om.path and (outputs := om.get_section("outputs")):
-                            om.parent_outputs = outputs
-                            del om.meta["outputs"]
-
-                        output_metas[
-                            om.dist(),
-                            om.config.variant.get("target_platform"),
-                            tuple(
-                                (var, om.config.variant[var])
-                                for var in om.get_used_vars()
-                            ),
-                        ] = MetaDataTuple(om, download, render_in_env)
-                    else:
-                        output_metas[
-                            f"{om.type}: {om.name()}",
-                            om.config.variant.get("target_platform"),
-                            tuple(
-                                (var, om.config.variant[var])
-                                for var in om.get_used_vars()
-                            ),
-                        ] = MetaDataTuple(om, download, render_in_env)
-
-    return list(output_metas.values())
+    return render_metadata_tuples(
+        metadata_tuples,
+        config=config,
+        permit_unsatisfiable_variants=permit_unsatisfiable_variants,
+        finalize=finalize,
+        bypass_env_check=bypass_env_check,
+    )
 
 
 def output_yaml(
@@ -207,6 +167,7 @@ def check(
     return all(m[0].check_fields() for m in metadata)
 
 
+# UP007 can be exception can be dropped when Python 3.10 is minimum version.
 def build(
     recipe_paths_or_metadata: str | os.PathLike | Path | MetaData,
     post: bool | None = None,
@@ -270,8 +231,8 @@ def test(
     """Run tests on either packages (.tar.bz2 or extracted) or recipe folders
 
     For a recipe folder, it renders the recipe enough to know what package to download, and obtains
-    it from your currently configuured channels."""
-    from .build import test
+    it from your currently configured channels."""
+    from conda_build.build import test
 
     if hasattr(recipedir_or_package_or_metadata, "config"):
         config = recipedir_or_package_or_metadata.config
@@ -467,14 +428,14 @@ def inspect_prefix_length(packages, min_prefix_length=_prefix_length):
     prefix_lengths = check_prefix_lengths(packages, config)
     if prefix_lengths:
         print(
-            "Packages with binary prefixes shorter than %d characters:"
+            "Packages with binary prefixes shorter than %d characters:"  # noqa: UP031
             % min_prefix_length
         )
         for fn, length in prefix_lengths.items():
             print(f"{fn} ({length} chars)")
     else:
         print(
-            "No packages found with binary prefixes shorter than %d characters."
+            "No packages found with binary prefixes shorter than %d characters."  # noqa: UP031
             % min_prefix_length
         )
     return len(prefix_lengths) == 0
