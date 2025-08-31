@@ -72,6 +72,7 @@ from .utils import (
     CONDA_PACKAGE_EXTENSION_V1,
     CONDA_PACKAGE_EXTENSION_V2,
     CONDA_PACKAGE_EXTENSIONS,
+    MAX_CMD_LINE_LENGTH,
     env_var,
     glob,
     on_linux,
@@ -80,6 +81,7 @@ from .utils import (
     shutil_move_more_retrying,
     tmp_chdir,
     write_bat_activation_text,
+    chunks,
 )
 from .variants import (
     dict_of_lists_to_list_of_dicts,
@@ -188,42 +190,6 @@ def prefix_replacement_excluded(path):
     return False
 
 
-def chunks(line: list[str], n: int, len_padding: int = 3, use_len: bool = True) -> list[list[str]]:
-    """
-        Chunk the list of strings into smaller subsets with a maximum size.
-
-        Args:
-            line (list of strings): a list of strings (e.g., a command line argument list)
-            n (int): max chunk size
-            len_padding (int): if use_len=True, add this to each of the string lengths. 
-                (default is 3 in case a shell is used: 1 space and 2 quotes.)
-            use_len (bool): If True (default), the string lengths are used. If False, 
-                then the number of strings is used. It may be that when using the list 
-                form of passing args to subprocess what matters is the number of arguments 
-                rather than the accumulated string length. We should test this!
-
-        Returns:
-            A list of string lists.
-    """
-    result = []  # the list that will be returned
-    element = []  # an element (list) in the returned list
-    size = 0  # size accumulator for each element
-    for f in line:
-        f_size = (len(f) + len_padding if use_len else 1)  # padded size of current f
-        tmp_size = size + f_size # size if we added current f to element
-        if tmp_size > n:  # the chunk would be too big if we add this one
-            if element:  # done with this chunk, add what we have so far
-                result.append(element)
-            size = f_size  # first one in the next chunk
-            element = [f]
-        else:  # add another one to this chunk
-            size = tmp_size
-            element.append(f)
-    if element:  # last one if necessary
-        result.append(element)
-    return result
-
-
 def get_bytes_or_text_as_bytes(parent):
     if "bytes" in parent:
         return parent["bytes"]
@@ -259,10 +225,8 @@ def regex_files_rg(
         os.path.join(pu, f.replace("/", os.sep).encode("utf-8")) for f in files
     ]
     args_len = len(b" ".join(args_base))
-    # can specify the max length via env var, or use these defaults
-    # note: there is a different algorithm in post.py : compile_missing_pyc()
-    max_len = int(os.environ.get("CONDA_BUILD_MAX_CMD_LEN", 32760 if utils.on_win else 131071))
-    file_lists = chunks(prefix_files, max_len - args_len)
+    # chunk them to avoid too long comand lines:
+    file_lists = chunks(prefix_files, MAX_CMD_LINE_LENGTH - args_len)
     for file_list in file_lists:
         args = args_base[:] + file_list
         # This will not work now our args are binary strings:

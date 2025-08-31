@@ -88,6 +88,8 @@ mmap_MAP_PRIVATE = 0 if on_win else mmap.MAP_PRIVATE
 mmap_PROT_READ = 0 if on_win else mmap.PROT_READ
 mmap_PROT_WRITE = 0 if on_win else mmap.PROT_WRITE
 
+MAX_CMD_LINE_LENGTH = int(os.environ.get("CONDA_BUILD_MAX_CMD_LEN", 8190 if on_win else 32760))
+
 DEFAULT_SUBDIRS = set(KNOWN_SUBDIRS)
 
 RUN_EXPORTS_TYPES = {
@@ -2179,3 +2181,39 @@ def is_conda_pkg(pkg_path: str) -> bool:
 
 def package_record_to_requirement(prec: PackageRecord) -> str:
     return f"{prec.name} {prec.version} {prec.build}"
+
+
+def chunks(line: list[str], n: int, len_padding: int = 3, use_len: bool = True) -> list[list[str]]:
+    """
+        Chunk the list of strings into smaller subsets with a maximum size.
+
+        Args:
+            line (list of strings): a list of strings (e.g., a command line argument list)
+            n (int): max chunk size
+            len_padding (int): if use_len=True, add this to each of the string lengths. 
+                (default is 3 in case a shell is used: 1 space and 2 quotes.)
+            use_len (bool): If True (default), the string lengths are used. If False, 
+                then the number of strings is used. It may be that when using the list 
+                form of passing args to subprocess what matters is the number of arguments 
+                rather than the accumulated string length. We should test this!
+
+        Returns:
+            A list of string lists.
+    """
+    result = []  # the list that will be returned
+    element = []  # an element (list) in the returned list
+    size = 0  # size accumulator for each element
+    for f in line:
+        f_size = (len(f) + len_padding if use_len else 1)  # padded size of current f
+        tmp_size = size + f_size # size if we added current f to element
+        if tmp_size > n:  # the chunk would be too big if we add this one
+            if element:  # done with this chunk, add what we have so far
+                result.append(element)
+            size = f_size  # first one in the next chunk
+            element = [f]
+        else:  # add another one to this chunk
+            size = tmp_size
+            element.append(f)
+    if element:  # last one if necessary
+        result.append(element)
+    return result
