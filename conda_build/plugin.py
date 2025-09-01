@@ -5,12 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import conda.plugins
-
-try:
-    # FUTURE: Use this import only in conda 26.3+
-    from conda.plugins.types import CondaSubcommand
-except ImportError:
-    from conda.plugins import CondaSubcommand
+from conda.plugins.types import CondaSubcommand
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
