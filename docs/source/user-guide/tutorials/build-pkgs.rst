@@ -178,6 +178,11 @@ on your local computer.
 
       ~/anaconda/conda-bld/linux-64/click-7.0-py37_0.tar.bz2
 
+   .. note::
+      By default, conda-build now creates packages in the modern `.conda` format.
+      The example above shows the legacy `.tar.bz2` format. For more information
+      on package formats and how to configure them, see :ref:`configuration`.
+
 
    .. note::
       Save this path and file information for the next task.

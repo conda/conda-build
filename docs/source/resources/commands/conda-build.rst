@@ -322,6 +322,10 @@ conda-build
           <B>--override-channels</B>
                  Do  not search default or .condarc channels. Requires <B>--channel</B>.
 
+.. note::
+
+   For configuration options including package format settings, see :ref:`configuration`.
+
       <B>PyPI</B> <B>upload</B> <B>parameters</B> <B>(twine):</B>
           <B>--password</B> PASSWORD
                  password to use when uploading packages to pypi
