@@ -8,6 +8,12 @@ Conda-build can be configured through various methods including environment vari
 command-line arguments, and configuration files. This section documents the available
 configuration options and how to use them.
 
+The priority of configuration options is as follows:
+1. Command-line arguments
+2. Environment variables
+3. Conda configuration file (.condarc)
+4. Default values
+
 .. _condarc-configuration:
 
 Conda configuration file (.condarc)
@@ -60,24 +66,6 @@ Example .condarc file:
 
    The package format can also be specified per-build using the `--package-format`
    command-line option, which will override the condarc setting.
-
-Package format differences
--------------------------
-
-**Legacy .tar.bz2 format:**
-* Traditional conda package format
-* Compatible with older conda versions
-* Larger file sizes due to less efficient compression
-* Slower installation times
-
-**Modern .conda format:**
-* Newer, more efficient package format
-* Better compression ratios
-* Faster installation times
-* Requires conda 4.7+ for installation
-* Default format in conda-build 25.1+
-
-For detailed information about conda package formats and specifications, see :doc:`package specification <../package-spec>`.
 
 .. _environment-variables:
 
