@@ -41,7 +41,7 @@ inherited from the shell environment in which you invoke
 
 .. note::
 
-   For configuration options including package format settings, see :ref:`configuration`.
+   For configuration options, including package format settings, see :ref:`configuration`.
 
 
 .. list-table::

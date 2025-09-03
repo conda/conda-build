@@ -324,7 +324,7 @@ conda-build
 
 .. note::
 
-   For configuration options including package format settings, see :ref:`configuration`.
+   For configuration options, including package format settings, see :ref:`configuration`.
 
       <B>PyPI</B> <B>upload</B> <B>parameters</B> <B>(twine):</B>
           <B>--password</B> PASSWORD

@@ -1,17 +1,17 @@
 .. _configuration:
 
-==================
+=============
 Configuration
-==================
+=============
 
-Conda-build can be configured through various methods including environment variables,
+Conda-build can be configured through various methods, including environment variables,
 command-line arguments, and configuration files. This section documents the available
 configuration options and how to use them.
 
 The priority of configuration options is as follows:
 1. Command-line arguments
 2. Environment variables
-3. Conda configuration file (.condarc)
+3. Conda configuration file (`.condarc`)
 4. Default values
 
 .. _condarc-configuration:
@@ -49,7 +49,7 @@ Accepted values for `pkg_format`:
 * `.tar.bz2` - Legacy format (alternative syntax)
 * `.conda` - Modern format (alternative syntax)
 
-Example .condarc file:
+Example `.condarc` file:
 
 .. code-block:: yaml
 
