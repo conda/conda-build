@@ -403,7 +403,7 @@ def test_python_line_up_with_compiled_lib(recipe, testing_config):
                 metadata.name(),
                 deps,
             )
-            assert any(dep.startswith("zlib >") for dep in deps), (
+            assert any(dep.startswith(("zlib >", "libzlib >")) for dep in deps), (
                 metadata.name(),
                 deps,
             )
