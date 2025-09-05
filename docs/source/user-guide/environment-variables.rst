@@ -39,6 +39,10 @@ inherited from the shell environment in which you invoke
 ``conda-build``. To override this behavior, see
 :ref:`inherited-env-vars`.
 
+.. note::
+
+   For configuration options, including package format settings, see :ref:`configuration`.
+
 
 .. list-table::
    :widths: 20 80
