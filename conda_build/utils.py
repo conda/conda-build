@@ -48,7 +48,6 @@ from typing import TYPE_CHECKING, overload
 
 import conda_package_handling.api
 import filelock
-import libarchive
 import yaml
 from conda.base.constants import (
     CONDA_PACKAGE_EXTENSION_V1,  # noqa: F401
@@ -827,7 +826,9 @@ uncompress (or gunzip) is required to unarchive .z source files.
     t.close()
 
 
-def tar_xf_file(tarball, entries):
+def tar_xf_file(
+    tarball, entries
+):  # Unused in conda-build? (See 25.4.0 (2025-04-07) changelog "use tar_xf everywhere"
     entries = ensure_list(entries)
     if not os.path.isabs(tarball):
         tarball = os.path.join(os.getcwd(), tarball)
@@ -852,35 +853,18 @@ def tar_xf_getnames(tarball):
     if not os.path.isabs(tarball):
         tarball = os.path.join(os.getcwd(), tarball)
     result = []
-    with libarchive.file_reader(tarball) as archive:
+    with tarfile.open(tarball) as archive:
         for entry in archive:
             result.append(entry.name)
     return result
 
 
 def tar_xf(tarball, dir_path):
-    flags = (
-        libarchive.extract.EXTRACT_TIME
-        | libarchive.extract.EXTRACT_PERM
-        | libarchive.extract.EXTRACT_SECURE_NODOTDOT
-        | libarchive.extract.EXTRACT_SECURE_SYMLINKS
-        | libarchive.extract.EXTRACT_SECURE_NOABSOLUTEPATHS
-    )
     if not os.path.isabs(tarball):
         tarball = os.path.join(os.getcwd(), tarball)
-    try:
-        with tmp_chdir(os.path.realpath(dir_path)):
-            libarchive.extract_file(tarball, flags)
-    except libarchive.exception.ArchiveError:
-        # try again, maybe we are on Windows and the archive contains symlinks
-        # https://github.com/conda/conda-build/issues/3351
-        # https://github.com/libarchive/libarchive/pull/1030
-        if tarball.lower().endswith(
-            (".tar", ".tar.gz", ".tgz", ".tar.bz2", ".tar.z", ".tar.xz")
-        ):
-            _tar_xf_fallback(tarball, dir_path)
-        else:
-            raise
+
+    with tarfile.open(tarball) as tar:
+        tar.extractall(dir_path, filter="data")
 
 
 def file_info(path):
