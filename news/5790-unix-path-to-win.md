@@ -8,8 +8,9 @@
 
 ### Deprecations
 
-* Use `conda.common.path.unix_path_to_win` instead of deprecated function. (#5790)
-* Use `conda.common.path.BIN_DIRECTORY` instead of removed`conda.testing.integration.BIN_DIRECTORY`
+* Use `conda.common.path.unix_path_to_win` instead of deprecated function, use
+  `conda.common.path.BIN_DIRECTORY` instead of removed
+  `conda.testing.integration.BIN_DIRECTORY`  (#5790)
 
 ### Docs
 
