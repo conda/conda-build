@@ -57,7 +57,7 @@ from conda.base.constants import (
     KNOWN_SUBDIRS,
 )
 from conda.base.context import context
-from conda.common.path import win_path_to_unix
+from conda.common.path import unix_path_to_win, win_path_to_unix
 from conda.exceptions import CondaHTTPError
 from conda.gateways.connection.download import download
 from conda.gateways.disk.create import TemporaryDirectory
@@ -66,7 +66,6 @@ from conda.models.channel import Channel
 from conda.models.match_spec import MatchSpec
 from conda.models.records import PackageRecord
 from conda.models.version import VersionOrder
-from conda.utils import unix_path_to_win
 
 from .exceptions import BuildLockError
 
