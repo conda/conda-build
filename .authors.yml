@@ -1529,3 +1529,12 @@
   github: emmanuel-ferdman
   num_commits: 1
   first_commit: 2025-05-11 13:14:57
+- name: Jakov Smolić
+  email: jsmolic@gentoo.org
+  github: jsmolic
+- name: ColemanTom
+  email: 15375218+ColemanTom@users.noreply.github.com
+  github: ColemanTom
+- name: Rory Yorke
+  email: rory.yorke@gmail.com
+  github: roryyorke
