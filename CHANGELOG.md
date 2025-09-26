@@ -1,5 +1,44 @@
 [//]: # (current developments)
 
+## 25.9.0 (2025-09-26)
+
+### Bug fixes
+
+* Import `CondaSubCommand` from its canonical location to avoid deprecation warnings. (#5747)
+* Run outputs parsing check only for multi-output recipes. (#5655 via #5747)
+
+### Deprecations
+
+* Use `conda.common.path.unix_path_to_win` instead of deprecated function, use
+  `conda.common.path.BIN_DIRECTORY` instead of removed
+  `conda.testing.integration.BIN_DIRECTORY`  (#5790)
+
+### Docs
+
+* Add documentation for package format configuration for command line and configuration in `.condarc`. (#5687)
+* Update package naming conventions documentation to clarify the default package format.
+* Created new configuration documentation that briefly summarizes configuration precedence and options.
+
+### Other
+
+* Avoid redundant isfile() check in sha256_checksum (#5422)
+
+### Contributors
+
+* @ColemanTom
+* @conda-bot
+* @dholth
+* @jaimergp
+* @jsmolic
+* @jezdez
+* @kenodegard
+* @roryyorke
+* @ryanskeith
+* @dependabot[bot]
+* @pre-commit-ci[bot]
+
+
+
 ## 25.7.0 (2025-07-31)
 
 ### Deprecations
