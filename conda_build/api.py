@@ -232,7 +232,7 @@ def test(
 
     For a recipe folder, it renders the recipe enough to know what package to download, and obtains
     it from your currently configured channels."""
-    from conda_build.build import test
+    from .build import test as run_test
 
     if hasattr(recipedir_or_package_or_metadata, "config"):
         config = recipedir_or_package_or_metadata.config
@@ -248,7 +248,7 @@ def test(
         #   doesn't already have one. What this means is that if we're
         #   running a test immediately after build, we use the one that the
         #   build already provided
-        return test(
+        return run_test(
             recipedir_or_package_or_metadata,
             config=config,
             move_broken=move_broken,
