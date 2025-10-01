@@ -137,13 +137,13 @@ def get_default_variant(config):
     return base
 
 
-def parse_config_file(path, config):
+def parse_config_file(path, config, loader=yaml.loader.BaseLoader):
     from .metadata import get_selectors, select_lines
 
     with open(path) as f:
         contents = f.read()
     contents = select_lines(contents, get_selectors(config), variants_in_place=False)
-    content = yaml.load(contents, Loader=yaml.loader.BaseLoader) or {}
+    content = yaml.load(contents, Loader=loader) or {}
     trim_empty_keys(content)
     return content
 
