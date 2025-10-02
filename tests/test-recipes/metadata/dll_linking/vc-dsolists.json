@@ -1,0 +1,7 @@
+{
+  "version":1,
+  "allow": [
+    "C:/Windows/System32/*.dll",
+  ],
+  "subdir":"win-64"
+}
