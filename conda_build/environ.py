@@ -381,8 +381,12 @@ def get_dict(
     for k, v in variant.items():
         if not for_env or (k.upper() not in d and k.upper() not in LANGUAGES):
             # coerce true and false as strings to bools
-            if variant_true_false_as_bool and isinstance(v, str) and v.lower() in ['true', 'false']:
-                d[k] = v.lower() == 'true'
+            if (
+                variant_true_false_as_bool
+                and isinstance(v, str)
+                and v.lower() in ["true", "false"]
+            ):
+                d[k] = v.lower() == "true"
             else:
                 d[k] = v
     return d
