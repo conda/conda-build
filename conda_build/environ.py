@@ -352,7 +352,7 @@ def get_dict(
     skip_build_id=False,
     escape_backslash=False,
     variant=None,
-    true_false_as_bool=False,
+    variant_true_false_as_bool=False,
 ):
     if not prefix:
         prefix = m.config.host_prefix
@@ -381,7 +381,7 @@ def get_dict(
     for k, v in variant.items():
         if not for_env or (k.upper() not in d and k.upper() not in LANGUAGES):
             # coerce true and false as strings to bools
-            if true_false_as_bool and isinstance(v, str) and v.lower() in ['true', 'false']:
+            if variant_true_false_as_bool and isinstance(v, str) and v.lower() in ['true', 'false']:
                 d[k] = v.lower() == 'true'
             else:
                 d[k] = v
