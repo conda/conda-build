@@ -719,6 +719,7 @@ def context_processor(
         skip_build_id=skip_build_id,
         escape_backslash=True,
         variant=variant,
+        variant_true_false_as_bool=True,  # coerce 'true' or 'false' to bools
     )
     environ = dict(os.environ)
     environ.update(get_environ(m=initial_metadata, skip_build_id=skip_build_id))
