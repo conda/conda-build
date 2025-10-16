@@ -141,6 +141,8 @@ filterwarnings = [
   "ignore:conda.trust:DeprecationWarning",
   # ignore conda link PrefixActions deprecation
   "ignore:conda.core.link.PrefixActions is deprecated and will be removed in 26.3:DeprecationWarning",
+  # ignore conda context restore_free_channel deprecation
+  "ignore:conda.base.context.Context.restore_free_channel is deprecated:DeprecationWarning",
 ]
 markers = [
   "serial: execute test serially (to avoid race conditions)",
