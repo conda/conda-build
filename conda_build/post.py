@@ -1705,11 +1705,8 @@ def _build_validator(url):
     log = utils.get_logger(__name__, dedupe=False)
 
     if not url.startswith(VALID_SCHEMA_LOCATIONS):
-        log.warning(
-            "JSON Schema at '%s' URL doesn't match any of the valid locations: %s. "
-            "This will be an error in 25.11.",  # FUTURE: Raise in 25.11
-            url,
-            VALID_SCHEMA_LOCATIONS,
+        raise ValueError(
+            f"JSON Schema at '{url}' URL doesn't match any of the valid locations: {VALID_SCHEMA_LOCATIONS}."
         )
     log = utils.get_logger(__name__, dedupe=False)
     try:
@@ -1744,12 +1741,9 @@ def _check_one_menuinst_json(json_file):
         loaded = json.loads(text)
         schema_url = loaded.get("$schema")
         if not schema_url:
-            log.warning(
-                "Invalid empty value for $schema. '%s' won't be validated. "
-                "This will be an error in 25.11.",  # FUTURE: Raise in 25.11
-                json_file,
+            raise ValueError(
+                f"Invalid empty value for $schema in '{json_file}'. This is now an error."
             )
-            return
         elif schema_url == "https://json-schema.org/draft-07/schema":
             # This is for compatibility with menuinst files built as per the wrong
             # recommendations of menuinst >=2,<=2.2
@@ -1760,17 +1754,13 @@ def _check_one_menuinst_json(json_file):
             schema_url = FALLBACK_MENUINST_SCHEMA
         validator = _build_validator(schema_url)
         if validator is None:
-            # FUTURE: Raise in 25.11
-            log.warning("Could not build validator. This will be an error in 25.11.")
-            return
+            raise RuntimeError(
+                f"Could not build validator for schema '{schema_url}'. This is now an error."
+            )
         validator.validate(loaded)
     except (jsonschema.ValidationError, json.JSONDecodeError, OSError) as exc:
-        log.warning(
-            # FUTURE: Raise in 25.11
-            "'%s' is not a valid menuinst JSON document! This will be an error in 25.11.",
-            json_file,
-            exc_info=exc,
-        )
+        # Raise exception - invalid menuinst JSON is now an error
+        raise exc
     else:
         log.info("'%s' is a valid menuinst JSON document", json_file)
 
