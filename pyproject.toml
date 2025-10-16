@@ -122,6 +122,10 @@ filterwarnings = [
   # elevate conda-build's deprecated warning to an error
   "error::PendingDeprecationWarning:conda_build",
   "error::DeprecationWarning:conda_build",
+  # ignore numpy.distutils error
+  'ignore:\s+`numpy.distutils` is deprecated:DeprecationWarning:conda_build._load_setup_py_data',
+  # ignore conda-package-streaming error
+  "ignore:conda.core.index._supplement_index_with_system is pending deprecation:PendingDeprecationWarning:conda",
   # ignore tarfile Python 3.14 warning
   "ignore:Python 3.14 will, by default, filter extracted tar archives:DeprecationWarning",
   # TEMPORARY: Remove once CLS is released with https://github.com/conda/conda-libmamba-solver/pull/691
