@@ -133,8 +133,8 @@ filterwarnings = [
   "ignore:conda.plugins.CondaSolver:DeprecationWarning",
   # ignore conda prefix data deprecation
   "ignore:conda.core.prefix_data:DeprecationWarning",
-  # ignore conda prefix data pip_interop_enabled pending deprecation (for macOS 3.10 and conda 24.11)
-  "ignore:conda.core.prefix_data.PrefixDataType.__call__(pip_interop_enabled) is pending deprecation:PendingDeprecationWarning",
+  # ignore conda prefix data pending deprecation (including pip_interop_enabled)
+  "ignore:conda.core.prefix_data:PendingDeprecationWarning",
   # ignore conda index deprecation
   "ignore:conda.core.index._supplement_index_with_system is deprecated:DeprecationWarning",
   # ignore conda trust deprecation
