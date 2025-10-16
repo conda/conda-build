@@ -19,7 +19,7 @@ from conda_build.utils import (
     package_has_file,
 )
 
-from .utils import add_mangling, metadata_dir, raises_after, subpackage_path
+from .utils import add_mangling, metadata_dir, subpackage_path
 
 
 @pytest.mark.skipif(
@@ -130,13 +130,9 @@ def test_menuinst_validation_fails_bad_input(testing_config, caplog, tmp_path):
     bad_data = json.loads(menu_json_contents)
     bad_data["menu_items"][0]["osx"] = ["bad", "input"]
     menu_json.write_text(json.dumps(bad_data, indent=2))
-    with caplog.at_level(logging.WARNING), raises_after((2025, 10, 10), Exception):
-        api.build(str(recipe_tmp), config=testing_config, notest=True)
 
-    captured_text = caplog.text
-    assert "Found 'Menu/*.json' files but couldn't validate:" not in captured_text
-    assert "not a valid menuinst JSON document" in captured_text
-    assert "ValidationError" in captured_text
+    with pytest.raises(Exception):
+        api.build(str(recipe_tmp), config=testing_config, notest=True)
 
 
 def test_menuinst_validation_fails_bad_schema_url(testing_config, caplog, tmp_path):
@@ -153,12 +149,9 @@ def test_menuinst_validation_fails_bad_schema_url(testing_config, caplog, tmp_pa
         "7e1aa1fc445935d25f7d22cf808b68d41fa6956c/menuinst/data/menuinst-1-1-0.schema.json"
     )
     menu_json.write_text(json.dumps(bad_data, indent=2))
-    with caplog.at_level(logging.WARNING), raises_after((2025, 10, 10), Exception):
-        api.build(str(recipe_tmp), config=testing_config, notest=True)
 
-    captured_text = caplog.text
-    assert "Found 'Menu/*.json' files but couldn't validate:" not in captured_text
-    assert "URL doesn't match any of the valid locations:" in captured_text
+    with pytest.raises(Exception):
+        api.build(str(recipe_tmp), config=testing_config, notest=True)
 
 
 def test_menuinst_validation_fails_bad_json(testing_config, monkeypatch, tmp_path):
@@ -189,17 +182,8 @@ def test_menuinst_validation_fails_bad_json(testing_config, monkeypatch, tmp_pat
     # a module-level global that we could easily patch.
     monkeypatch.setattr(conda_build.utils, "get_logger", get_monkey_logger)
 
-    with raises_after((2025, 10, 10), Exception):
+    with pytest.raises(Exception):
         api.build(str(recipe_tmp), config=testing_config, notest=True)
-
-    # without %s substitution
-    messages = [record[0] for record in records]
-
-    assert any("'%s' is not a valid menuinst JSON document!" in msg for msg in messages)
-    assert any(
-        isinstance(record[-1].get("exc_info"), json.JSONDecodeError)
-        for record in records
-    )
 
 
 def test_file_hash(testing_config, caplog, tmp_path):
