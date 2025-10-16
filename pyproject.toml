@@ -139,6 +139,7 @@ filterwarnings = [
   "ignore:conda.core.index._supplement_index_with_system is deprecated:DeprecationWarning",
   # ignore conda trust deprecation
   "ignore:conda.trust:DeprecationWarning",
+  "ignore:conda.trust:PendingDeprecationWarning",
   # ignore conda link PrefixActions deprecation
   "ignore:conda.core.link.PrefixActions is deprecated and will be removed in 26.3:DeprecationWarning",
   # ignore conda context restore_free_channel deprecation
