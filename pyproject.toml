@@ -143,7 +143,6 @@ filterwarnings = [
   # ignore conda link PrefixActions deprecation
   "ignore:conda.core.link.PrefixActions is deprecated and will be removed in 26.3:DeprecationWarning",
   "ignore:conda.core.link.PrefixActions is pending deprecated and will be removed in 26.3:PendingDeprecationWarning",
-  
   # ignore conda context restore_free_channel deprecation
   "ignore:conda.base.context.Context.restore_free_channel is deprecated:DeprecationWarning",
 ]
