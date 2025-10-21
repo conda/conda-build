@@ -187,7 +187,8 @@ def msvc_env_cmd(bits, config, override=None):
         if int(py_ver[0]) >= 3:
             if int(py_ver.split(".")[1]) < 5:
                 version = "10.0"
-            version = "17.0"
+            else:
+                version = "17.0"
         else:
             version = "9.0"
 
