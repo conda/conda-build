@@ -211,15 +211,9 @@ def msvc_env_cmd(bits, config, override=None):
     msvc_env_lines.append(f'set "VS_VERSION={version}"')
     msvc_env_lines.append(f'set "VS_MAJOR={vs_major}"')
     msvc_env_lines.append(f'set "VS_YEAR={VS_VERSION_STRING[version][-4:]}"')
-    if int(vs_major) >= 16:
-        # No Win64 for VS 2019.
-        msvc_env_lines.append(f'set "CMAKE_GENERATOR={VS_VERSION_STRING[version]}"')
-    else:
-        msvc_env_lines.append(
-            'set "CMAKE_GENERATOR={}"'.format(
-                VS_VERSION_STRING[version] + {"64": " Win64", "32": ""}[bits]
-            )
-        )
+    # CMake 4.1.2+ no longer supports platform suffixes in Visual Studio generator names
+    # This approach is compatible with CMake 3.1+ (2014+)
+    msvc_env_lines.append(f'set "CMAKE_GENERATOR={VS_VERSION_STRING[version]}"')
     # tell msys2 to ignore path conversions for issue-causing windows-style flags in build
     #   See https://github.com/conda-forge/icu-feedstock/pull/5
     msvc_env_lines.append('set "MSYS2_ARG_CONV_EXCL=/AI;/AL;/OUT;/out"')
