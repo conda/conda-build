@@ -4,7 +4,7 @@
 
 ### Bug fixes
 
-* Fix set_regex when finding used variables inside jinja statements.
+* Fix `set_regex` when finding used variables inside jinja statements. (#5812 via #5811)
 
 ### Deprecations
 
