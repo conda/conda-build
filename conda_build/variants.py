@@ -774,6 +774,7 @@ def find_used_variables_in_text(variant, recipe_text, selectors_only=False):
         )
         set_regex = (
             r"(?:^|[^\{])\{%\s*set\s*.*\s*=\s*.*"
+            + r"(?<![a-zA-Z_0-9])"
             + v_regex
             + r"(?![a-zA-Z_0-9])(?:[^%]*?)?%\}"
         )
