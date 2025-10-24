@@ -305,6 +305,26 @@ def write_build_scripts(m, env, bld_bat):
                     override=m.get_value("build/msvc_compiler", None),
                 )
             )
+        else:
+            # Set CMAKE_GENERATOR for new-style compiler activation
+            version = m.get_value("build/msvc_compiler", None)
+            if not version:
+                from .variants import get_default_variant
+
+                py_ver = m.config.variant.get(
+                    "python", get_default_variant(m.config)["python"]
+                )
+                if int(py_ver[0]) >= 3:
+                    if int(py_ver.split(".")[1]) < 5:
+                        version = "10.0"
+                    elif int(py_ver.split(".")[1]) == 5:
+                        version = "15.0"
+                    else:
+                        version = "17.0"
+                else:
+                    version = "9.0"
+            if version:
+                fo.write(f'set "CMAKE_GENERATOR={VS_VERSION_STRING[version]}"\n')
         # Reset echo on, because MSVC scripts might have turned it off
         fo.write("@echo on\n")
         fo.write('set "INCLUDE={};%INCLUDE%"\n'.format(env["LIBRARY_INC"]))
