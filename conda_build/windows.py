@@ -213,7 +213,7 @@ def msvc_env_cmd(bits, config, override=None):
     msvc_env_lines.append(f'set "VS_YEAR={VS_VERSION_STRING[version][-4:]}"')
     # CMake 4.1.2+ no longer supports platform suffixes in Visual Studio generator names
     # This approach is compatible with CMake 3.1+ (2014+)
-    msvc_env_lines.append(f'set "CMAKE_GENERATOR={VS_VERSION_STRING[version]}"')
+    msvc_env_lines.append(f'set "CMAKE_GENERATOR=\\"{VS_VERSION_STRING[version]}\\""')
     # tell msys2 to ignore path conversions for issue-causing windows-style flags in build
     #   See https://github.com/conda-forge/icu-feedstock/pull/5
     msvc_env_lines.append('set "MSYS2_ARG_CONV_EXCL=/AI;/AL;/OUT;/out"')
