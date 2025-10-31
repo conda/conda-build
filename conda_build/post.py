@@ -43,7 +43,12 @@ from conda.misc import walk_prefix
 from conda.models.records import PrefixRecord
 
 from . import utils
-from .exceptions import OverDependingError, OverLinkingError, RunPathError
+from .exceptions import (
+    CondaBuildException,
+    OverDependingError,
+    OverLinkingError,
+    RunPathError,
+)
 from .inspect_pkg import which_package
 from .os_utils import external, macho
 from .os_utils.liefldd import (
@@ -1758,9 +1763,9 @@ def _check_one_menuinst_json(json_file):
                 f"Could not build validator for schema '{schema_url}'. This is now an error."
             )
         validator.validate(loaded)
-    except (jsonschema.ValidationError, json.JSONDecodeError, OSError) as exc:
+    except (jsonschema.ValidationError, json.JSONDecodeError, OSError):
         # Raise exception - invalid menuinst JSON is now an error
-        raise exc
+        raise CondaBuildException(f"Invalid menuinst JSON document: {json_file}")
     else:
         log.info("'%s' is a valid menuinst JSON document", json_file)
 
