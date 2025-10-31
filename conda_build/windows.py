@@ -187,7 +187,8 @@ def msvc_env_cmd(bits, config, override=None):
         if int(py_ver[0]) >= 3:
             if int(py_ver.split(".")[1]) < 5:
                 version = "10.0"
-            version = "17.0"
+            else:
+                version = "17.0"
         else:
             version = "9.0"
 
@@ -210,15 +211,9 @@ def msvc_env_cmd(bits, config, override=None):
     msvc_env_lines.append(f'set "VS_VERSION={version}"')
     msvc_env_lines.append(f'set "VS_MAJOR={vs_major}"')
     msvc_env_lines.append(f'set "VS_YEAR={VS_VERSION_STRING[version][-4:]}"')
-    if int(vs_major) >= 16:
-        # No Win64 for VS 2019.
-        msvc_env_lines.append(f'set "CMAKE_GENERATOR={VS_VERSION_STRING[version]}"')
-    else:
-        msvc_env_lines.append(
-            'set "CMAKE_GENERATOR={}"'.format(
-                VS_VERSION_STRING[version] + {"64": " Win64", "32": ""}[bits]
-            )
-        )
+    # CMake 4.1.2+ no longer supports platform suffixes in Visual Studio generator names
+    # This approach is compatible with CMake 3.1+ (2014+)
+    msvc_env_lines.append(f'set "CMAKE_GENERATOR={VS_VERSION_STRING[version]}"')
     # tell msys2 to ignore path conversions for issue-causing windows-style flags in build
     #   See https://github.com/conda-forge/icu-feedstock/pull/5
     msvc_env_lines.append('set "MSYS2_ARG_CONV_EXCL=/AI;/AL;/OUT;/out"')
@@ -310,6 +305,26 @@ def write_build_scripts(m, env, bld_bat):
                     override=m.get_value("build/msvc_compiler", None),
                 )
             )
+        else:
+            # Set CMAKE_GENERATOR for new-style compiler activation
+            version = m.get_value("build/msvc_compiler", None)
+            if not version:
+                from .variants import get_default_variant
+
+                py_ver = m.config.variant.get(
+                    "python", get_default_variant(m.config)["python"]
+                )
+                if int(py_ver[0]) >= 3:
+                    if int(py_ver.split(".")[1]) < 5:
+                        version = "10.0"
+                    elif int(py_ver.split(".")[1]) == 5:
+                        version = "15.0"
+                    else:
+                        version = "17.0"
+                else:
+                    version = "9.0"
+            if version:
+                fo.write(f'set "CMAKE_GENERATOR={VS_VERSION_STRING[version]}"\n')
         # Reset echo on, because MSVC scripts might have turned it off
         fo.write("@echo on\n")
         fo.write('set "INCLUDE={};%INCLUDE%"\n'.format(env["LIBRARY_INC"]))
