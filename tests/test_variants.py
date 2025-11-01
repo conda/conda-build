@@ -877,6 +877,16 @@ def test_get_vars():
             "{{ pin_compatible('python_min', max_pin='x.x') }}",
             {"python_min"},
         ),
+        (
+            ("zlib", "ace"),
+            "{% set p = zlib.replace('.', '') %}",
+            {"zlib"},
+        ),
+        (
+            ("zlib", "xz", "ace"),
+            "{% set p = azlib.replace('.', '') ~ xz ~ 'a' %}",
+            {"xz"},
+        ),
     ],
 )
 def test_find_used_variables_in_text(vars, text, found_vars):
