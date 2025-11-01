@@ -150,7 +150,7 @@ def test_menuinst_validation_fails_bad_schema_url(testing_config, caplog, tmp_pa
     )
     menu_json.write_text(json.dumps(bad_data, indent=2))
 
-    with pytest.raises(Exception):
+    with pytest.raises(Exception, match="URL doesn't match any of the valid locations"):
         api.build(str(recipe_tmp), config=testing_config, notest=True)
 
 
@@ -182,7 +182,7 @@ def test_menuinst_validation_fails_bad_json(testing_config, monkeypatch, tmp_pat
     # a module-level global that we could easily patch.
     monkeypatch.setattr(conda_build.utils, "get_logger", get_monkey_logger)
 
-    with pytest.raises(Exception):
+    with pytest.raises(Exception, match="is not a valid menuinst JSON document!"):
         api.build(str(recipe_tmp), config=testing_config, notest=True)
 
 
