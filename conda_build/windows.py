@@ -314,14 +314,14 @@ def write_build_scripts(m, env, bld_bat):
                 py_ver = m.config.variant.get(
                     "python", get_default_variant(m.config)["python"]
                 )
-                if int(py_ver[0]) >= 3:
-                    if int(py_ver.split(".")[1]) < 5:
-                        version = "10.0"
-                    elif int(py_ver.split(".")[1]) == 5:
-                        version = "15.0"
-                    else:
-                        version = "17.0"
-                else:
+                py_ver = [int(x) for x in py_ver.split(".")[:2]]
+                if py_ver >= (3, 6):
+                    version = "17.0"
+                elif py_ver == (3, 5):
+                    version = "15.0"
+                elif py_ver >= (3, 0):
+                    version = "10.0"
+                else:  # 2.x
                     version = "9.0"
             if version:
                 fo.write(f'set "CMAKE_GENERATOR={VS_VERSION_STRING[version]}"\n')
