@@ -1746,9 +1746,7 @@ def _check_one_menuinst_json(json_file):
         loaded = json.loads(text)
         schema_url = loaded.get("$schema")
         if not schema_url:
-            raise ValueError(
-                f"Invalid empty value for `$schema` in '{json_file}'."
-            )
+            raise ValueError(f"Invalid empty value for `$schema` in '{json_file}'.")
         elif schema_url == "https://json-schema.org/draft-07/schema":
             # This is for compatibility with menuinst files built as per the wrong
             # recommendations of menuinst >=2,<=2.2
@@ -1759,9 +1757,7 @@ def _check_one_menuinst_json(json_file):
             schema_url = FALLBACK_MENUINST_SCHEMA
         validator = _build_validator(schema_url)
         if validator is None:
-            raise RuntimeError(
-                f"Could not build validator for schema '{schema_url}'."
-            )
+            raise RuntimeError(f"Could not build validator for schema '{schema_url}'.")
         validator.validate(loaded)
     except (jsonschema.ValidationError, json.JSONDecodeError, OSError):
         # Raise exception - invalid menuinst JSON is now an error
