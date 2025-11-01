@@ -141,6 +141,8 @@ def test_recipe_builds(
         pytest.xfail("Numpy build doesn't run on Python 3.13 yet.")
     elif recipe.name == "numpy_build" and sys.version_info >= (3, 13):
         pytest.xfail("Numpy build doesn't run on Python 3.13 yet.")
+    elif recipe.name == "dll_linking_fail":
+        pytest.xfail("Recipe being built needs to fail linking tests.")
 
     # These variables are defined solely for testing purposes,
     # so they can be checked within build scripts
