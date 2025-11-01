@@ -17,9 +17,9 @@ jobs:
         include:
           - runner: ubuntu-latest
             subdir: linux-64
-          - runner: macos-14
+          - runner: macos-latest
             subdir: osx-arm64
-          - runner: macos-13
+          - runner: macos-15-intel  # FUTURE: Deprecated in Fall 2027
             subdir: osx-64
           - runner: windows-latest
             subdir: win-64
