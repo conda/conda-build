@@ -184,7 +184,7 @@ def msvc_env_cmd(bits, config, override=None):
 
     if not version:
         py_ver = config.variant.get("python", get_default_variant(config)["python"])
-        py_ver = [int(x) for x in py_ver.split(".")[:2]]
+        py_ver = tuple([int(x) for x in py_ver.split(".")[:2]])
         if py_ver >= (3, 6):
             version = "17.0"
         elif py_ver == (3, 5):
@@ -316,7 +316,7 @@ def write_build_scripts(m, env, bld_bat):
                 py_ver = m.config.variant.get(
                     "python", get_default_variant(m.config)["python"]
                 )
-                py_ver = [int(x) for x in py_ver.split(".")[:2]]
+                py_ver = tuple([int(x) for x in py_ver.split(".")[:2]])
                 if py_ver >= (3, 6):
                     version = "17.0"
                 elif py_ver == (3, 5):
