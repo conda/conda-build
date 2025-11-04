@@ -1,6 +1,6 @@
 ### Enhancements
 
-* <news item>
+* `menuinst` JSON validation errors, which used to be warnings, will now be raised. (#5807)
 
 ### Bug fixes
 
@@ -16,4 +16,4 @@
 
 ### Other
 
-* Avoid redundant isfile() check in sha256_checksum (#5422)
+* <news item>

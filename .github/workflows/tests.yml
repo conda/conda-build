@@ -54,6 +54,7 @@ jobs:
         uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3.0.2
         id: filter
         with:
+          base: main
           filters: |
             code:
               - 'conda_build/**'
@@ -79,15 +80,15 @@ jobs:
       fail-fast: false
       matrix:
         # test all lower versions (w/ stable conda) and upper version (w/ canary conda)
-        python-version: ['3.9', '3.10', '3.11', '3.12']
+        python-version: ['3.10', '3.11', '3.12', '3.13']
         conda-version: [release]
         test-type: [serial, parallel]
         include:
           # minimum Python/conda combo
-          - python-version: '3.9'
+          - python-version: '3.10'
             conda-version: 24.11.0
             test-type: serial
-          - python-version: '3.9'
+          - python-version: '3.10'
             conda-version: 24.11.0
             test-type: parallel
           # maximum Python/conda combo
@@ -246,7 +247,7 @@ jobs:
       fail-fast: false
       matrix:
         # test lower version (w/ stable conda) and upper version (w/ canary conda)
-        python-version: ['3.9']
+        python-version: ['3.10']
         conda-version: [release]
         test-type: [serial, parallel]
         include:
@@ -343,10 +344,10 @@ jobs:
     needs: changes
     if: github.event_name == 'schedule' || needs.changes.outputs.code == 'true'
 
-    # we still need intel macs so we are stuck on macos-13 (not -14 or -latest)
+    # we still need intel macs so we are stuck on intel runners
     # the issue is that there are recipes that depend on packages
     # that do not exist for osx-arm64 - see #5388
-    runs-on: macos-13
+    runs-on: macos-15-intel
     defaults:
       run:
         # https://github.com/conda-incubator/setup-miniconda#use-a-default-shell
@@ -355,7 +356,7 @@ jobs:
       fail-fast: false
       matrix:
         # test lower version (w/ stable conda) and upper version (w/ canary conda)
-        python-version: ['3.9']
+        python-version: ['3.10']
         conda-version: [release]
         test-type: [serial, parallel]
         include:
@@ -517,9 +518,9 @@ jobs:
         include:
           - runner: ubuntu-latest
             subdir: linux-64
-          - runner: macos-13
+          - runner: macos-15-intel # FUTURE: Deprecated in Fall 2027
             subdir: osx-64
-          - runner: macos-14  # FUTURE: Use -latest
+          - runner: macos-latest
             subdir: osx-arm64
           - runner: windows-latest
             subdir: win-64
@@ -575,7 +576,7 @@ jobs:
           Path(environ["GITHUB_ENV"]).write_text("\n".join(f"{name}={value}" for name, value in envs.items()))
 
       - name: Create & Upload
-        uses: conda/actions/canary-release@eb545bb8ab48d499b31c057a6df3cf46753fdbcb # v25.3.1
+        uses: conda/actions/canary-release@f05161c6e6e37a49b17c8e0b436197b53830318a # v25.9.2
         with:
           package-name: ${{ github.event.repository.name }}
           subdir: ${{ matrix.subdir }}

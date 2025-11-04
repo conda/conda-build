@@ -66,18 +66,21 @@ DEFAULT_COMPILERS = {
             "3.3": "vs2010",
             "3.4": "vs2010",
             "3.5": "vs2017",
+            "3.6": "vs2022",
         },
         "cxx": {
             "2.7": "vs2008",
             "3.3": "vs2010",
             "3.4": "vs2010",
             "3.5": "vs2017",
+            "3.6": "vs2022",
         },
         "vc": {
             "2.7": "9",
             "3.3": "10",
             "3.4": "10",
             "3.5": "14",
+            "3.6": "17",
         },
         "fortran": "gfortran",
     },
@@ -137,13 +140,13 @@ def get_default_variant(config):
     return base
 
 
-def parse_config_file(path, config):
+def parse_config_file(path, config, loader=yaml.loader.BaseLoader):
     from .metadata import get_selectors, select_lines
 
     with open(path) as f:
         contents = f.read()
     contents = select_lines(contents, get_selectors(config), variants_in_place=False)
-    content = yaml.load(contents, Loader=yaml.loader.BaseLoader) or {}
+    content = yaml.load(contents, Loader=loader) or {}
     trim_empty_keys(content)
     return content
 
