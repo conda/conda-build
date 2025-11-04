@@ -777,9 +777,7 @@ def find_used_variables_in_text(variant, recipe_text, selectors_only=False):
         )
         set_regex = (
             r"(?:^|[^\{])\{%\s*set\s*.*\s*=\s*.*"
-            + r"(?<![a-zA-Z_0-9])"
-            + v_regex
-            + r"(?![a-zA-Z_0-9])(?:[^%]*?)?%\}"
+            r"(?<![a-zA-Z_0-9])" + v_regex + r"(?![a-zA-Z_0-9])(?:[^%]*?)?%\}"
         )
         # plain req name, no version spec.  Look for end of line after name, or comment or selector
         requirement_regex = rf"^\s+\-\s+{v_req_regex}\s*(?:\s[\[#]|$)"
