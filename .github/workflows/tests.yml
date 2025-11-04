@@ -344,10 +344,10 @@ jobs:
     needs: changes
     if: github.event_name == 'schedule' || needs.changes.outputs.code == 'true'
 
-    # we still need intel macs so we are stuck on macos-13 (not -14 or -latest)
+    # we still need intel macs so we are stuck on intel runners
     # the issue is that there are recipes that depend on packages
     # that do not exist for osx-arm64 - see #5388
-    runs-on: macos-13
+    runs-on: macos-15-intel
     defaults:
       run:
         # https://github.com/conda-incubator/setup-miniconda#use-a-default-shell
@@ -518,9 +518,9 @@ jobs:
         include:
           - runner: ubuntu-latest
             subdir: linux-64
-          - runner: macos-13
+          - runner: macos-15-intel # FUTURE: Deprecated in Fall 2027
             subdir: osx-64
-          - runner: macos-14  # FUTURE: Use -latest
+          - runner: macos-latest
             subdir: osx-arm64
           - runner: windows-latest
             subdir: win-64
