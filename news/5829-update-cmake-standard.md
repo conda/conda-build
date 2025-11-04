@@ -4,7 +4,7 @@
 
 ### Bug fixes
 
-* Fixed logic error in Windows MSVC version detection for Python 3.5+ (#5807)
+* Fixed logic error in Windows MSVC version detection for Python 3.5+ (#5807, #5818)
 * Updated CMake generator handling for CMake 4 compatibility (#5807)
 
 ### Deprecations
