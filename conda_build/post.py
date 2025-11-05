@@ -899,7 +899,7 @@ def _get_dsolists(build_prefix, host_prefix, subdir):
         _get_dsolists_prefix(host_prefix, subdir),
     )
     if subdir.startswith("win-") and (result["allow"] or result["deny"]):
-        result["allow"].append("C:/Windows/System32/**/*.dll")
+        result["allow"].append(_expand_dsolist(["C:/Windows/System32/**/*.dll"]))
     return result
 
 
