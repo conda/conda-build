@@ -4,7 +4,7 @@
 
 ### Bug fixes
 
-* Run outputs parsing check only for multi-output recipes. (#5655 via #5747)
+* Fix `set_regex` when finding used variables inside jinja statements. (#5812 via #5811)
 
 ### Deprecations
 
