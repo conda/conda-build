@@ -744,14 +744,22 @@ def linux_vars(m, get_default, prefix):
     # the GNU triplet is powerpc, not ppc. This matters.
     if build_arch.startswith("ppc"):
         build_arch = build_arch.replace("ppc", "powerpc")
+    # Check if cdt_name is specified in the variant first
+    # Default based on architecture if not specified
     if (
         build_arch.startswith("powerpc")
         or build_arch.startswith("aarch64")
         or build_arch.startswith("s390x")
     ):
-        build_distro = "cos7"
+        default_build_distro = "cos7"
     else:
-        build_distro = "cos6"
+        default_build_distro = "cos6"
+
+    # Override with variant value if provided
+    if m.config.variant:
+        build_distro = m.config.variant.get("cdt_name", default_build_distro)
+    else:
+        build_distro = default_build_distro
     # There is also QEMU_SET_ENV, but that needs to be
     # filtered so it only contains the result of `linux_vars`
     # which, before this change was empty, and after it only
