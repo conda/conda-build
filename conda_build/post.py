@@ -860,14 +860,25 @@ def _expand_dsolist(dsolist):
         if d.startswith("*"):
             result.append(d)
         else:
-            result.extend([f"**/{basename(f)}" for f in utils.glob(d)])
+            result.extend(
+                [
+                    f"**/{basename(f)}"
+                    for f in sorted(utils.glob(d, recursive=True, include_hidden=True))
+                ]
+            )
     return result
 
 
 def _get_dsolists_prefix(prefix, subdir):
     allow = []
     deny = []
-    for fname in utils.glob(join(prefix, "etc", "conda-build", "dsolists.d", "*.json")):
+    for fname in sorted(
+        utils.glob(
+            join(prefix, "etc", "conda-build", "dsolists.d", "*.json"),
+            recursive=True,
+            include_hidden=True,
+        )
+    ):
         with open(fname) as f:
             contents = json.load(f)
             if "version" not in contents:
@@ -887,8 +898,8 @@ def _get_dsolists(build_prefix, host_prefix, subdir):
         _get_dsolists_prefix(build_prefix, subdir),
         _get_dsolists_prefix(host_prefix, subdir),
     )
-    if not result["allow"] and result["deny"]:
-        result["allow"] = ["C:/Windows/System32/*.dll"]
+    if subdir.startswith("win-") and (result["allow"] or result["deny"]):
+        result["allow"].append("C:/Windows/System32/**/*.dll")
     return result
 
 
@@ -1438,7 +1449,7 @@ def check_overlinking_impl(
             sysroots = ["/usr/lib", "/opt/X11", "/System/Library/Frameworks"]
             whitelist = DEFAULT_MAC_WHITELIST
             build_is_host = True if on_mac else False
-        elif subdir.startswith("win"):
+        elif subdir.startswith("win-"):
             dsolists = _get_dsolists(build_prefix, run_prefix, subdir)
             whitelist, denylist = dsolists["allow"], dsolists["deny"]
             if not whitelist and not denylist:
