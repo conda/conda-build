@@ -1,2 +1,5 @@
 cdt_name:  # [linux]
   - el8   # [linux]
+
+BUILD: x86_64-conda_el8-linux-gnu   # [linux and x86_64]
+BUILD: aarch64-conda_el8-linux-gnu  # [linux and aarch64]
