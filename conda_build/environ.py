@@ -746,11 +746,7 @@ def linux_vars(m, get_default, prefix):
         build_arch = build_arch.replace("ppc", "powerpc")
     # Check if cdt_name is specified in the variant first
     # Default based on architecture if not specified
-    if (
-        build_arch.startswith("powerpc")
-        or build_arch.startswith("aarch64")
-        or build_arch.startswith("s390x")
-    ):
+    if build_arch.startswith(("powerpc", "aarch64", "s390x")):
         default_build_distro = "cos7"
     else:
         default_build_distro = "cos6"
