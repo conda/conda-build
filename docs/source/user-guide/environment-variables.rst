@@ -205,7 +205,7 @@ shell environment, variant configuration (e.g., in
        The distribution component (e.g., ``cos6``, ``cos7``, ``el8``) can be
        customized by setting the ``cdt_name`` variable in variant
        configuration. Defaults to ``cos6`` for most architectures, ``cos7``
-       for powerpc, aarch64, and s390x.  If BUILD and cdt_name are both set,
+       for ``powerpc``, ``aarch64``, and ``s390x``.  If ``BUILD`` and ``cdt_name`` are both set,
        BUILD takes precedence.
    * - CFLAGS
      - C compiler flags. Inherited from environment or variant
