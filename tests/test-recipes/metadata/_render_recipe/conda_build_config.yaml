@@ -141,9 +141,9 @@ channel_targets:
   - conda-forge main
 
 cdt_name:  # [linux]
-  - el   # [linux]
-  - el   # [linux and os.environ.get("CF_CUDA_ENABLED", "False") == "True"]
-  - el   # [linux and os.environ.get("CF_CUDA_ENABLED", "False") == "True"]
+  - el8   # [linux]
+  - el8   # [linux and os.environ.get("CF_CUDA_ENABLED", "False") == "True"]
+  - el8   # [linux and os.environ.get("CF_CUDA_ENABLED", "False") == "True"]
 
 docker_image:                                   # [os.environ.get("BUILD_PLATFORM", "").startswith("linux-")]
   # Native builds
