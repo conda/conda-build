@@ -1,2 +1,7 @@
+channel_sources:
+  - conda-forge
+channel_targets:
+  - conda-forge main
+
 cdt_name:  # [linux]
   - centos7   # [linux]
