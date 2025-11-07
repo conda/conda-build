@@ -11,6 +11,5 @@ requirements:
   build:
     - {{ compiler('c') }}
     - {{ cdt('libx11-devel') }}
-    - {{ cdt('libxext-devel') }}
-    - {{ cdt('mesa-libgl-devel') }}
+    - {{ cdt('xorg-x11-proto-devel') }}
     - expat
