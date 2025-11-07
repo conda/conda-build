@@ -11,5 +11,6 @@ requirements:
   build:
     - {{ compiler('c') }}
     - {{ cdt('libx11-devel') }}
+    - {{ cdt('libxcb') }}
     - {{ cdt('xorg-x11-proto-devel') }}
     - expat
