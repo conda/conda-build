@@ -4,4 +4,4 @@ channel_targets:
   - conda-forge main
 
 cdt_name:          # [linux]
-  - cos7           # [linux]
+  - conda           # [linux]
