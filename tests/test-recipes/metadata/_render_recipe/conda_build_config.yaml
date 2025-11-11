@@ -140,6 +140,7 @@ channel_sources:
 channel_targets:
   - conda-forge main
 
+# This is synced with AnacondaRecipes/aggregate repository in the conda_build_config.yaml file.
 cdt_name:  # [linux]
   - el8   # [linux]
   - el8   # [linux and os.environ.get("CF_CUDA_ENABLED", "False") == "True"]
