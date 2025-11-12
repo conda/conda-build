@@ -159,6 +159,7 @@ norecursedirs = ["tests/test-recipes/*"]
 testpaths = ["tests"]
 
 [tool.ruff]
+show-fixes = true
 target-version = "py39"
 
 [tool.ruff.lint]
