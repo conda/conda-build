@@ -140,11 +140,11 @@ channel_sources:
 channel_targets:
   - conda-forge main
 
+# This is synced with AnacondaRecipes/aggregate repository in the conda_build_config.yaml file.
 cdt_name:  # [linux]
-  - cos7   # [linux]
-
-  - cos7   # [linux and os.environ.get("CF_CUDA_ENABLED", "False") == "True"]
-  - cos7   # [linux and os.environ.get("CF_CUDA_ENABLED", "False") == "True"]
+  - el8   # [linux]
+  - el8   # [linux and os.environ.get("CF_CUDA_ENABLED", "False") == "True"]
+  - el8   # [linux and os.environ.get("CF_CUDA_ENABLED", "False") == "True"]
 
 docker_image:                                   # [os.environ.get("BUILD_PLATFORM", "").startswith("linux-")]
   # Native builds
