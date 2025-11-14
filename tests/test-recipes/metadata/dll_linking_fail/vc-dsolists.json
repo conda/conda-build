@@ -1,13 +1,13 @@
 {
   "version":1,
   "allow": [
-    "C:/Windows/System32/*.dll",
+    "C:/Windows/System32/**/*.dll"
   ],
   "deny": [
     "**/ucrtbased.dll",
     "**/msvcp140d.dll",
     "**/vcruntime140d.dll",
-    "**/vcomp.dll",
+    "**/vcomp.dll"
   ],
   "subdir":"win-64"
 }
