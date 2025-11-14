@@ -884,8 +884,8 @@ def _get_dsolists_prefix(prefix, subdir):
                 raise ValueError(f"dsolist version={version} not recognized.")
             if contents["subdir"] != subdir:
                 continue
-            allow.extend(contents["allow"])
-            deny.extend(contents["deny"])
+            allow.extend(contents.get("allow", []))
+            deny.extend(contents.get("deny", []))
     return {"allow": _expand_dsolist(allow), "deny": _expand_dsolist(deny)}
 
 
