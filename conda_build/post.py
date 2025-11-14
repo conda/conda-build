@@ -863,7 +863,7 @@ def _expand_dsolist(dsolist):
             result.extend(
                 [
                     f"**/{basename(f)}"
-                    for f in sorted(utils.glob(d, recursive=True, include_hidden=True))
+                    for f in sorted(utils.glob(d, recursive=True))
                 ]
             )
     return result
@@ -876,7 +876,6 @@ def _get_dsolists_prefix(prefix, subdir):
         utils.glob(
             join(prefix, "etc", "conda-build", "dsolists.d", "*.json"),
             recursive=True,
-            include_hidden=True,
         )
     ):
         with open(fname) as f:
