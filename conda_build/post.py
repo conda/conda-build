@@ -861,10 +861,7 @@ def _expand_dsolist(dsolist):
             result.append(d)
         else:
             result.extend(
-                [
-                    f"**/{basename(f)}"
-                    for f in sorted(utils.glob(d, recursive=True))
-                ]
+                [f"**/{basename(f)}" for f in sorted(utils.glob(d, recursive=True))]
             )
     return result
 
