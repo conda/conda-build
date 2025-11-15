@@ -1939,12 +1939,9 @@ def bundle_conda(
             # we do the import here because we want to respect logger level context
             try:
                 from conda_verify.verify import Verify
-            except ImportError:
+            except ImportError as exc:
                 Verify = None
-                log.warning(
-                    "Importing conda-verify failed.  Please be sure to test your packages.  "
-                    "conda install conda-verify to make this message go away."
-                )
+                log.debug("Importing conda-verify failed. Skipping extra checks...", exc_info=exc)
             if getattr(metadata.config, "verify", False) and Verify:
                 verifier = Verify()
                 checks_to_ignore = (
