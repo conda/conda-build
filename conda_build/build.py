@@ -1941,7 +1941,10 @@ def bundle_conda(
                 from conda_verify.verify import Verify
             except ImportError as exc:
                 Verify = None
-                log.debug("Importing conda-verify failed. Skipping extra checks...", exc_info=exc)
+                log.debug(
+                    "Importing conda-verify failed. Skipping extra checks...",
+                    exc_info=exc,
+                )
             if getattr(metadata.config, "verify", False) and Verify:
                 verifier = Verify()
                 checks_to_ignore = (
