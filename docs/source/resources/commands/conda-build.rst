@@ -188,8 +188,8 @@ conda-build
                  Choose which package type(s) are outputted. Accepted inputs:
                  .tar.bz2 or 1 (legacy format), .conda or 2 (modern format).
                  Defaults to .conda format. The .conda format provides better
-                 compression and faster installation times. For configuration options, 
-                 including package format settings, see 
+                 compression and faster installation times. For configuration options,
+                 including package format settings, see
                  <a href="https://docs.conda.io/projects/conda-build/en/stable/resources/configuration.html">configuration</a>.
 
           <B>--no-activate</B>
