@@ -1,5 +1,41 @@
 [//]: # (current developments)
 
+## 25.11.0 (2025-11-20)
+
+### Enhancements
+
+* Allow the PyYAML loader to be specified when calling `conda_build.variants.parse_config_file`. (#5800)
+* Raise `menuinst` JSON validation errors, which used to be warnings. (#5807)
+
+### Bug fixes
+
+* Fix `BUILD` environment variable to respect `cdt_name` variant configuration. Previously, BUILD was hardcoded to use `cos6` or `cos7` based on architecture, ignoring the `cdt_name` variant when specified. Now, if `cdt_name` is provided in the variant configuration, it will be used in the BUILD variable. Otherwise, it falls back to the architecture-based default. (#5733)
+* Fix Windows MSVC version detection for Python 3.5+. (#5807, #5818)
+* Update CMake generator handling for CMake 4 compatibility. CMake 2 compatibility was dropped in CMake 4. (#5807)
+* Fix `set_regex` when finding used variables inside jinja statements. (#5812 via #5811)
+
+### Deprecations
+
+* Remove Python 3.9 support. The minimum supported Python version is now 3.10. (#5807)
+
+### Other
+
+* Add Python 3.13 to Linux test matrix. (#5807)
+* Fix conda deprecation warning filters to prevent CI test failures with strict validation. (#5807)
+
+### Contributors
+
+* @conda-bot
+* @isuruf
+* @jaimergp
+* @kenodegard
+* @ryanskeith
+* @shermansiu made their first contribution in https://github.com/conda/conda-build/pull/5800
+* @dependabot[bot]
+* @pre-commit-ci[bot]
+
+
+
 ## 25.9.0 (2025-09-26)
 
 ### Bug fixes

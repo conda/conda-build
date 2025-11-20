@@ -211,6 +211,7 @@ Authors are sorted alphabetically.
 * Serhii Kupriienko
 * Shaun Walbridge
 * Shaun Walbridge
+* Sherman Siu
 * Siu Kwan Lam
 * Sophia Castellarin
 * Sophian Guidara

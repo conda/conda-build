@@ -21,7 +21,7 @@
   email: isuruf@gmail.com
   alternate_emails:
   - isuru.11@cse.mrt.ac.lk
-  num_commits: 92
+  num_commits: 93
   first_commit: 2017-06-16 15:14:34
   github: isuruf
 - name: Dan Blanchard
@@ -1203,7 +1203,7 @@
   alternate_emails:
   - clee@anaconda.com
 - name: Ken Odegard
-  num_commits: 243
+  num_commits: 245
   email: kodegard@anaconda.com
   first_commit: 2020-09-08 19:53:41
   github: kenodegard
@@ -1241,7 +1241,7 @@
   github: pre-commit-ci[bot]
   aliases:
   - pre-commit-ci[bot]
-  num_commits: 125
+  num_commits: 131
   first_commit: 2021-11-20 01:47:17
 - name: Jacob Walls
   email: jacobtylerwalls@gmail.com
@@ -1263,7 +1263,7 @@
   alternate_emails:
   - ad-team+condabot@anaconda.com
   - 18747875+conda-bot@users.noreply.github.com
-  num_commits: 78
+  num_commits: 80
   first_commit: 2022-01-17 18:09:22
 - name: Uwe L. Korn
   email: xhochy@users.noreply.github.com
@@ -1311,7 +1311,7 @@
 - name: dependabot[bot]
   email: 49699333+dependabot[bot]@users.noreply.github.com
   github: dependabot[bot]
-  num_commits: 47
+  num_commits: 49
   first_commit: 2022-05-31 04:34:40
 - name: Serhii Kupriienko
   email: 79282962+skupr-anaconda@users.noreply.github.com
@@ -1328,7 +1328,7 @@
 - name: Jaime Rodríguez-Guerra
   email: jaimergp@users.noreply.github.com
   github: jaimergp
-  num_commits: 33
+  num_commits: 34
   first_commit: 2022-11-02 19:34:51
 - name: Dave Clements
   email: tnabtaf@gmail.com
@@ -1377,7 +1377,7 @@
   aliases:
   - Ryan
   github: ryanskeith
-  num_commits: 9
+  num_commits: 15
   first_commit: 2023-03-22 03:11:02
 - name: Rishabh Singh
   email: 67859818+rishabh11336@users.noreply.github.com
@@ -1544,3 +1544,8 @@
   github: roryyorke
   num_commits: 1
   first_commit: 2025-08-19 02:48:11
+- name: Sherman Siu
+  email: sherman.siu@uwaterloo.ca
+  github: shermansiu
+  num_commits: 1
+  first_commit: 2025-09-29 09:23:19
