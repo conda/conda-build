@@ -40,6 +40,10 @@
 * @dependabot[bot]
 * @pre-commit-ci[bot]
 
+### New Contributors
+
+* @shermansiu made their first contribution in https://github.com/conda/conda-build/pull/5800
+
 
 
 ## 25.9.0 (2025-09-26)
