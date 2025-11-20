@@ -4,14 +4,14 @@
 
 ### Enhancements
 
-* Allows the PyYAML loader to be specified when calling `conda_build.variants.parse_config_file` (#5800)
+* Allows the PyYAML loader to be specified when calling `conda_build.variants.parse_config_file`. (#5800)
 * `menuinst` JSON validation errors, which used to be warnings, will now be raised. (#5807)
 
 ### Bug fixes
 
-* Fixed BUILD environment variable to respect `cdt_name` variant configuration. Previously, BUILD was hardcoded to use `cos6` or `cos7` based on architecture, ignoring the `cdt_name` variant when specified. Now, if `cdt_name` is provided in the variant configuration, it will be used in the BUILD variable; otherwise, it falls back to the architecture-based default. (#5733)
-* Fixed Windows MSVC version detection for Python 3.5+ (#5807, #5818)
-* Updated CMake generator handling for CMake 4 compatibility. CMake 2 compatibility was dropped in CMake 4. (#5807)
+* Fix `BUILD` environment variable to respect `cdt_name` variant configuration. Previously, BUILD was hardcoded to use `cos6` or `cos7` based on architecture, ignoring the `cdt_name` variant when specified. Now, if `cdt_name` is provided in the variant configuration, it will be used in the BUILD variable. Otherwise, it falls back to the architecture-based default. (#5733)
+* Fix Windows MSVC version detection for Python 3.5+. (#5807, #5818)
+* Update CMake generator handling for CMake 4 compatibility. CMake 2 compatibility was dropped in CMake 4. (#5807)
 * Fix `set_regex` when finding used variables inside jinja statements. (#5812 via #5811)
 
 ### Deprecations
@@ -20,8 +20,8 @@
 
 ### Other
 
-* Added Python 3.13 to Linux test matrix. (#5807)
-* Fixed conda deprecation warning filters to prevent CI test failures with strict validation. (#5807)
+* Add Python 3.13 to Linux test matrix. (#5807)
+* Fix conda deprecation warning filters to prevent CI test failures with strict validation. (#5807)
 
 ### Contributors
 
