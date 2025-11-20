@@ -4,8 +4,8 @@
 
 ### Enhancements
 
-* Allows the PyYAML loader to be specified when calling `conda_build.variants.parse_config_file`. (#5800)
-* `menuinst` JSON validation errors, which used to be warnings, will now be raised. (#5807)
+* Allow the PyYAML loader to be specified when calling `conda_build.variants.parse_config_file`. (#5800)
+* Raise `menuinst` JSON validation errors, which used to be warnings. (#5807)
 
 ### Bug fixes
 
@@ -16,7 +16,7 @@
 
 ### Deprecations
 
-* Python 3.9 support has been removed. The minimum supported Python version is now 3.10. (#5807)
+* Remove Python 3.9 support. The minimum supported Python version is now 3.10. (#5807)
 
 ### Other
 
@@ -30,13 +30,9 @@
 * @jaimergp
 * @kenodegard
 * @ryanskeith
-* @shermansiu
+* @shermansiu made their first contribution in https://github.com/conda/conda-build/pull/5800
 * @dependabot[bot]
 * @pre-commit-ci[bot]
-
-### New Contributors
-
-* @shermansiu made their first contribution in https://github.com/conda/conda-build/pull/5800
 
 
 
