@@ -188,7 +188,9 @@ conda-build
                  Choose which package type(s) are outputted. Accepted inputs:
                  .tar.bz2 or 1 (legacy format), .conda or 2 (modern format).
                  Defaults to .conda format. The .conda format provides better
-                 compression and faster installation times.
+                 compression and faster installation times. For configuration options,
+                 including package format settings, see
+                 <a href="https://docs.conda.io/projects/conda-build/en/stable/resources/configuration.html">configuration</a>.
 
           <B>--no-activate</B>
                  do not activate the build and test envs; just prepend to PATH
@@ -321,10 +323,6 @@ conda-build
 
           <B>--override-channels</B>
                  Do  not search default or .condarc channels. Requires <B>--channel</B>.
-
-.. note::
-
-   For configuration options, including package format settings, see :ref:`configuration`.
 
       <B>PyPI</B> <B>upload</B> <B>parameters</B> <B>(twine):</B>
           <B>--password</B> PASSWORD
