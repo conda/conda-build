@@ -79,7 +79,9 @@ def create_shell_files(m: MetaData, test_dir: os.PathLike) -> list[str]:
         if commands:
             with open(join(dest_file), "a") as f:
                 f.write("\n\n")
-                if not status:
+                if status:
+                    f.write("@echo on")
+                else:
                     f.write("set -ex\n\n")
                 f.write("\n\n")
                 for cmd in commands:
