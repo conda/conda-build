@@ -1,0 +1,12 @@
+package:
+  name: _osx_rpath_test
+  version: 1.0
+
+build:
+  skip: true  # [not osx]
+
+requirements:
+  build:
+    - {{ compiler('c') }}
+  host:
+  run:
