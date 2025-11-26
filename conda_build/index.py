@@ -9,6 +9,7 @@ from os.path import dirname
 from typing import TYPE_CHECKING
 
 from conda.base.context import context
+from conda.core.index import Index
 from conda.exceptions import CondaHTTPError
 from conda.utils import url_path
 
@@ -26,16 +27,6 @@ except ImportError:
     raise ImportError(
         "conda-build requires conda-index to be installed. Please install conda-index using conda."
     )
-
-
-try:
-    from conda.core.index import Index
-except ImportError:
-    # FUTURE: remove for `conda >=24.9`
-    from conda.core.index import get_index
-
-    def Index(channels: tuple[str | Channel, ...] = (), *args, **kwargs) -> dict:  # type: ignore[no-redef]
-        return get_index(channel_urls=channels, *args, **kwargs)
 
 
 log = get_logger(__name__)

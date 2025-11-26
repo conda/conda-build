@@ -25,7 +25,6 @@ from conda.base.constants import (
 )
 from conda.base.context import context, reset_context
 from conda.common.io import env_vars
-from conda.core.index import LAST_CHANNEL_URLS
 from conda.core.link import PrefixSetup, UnlinkLinkTransaction
 from conda.core.package_cache_data import PackageCacheData, ProgressiveFetchExtract
 from conda.core.prefix_data import PrefixData
@@ -38,7 +37,7 @@ from conda.exceptions import (
     UnsatisfiableError,
 )
 from conda.gateways.disk.create import TemporaryDirectory
-from conda.models.channel import Channel, prioritize_channels
+from conda.models.channel import Channel
 from conda.models.match_spec import MatchSpec
 from conda.models.records import PackageRecord
 
@@ -61,6 +60,8 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
     from pathlib import Path
     from typing import Any, TypedDict
+
+    from conda.core.index import Index
 
     from .config import Config
     from .metadata import MetaData
@@ -1262,7 +1263,7 @@ def get_pinned_deps(m, section):
 #       checks for this name in the call stack explicitly.
 def install_actions(
     prefix: str | os.PathLike | Path,
-    index,
+    index: Index,
     specs: Iterable[str | MatchSpec],
     subdir: str | None = None,
 ) -> InstallActionsType:
@@ -1280,25 +1281,8 @@ def install_actions(
         },
         callback=reset_context,
     ):
-        # a hack since in conda-build we don't track channel_priority_map
-        channels: tuple[Channel, ...] | None
-        subdirs: tuple[str, ...] | None
-        if LAST_CHANNEL_URLS:
-            channel_priority_map = prioritize_channels(LAST_CHANNEL_URLS)
-            # tuple(dict.fromkeys(...)) removes duplicates while preserving input order.
-            channels = tuple(
-                dict.fromkeys(Channel(url) for url in channel_priority_map)
-            )
-            subdirs = (
-                tuple(
-                    dict.fromkeys(
-                        subdir for channel in channels if (subdir := channel.subdir)
-                    )
-                )
-                or context.subdirs
-            )
-        else:
-            channels = subdirs = None
+        channels: tuple[Channel, ...] = tuple(index.expanded_channels) or None
+        subdirs: tuple[str, ...] | None = tuple(index._subdirs) or None
 
         mspecs = tuple(MatchSpec(spec) for spec in specs)
 
