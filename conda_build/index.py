@@ -6,7 +6,6 @@ import logging
 import os
 from functools import partial
 from os.path import dirname
-from typing import TYPE_CHECKING
 
 from conda.base.context import context
 from conda.core.index import Index
@@ -17,9 +16,6 @@ from . import utils
 from .utils import (
     get_logger,
 )
-
-if TYPE_CHECKING:
-    from conda.models.channels import Channel
 
 try:
     from conda_index.index import update_index as _update_index
