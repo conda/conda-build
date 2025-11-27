@@ -36,7 +36,6 @@ dependencies = [
   "packaging",
   "pkginfo",
   "psutil",
-  "pytz",
   "pyyaml",
   "requests",
   "evalidate >=2,<3",

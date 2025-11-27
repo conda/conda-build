@@ -51,7 +51,6 @@ requirements:
     - py-lief
     - python
     - python-libarchive-c
-    - pytz
     - pyyaml
     - requests
     - tomli                        # [py<311]
