@@ -558,17 +558,15 @@ def cdt(package_name, config, permit_undefined_jinja=False):
 
     cdt_name = "cos6"
     arch = config.host_arch or config.arch
-    if (
-        arch == "ppc64le"
-        or arch == "aarch64"
-        or arch == "ppc64"
-        or arch == "s390x"
-        or arch == "riscv64"
-    ):
-        cdt_name = "cos7"
-        cdt_arch = arch
+    if arch == "64":
+        cdt_arch = "x86_64"
+        cdt_name = "cos6"
+    elif arch == "32":
+        cdt_arch = "i686"
+        cdt_name = "cos6"
     else:
-        cdt_arch = "x86_64" if arch == "64" else "i686"
+        cdt_arch = arch
+        cdt_name = "cos7"
     if config.variant:
         cdt_name = config.variant.get("cdt_name", cdt_name)
         cdt_arch = config.variant.get("cdt_arch", cdt_arch)
