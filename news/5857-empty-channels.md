@@ -8,7 +8,7 @@
 
 ### Deprecations
 
-* <news item>
+* Remove fallback imports for `conda.core.index.Index`. (#5857)
 
 ### Docs
 
