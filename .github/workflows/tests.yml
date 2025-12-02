@@ -134,8 +134,8 @@ jobs:
             /usr/local/aws-cli
             /usr/local/aws-sam-cli
             /usr/share/gradle
-          rm_cmd: "rmz"
-          rmz_version: "3.1.1"
+          rm_cmd: rmz
+          rmz_version: 3.1.1
           testing: false
 
       - name: Checkout Source
