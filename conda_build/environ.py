@@ -1281,7 +1281,7 @@ def install_actions(
         },
         callback=reset_context,
     ):
-        channels: tuple[Channel, ...] = tuple(index.expanded_channels) or None
+        channels: tuple[Channel, ...] | None = tuple(index.expanded_channels) or None
         subdirs: tuple[str, ...] | None = tuple(index._subdirs) or None
 
         mspecs = tuple(MatchSpec(spec) for spec in specs)
