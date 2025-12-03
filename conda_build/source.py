@@ -194,6 +194,9 @@ def unpack(
             # as well as `pip install name-version.whl` as install command
             copy_into(src_path, unhashed_dest, timeout, locking=locking)
         flist = os.listdir(tmpdir)
+        if not flist:
+            log.warning("Empty source archive detected.")
+            return
         folder = os.path.join(tmpdir, flist[0])
         # Hoisting is destructive of information, in CDT packages, a single top level
         # folder of /usr64 must not be discarded.
