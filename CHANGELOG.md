@@ -21,7 +21,7 @@
 ### Enhancements
 
 * Allow the PyYAML loader to be specified when calling `conda_build.variants.parse_config_file`. (#5800)
-* Raise `menuinst` JSON validation errors, which used to be warnings. (#5807)
+* Raise `menuinst` JSON validation errors, which used to be warnings. (#5828)
 
 ### Bug fixes
 
