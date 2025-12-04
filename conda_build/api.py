@@ -112,7 +112,7 @@ def get_output_file_paths(
             no_download_source=no_download_source,
             variants=variants,
             config=config,
-            finalize=True,
+            finalize=False,  # Skip dependency resolution for faster output path generation
             **kwargs,
         )
 
