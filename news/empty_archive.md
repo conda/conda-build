@@ -4,7 +4,7 @@
 
 ### Bug fixes
 
-* Don't fail on empty source archive (#5861)
+* Don't fail on empty source archive. Ignore and continue instead. (#5854 via #5861)
 
 ### Deprecations
 

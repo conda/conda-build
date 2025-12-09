@@ -195,7 +195,7 @@ def unpack(
             copy_into(src_path, unhashed_dest, timeout, locking=locking)
         flist = os.listdir(tmpdir)
         if not flist:
-            log.warning("Empty source archive detected.")
+            log.warning("Empty source archive detected: %s. Ignoring...", src_path)
             return
         folder = os.path.join(tmpdir, flist[0])
         # Hoisting is destructive of information, in CDT packages, a single top level
