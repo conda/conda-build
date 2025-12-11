@@ -12,6 +12,7 @@ from .. import api
 from ..utils import on_win
 from . import validators as valid
 from .main_render import get_render_parser
+import subprocess
 
 if TYPE_CHECKING:
     from argparse import ArgumentParser
@@ -29,6 +30,13 @@ def get_parser() -> ArgumentParser:
 Set up environments and activation scripts to debug your build or test phase.
 
 """
+    # Flag for using rattler-build
+    p.add_argument(
+        "--use-rattler",
+        action="store_true",
+        help="Set up scripts using rattler-build"
+    )
+
     # we do this one separately because we only allow one entry to conda render
     p.add_argument(
         "recipe_or_package_file_path",
@@ -97,6 +105,19 @@ def execute(args: Sequence[str] | None = None) -> int:
     parser = get_parser()
     parsed = parser.parse_args(args)
     context.__init__(argparse_args=parsed)
+
+    if parsed.use_rattler:
+        cmd = ["rattler-build", "debug", "--recipe", parsed.recipe_or_package_file_path]
+        try:
+            subprocess.run(
+                cmd,
+                text=True,
+                check=True
+                )
+            return 0
+        except subprocess.CalledProcessError as e:
+            print(f"rattler-build failed: {e}", file=sys.stderr)
+            return e.returncode
 
     try:
         activation_string = api.debug(

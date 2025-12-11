@@ -6,6 +6,9 @@ import argparse
 import logging
 from pprint import pprint
 from typing import TYPE_CHECKING
+from pathlib import Path
+from os.path import join
+import subprocess
 
 import yaml
 from conda.base.context import context
@@ -15,6 +18,7 @@ from .. import __version__, api
 from ..config import get_channel_urls, get_or_merge_config
 from ..utils import LoggingContext
 from ..variants import get_package_variants, set_language_env_vars
+from ..utils import is_v1_recipe
 
 try:
     from conda.cli.helpers import add_parser_channels
@@ -48,6 +52,25 @@ class ParseYAMLArgument(argparse.Action):
                 f"The argument of {option_string} is not a valid YAML. The parser error was: \n\n{str(e)}"
             )
 
+def run_rattler_build(recipe_dir: Path, parsed_args, config) -> int:
+    """Run rattler-build for v1 recipes"""
+    recipe_file = recipe_dir / "recipe.yaml"
+    cmd = ["rattler-build", "build", "--render-only", "--recipe", str(recipe_file)]
+
+    if parsed_args.variant_config_files:
+        variants_path = join(*parsed_args.variant_config_files)
+        cmd.extend(["-m", str(variants_path)])
+
+    try:
+        subprocess.run(
+            cmd,
+            check=True,
+            text=True
+            )
+        return 0
+    except subprocess.CalledProcessError as e:
+        print(f"rattler-build failed: {e}", file=sys.stderr)
+        return e.returncode
 
 def get_render_parser() -> ArgumentParser:
     from conda.cli.conda_argparse import ArgumentParser
@@ -217,6 +240,12 @@ def execute(args: Sequence[str] | None = None) -> int:
     if parsed.output:
         config.verbose = False
         config.debug = False
+    
+
+    if is_v1_recipe(Path(parsed.recipe)):
+        print("recipe.yaml detected; continuing with rattler-build...")
+        run_rattler_build(Path(parsed.recipe), parsed, config)
+        return 0
 
     metadata_tuples = api.render(
         parsed.recipe,
