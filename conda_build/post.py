@@ -69,6 +69,7 @@ from .os_utils.pyldd import (
 from .utils import (
     FALLBACK_MENUINST_SCHEMA,
     VALID_SCHEMA_LOCATIONS,
+    merge_dicts_of_lists,
     on_mac,
     on_win,
     prefix_files,
@@ -853,6 +854,51 @@ DEFAULT_WIN_WHITELIST = [
 ]
 
 
+def _expand_dsolist(dsolist):
+    result = []
+    for d in dsolist:
+        if d.startswith("*"):
+            result.append(d)
+        else:
+            result.extend(
+                [f"**/{basename(f)}" for f in sorted(utils.glob(d, recursive=True))]
+            )
+    return result
+
+
+def _get_dsolists_prefix(prefix, subdir):
+    allow = []
+    deny = []
+    for fname in sorted(
+        utils.glob(
+            join(prefix, "etc", "conda-build", "dsolists.d", "*.json"),
+            recursive=True,
+        )
+    ):
+        with open(fname) as f:
+            contents = json.load(f)
+            if "version" not in contents:
+                raise ValueError("dsolist JSON format requires a version attribute.")
+            version = contents["version"]
+            if version != 1:
+                raise ValueError(f"dsolist version={version} not recognized.")
+            if contents["subdir"] != subdir:
+                continue
+            allow.extend(contents.get("allow", []))
+            deny.extend(contents.get("deny", []))
+    return {"allow": _expand_dsolist(allow), "deny": _expand_dsolist(deny)}
+
+
+def _get_dsolists(build_prefix, host_prefix, subdir):
+    result = merge_dicts_of_lists(
+        _get_dsolists_prefix(build_prefix, subdir),
+        _get_dsolists_prefix(host_prefix, subdir),
+    )
+    if subdir.startswith("win-") and (result["allow"] or result["deny"]):
+        result["allow"].extend(_expand_dsolist(["C:/Windows/System32/**/*.dll"]))
+    return result
+
+
 def _collect_needed_dsos(
     sysroots_files,
     files,
@@ -1013,6 +1059,7 @@ def caseless_sepless_fnmatch(paths, pat):
 def _lookup_in_sysroots_and_whitelist(
     errors,
     whitelist,
+    denylist,
     needed_dso,
     sysroots_files,
     msg_prelude,
@@ -1090,6 +1137,8 @@ def _lookup_in_sysroots_and_whitelist(
             # We should pass in multiple paths at once to this, but the code isn't structured for that.
             in_whitelist = any(
                 [caseless_sepless_fnmatch([needed_dso_w], w) for w in whitelist]
+            ) and not any(
+                [caseless_sepless_fnmatch([needed_dso_w], w) for w in denylist]
             )
             if in_whitelist:
                 n_dso_p = f"Needed DSO {needed_dso_w}"
@@ -1114,6 +1163,7 @@ def _lookup_in_prefix_packages(
     files,
     run_prefix,
     whitelist,
+    denylist,
     info_prelude,
     msg_prelude,
     warn_prelude,
@@ -1131,7 +1181,9 @@ def _lookup_in_prefix_packages(
     for prec in precs_in_reqs:
         if prec in lib_packages:
             lib_packages_used.add(prec)
-    in_whitelist = any([fnmatch(in_prefix_dso, w) for w in whitelist])
+    in_whitelist = any([fnmatch(in_prefix_dso, w) for w in whitelist]) and not any(
+        [fnmatch(in_prefix_dso, w) for w in denylist]
+    )
     if len(precs_in_reqs) == 1:
         _print_msg(
             errors,
@@ -1192,6 +1244,7 @@ def _show_linking_messages(
     lib_packages,
     lib_packages_used,
     whitelist,
+    denylist,
     sysroots,
     sysroot_prefix,
     sysroot_substitution,
@@ -1244,6 +1297,7 @@ def _show_linking_messages(
                     files,
                     run_prefix,
                     whitelist,
+                    denylist,
                     info_prelude,
                     msg_prelude,
                     warn_prelude,
@@ -1262,6 +1316,7 @@ def _show_linking_messages(
                 _lookup_in_sysroots_and_whitelist(
                     errors,
                     whitelist,
+                    denylist,
                     needed_dso,
                     sysroots,
                     msg_prelude,
@@ -1373,6 +1428,7 @@ def check_overlinking_impl(
             for sysroot in utils.glob(join(sysroot_prefix, "**", "sysroot"))
         ]
     whitelist = []
+    denylist = []
     vendoring_record = dict()
     # When build_is_host is True we perform file existence checks for files in the sysroot (e.g. C:\Windows)
     # When build_is_host is False we must skip things that match the whitelist from the prefix_owners (we could
@@ -1389,9 +1445,12 @@ def check_overlinking_impl(
             sysroots = ["/usr/lib", "/opt/X11", "/System/Library/Frameworks"]
             whitelist = DEFAULT_MAC_WHITELIST
             build_is_host = True if on_mac else False
-        elif subdir.startswith("win"):
-            sysroots = ["C:/Windows"]
-            whitelist = DEFAULT_WIN_WHITELIST
+        elif subdir.startswith("win-"):
+            dsolists = _get_dsolists(build_prefix, run_prefix, subdir)
+            whitelist, denylist = dsolists["allow"], dsolists["deny"]
+            if not whitelist and not denylist:
+                sysroots = ["C:/Windows"]
+                whitelist = DEFAULT_WIN_WHITELIST
             build_is_host = True if on_win else False
 
     whitelist += missing_dso_whitelist or []
@@ -1495,6 +1554,9 @@ def check_overlinking_impl(
                     in_whitelist = any(
                         [caseless_sepless_fnmatch([orig], w) for w in whitelist]
                     )
+                in_whitelist = in_whitelist and not any(
+                    [caseless_sepless_fnmatch([orig], w) for w in denylist]
+                )
                 if not in_whitelist:
                     if resolved in prefix_owners[build_prefix]:
                         print(f"  ERROR :: {needed_dso} in prefix_owners[build_prefix]")
@@ -1524,6 +1586,7 @@ def check_overlinking_impl(
         lib_packages,
         lib_packages_used,
         whitelist,
+        denylist,
         sysroots_files,
         sysroot_prefix,
         sysroot_substitution,
