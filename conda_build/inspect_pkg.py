@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING
 from conda.api import Solver
 from conda.base.context import context
 from conda.cli.common import specs_from_args
+from conda.core.index import Index
 from conda.core.prefix_data import PrefixData
 from conda.models.records import PrefixRecord
 
@@ -36,12 +37,6 @@ from .utils import (
     on_win,
     package_has_file,
 )
-
-try:
-    from conda.core.index import Index
-except ImportError:
-    # FUTURE: remove for `conda >=24.9`
-    from conda_build.index import Index
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
