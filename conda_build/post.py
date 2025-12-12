@@ -498,26 +498,27 @@ def mk_relative_osx(path, host_prefix, m, files, rpaths=("lib",)):
 
     if names:
         existing_rpaths = macho.get_rpaths(path, build_prefix=prefix)
+        # Remove rpaths that start with SRC_DIR
+        for rpath in existing_rpaths:
+            if rpath.startswith(base_prefix) and not rpath.startswith(host_prefix):
+                macho.delete_rpath(path, rpath, build_prefix=prefix, verbose=True)
+
         # Add an rpath to every executable to increase the chances of it
         # being found.
         for rpath in rpaths:
             # Escape hatch for when you really don't want any rpaths added.
             if rpath == "":
                 continue
-            rpath_new = join(
-                "@loader_path", relpath(join(host_prefix, rpath), dirname(path)), ""
-            ).replace("/./", "/")
-            macho.add_rpath(path, rpath_new, build_prefix=prefix, verbose=True)
             full_rpath = join(host_prefix, rpath)
             for existing_rpath in existing_rpaths:
                 if normpath(existing_rpath) == normpath(full_rpath):
                     macho.delete_rpath(
                         path, existing_rpath, build_prefix=prefix, verbose=True
                     )
-
-        for rpath in existing_rpaths:
-            if rpath.startswith(base_prefix) and not rpath.startswith(host_prefix):
-                macho.delete_rpath(path, rpath, build_prefix=prefix, verbose=True)
+            rpath_new = join(
+                "@loader_path", relpath(join(host_prefix, rpath), dirname(path)), ""
+            ).replace("/./", "/")
+            macho.add_rpath(path, rpath_new, build_prefix=prefix, verbose=True)
     if s:
         # Skip for stub files, which have to use binary_has_prefix_files to be
         # made relocatable.
