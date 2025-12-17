@@ -2297,6 +2297,9 @@ def create_file_with_permissions(path: str, permissions: int):
 
         shutil.move(tmp_path, path)
 
+
 def is_v1_recipe(recipe_dir: Path) -> bool:
     """Check if recipe.yaml exists"""
-    return (recipe_dir / "recipe.yaml").exists() and not (recipe_dir / "meta.yaml").exists()
+    return (recipe_dir / "recipe.yaml").exists() and not (
+        recipe_dir / "meta.yaml"
+    ).exists()

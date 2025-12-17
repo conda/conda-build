@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import subprocess
 import sys
 import warnings
 from glob import glob
@@ -11,7 +12,6 @@ from itertools import chain
 from os.path import abspath, expanduser, expandvars, join
 from pathlib import Path
 from typing import TYPE_CHECKING
-import subprocess
 
 from conda.auxlib.ish import dals
 from conda.base.context import context
@@ -25,10 +25,9 @@ from ..config import (
     get_or_merge_config,
     zstd_compression_level_default,
 )
-from ..utils import LoggingContext
+from ..utils import LoggingContext, is_v1_recipe
 from .actions import KeyValueAction, PackageTypeNormalize
 from .main_render import get_render_parser
-from ..utils import is_v1_recipe
 
 try:
     from conda.cli.helpers import add_parser_channels
@@ -42,6 +41,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from ..config import Config
+
 
 def run_rattler_build(recipe_dir: Path, parsed_args, config) -> int:
     """Run rattler-build for v1 recipes"""
@@ -66,15 +66,12 @@ def run_rattler_build(recipe_dir: Path, parsed_args, config) -> int:
         cmd.extend(["--no-build-id"])
 
     try:
-        subprocess.run(
-            cmd,
-            check=True,
-            text=True
-            )
+        subprocess.run(cmd, check=True, text=True)
         return 0
     except subprocess.CalledProcessError as e:
         print(f"rattler-build failed: {e}", file=sys.stderr)
         return e.returncode
+
 
 def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
     parser = get_render_parser()

@@ -5,8 +5,8 @@ from __future__ import annotations
 import logging
 import os
 import pkgutil
-import sys
 import subprocess
+import sys
 from importlib import import_module
 from typing import TYPE_CHECKING
 
@@ -42,7 +42,7 @@ options available.
     parser.add_argument(
         "--use-rattler",
         action="store_true",
-        help="Generate recipes using rattler-build"
+        help="Generate recipes using rattler-build",
     )
 
     repos = parser.add_subparsers(dest="repo")
@@ -75,21 +75,22 @@ def execute(args: Sequence[str] | None = None) -> int:
             print(
                 f"Warning: rattler-build does not support '{parsed.repo}' skeleton"
                 "Falling back to conda-skeleton recipe generation.",
-                file=sys.stderr
+                file=sys.stderr,
             )
         else:
-            cmd = ["rattler-build", "generate-recipe", parsed.repo, *parsed.packages, "-w"]
+            cmd = [
+                "rattler-build",
+                "generate-recipe",
+                parsed.repo,
+                *parsed.packages,
+                "-w",
+            ]
             try:
-                subprocess.run(
-                    cmd,
-                    text=True,
-                    check=True
-                    )
+                subprocess.run(cmd, text=True, check=True)
                 return 0
             except subprocess.CalledProcessError as e:
                 print(f"rattler-build failed: {e}", file=sys.stderr)
                 return e.returncode
-
 
     api.skeletonize(
         parsed.packages,

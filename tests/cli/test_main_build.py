@@ -549,6 +549,7 @@ def test_build_with_empty_channel_fails(empty_channel: Path) -> None:
             ]
         )
 
+
 def test_render_with_v1_recipe() -> None:
     """Test building a v1 recipe"""
     recipe = os.path.join(metadata_dir, "..", "variants", "32_v1_recipe")

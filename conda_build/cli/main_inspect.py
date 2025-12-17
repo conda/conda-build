@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import logging
+import subprocess
 import sys
 from os.path import expanduser
 from pprint import pprint
 from typing import TYPE_CHECKING
-import subprocess
 
 from conda.base.context import context
 
@@ -44,7 +44,7 @@ options available.
     rattler_parser = subcommand.add_parser(
         "rattler",
         help="Rattler-build specific operations.",
-        description="Inspect conda packages using rattler-build."
+        description="Inspect conda packages using rattler-build.",
     )
 
     rattler_parser.add_argument(
@@ -218,11 +218,7 @@ def execute(args: Sequence[str] | None = None) -> int:
     elif parsed.subcommand == "rattler":
         cmd = ["rattler-build", "package", "inspect", *parsed.packages]
         try:
-            subprocess.run(
-                cmd,
-                text=True,
-                check=True
-                )
+            subprocess.run(cmd, text=True, check=True)
             return 0
         except subprocess.CalledProcessError as e:
             print(f"rattler-build failed: {e}", file=sys.stderr)
