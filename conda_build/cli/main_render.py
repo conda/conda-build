@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import logging
 import subprocess
+import sys
 from os.path import join
 from pathlib import Path
 from pprint import pprint
