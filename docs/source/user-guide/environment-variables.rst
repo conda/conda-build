@@ -39,6 +39,10 @@ inherited from the shell environment in which you invoke
 ``conda-build``. To override this behavior, see
 :ref:`inherited-env-vars`.
 
+.. note::
+
+   For configuration options, including package format settings, see :ref:`configuration`.
+
 
 .. list-table::
    :widths: 20 80
@@ -187,14 +191,45 @@ defined only on macOS.
    * - OSX_ARCH
      - ``i386`` or ``x86_64``, depending on Python build.
 
-The environment variable listed in the following table is
-defined only on Linux.
+The environment variables listed in the following table are
+defined only on Linux. These variables can be set from the
+shell environment, variant configuration (e.g., in
+``conda_build_config.yaml``), or use default values.
 
 .. list-table::
    :widths: 20 80
 
+   * - BUILD
+     - GNU triplet specifying the build target, for example
+       ``x86_64-conda_cos6-linux-gnu`` or ``aarch64-conda_cos7-linux-gnu``.
+       The distribution component (e.g., ``cos6``, ``cos7``, ``el8``) can be
+       customized by setting the ``cdt_name`` variable in variant
+       configuration. Defaults to ``cos6`` for most architectures, ``cos7``
+       for ``powerpc``, ``aarch64``, and ``s390x``.  If ``BUILD`` and ``cdt_name`` are both set,
+       BUILD takes precedence.
+   * - CFLAGS
+     - C compiler flags. Inherited from environment or variant
+       configuration if set, otherwise empty.
+   * - CXXFLAGS
+     - C++ compiler flags. Inherited from environment or variant
+       configuration if set, otherwise empty.
+   * - DEJAGNU
+     - DejaGnu test framework configuration. Inherited from
+       environment or variant configuration if set, otherwise empty.
+   * - DISPLAY
+     - X11 display variable. Inherited from environment or variant
+       configuration if set, otherwise empty.
    * - LD_RUN_PATH
-     - ``$PREFIX/lib``.
+     - Runtime library search path. Defaults to ``$PREFIX/lib``.
+   * - LDFLAGS
+     - Linker flags. Inherited from environment or variant
+       configuration if set, otherwise empty.
+   * - QEMU_LD_PREFIX
+     - QEMU library prefix for cross-compilation. Inherited from
+       environment or variant configuration if set, otherwise empty.
+   * - QEMU_UNAME
+     - QEMU uname information for cross-compilation. Inherited from
+       environment or variant configuration if set, otherwise empty.
 
 
 .. _git-env:

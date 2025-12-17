@@ -35,6 +35,22 @@ package. Directories are not included. Directories are created
 and removed as needed, but you cannot create an empty directory
 from the tar archive directly.
 
+Package format differences
+-------------------------
+
+**Legacy .tar.bz2 format:**
+* Traditional conda package format
+* Compatible with older conda versions
+* Larger file sizes due to less efficient compression
+* Slower installation times
+
+**Modern .conda format:**
+* Newer, more efficient package format
+* Better compression ratios
+* Faster installation times
+* Requires conda 4.7+ for installation
+* Default format in conda-build 25.1+
+
 
 .. _package_metadata:
 

@@ -57,7 +57,7 @@ from conda.base.constants import (
     KNOWN_SUBDIRS,
 )
 from conda.base.context import context
-from conda.common.path import win_path_to_unix
+from conda.common.path import unix_path_to_win, win_path_to_unix
 from conda.exceptions import CondaHTTPError
 from conda.gateways.connection.download import download
 from conda.gateways.disk.create import TemporaryDirectory
@@ -66,7 +66,6 @@ from conda.models.channel import Channel
 from conda.models.match_spec import MatchSpec
 from conda.models.records import PackageRecord
 from conda.models.version import VersionOrder
-from conda.utils import unix_path_to_win
 
 from .exceptions import BuildLockError
 
@@ -1994,11 +1993,13 @@ def expand_reqs(reqs_entry):
 
 
 def sha256_checksum(filename, buffersize=65536):
-    if islink(filename) and not isfile(filename):
+    is_link = islink(filename)
+    is_file = isfile(filename)
+    if is_link and not is_file:
         # symlink to nowhere so an empty file
         # this is the sha256 hash of an empty file
         return "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-    if not isfile(filename):
+    if not is_file:
         return None
     sha256 = hashlib.sha256()
     with open(filename, "rb") as f:

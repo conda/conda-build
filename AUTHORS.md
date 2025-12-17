@@ -45,6 +45,7 @@ Authors are sorted alphabetically.
 * Christopher Burr
 * Christopher J. Wright
 * Christopher Whelan
+* ColemanTom
 * Conda Bot
 * Connor Martin
 * Cornelius Roemer
@@ -99,6 +100,7 @@ Authors are sorted alphabetically.
 * Jack Olivieri
 * Jacob Walls
 * Jaime Rodríguez-Guerra
+* Jakov Smolić
 * James Abbott
 * James Lamb
 * James Sexton
@@ -195,6 +197,7 @@ Authors are sorted alphabetically.
 * Robert T. McGibbon
 * Robert Wall
 * Rolando (Max) Espinoza
+* Rory Yorke
 * Ruben Vorderman
 * Ryan Dale
 * Ryan Grout
@@ -208,6 +211,7 @@ Authors are sorted alphabetically.
 * Serhii Kupriienko
 * Shaun Walbridge
 * Shaun Walbridge
+* Sherman Siu
 * Siu Kwan Lam
 * Sophia Castellarin
 * Sophian Guidara

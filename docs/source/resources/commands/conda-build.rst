@@ -184,6 +184,14 @@ conda-build
                  conda-package-handling. Defaults to 19. Note that using levels
                  above 19 is not advised due to high memory consumption.
 
+          <B>--package-format</B> {1,2,.tar.bz2,.conda}
+                 Choose which package type(s) are outputted. Accepted inputs:
+                 .tar.bz2 or 1 (legacy format), .conda or 2 (modern format).
+                 Defaults to .conda format. The .conda format provides better
+                 compression and faster installation times. For configuration options,
+                 including package format settings, see
+                 <a href="https://docs.conda.io/projects/conda-build/en/stable/resources/configuration.html">configuration</a>.
+
           <B>--no-activate</B>
                  do not activate the build and test envs; just prepend to PATH
 
