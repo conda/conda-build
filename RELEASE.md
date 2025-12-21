@@ -388,7 +388,7 @@ Currently, there are only 2 activities we use rever for, (1) aggregating the aut
 
 ## 7. Merge release PR and publish release.
 
-To publish the release, go to the project's release page (e.g., https://github.com/conda/conda/releases) and add the release notes from `CHANGELOG.md` to the draft release you created earlier. Then publish the release.
+To publish the release, go to the project's release page (e.g., https://github.com/conda/conda-build/releases) and add the release notes from `CHANGELOG.md` to the draft release you created earlier. Then publish the release.
 
 > [!NOTE]
 > Release notes can be drafted and saved ahead of time.
