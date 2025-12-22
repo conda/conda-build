@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import argparse
 import logging
+import subprocess
 import sys
 import warnings
 from glob import glob
 from itertools import chain
-from os.path import abspath, expanduser, expandvars
+from os.path import abspath, expanduser, expandvars, join
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -24,7 +25,7 @@ from ..config import (
     get_or_merge_config,
     zstd_compression_level_default,
 )
-from ..utils import LoggingContext
+from ..utils import LoggingContext, is_v1_recipe
 from .actions import KeyValueAction, PackageTypeNormalize
 from .main_render import get_render_parser
 
@@ -40,6 +41,36 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from ..config import Config
+
+
+def run_rattler_build(recipe_dir: Path, parsed_args, config) -> int:
+    """Run rattler-build for v1 recipes"""
+    recipe_file = recipe_dir / "recipe.yaml"
+    cmd = ["rattler-build", "build", "--recipe", str(recipe_file)]
+
+    if parsed_args.variant_config_files:
+        variants_path = join(*parsed_args.variant_config_files)
+        cmd.extend(["-m", str(variants_path)])
+
+    if parsed_args.output_folder:
+        cmd.extend(["--output-dir", parsed_args.output_folder])
+    if parsed_args.notest:
+        cmd.extend(["--test", "skip"])
+    if parsed_args.quiet:
+        cmd.extend(["-q"])
+    if parsed_args.skip_existing:
+        cmd.extend(["--skip-existing"])
+    if parsed_args.debug:
+        cmd.extend(["--verbose"])
+    if not parsed_args.set_build_id:
+        cmd.extend(["--no-build-id"])
+
+    try:
+        subprocess.run(cmd, check=True, text=True)
+        return 0
+    except subprocess.CalledProcessError as e:
+        print(f"rattler-build failed: {e}", file=sys.stderr)
+        return e.returncode
 
 
 def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
@@ -618,6 +649,13 @@ def execute(args: Sequence[str] | None = None) -> int:
     elif parsed.check:
         for recipe in parsed.recipe:
             check_action(recipe, config)
+        return 0
+
+    if is_v1_recipe(Path(join(*parsed.recipe))):
+        print("recipe.yaml detected; continuing with rattler-build...")
+        rc = run_rattler_build(Path(join(*parsed.recipe)), parsed, config)
+        if rc != 0:
+            return rc
     else:
         api.build(
             parsed.recipe,

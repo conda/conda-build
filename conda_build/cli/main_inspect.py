@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import subprocess
 import sys
 from os.path import expanduser
 from pprint import pprint
@@ -38,6 +39,19 @@ options available.
     )
     subcommand = parser.add_subparsers(
         dest="subcommand",
+    )
+
+    rattler_parser = subcommand.add_parser(
+        "rattler",
+        help="Rattler-build specific operations.",
+        description="Inspect conda packages using rattler-build.",
+    )
+
+    rattler_parser.add_argument(
+        "packages",
+        action="store",
+        nargs="*",
+        help="Full path to a conda package to inspect.",
     )
 
     linkages_help = """
@@ -201,6 +215,14 @@ def execute(args: Sequence[str] | None = None) -> int:
     if not parsed.subcommand:
         parser.print_help()
         sys.exit(0)
+    elif parsed.subcommand == "rattler":
+        cmd = ["rattler-build", "package", "inspect", *parsed.packages]
+        try:
+            subprocess.run(cmd, text=True, check=True)
+            return 0
+        except subprocess.CalledProcessError as e:
+            print(f"rattler-build failed: {e}", file=sys.stderr)
+            return e.returncode
     elif parsed.subcommand == "channels":
         print(api.test_installable(parsed.channel))
     elif parsed.subcommand == "linkages":
