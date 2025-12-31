@@ -398,6 +398,40 @@ Jinja is not allowed in ``conda_build_config.yaml``, though. It is the source of
 information to feed into other Jinja templates, and the buck has to stop
 somewhere.
 
+Variable type behavior in selectors and Jinja2 expressions
+-----------------------------------------------------------
+
+Varaibles defined in the ``conda_build_config.yaml`` file are treated differently depending
+on where they are used in the recipe.
+
+In selector expressions, variables from ``conda_build_config.yaml`` are converted into specific Python types.
+Conda-build converts numerical-like expressions into ``int`` type for easier relational operations.
+Additionally, ``true`` / ``false`` strings are converted to booleans.
+
+In Jinja2 expressions, the variables are treated as strings even if they are defined as integers in ``conda_build_config.yaml``.
+This is the default Jinja2 behavior as its original use-case was generating text-based outputs.
+Variables must be explicitly cast to ``int`` type in the Jinja expression if wanted to use as such.
+
+Consider two different variable definitions in  ``conda_build_config.yaml``:
+
+a)
+
+.. code-block:: yaml
+
+   foo:
+     - 1
+
+b)
+
+.. code-block:: yaml
+
+   foo:
+     - "1"
+
+Due to this type-handling discrepancy, a Jinja2 expression such as  ``{{ foo == 1 }}`` will evaluate to ``False``
+regardless of whether ``foo`` was defined as an integer or string in ``conda_build_config.yaml``.
+Similarly, selector expressions such as  ``# [foo == 1]`` will always evaluate to ``True``.
+
 
 About reproducibility
 ---------------------
