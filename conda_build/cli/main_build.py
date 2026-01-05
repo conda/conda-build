@@ -48,22 +48,41 @@ def run_rattler_build(recipe_dir: Path, parsed_args, config) -> int:
     recipe_file = recipe_dir / "recipe.yaml"
     cmd = ["rattler-build", "build", "--recipe", str(recipe_file)]
 
+    if config.channel_urls:
+        cmd.extend(["-c", str(config.channel_urls)])
+    if config.conda_pkg_format == CondaPkgFormat.V2:
+        cmd.extend(["--package-format", ".conda:" + str(config.zstd_compression_level)])
+    else:
+        cmd.extend(["--package-format", ".tar.bz2"])
+
     if parsed_args.variant_config_files:
         variants_path = join(*parsed_args.variant_config_files)
         cmd.extend(["-m", str(variants_path)])
-
+    if not parsed_args.include_recipe:
+        cmd.extend(["--no-include-recipe"])
+    if parsed_args.skip_existing != "none":
+        if parsed_args.skip_existing == "local":
+            cmd.extend(["--skip-existing local"])
+        elif parsed_args.skip_existing == "all":
+            cmd.extend(["--skip-existing all"])
     if parsed_args.output_folder:
         cmd.extend(["--output-dir", parsed_args.output_folder])
     if parsed_args.notest:
         cmd.extend(["--test", "skip"])
     if parsed_args.quiet:
         cmd.extend(["-q"])
-    if parsed_args.skip_existing:
-        cmd.extend(["--skip-existing"])
+    if parsed_args.debug:
+        cmd.extend(["--debug"])
+    elif parsed_args.skip_existing:
+        cmd.extend(["--skip-existing", parsed_args.skip_existing])
     if parsed_args.debug:
         cmd.extend(["--verbose"])
     if not parsed_args.set_build_id:
         cmd.extend(["--no-build-id"])
+    if parsed_args.host_platform:
+        cmd.extend(["--host-platform", parsed_args.host_platform])
+    if parsed_args.target_platform:
+        cmd.extend(["--target-platform", parsed_args.target_platform])
 
     try:
         subprocess.run(cmd, check=True, text=True)
@@ -72,8 +91,85 @@ def run_rattler_build(recipe_dir: Path, parsed_args, config) -> int:
         print(f"rattler-build failed: {e}", file=sys.stderr)
         return e.returncode
 
+def build_rattler_parser() -> ArgumentParser:
+    parser = argparse.ArgumentParser(prog="rattler build")
 
-def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
+    parser.add_argument(
+        "recipe",
+        metavar="RECIPE_PATH",
+        nargs="+",
+        help="Path to recipe directory"
+    )
+    parser.add_argument(
+        "-m",
+        "--variant-config-files",
+        nargs="+",
+        help="Variant configuration files for the build"
+    )
+    parser.add_argument(
+        "--no-include-recipe",
+        action="store_false",
+        help="Don't store the recipe in the final package",
+        dest="include_recipe",
+        default=context.conda_build.get("include_recipe", "true").lower() == "true",
+    )
+    parser.add_argument(
+    "--skip-existing",
+    nargs="?",
+    const="local",
+    default="none",
+    choices=["none", "local", "all"],
+    help=(
+        "Whether to skip packages that already exist in any channel. "
+        "If set to 'none', do not skip any packages (default when not specified). "
+        "If set to 'local', only skip packages that already exist locally "
+        "(default when using --skip-existing without a value). "
+        "If set to 'all', skip packages that already exist in any channel."
+    ),
+)
+    parser.add_argument(
+        "--output-dir",
+        "--output-folder",
+        dest="output_folder",
+        help="Directory to write output packages to"
+    )
+    parser.add_argument(
+        "--no-test",
+        action="store_true",
+        dest="notest",
+        help="Do not run tests after building"
+    )
+    parser.add_argument(
+        "-q",
+        "--quiet",
+        action="store_true",
+        help="Reduce output verbosity"
+    )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Enable debug output"
+    )
+    parser.add_argument(
+        "--no-build-id",
+        action="store_false",
+        dest="set_build_id",
+        help="Do not generate unique build folder names"
+    )
+    parser.add_argument(
+        "--host-platform",
+        dest="host_platform",
+        help="The build platform to build for (defaults to current platform)"
+    )
+    parser.add_argument(
+        "--target-platform",
+        dest="target_platform",
+        help="The target platform to build for"
+    )
+
+    return parser
+
+def build_conda_parser() -> ArgumentParser:
     parser = get_render_parser()
     parser.prog = "conda build"
     parser.description = dals(
@@ -161,8 +257,11 @@ def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
         "--skip-existing",
         action="store_true",
         help=(
-            "Skip recipes for which there already exists an existing build "
-            "(locally or in the channels)."
+            """Whether to skip packages that already exist in any channel.
+            If set to `none`, do not skip any packages, default when not specified.
+            If set to local, only skip packages that already exist locally, default when using --skip-existing.
+            If set toall`, skip packages that already exist in any channel
+            """
         ),
         default=context.conda_build.get("skip_existing", "false").lower() == "true",
     )
@@ -532,11 +631,26 @@ def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
     )
     add_parser_channels(parser)
 
-    parsed = parser.parse_args(args)
+    return parser
+
+def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
+    # pre-parse selecor
+    selector = argparse.ArgumentParser(add_help=False)
+    selector.add_argument(
+        "backend",
+        nargs="?",
+        choices=["rattler"],
+        help="Use rattler as a build backend"
+    )
+    namespace, extra = selector.parse_known_args(args)
+
+
+    parser = build_rattler_parser() if namespace.backend == "rattler" else build_conda_parser()
+
+    parsed = parser.parse_args(extra)
     check_recipe(parsed.recipe)
 
     return parser, parsed
-
 
 def check_recipe(path_list):
     """Verify if the list of recipes received contain a path to a directory,
@@ -605,58 +719,58 @@ def execute(args: Sequence[str] | None = None) -> int:
 
     config.verbose = not parsed.quiet or parsed.debug
 
-    if "purge" in parsed.recipe:
-        build.clean_build(config)
-        return 0
-
-    if "purge-all" in parsed.recipe:
-        build.clean_build(config)
-        config.clean_pkgs()
-        return 0
-
-    if parsed.output:
-        config.verbose = False
-        config.quiet = True
-        config.debug = False
-        for recipe in parsed.recipe:
-            output_action(recipe, config)
-        return 0
-
-    if parsed.test:
-        failed_recipes = []
-        recipes = chain.from_iterable(
-            glob(abspath(recipe), recursive=True) if "*" in recipe else [recipe]
-            for recipe in parsed.recipe
-        )
-        for recipe in recipes:
-            try:
-                test_action(recipe, config)
-            except:
-                if not parsed.keep_going:
-                    raise
-                else:
-                    failed_recipes.append(recipe)
-                    continue
-        if failed_recipes:
-            print("Failed recipes:")
-            dashlist(failed_recipes)
-            sys.exit(len(failed_recipes))
-        else:
-            print("All tests passed")
-    elif parsed.source:
-        for recipe in parsed.recipe:
-            source_action(recipe, config)
-    elif parsed.check:
-        for recipe in parsed.recipe:
-            check_action(recipe, config)
-        return 0
-
     if is_v1_recipe(Path(join(*parsed.recipe))):
         print("recipe.yaml detected; continuing with rattler-build...")
         rc = run_rattler_build(Path(join(*parsed.recipe)), parsed, config)
         if rc != 0:
             return rc
     else:
+        if "purge" in parsed.recipe:
+            build.clean_build(config)
+            return 0
+
+        if "purge-all" in parsed.recipe:
+            build.clean_build(config)
+            config.clean_pkgs()
+            return 0
+
+        if parsed.output:
+            config.verbose = False
+            config.quiet = True
+            config.debug = False
+            for recipe in parsed.recipe:
+                output_action(recipe, config)
+            return 0
+
+        if parsed.test:
+            failed_recipes = []
+            recipes = chain.from_iterable(
+                glob(abspath(recipe), recursive=True) if "*" in recipe else [recipe]
+                for recipe in parsed.recipe
+            )
+            for recipe in recipes:
+                try:
+                    test_action(recipe, config)
+                except:
+                    if not parsed.keep_going:
+                        raise
+                    else:
+                        failed_recipes.append(recipe)
+                        continue
+            if failed_recipes:
+                print("Failed recipes:")
+                dashlist(failed_recipes)
+                sys.exit(len(failed_recipes))
+            else:
+                print("All tests passed")
+        elif parsed.source:
+            for recipe in parsed.recipe:
+                source_action(recipe, config)
+        elif parsed.check:
+            for recipe in parsed.recipe:
+                check_action(recipe, config)
+            return 0
+
         api.build(
             parsed.recipe,
             post=parsed.post,

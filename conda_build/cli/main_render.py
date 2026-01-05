@@ -62,6 +62,9 @@ def run_rattler_build(recipe_dir: Path, parsed_args, config) -> int:
         variants_path = join(*parsed_args.variant_config_files)
         cmd.extend(["-m", str(variants_path)])
 
+    if config.channel_urls:
+        cmd.extend(["-c", str(config.channel_urls)])
+
     try:
         subprocess.run(cmd, check=True, text=True)
         return 0
