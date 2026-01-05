@@ -73,8 +73,6 @@ def run_rattler_build(recipe_dir: Path, parsed_args, config) -> int:
         cmd.extend(["-q"])
     if parsed_args.debug:
         cmd.extend(["--debug"])
-    elif parsed_args.skip_existing:
-        cmd.extend(["--skip-existing", parsed_args.skip_existing])
     if parsed_args.debug:
         cmd.extend(["--verbose"])
     if not parsed_args.set_build_id:
@@ -257,11 +255,8 @@ def build_conda_parser() -> ArgumentParser:
         "--skip-existing",
         action="store_true",
         help=(
-            """Whether to skip packages that already exist in any channel.
-            If set to `none`, do not skip any packages, default when not specified.
-            If set to local, only skip packages that already exist locally, default when using --skip-existing.
-            If set toall`, skip packages that already exist in any channel
-            """
+            "Skip recipes for which there already exists an existing build "
+            "(locally or in the channels)."
         ),
         default=context.conda_build.get("skip_existing", "false").lower() == "true",
     )
