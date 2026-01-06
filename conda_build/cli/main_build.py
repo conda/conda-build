@@ -43,18 +43,18 @@ if TYPE_CHECKING:
     from ..config import Config
 
 
-def run_rattler_build(recipe_dir: Path, parsed_args, config) -> int:
+def run_rattler_build(parsed_args) -> int:
     """Run rattler-build for v1 recipes"""
+    recipe_dir = Path(join(*parsed_args.recipe))
     recipe_file = recipe_dir / "recipe.yaml"
     cmd = ["rattler-build", "build", "--recipe", str(recipe_file)]
 
-    if config.channel_urls:
-        cmd.extend(["-c", str(config.channel_urls)])
-    if config.conda_pkg_format == CondaPkgFormat.V2:
-        cmd.extend(["--package-format", ".conda:" + str(config.zstd_compression_level)])
+    if parsed_args.channel:
+        cmd.extend(["-c", str(parsed_args.channel[0])])
+    if parsed_args.conda_pkg_format == CondaPkgFormat.V2:
+        cmd.extend(["--package-format", f".conda:{parsed_args.zstd_compression_level}"])
     else:
         cmd.extend(["--package-format", ".tar.bz2"])
-
     if parsed_args.variant_config_files:
         variants_path = join(*parsed_args.variant_config_files)
         cmd.extend(["-m", str(variants_path)])
@@ -77,10 +77,8 @@ def run_rattler_build(recipe_dir: Path, parsed_args, config) -> int:
         cmd.extend(["--verbose"])
     if not parsed_args.set_build_id:
         cmd.extend(["--no-build-id"])
-    if parsed_args.host_platform:
-        cmd.extend(["--host-platform", parsed_args.host_platform])
-    if parsed_args.target_platform:
-        cmd.extend(["--target-platform", parsed_args.target_platform])
+    if parsed_args.output_folder:
+        cmd.extend(["--output-dir", parsed_args.output_folder])
 
     try:
         subprocess.run(cmd, check=True, text=True)
@@ -89,85 +87,7 @@ def run_rattler_build(recipe_dir: Path, parsed_args, config) -> int:
         print(f"rattler-build failed: {e}", file=sys.stderr)
         return e.returncode
 
-def build_rattler_parser() -> ArgumentParser:
-    parser = argparse.ArgumentParser(prog="rattler build")
-
-    parser.add_argument(
-        "recipe",
-        metavar="RECIPE_PATH",
-        nargs="+",
-        help="Path to recipe directory"
-    )
-    parser.add_argument(
-        "-m",
-        "--variant-config-files",
-        nargs="+",
-        help="Variant configuration files for the build"
-    )
-    parser.add_argument(
-        "--no-include-recipe",
-        action="store_false",
-        help="Don't store the recipe in the final package",
-        dest="include_recipe",
-        default=context.conda_build.get("include_recipe", "true").lower() == "true",
-    )
-    parser.add_argument(
-    "--skip-existing",
-    nargs="?",
-    const="local",
-    default="none",
-    choices=["none", "local", "all"],
-    help=(
-        "Whether to skip packages that already exist in any channel. "
-        "If set to 'none', do not skip any packages (default when not specified). "
-        "If set to 'local', only skip packages that already exist locally "
-        "(default when using --skip-existing without a value). "
-        "If set to 'all', skip packages that already exist in any channel."
-    ),
-)
-    parser.add_argument(
-        "--output-dir",
-        "--output-folder",
-        dest="output_folder",
-        help="Directory to write output packages to"
-    )
-    parser.add_argument(
-        "--no-test",
-        action="store_true",
-        dest="notest",
-        help="Do not run tests after building"
-    )
-    parser.add_argument(
-        "-q",
-        "--quiet",
-        action="store_true",
-        help="Reduce output verbosity"
-    )
-    parser.add_argument(
-        "--debug",
-        action="store_true",
-        help="Enable debug output"
-    )
-    parser.add_argument(
-        "--no-build-id",
-        action="store_false",
-        dest="set_build_id",
-        help="Do not generate unique build folder names"
-    )
-    parser.add_argument(
-        "--host-platform",
-        dest="host_platform",
-        help="The build platform to build for (defaults to current platform)"
-    )
-    parser.add_argument(
-        "--target-platform",
-        dest="target_platform",
-        help="The target platform to build for"
-    )
-
-    return parser
-
-def build_conda_parser() -> ArgumentParser:
+def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
     parser = get_render_parser()
     parser.prog = "conda build"
     parser.description = dals(
@@ -626,23 +546,7 @@ def build_conda_parser() -> ArgumentParser:
     )
     add_parser_channels(parser)
 
-    return parser
-
-def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
-    # pre-parse selecor
-    selector = argparse.ArgumentParser(add_help=False)
-    selector.add_argument(
-        "backend",
-        nargs="?",
-        choices=["rattler"],
-        help="Use rattler as a build backend"
-    )
-    namespace, extra = selector.parse_known_args(args)
-
-
-    parser = build_rattler_parser() if namespace.backend == "rattler" else build_conda_parser()
-
-    parsed = parser.parse_args(extra)
+    parsed = parser.parse_args(args)
     check_recipe(parsed.recipe)
 
     return parser, parsed
@@ -716,7 +620,7 @@ def execute(args: Sequence[str] | None = None) -> int:
 
     if is_v1_recipe(Path(join(*parsed.recipe))):
         print("recipe.yaml detected; continuing with rattler-build...")
-        rc = run_rattler_build(Path(join(*parsed.recipe)), parsed, config)
+        rc = run_rattler_build(parsed)
         if rc != 0:
             return rc
     else:
