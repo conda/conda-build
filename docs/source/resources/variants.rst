@@ -405,7 +405,7 @@ Variables defined in the ``conda_build_config.yaml`` file are treated differentl
 on where they are used in the recipe.
 
 In selector expressions, variables from ``conda_build_config.yaml`` are converted into specific Python types.
-Conda-build converts numerical-like expressions into ``int`` type for easier relational operations.
+Conda build converts numerical-like expressions into ``int`` type for easier relational operations.
 Additionally, ``true`` / ``false`` strings are converted to booleans.
 
 In Jinja2 expressions, the variables are treated as strings even if they are defined as integers in ``conda_build_config.yaml``.
