@@ -410,7 +410,7 @@ Additionally, ``true`` / ``false`` strings are converted to booleans.
 
 In Jinja2 expressions, the variables are treated as strings even if they are defined as integers in ``conda_build_config.yaml``.
 This is the default Jinja2 behavior as its original use-case was generating text-based outputs.
-Variables must be explicitly cast to ``int`` type in the Jinja expression if wanted to use as such.
+Variables must be explicitly casted to ``int`` type in the Jinja expression if they need to be used as such.
 
 Consider two different variable definitions in  ``conda_build_config.yaml``:
 
