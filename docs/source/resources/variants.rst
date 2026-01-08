@@ -401,7 +401,7 @@ somewhere.
 Variable type behavior in selectors and Jinja2 expressions
 -----------------------------------------------------------
 
-Varaibles defined in the ``conda_build_config.yaml`` file are treated differently depending
+Variables defined in the ``conda_build_config.yaml`` file are treated differently depending
 on where they are used in the recipe.
 
 In selector expressions, variables from ``conda_build_config.yaml`` are converted into specific Python types.
