@@ -399,7 +399,7 @@ information to feed into other Jinja templates, and the buck has to stop
 somewhere.
 
 Variable type behavior in selectors and Jinja2 expressions
------------------------------------------------------------
+----------------------------------------------------------
 
 Variables defined in the ``conda_build_config.yaml`` file are treated differently depending
 on where they are used in the recipe.
