@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import argparse
 import logging
+import subprocess
 import sys
 import warnings
 from glob import glob
 from itertools import chain
-from os.path import abspath, expanduser, expandvars
+from os.path import abspath, expanduser, expandvars, join
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -24,7 +25,7 @@ from ..config import (
     get_or_merge_config,
     zstd_compression_level_default,
 )
-from ..utils import LoggingContext
+from ..utils import LoggingContext, is_v1_recipe
 from .actions import KeyValueAction, PackageTypeNormalize
 from .main_render import get_render_parser
 
@@ -41,6 +42,50 @@ if TYPE_CHECKING:
 
     from ..config import Config
 
+
+def run_rattler_build(parsed_args) -> int:
+    """Run rattler-build for v1 recipes"""
+    recipe_dir = Path(join(*parsed_args.recipe))
+    recipe_file = recipe_dir / "recipe.yaml"
+    cmd = ["rattler-build", "build", "--recipe", str(recipe_file)]
+
+    if parsed_args.channel:
+        cmd.extend(["-c", str(parsed_args.channel[0])])
+    if parsed_args.conda_pkg_format == CondaPkgFormat.V2:
+        cmd.extend(["--package-format", f".conda:{parsed_args.zstd_compression_level}"])
+    else:
+        cmd.extend(["--package-format", ".tar.bz2"])
+    if parsed_args.variant_config_files:
+        variants_path = join(*parsed_args.variant_config_files)
+        cmd.extend(["-m", str(variants_path)])
+    if not parsed_args.include_recipe:
+        cmd.extend(["--no-include-recipe"])
+    if parsed_args.skip_existing != "none":
+        if parsed_args.skip_existing == "local":
+            cmd.extend(["--skip-existing local"])
+        elif parsed_args.skip_existing == "all":
+            cmd.extend(["--skip-existing all"])
+    if parsed_args.output_folder:
+        cmd.extend(["--output-dir", parsed_args.output_folder])
+    if parsed_args.notest:
+        cmd.extend(["--test", "skip"])
+    if parsed_args.quiet:
+        cmd.extend(["-q"])
+    if parsed_args.debug:
+        cmd.extend(["--debug"])
+    if parsed_args.debug:
+        cmd.extend(["--verbose"])
+    if not parsed_args.set_build_id:
+        cmd.extend(["--no-build-id"])
+    if parsed_args.output_folder:
+        cmd.extend(["--output-dir", parsed_args.output_folder])
+
+    try:
+        subprocess.run(cmd, check=True, text=True)
+        return 0
+    except subprocess.CalledProcessError as e:
+        print(f"rattler-build failed: {e}", file=sys.stderr)
+        return e.returncode
 
 def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
     parser = get_render_parser()
@@ -506,7 +551,6 @@ def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
 
     return parser, parsed
 
-
 def check_recipe(path_list):
     """Verify if the list of recipes received contain a path to a directory,
     if a path to a recipe is found it will give an warning.
@@ -574,51 +618,58 @@ def execute(args: Sequence[str] | None = None) -> int:
 
     config.verbose = not parsed.quiet or parsed.debug
 
-    if "purge" in parsed.recipe:
-        build.clean_build(config)
-        return 0
-
-    if "purge-all" in parsed.recipe:
-        build.clean_build(config)
-        config.clean_pkgs()
-        return 0
-
-    if parsed.output:
-        config.verbose = False
-        config.quiet = True
-        config.debug = False
-        for recipe in parsed.recipe:
-            output_action(recipe, config)
-        return 0
-
-    if parsed.test:
-        failed_recipes = []
-        recipes = chain.from_iterable(
-            glob(abspath(recipe), recursive=True) if "*" in recipe else [recipe]
-            for recipe in parsed.recipe
-        )
-        for recipe in recipes:
-            try:
-                test_action(recipe, config)
-            except:
-                if not parsed.keep_going:
-                    raise
-                else:
-                    failed_recipes.append(recipe)
-                    continue
-        if failed_recipes:
-            print("Failed recipes:")
-            dashlist(failed_recipes)
-            sys.exit(len(failed_recipes))
-        else:
-            print("All tests passed")
-    elif parsed.source:
-        for recipe in parsed.recipe:
-            source_action(recipe, config)
-    elif parsed.check:
-        for recipe in parsed.recipe:
-            check_action(recipe, config)
+    if is_v1_recipe(Path(join(*parsed.recipe))):
+        print("recipe.yaml detected; continuing with rattler-build...")
+        rc = run_rattler_build(parsed)
+        if rc != 0:
+            return rc
     else:
+        if "purge" in parsed.recipe:
+            build.clean_build(config)
+            return 0
+
+        if "purge-all" in parsed.recipe:
+            build.clean_build(config)
+            config.clean_pkgs()
+            return 0
+
+        if parsed.output:
+            config.verbose = False
+            config.quiet = True
+            config.debug = False
+            for recipe in parsed.recipe:
+                output_action(recipe, config)
+            return 0
+
+        if parsed.test:
+            failed_recipes = []
+            recipes = chain.from_iterable(
+                glob(abspath(recipe), recursive=True) if "*" in recipe else [recipe]
+                for recipe in parsed.recipe
+            )
+            for recipe in recipes:
+                try:
+                    test_action(recipe, config)
+                except:
+                    if not parsed.keep_going:
+                        raise
+                    else:
+                        failed_recipes.append(recipe)
+                        continue
+            if failed_recipes:
+                print("Failed recipes:")
+                dashlist(failed_recipes)
+                sys.exit(len(failed_recipes))
+            else:
+                print("All tests passed")
+        elif parsed.source:
+            for recipe in parsed.recipe:
+                source_action(recipe, config)
+        elif parsed.check:
+            for recipe in parsed.recipe:
+                check_action(recipe, config)
+            return 0
+
         api.build(
             parsed.recipe,
             post=parsed.post,

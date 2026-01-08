@@ -548,3 +548,11 @@ def test_build_with_empty_channel_fails(empty_channel: Path) -> None:
                 os.path.join(metadata_dir, "_recipe_requiring_external_channel"),
             ]
         )
+
+
+def test_build_with_v1_recipe() -> None:
+    """Test building a v1 recipe"""
+    recipe = os.path.join(metadata_dir, "..", "variants", "32_v1_recipe")
+
+    args = [recipe]
+    assert main_build.execute(args) == 0
