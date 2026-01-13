@@ -2296,3 +2296,11 @@ def create_file_with_permissions(path: str, permissions: int):
             yield fh
 
         shutil.move(tmp_path, path)
+
+
+def is_v1_recipe(recipe_dir: Path) -> bool:
+    """Check if recipe.yaml exists"""
+    recipe_dir = Path(recipe_dir)
+    return (recipe_dir / "recipe.yaml").exists() and not any (
+        (recipe_dir / meta).exists() for meta in VALID_METAS
+    )

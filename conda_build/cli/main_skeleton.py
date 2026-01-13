@@ -5,6 +5,8 @@ from __future__ import annotations
 import logging
 import os
 import pkgutil
+import shlex
+import subprocess
 import sys
 from importlib import import_module
 from typing import TYPE_CHECKING
@@ -37,6 +39,13 @@ options available.
         """,
     )
 
+    # Flag for using rattler-build
+    parser.add_argument(
+        "--use-rattler",
+        action="store_true",
+        help="Generate recipes using rattler-build",
+    )
+
     repos = parser.add_subparsers(dest="repo")
 
     skeletons = [
@@ -61,6 +70,29 @@ def execute(args: Sequence[str] | None = None) -> int:
     if not parsed.repo:
         parser.print_help()
         sys.exit()
+
+    if parsed.use_rattler:
+        if parsed.repo == "rpm":
+            print(
+                f"Warning: rattler-build does not support '{parsed.repo}' skeleton"
+                "Falling back to conda-skeleton recipe generation.",
+                file=sys.stderr,
+            )
+        else:
+            cmd = [
+                "rattler-build",
+                "generate-recipe",
+                parsed.repo,
+                *parsed.packages,
+                "-w",
+            ]
+            try:
+                print("Running rattler-build:", shlex.join(cmd))
+                subprocess.run(cmd, text=True, check=True)
+                return 0
+            except subprocess.CalledProcessError as e:
+                print(f"rattler-build failed: {e}", file=sys.stderr)
+                return e.returncode
 
     api.skeletonize(
         parsed.packages,
