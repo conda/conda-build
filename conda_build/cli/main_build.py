@@ -43,7 +43,7 @@ if TYPE_CHECKING:
     from ..config import Config
 
 
-def run_rattler_build(parsed_args) -> int:
+def run_rattler_build(parsed_args: argparse.Namespace, config: Config) -> int:
     """Run rattler-build for v1 recipes"""
     recipe_dir = Path(join(*parsed_args.recipe))
     recipe_file = recipe_dir / "recipe.yaml"
@@ -551,6 +551,7 @@ def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
 
     return parser, parsed
 
+
 def check_recipe(path_list):
     """Verify if the list of recipes received contain a path to a directory,
     if a path to a recipe is found it will give an warning.
@@ -618,58 +619,61 @@ def execute(args: Sequence[str] | None = None) -> int:
 
     config.verbose = not parsed.quiet or parsed.debug
 
-    if is_v1_recipe(Path(join(*parsed.recipe))):
+    n_v1_recipes = sum(1 for recipe in parsed.recipe if is_v1_recipe(recipe))
+    if n_v1_recipes == len(parsed.recipe):  # all are v1, proceed with rattler-build
         print("recipe.yaml detected; continuing with rattler-build...")
-        rc = run_rattler_build(parsed)
-        if rc != 0:
-            return rc
+        return run_rattler_build(parsed, config)
+
+    if n_v1_recipes > 0:  # mixed recipe formats, error out
+        print("Cannot process several recipe versions at the same time!", file=sys.stderr)
+        return 1
+
+    # No v1 recipes, then everything is meta.yaml, continue with conda-build
+    if "purge" in parsed.recipe:
+        build.clean_build(config)
+        return 0
+
+    if "purge-all" in parsed.recipe:
+        build.clean_build(config)
+        config.clean_pkgs()
+        return 0
+
+    if parsed.output:
+        config.verbose = False
+        config.quiet = True
+        config.debug = False
+        for recipe in parsed.recipe:
+            output_action(recipe, config)
+        return 0
+
+    if parsed.test:
+        failed_recipes = []
+        recipes = chain.from_iterable(
+            glob(abspath(recipe), recursive=True) if "*" in recipe else [recipe]
+            for recipe in parsed.recipe
+        )
+        for recipe in recipes:
+            try:
+                test_action(recipe, config)
+            except:
+                if not parsed.keep_going:
+                    raise
+                else:
+                    failed_recipes.append(recipe)
+                    continue
+        if failed_recipes:
+            print("Failed recipes:")
+            dashlist(failed_recipes)
+            sys.exit(len(failed_recipes))
+        else:
+            print("All tests passed")
+    elif parsed.source:
+        for recipe in parsed.recipe:
+            source_action(recipe, config)
+    elif parsed.check:
+        for recipe in parsed.recipe:
+            check_action(recipe, config)
     else:
-        if "purge" in parsed.recipe:
-            build.clean_build(config)
-            return 0
-
-        if "purge-all" in parsed.recipe:
-            build.clean_build(config)
-            config.clean_pkgs()
-            return 0
-
-        if parsed.output:
-            config.verbose = False
-            config.quiet = True
-            config.debug = False
-            for recipe in parsed.recipe:
-                output_action(recipe, config)
-            return 0
-
-        if parsed.test:
-            failed_recipes = []
-            recipes = chain.from_iterable(
-                glob(abspath(recipe), recursive=True) if "*" in recipe else [recipe]
-                for recipe in parsed.recipe
-            )
-            for recipe in recipes:
-                try:
-                    test_action(recipe, config)
-                except:
-                    if not parsed.keep_going:
-                        raise
-                    else:
-                        failed_recipes.append(recipe)
-                        continue
-            if failed_recipes:
-                print("Failed recipes:")
-                dashlist(failed_recipes)
-                sys.exit(len(failed_recipes))
-            else:
-                print("All tests passed")
-        elif parsed.source:
-            for recipe in parsed.recipe:
-                source_action(recipe, config)
-        elif parsed.check:
-            for recipe in parsed.recipe:
-                check_action(recipe, config)
-            return 0
-
         api.build(
             parsed.recipe,
             post=parsed.post,
