@@ -45,19 +45,20 @@ if TYPE_CHECKING:
 
 def run_rattler_build(parsed_args: argparse.Namespace, config: Config) -> int:
     """Run rattler-build for v1 recipes"""
-    recipe_dir = Path(join(*parsed_args.recipe))
-    recipe_file = recipe_dir / "recipe.yaml"
-    cmd = ["rattler-build", "build", "--recipe", str(recipe_file)]
+    cmd = ["rattler-build", "build"] + [
+        f"--recipe={join(recipe_dir, 'recipe.yaml')}"
+        for recipe_dir in parsed_args.recipe
+    ]
 
-    if parsed_args.channel:
-        cmd.extend(["-c", str(parsed_args.channel[0])])
+    if config.channel_urls:
+        cmd.extend([f"--channel={url}" for url in config.channel_urls])
+        # TODO: investigate what to do about --local and -c local
     if parsed_args.conda_pkg_format == CondaPkgFormat.V2:
         cmd.extend(["--package-format", f".conda:{parsed_args.zstd_compression_level}"])
     else:
         cmd.extend(["--package-format", ".tar.bz2"])
     if parsed_args.variant_config_files:
-        variants_path = join(*parsed_args.variant_config_files)
-        cmd.extend(["-m", str(variants_path)])
+        cmd.extend([f"-m={variant}" for variant in parsed_args.variant_config_files])
     if not parsed_args.include_recipe:
         cmd.extend(["--no-include-recipe"])
     if parsed_args.skip_existing != "none":
@@ -73,12 +74,10 @@ def run_rattler_build(parsed_args: argparse.Namespace, config: Config) -> int:
         cmd.extend(["-q"])
     if parsed_args.debug:
         cmd.extend(["--debug"])
-    if parsed_args.debug:
+    if config.verbose:
         cmd.extend(["--verbose"])
     if not parsed_args.set_build_id:
         cmd.extend(["--no-build-id"])
-    if parsed_args.output_folder:
-        cmd.extend(["--output-dir", parsed_args.output_folder])
 
     try:
         subprocess.run(cmd, check=True, text=True)
@@ -86,6 +85,7 @@ def run_rattler_build(parsed_args: argparse.Namespace, config: Config) -> int:
     except subprocess.CalledProcessError as e:
         print(f"rattler-build failed: {e}", file=sys.stderr)
         return e.returncode
+
 
 def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
     parser = get_render_parser()
@@ -625,7 +625,9 @@ def execute(args: Sequence[str] | None = None) -> int:
         return run_rattler_build(parsed, config)
 
     if n_v1_recipes > 0:  # mixed recipe formats, error out
-        print("Cannot process several recipe versions at the same time!", file=sys.stderr)
+        print(
+            "Cannot process several recipe versions at the same time!", file=sys.stderr
+        )
         return 1
 
     # No v1 recipes, then everything is meta.yaml, continue with conda-build
