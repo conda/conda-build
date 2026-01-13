@@ -53,17 +53,16 @@ class ParseYAMLArgument(argparse.Action):
             )
 
 
-def run_rattler_build(recipe_dir: Path, parsed_args, config) -> int:
+def run_rattler_build(recipe_dir: Path, parsed_args: argparse.Namespace, config: Config) -> int:
     """Run rattler-build for v1 recipes"""
     recipe_file = recipe_dir / "recipe.yaml"
     cmd = ["rattler-build", "build", "--render-only", "--recipe", str(recipe_file)]
 
     if parsed_args.variant_config_files:
-        variants_path = join(*parsed_args.variant_config_files)
-        cmd.extend(["-m", str(variants_path)])
+        cmd.extend([f"-m={variant}" for variant in parsed_args.variant_config_files])
 
     if config.channel_urls:
-        cmd.extend(["-c", str(config.channel_urls)])
+        cmd.extend([f"--channel={url}" for url in config.channel_urls])
 
     try:
         subprocess.run(cmd, check=True, text=True)

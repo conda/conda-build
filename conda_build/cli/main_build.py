@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import shlex
 import subprocess
 import sys
 import warnings
@@ -80,7 +81,8 @@ def run_rattler_build(parsed_args: argparse.Namespace, config: Config) -> int:
         cmd.extend(["--no-build-id"])
 
     try:
-        subprocess.run(cmd, check=True, text=True)
+        print("Running rattler-build:", shlex.join(cmd))
+        subprocess.run(cmd, check=True)
         return 0
     except subprocess.CalledProcessError as e:
         print(f"rattler-build failed: {e}", file=sys.stderr)
@@ -621,7 +623,6 @@ def execute(args: Sequence[str] | None = None) -> int:
 
     n_v1_recipes = sum(1 for recipe in parsed.recipe if is_v1_recipe(recipe))
     if n_v1_recipes == len(parsed.recipe):  # all are v1, proceed with rattler-build
-        print("recipe.yaml detected; continuing with rattler-build...")
         return run_rattler_build(parsed, config)
 
     if n_v1_recipes > 0:  # mixed recipe formats, error out

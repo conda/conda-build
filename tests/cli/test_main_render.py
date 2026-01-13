@@ -170,4 +170,4 @@ def test_render_with_v1_recipe() -> None:
     recipe = os.path.join(metadata_dir, "..", "variants", "32_v1_recipe")
 
     args = [recipe]
-    main_render.execute(args)
+    assert main_render.execute(args) == 0

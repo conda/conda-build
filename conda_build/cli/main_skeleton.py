@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import os
 import pkgutil
+import shlex
 import subprocess
 import sys
 from importlib import import_module
@@ -86,6 +87,7 @@ def execute(args: Sequence[str] | None = None) -> int:
                 "-w",
             ]
             try:
+                print("Running rattler-build:", shlex.join(cmd))
                 subprocess.run(cmd, text=True, check=True)
                 return 0
             except subprocess.CalledProcessError as e:

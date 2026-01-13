@@ -22,7 +22,7 @@ python >=3.10
 python-libarchive-c
 pytz
 pyyaml
-rattler-build
+conda-forge::rattler-build
 requests
 ripgrep  # for faster grep
 setuptools
