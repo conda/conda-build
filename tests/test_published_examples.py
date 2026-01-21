@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 import pytest
-from conda.testing.integration import BIN_DIRECTORY
+from conda.common.path import BIN_DIRECTORY
 
 from conda_build.api import build
 from conda_build.utils import check_call_env

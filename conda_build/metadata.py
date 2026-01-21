@@ -2295,7 +2295,7 @@ class MetaData:
         if not outputs:
             outputs = [{"name": self.name()}]
 
-        if len(output_matches) != len(outputs):
+        if 1 != len(output_matches) != len(outputs):
             # See https://github.com/conda/conda-build/issues/5571
             utils.get_logger(__name__).warning(
                 "Number of parsed outputs does not match detected raw metadata blocks. "
