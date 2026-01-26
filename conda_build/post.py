@@ -43,6 +43,7 @@ from conda.misc import walk_prefix
 from conda.models.records import PrefixRecord
 
 from . import utils
+from .deprecations import deprecated
 from .exceptions import (
     CondaBuildException,
     OverDependingError,
@@ -782,7 +783,7 @@ def library_nature(
 
 
 # This is really just a small, fixed sysroot and it is rooted at ''. `libcrypto.0.9.8.dylib` should not be in it IMHO.
-DEFAULT_MAC_WHITELIST = [
+DEFAULT_MAC_ALLOWLIST = [
     "/opt/X11/",
     "/usr/lib/libSystem.B.dylib",
     "/usr/lib/libcrypto.0.9.8.dylib",
@@ -830,7 +831,7 @@ DEFAULT_MAC_WHITELIST = [
 
 # Should contain the System32/SysWOW64 DLLs present on a clean installation of the
 # oldest version of Windows that we support (or are currently) building packages for.
-DEFAULT_WIN_WHITELIST = [
+DEFAULT_WIN_ALLOWLIST = [
     "**/ADVAPI32.dll",
     "**/bcrypt.dll",
     "**/COMCTL32.dll",
@@ -853,6 +854,22 @@ DEFAULT_WIN_WHITELIST = [
     "**/ntdll.dll",
     "**/msvcrt.dll",
 ]
+
+# Deprecated constant aliases for backward compatibility
+deprecated.constant(
+    "26.9",
+    "27.3",
+    "DEFAULT_MAC_WHITELIST",
+    DEFAULT_MAC_ALLOWLIST,
+    addendum="Use 'DEFAULT_MAC_ALLOWLIST' instead.",
+)
+deprecated.constant(
+    "26.9",
+    "27.3",
+    "DEFAULT_WIN_WHITELIST",
+    DEFAULT_WIN_ALLOWLIST,
+    addendum="Use 'DEFAULT_WIN_ALLOWLIST' instead.",
+)
 
 
 def _expand_dsolist(dsolist):
@@ -940,7 +957,7 @@ def _collect_needed_dsos(
             if resolved.startswith(run_prefix):
                 resolved = relpath(resolved, run_prefix).replace(os.sep, "/")
             # If resolved still starts with '$RPATH' then that means we will either find it in
-            # the whitelist or it will present as an error later.
+            # the allowlist or it will present as an error later.
             res["resolved"] = resolved
         needed_dsos_for_file[f] = needed
         all_needed_dsos = all_needed_dsos.union(
@@ -1057,9 +1074,9 @@ def caseless_sepless_fnmatch(paths, pat):
     return matches
 
 
-def _lookup_in_sysroots_and_whitelist(
+def _lookup_in_sysroots_and_allowlist(
     errors,
-    whitelist,
+    allowlist,
     denylist,
     needed_dso,
     sysroots_files,
@@ -1079,7 +1096,7 @@ def _lookup_in_sysroots_and_whitelist(
         ]
     else:
         replacements = [needed_dso]
-    in_whitelist = False
+    in_allowlist = False
     in_sysroots = False
     if len(sysroots_files):
         # Check if we have a CDT package or a file in a sysroot.
@@ -1128,7 +1145,7 @@ def _lookup_in_sysroots_and_whitelist(
                     _print_msg(
                         errors,
                         f"{msg_prelude}: {n_dso_p} not found in any CDT/compiler package,"
-                        " nor the whitelist?!",
+                        " nor the allowlist?!",
                         verbose=verbose,
                     )
     if not in_sysroots:
@@ -1136,23 +1153,23 @@ def _lookup_in_sysroots_and_whitelist(
         for replacement in replacements:
             needed_dso_w = needed_dso.replace(sysroot_substitution, replacement + "/")
             # We should pass in multiple paths at once to this, but the code isn't structured for that.
-            in_whitelist = any(
-                [caseless_sepless_fnmatch([needed_dso_w], w) for w in whitelist]
+            in_allowlist = any(
+                [caseless_sepless_fnmatch([needed_dso_w], w) for w in allowlist]
             ) and not any(
                 [caseless_sepless_fnmatch([needed_dso_w], w) for w in denylist]
             )
-            if in_whitelist:
+            if in_allowlist:
                 n_dso_p = f"Needed DSO {needed_dso_w}"
                 _print_msg(
                     errors,
-                    f"{info_prelude}: {n_dso_p} found in the whitelist",
+                    f"{info_prelude}: {n_dso_p} found in the allowlist",
                     verbose=verbose,
                 )
                 break
-    if not in_whitelist and not in_sysroots:
+    if not in_allowlist and not in_sysroots:
         _print_msg(
             errors,
-            f"{msg_prelude}: {needed_dso} not found in packages, sysroot(s) nor the missing_dso_whitelist.\n"
+            f"{msg_prelude}: {needed_dso} not found in packages, sysroot(s) nor the missing_dso_allowlist.\n"
             ".. is this binary repackaging?",
             verbose=verbose,
         )
@@ -1163,7 +1180,7 @@ def _lookup_in_prefix_packages(
     needed_dso,
     files,
     run_prefix,
-    whitelist,
+    allowlist,
     denylist,
     info_prelude,
     msg_prelude,
@@ -1182,7 +1199,7 @@ def _lookup_in_prefix_packages(
     for prec in precs_in_reqs:
         if prec in lib_packages:
             lib_packages_used.add(prec)
-    in_whitelist = any([fnmatch(in_prefix_dso, w) for w in whitelist]) and not any(
+    in_allowlist = any([fnmatch(in_prefix_dso, w) for w in allowlist]) and not any(
         [fnmatch(in_prefix_dso, w) for w in denylist]
     )
     if len(precs_in_reqs) == 1:
@@ -1191,10 +1208,10 @@ def _lookup_in_prefix_packages(
             f"{info_prelude}: {n_dso_p} found in {precs_in_reqs[0]}{and_also}",
             verbose=verbose,
         )
-    elif in_whitelist:
+    elif in_allowlist:
         _print_msg(
             errors,
-            f"{info_prelude}: {n_dso_p} found in the whitelist",
+            f"{info_prelude}: {n_dso_p} found in the allowlist",
             verbose=verbose,
         )
     elif len(precs_in_reqs) == 0 and len(precs) > 0:
@@ -1239,12 +1256,12 @@ def _show_linking_messages(
     run_prefix,
     pkg_name,
     error_overlinking,
-    runpath_whitelist,
+    runpath_allowlist,
     verbose,
     requirements_run,
     lib_packages,
     lib_packages_used,
-    whitelist,
+    allowlist,
     denylist,
     sysroots,
     sysroot_prefix,
@@ -1277,7 +1294,7 @@ def _show_linking_messages(
             )
             continue
         if runpaths and not (
-            runpath_whitelist or any(fnmatch(f, w) for w in runpath_whitelist)
+            runpath_allowlist or any(fnmatch(f, w) for w in runpath_allowlist)
         ):
             _print_msg(
                 errors,
@@ -1297,7 +1314,7 @@ def _show_linking_messages(
                     needed_dso,
                     files,
                     run_prefix,
-                    whitelist,
+                    allowlist,
                     denylist,
                     info_prelude,
                     msg_prelude,
@@ -1314,9 +1331,9 @@ def _show_linking_messages(
                     verbose=verbose,
                 )
             else:
-                _lookup_in_sysroots_and_whitelist(
+                _lookup_in_sysroots_and_allowlist(
                     errors,
-                    whitelist,
+                    allowlist,
                     denylist,
                     needed_dso,
                     sysroots,
@@ -1329,6 +1346,18 @@ def _show_linking_messages(
                 )
 
 
+@deprecated.argument(
+    "26.9",
+    "27.3",
+    "missing_dso_whitelist",
+    rename="missing_dso_allowlist",
+)
+@deprecated.argument(
+    "26.9",
+    "27.3",
+    "runpath_whitelist",
+    rename="runpath_allowlist",
+)
 def check_overlinking_impl(
     pkg_name: str,
     pkg_version: str,
@@ -1341,8 +1370,8 @@ def check_overlinking_impl(
     requirements_host,
     run_prefix,
     build_prefix,
-    missing_dso_whitelist,
-    runpath_whitelist,
+    missing_dso_allowlist,
+    runpath_allowlist,
     error_overlinking,
     error_overdepending,
     verbose,
@@ -1414,7 +1443,7 @@ def check_overlinking_impl(
         "_timeout",
     ]
     # ignore_for_statics = ['gcc_impl_linux*', 'compiler-rt*', 'llvm-openmp*', 'gfortran_osx*']
-    # sysroots and whitelists are similar, but the subtle distinctions are important.
+    # sysroots and allowlists are similar, but the subtle distinctions are important.
     CONDA_BUILD_SYSROOT = variants.get("CONDA_BUILD_SYSROOT", None)
     if CONDA_BUILD_SYSROOT and os.path.exists(CONDA_BUILD_SYSROOT):
         # When on macOS and CBS not set, sysroots should probably be '/'
@@ -1428,11 +1457,11 @@ def check_overlinking_impl(
             sysroot + os.sep
             for sysroot in utils.glob(join(sysroot_prefix, "**", "sysroot"))
         ]
-    whitelist = []
+    allowlist = []
     denylist = []
     vendoring_record = dict()
     # When build_is_host is True we perform file existence checks for files in the sysroot (e.g. C:\Windows)
-    # When build_is_host is False we must skip things that match the whitelist from the prefix_owners (we could
+    # When build_is_host is False we must skip things that match the allowlist from the prefix_owners (we could
     #   create some packages for the Windows System DLLs as an alternative?)
     build_is_host = False
     if not len(sysroots):
@@ -1444,17 +1473,17 @@ def check_overlinking_impl(
             # Here we mean that we have a sysroot at '/' (could be a tokenized value like '$SYSROOT'?)
             # .. and in that sysroot there are 3 suddirs in which we may search for DSOs.
             sysroots = ["/usr/lib", "/opt/X11", "/System/Library/Frameworks"]
-            whitelist = DEFAULT_MAC_WHITELIST
+            allowlist = DEFAULT_MAC_ALLOWLIST
             build_is_host = True if on_mac else False
         elif subdir.startswith("win-"):
             dsolists = _get_dsolists(build_prefix, run_prefix, subdir)
-            whitelist, denylist = dsolists["allow"], dsolists["deny"]
-            if not whitelist and not denylist:
+            allowlist, denylist = dsolists["allow"], dsolists["deny"]
+            if not allowlist and not denylist:
                 sysroots = ["C:/Windows"]
-                whitelist = DEFAULT_WIN_WHITELIST
+                allowlist = DEFAULT_WIN_ALLOWLIST
             build_is_host = True if on_win else False
 
-    whitelist += missing_dso_whitelist or []
+    allowlist += missing_dso_allowlist or []
 
     # Sort the sysroots by the number of files in them so things can assume that
     # the first sysroot is more important than others.
@@ -1550,15 +1579,15 @@ def check_overlinking_impl(
                 not in [o.lower() for o in prefix_owners[run_prefix]]
                 and resolved not in filesu
             ):
-                in_whitelist = False
+                in_allowlist = False
                 if not build_is_host:
-                    in_whitelist = any(
-                        [caseless_sepless_fnmatch([orig], w) for w in whitelist]
+                    in_allowlist = any(
+                        [caseless_sepless_fnmatch([orig], w) for w in allowlist]
                     )
-                in_whitelist = in_whitelist and not any(
+                in_allowlist = in_allowlist and not any(
                     [caseless_sepless_fnmatch([orig], w) for w in denylist]
                 )
-                if not in_whitelist:
+                if not in_allowlist:
                     if resolved in prefix_owners[build_prefix]:
                         print(f"  ERROR :: {needed_dso} in prefix_owners[build_prefix]")
                     elif not needed_dso.startswith("$PATH"):
@@ -1581,12 +1610,12 @@ def check_overlinking_impl(
         run_prefix,
         pkg_name,
         error_overlinking,
-        runpath_whitelist,
+        runpath_allowlist,
         verbose,
         requirements_run,
         lib_packages,
         lib_packages_used,
-        whitelist,
+        allowlist,
         denylist,
         sysroots_files,
         sysroot_prefix,
@@ -1661,30 +1690,66 @@ def check_overlinking(m: MetaData, files, host_prefix=None):
         for file in files
         if not any([fnmatch(file, pattern) for pattern in patterns])
     ]
+
+    # Emit deprecation warnings for old recipe keys
+    if (
+        m.get_value("build/missing_dso_whitelist") is not None
+        and m.get_value("build/missing_dso_allowlist") is None
+    ):
+        deprecated.topic(
+            "26.9",
+            "27.3",
+            topic="build/missing_dso_whitelist",
+            addendum="Use 'build/missing_dso_allowlist' instead.",
+        )
+    if (
+        m.get_value("build/runpath_whitelist") is not None
+        and m.get_value("build/runpath_allowlist") is None
+    ):
+        deprecated.topic(
+            "26.9",
+            "27.3",
+            topic="build/runpath_whitelist",
+            addendum="Use 'build/runpath_allowlist' instead.",
+        )
+
     return check_overlinking_impl(
-        m.name(),
-        m.version(),
-        m.build_id(),
-        m.build_number(),
-        m.config.target_subdir,
-        m.get_value("build/ignore_run_exports"),
-        [req.split(" ")[0] for req in m.get_value("requirements/run", [])],
-        [req.split(" ")[0] for req in m.get_value("requirements/build", [])],
-        [req.split(" ")[0] for req in m.get_value("requirements/host", [])],
-        host_prefix or m.config.host_prefix,
-        m.config.build_prefix,
-        m.get_value("build/missing_dso_whitelist", []),
-        m.get_value("build/runpath_whitelist", []),
-        m.config.error_overlinking,
-        m.config.error_overdepending,
-        m.config.verbose,
-        True,
-        files,
-        m.config.bldpkgs_dir,
-        m.config.output_folder,
-        [*m.config.channel_urls, "local"],
-        m.config.enable_static,
-        m.config.variant,
+        pkg_name=m.name(),
+        pkg_version=m.version(),
+        build_str=m.build_id(),
+        build_number=m.build_number(),
+        subdir=m.config.target_subdir,
+        ignore_run_exports=m.get_value("build/ignore_run_exports"),
+        requirements_run=[
+            req.split(" ")[0] for req in m.get_value("requirements/run", [])
+        ],
+        requirements_build=[
+            req.split(" ")[0] for req in m.get_value("requirements/build", [])
+        ],
+        requirements_host=[
+            req.split(" ")[0] for req in m.get_value("requirements/host", [])
+        ],
+        run_prefix=host_prefix or m.config.host_prefix,
+        build_prefix=m.config.build_prefix,
+        # Support both old and new recipe keys (new preferred)
+        missing_dso_allowlist=m.get_value(
+            "build/missing_dso_allowlist",
+            m.get_value("build/missing_dso_whitelist", []),
+        ),
+        runpath_allowlist=m.get_value(
+            "build/runpath_allowlist",
+            m.get_value("build/runpath_whitelist", []),
+        ),
+        error_overlinking=m.config.error_overlinking,
+        error_overdepending=m.config.error_overdepending,
+        verbose=m.config.verbose,
+        exception_on_error=True,
+        files=files,
+        bldpkgs_dirs=m.config.bldpkgs_dir,
+        output_folder=m.config.output_folder,
+        channel_urls=[*m.config.channel_urls, "local"],
+        enable_static=m.config.enable_static,
+        variants=m.config.variant,
     )
 
 
