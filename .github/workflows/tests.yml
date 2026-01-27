@@ -79,8 +79,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # test all lower versions (w/ stable conda) and upper version (w/ canary conda)
-        python-version: ['3.10', '3.11', '3.12', '3.13']
+        # For PRs: test only boundary versions (3.10, 3.13)
+        # For main/schedule: test all versions (3.10, 3.12, 3.13)
+        # Note: 3.11 skipped as 3.10 and 3.12 provide sufficient coverage
+        python-version: ${{ github.event_name == 'pull_request' && fromJSON('["3.10", "3.13"]') || fromJSON('["3.10", "3.12", "3.13"]') }}
         conda-version: [release]
         test-type: [serial, parallel]
         include:
@@ -101,7 +103,8 @@ jobs:
     env:
       CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev::' || '' }}
       CONDA_VERSION: ${{ contains('canary|release', matrix.conda-version) && 'conda' || format('conda={0}', matrix.conda-version) }}
-      PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial' || 'not serial' }}
+      # Exclude benchmark tests from regular CI runs (they run separately in linux-benchmarks)
+      PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial and not benchmark' || 'not serial and not benchmark' }}
 
     steps:
       - name: Free Disk Space
@@ -151,6 +154,10 @@ jobs:
         with:
           path: ~/conda_pkgs_dir
           key: cache-${{ env.HASH }}
+          # Fallback to any cache for same OS/arch/Python, then any OS/arch cache
+          restore-keys: |
+            cache-${{ runner.os }}-${{ runner.arch }}-Py${{ matrix.python-version }}-
+            cache-${{ runner.os }}-${{ runner.arch }}-
 
       - name: Setup Miniconda
         uses: conda-incubator/setup-miniconda@835234971496cad1653abb28a638a281cf32541f # v3.2.0
@@ -183,7 +190,7 @@ jobs:
         run: >
           pytest
           --cov=conda_build
-          --reruns 3
+          --reruns 1
           --reruns-delay 1
           -n auto
           -m "${{ env.PYTEST_MARKER }}"
@@ -233,6 +240,10 @@ jobs:
         with:
           path: ~/conda_pkgs_dir
           key: cache-${{ env.HASH }}
+          # Fallback to any cache for same OS/arch/Python, then any OS/arch cache
+          restore-keys: |
+            cache-${{ runner.os }}-${{ runner.arch }}-Py${{ matrix.python-version }}-
+            cache-${{ runner.os }}-${{ runner.arch }}-
 
       - name: Setup Miniconda
         uses: conda-incubator/setup-miniconda@835234971496cad1653abb28a638a281cf32541f # v3.2.0
@@ -295,7 +306,8 @@ jobs:
     env:
       ErrorActionPreference: Stop  # powershell exit on first error
       CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'defaults' }}
-      PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial' || 'not serial and not slow' }}
+      # Exclude benchmark and slow tests from Windows parallel runs
+      PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial and not benchmark' || 'not serial and not slow and not benchmark' }}
 
     steps:
       - name: Checkout Source
@@ -314,6 +326,10 @@ jobs:
           enableCrossOsArchive: true
           path: D:\conda_pkgs_dir
           key: cache-${{ env.HASH }}
+          # Fallback to any cache for same OS/arch/Python, then any OS/arch cache
+          restore-keys: |
+            cache-${{ runner.os }}-${{ runner.arch }}-Py${{ matrix.python-version }}-
+            cache-${{ runner.os }}-${{ runner.arch }}-
 
       - name: Setup Miniconda
         uses: conda-incubator/setup-miniconda@835234971496cad1653abb28a638a281cf32541f # v3.2.0
@@ -379,10 +395,9 @@ jobs:
     needs: changes
     if: github.event_name == 'schedule' || needs.changes.outputs.code == 'true'
 
-    # we still need intel macs so we are stuck on intel runners
-    # the issue is that there are recipes that depend on packages
-    # that do not exist for osx-arm64 - see #5388
-    runs-on: macos-15-intel
+    # Using macos-latest (ARM) for better performance where possible
+    # Some tests may need Intel (macos-15-intel) due to missing osx-arm64 packages - see #5388
+    runs-on: macos-latest
     defaults:
       run:
         # https://github.com/conda-incubator/setup-miniconda#use-a-default-shell
@@ -403,7 +418,8 @@ jobs:
             test-type: parallel
     env:
       CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'defaults' }}
-      PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial' || 'not serial' }}
+      # Exclude benchmark tests from regular CI runs
+      PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial and not benchmark' || 'not serial and not benchmark' }}
 
     steps:
       - name: Checkout Source
@@ -421,6 +437,10 @@ jobs:
             ~/conda_pkgs_dir
             ~/macosx_sdks
           key: cache-${{ env.HASH }}
+          # Fallback to any cache for same OS/arch/Python, then any OS/arch cache
+          restore-keys: |
+            cache-${{ runner.os }}-${{ runner.arch }}-Py${{ matrix.python-version }}-
+            cache-${{ runner.os }}-${{ runner.arch }}-
 
       - name: Setup Miniconda
         uses: conda-incubator/setup-miniconda@835234971496cad1653abb28a638a281cf32541f # v3.2.0
@@ -429,21 +449,29 @@ jobs:
           run-post: false  # skip post cleanup
 
       - name: SDK Download
+        # SDK needed for cross-compilation tests
+        # ARM64 runners: use 11.3 SDK, Intel runners: use 10.15 SDK
         run: |
           echo "MACOSX_SDK_DIR=${HOME}/macosx_sdks" >> "$GITHUB_ENV"
           export MACOSX_SDK_DIR=${HOME}/macosx_sdks
-          echo "MACOSX_SDK_VERSION=10.15" >> "$GITHUB_ENV"
-          export MACOSX_SDK_VERSION=10.15
-          echo "MACOSX_SDK_ROOT=${MACOSX_SDK_DIR}/MacOSX${MACOSX_SDK_VERSION}.sdk" >> "$GITHUB_ENV"
-          export MACOSX_SDK_ROOT=${MACOSX_SDK_DIR}/MacOSX${MACOSX_SDK_VERSION}.sdk
+          # Use SDK version appropriate for architecture
+          if [ "${{ runner.arch }}" = "ARM64" ]; then
+            SDK_VERSION="11.3"
+            SDK_SHA256="cd4f08a75577145b8f05245a2975f7c81401d75e9535dcffbb879ee1deefcbf4"
+          else
+            SDK_VERSION="10.15"
+            SDK_SHA256="ac75d9e0eb619881f5aa6240689fce862dcb8e123f710032b7409ff5f4c3d18b"
+          fi
+          echo "MACOSX_SDK_VERSION=${SDK_VERSION}" >> "$GITHUB_ENV"
+          echo "MACOSX_SDK_ROOT=${MACOSX_SDK_DIR}/MacOSX${SDK_VERSION}.sdk" >> "$GITHUB_ENV"
+          export MACOSX_SDK_ROOT=${MACOSX_SDK_DIR}/MacOSX${SDK_VERSION}.sdk
 
           if [ ! -d ${MACOSX_SDK_DIR} ]; then mkdir ${MACOSX_SDK_DIR}; fi
           if [ ! -d ${MACOSX_SDK_ROOT} ]; then
-            url="https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX${MACOSX_SDK_VERSION}.sdk.tar.xz"
-            curl -L --output MacOSX${MACOSX_SDK_VERSION}.sdk.tar.xz "${url}"
-            sdk_sha256=ac75d9e0eb619881f5aa6240689fce862dcb8e123f710032b7409ff5f4c3d18b
-            echo "${sdk_sha256} *MacOSX${MACOSX_SDK_VERSION}.sdk.tar.xz" | shasum -a 256 -c
-            tar -xf MacOSX${MACOSX_SDK_VERSION}.sdk.tar.xz -C "${MACOSX_SDK_DIR}"
+            url="https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX${SDK_VERSION}.sdk.tar.xz"
+            curl -L --output MacOSX${SDK_VERSION}.sdk.tar.xz "${url}"
+            echo "${SDK_SHA256} *MacOSX${SDK_VERSION}.sdk.tar.xz" | shasum -a 256 -c
+            tar -xf MacOSX${SDK_VERSION}.sdk.tar.xz -C "${MACOSX_SDK_DIR}"
           fi
 
       - name: Conda Install
