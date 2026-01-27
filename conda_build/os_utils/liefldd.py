@@ -163,7 +163,7 @@ def _get_dynamic_tags(binary):
     return [
         dynamic_entry
         for dynamic_entry in binary.dynamic_entries
-        if isinstance(dynamic_entry, ELF_DYNAMIC_TAGS)
+        if isinstance(dynamic_entry.tag, ELF_DYNAMIC_TAGS)
     ]
 
 
