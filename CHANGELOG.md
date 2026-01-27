@@ -1,11 +1,27 @@
 [//]: # (current developments)
 
+## 25.11.1 (2025-12-04)
+
+### Bug fixes
+
+* Prevent empty channel lists from being passed to host environment creation. (#5857)
+
+### Deprecations
+
+* Remove fallback imports for `conda.core.index.Index`. (#5857)
+
+### Contributors
+
+* @jezdez
+
+
+
 ## 25.11.0 (2025-11-20)
 
 ### Enhancements
 
 * Allow the PyYAML loader to be specified when calling `conda_build.variants.parse_config_file`. (#5800)
-* Raise `menuinst` JSON validation errors, which used to be warnings. (#5807)
+* Raise `menuinst` JSON validation errors, which used to be warnings. (#5828)
 
 ### Bug fixes
 
