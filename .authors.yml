@@ -1530,7 +1530,9 @@
   num_commits: 1
   first_commit: 2025-05-11 13:14:57
 - name: Jakov Smolić
-  email: jsmolic@gentoo.org
+  email: jsmolic@quansight.com
+  alternate_emails:
+  - jsmolic@gentoo.org
   github: jsmolic
   num_commits: 2
   first_commit: 2025-09-18 13:31:04
@@ -1549,3 +1551,9 @@
   github: shermansiu
   num_commits: 1
   first_commit: 2025-09-29 09:23:19
+- name: Tianxiang Bian
+  email: bigbits@hackx.cc
+  github: bitsk
+- name: Charles Bousseau
+  email: 16641587+cbouss@users.noreply.github.com
+  github: cbouss
