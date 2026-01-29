@@ -11,14 +11,12 @@
 
 * Handle unknown dynamic tags in liefldd. (#5778)
 * Delete rpath before adding rpath on macOS to avoid errors with not having enough space to add rpath (#5856).
-* Prevent empty channel lists from being passed to host environment creation. (#5857)
 * Don't fail on empty source archive. Ignore and continue instead. (#5854 via #5861)
 * Fix `PendingDeprecationWarning` for `conda.models.enums.PathType` by using the new `PathEnum` name with backward compatibility. (#6004)
 
 ### Deprecations
 
 * Stop warning about failed `conda-verify` imports. Errors will be logged as debug statements. (#5841 via #5844)
-* Remove fallback imports for `conda.core.index.Index`. (#5857)
 * Bump minimum `conda` version to 25.11.0 and `conda-libmamba-solver` to 25.11.0. Remove obsolete `CondaSolver` deprecation warning filters. (#xxxx)
 * Remove obsolete `restore_free_channel` deprecation warning filter. This property was removed in conda 25.9.0. (#xxxx)
 
