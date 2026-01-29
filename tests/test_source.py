@@ -200,3 +200,12 @@ def test_append_hash_to_fn(testing_metadata):
     ]
     reset_deduplicator()
     source.provide(testing_metadata)
+
+
+def test_empty_archive(tmp_path, testing_metadata):
+    tarfile.open(tmp_path / "empty.tar", "w").close()
+
+    testing_metadata.meta["source"] = [{"url": str(tmp_path / "empty.tar")}]
+
+    # Just make sure that it doesn't fail
+    source.provide(testing_metadata)

@@ -144,6 +144,8 @@ filterwarnings = [
   "ignore:conda.core.link.PrefixActions is pending deprecation and will be removed in 26.3:PendingDeprecationWarning",
   # ignore conda context restore_free_channel deprecation
   "ignore:conda.base.context.Context.restore_free_channel is deprecated:DeprecationWarning",
+  # ignore conda PathType -> PathEnum rename deprecation
+  "ignore:conda.models.enums.PathType is pending deprecation:PendingDeprecationWarning",
 ]
 markers = [
   "serial: execute test serially (to avoid race conditions)",
