@@ -6,6 +6,7 @@
 
 * Enable `echo on` for Windows build scripts. (#5803)
 * Add support for [CEP 28](https://github.com/conda/ceps/blob/main/cep-0028.md) (customizable system DLL linkage checks for Windows). (#5806)
+* Add riscv64 architecture support to the `cdt()` Jinja function. (#5846)
 
 ### Bug fixes
 
