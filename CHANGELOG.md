@@ -10,16 +10,16 @@
 
 ### Bug fixes
 
-* Handle unknown dynamic tags in liefldd. (#5778)
-* Delete rpath before adding rpath on macOS to avoid errors with not having enough space to add rpath (#5856).
+* Handle unknown dynamic tags in liefldd. (#5665 via #5778)
+* Delete rpath before adding rpath on macOS to avoid errors with not having enough space to add rpath. (#5855 via #5856)
 * Don't fail on empty source archive. Ignore and continue instead. (#5854 via #5861)
-* Fix `PendingDeprecationWarning` for `conda.models.enums.PathType` by using the new `PathEnum` name with backward compatibility. (#6004)
+* Fix `PendingDeprecationWarning` for `conda.models.enums.PathType` by using the new `PathEnum` name with backward compatibility. (#5901)
 
 ### Deprecations
 
 * Stop warning about failed `conda-verify` imports. Errors will be logged as debug statements. (#5841 via #5844)
-* Bump minimum `conda` version to 25.11.0 and `conda-libmamba-solver` to 25.11.0. Remove obsolete `CondaSolver` deprecation warning filters. (#xxxx)
-* Remove obsolete `restore_free_channel` deprecation warning filter. This property was removed in conda 25.9.0. (#xxxx)
+* Bump minimum `conda` version to 25.11.0 and `conda-libmamba-solver` to 25.11.0. Remove obsolete `CondaSolver` deprecation warning filters. (#5905)
+* Remove obsolete `restore_free_channel` deprecation warning filter. This property was removed in conda 25.9.0. (#5905)
 
 ### Docs
 
@@ -27,7 +27,7 @@
 
 ### Other
 
-* Use `conda-forge` channel for macOS Intel (osx-64) CI tests since conda 25.11+ is not available in `defaults` channel for that platform. (#xxxx)
+* Use `conda-forge` channel for macOS Intel (osx-64) CI tests since conda 25.11+ is not available in `defaults` channel for that platform. (#5905)
 
 ### Contributors
 
