@@ -823,7 +823,9 @@ uncompress (or gunzip) is required to unarchive .z source files.
         members[i] = member
 
     if sys.version_info >= (3, 12):
-        # PEP 706: https://peps.python.org/pep-0706/. The default filter is "data" which is more restrictive.
+        # PEP 706: https://peps.python.org/pep-0706/. The default filter changed to "data" in Python 3.14.
+        # Use "fully_trusted" to maintain same functionality with Python 3.12 and earlier.
+        # TODO: Investigate if we can use "data" instead of "fully_trusted" in the future.
         t.extractall(path=dir_path, filter="fully_trusted")
     else:
         t.extractall(path=dir_path)
