@@ -822,7 +822,11 @@ uncompress (or gunzip) is required to unarchive .z source files.
             sys.exit("tarball contains unsafe path: " + member.name + " cwd is: " + cwd)
         members[i] = member
 
-    t.extractall(path=dir_path)
+    if sys.version_info >= (3, 12):
+        # PEP 706: https://peps.python.org/pep-0706/. The default filter is "data" which is more restrictive.
+        t.extractall(path=dir_path, filter="fully_trusted")
+    else:
+        t.extractall(path=dir_path)
     t.close()
 
 
