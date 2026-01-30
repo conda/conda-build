@@ -180,13 +180,12 @@ jobs:
         run: conda list --show-channel-urls
 
       - name: Run Tests
-        run: >
-          pytest
-          --cov=conda_build
-          --reruns 3
-          --reruns-delay 1
-          -n auto
-          -m "${{ env.PYTEST_MARKER }}"
+        run: |
+          if [ "${{ matrix.test-type }}" = "serial" ]; then
+            pytest --cov=conda_build --reruns 3 --reruns-delay 1 -m "${{ env.PYTEST_MARKER }}"
+          else
+            pytest --cov=conda_build --reruns 3 --reruns-delay 1 -n auto -m "${{ env.PYTEST_MARKER }}"
+          fi
 
       - name: Upload Coverage
         uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # v5.5.1
@@ -351,12 +350,13 @@ jobs:
       - name: Run Tests
         # Windows is sensitive to long paths, using `--basetemp=${{ runner.temp }} to
         # keep the test directories shorter
-        run: >
-          pytest
-          --cov=conda_build
-          --basetemp=${{ runner.temp }}
-          -n auto
-          -m "${{ env.PYTEST_MARKER }}"
+        shell: bash
+        run: |
+          if [ "${{ matrix.test-type }}" = "serial" ]; then
+            pytest --cov=conda_build --basetemp=${{ runner.temp }} -m "${{ env.PYTEST_MARKER }}"
+          else
+            pytest --cov=conda_build --basetemp=${{ runner.temp }} -n auto -m "${{ env.PYTEST_MARKER }}"
+          fi
 
       - name: Upload Coverage
         uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # v5.5.1
@@ -468,11 +468,12 @@ jobs:
         run: conda list --show-channel-urls
 
       - name: Run Tests
-        run: >
-          pytest
-          --cov=conda_build
-          -n auto
-          -m "${{ env.PYTEST_MARKER }}"
+        run: |
+          if [ "${{ matrix.test-type }}" = "serial" ]; then
+            pytest --cov=conda_build -m "${{ env.PYTEST_MARKER }}"
+          else
+            pytest --cov=conda_build -n auto -m "${{ env.PYTEST_MARKER }}"
+          fi
         env:
           CONDA_BUILD_SYSROOT: ${{ env.MACOSX_SDK_ROOT }}
 
