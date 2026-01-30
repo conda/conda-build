@@ -102,6 +102,8 @@ jobs:
       CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev::' || '' }}
       CONDA_VERSION: ${{ contains('canary|release', matrix.conda-version) && 'conda' || format('conda={0}', matrix.conda-version) }}
       PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial' || 'not serial' }}
+      # Serial tests run without xdist (-n auto) to avoid race conditions
+      PYTEST_XDIST: ${{ matrix.test-type == 'serial' && ' ' || '-n auto' }}
 
     steps:
       - name: Free Disk Space
@@ -180,12 +182,13 @@ jobs:
         run: conda list --show-channel-urls
 
       - name: Run Tests
-        run: |
-          if [ "${{ matrix.test-type }}" = "serial" ]; then
-            pytest --cov=conda_build --reruns 3 --reruns-delay 1 -m "${{ env.PYTEST_MARKER }}"
-          else
-            pytest --cov=conda_build --reruns 3 --reruns-delay 1 -n auto -m "${{ env.PYTEST_MARKER }}"
-          fi
+        run: >
+          pytest
+          --cov=conda_build
+          --reruns 3
+          --reruns-delay 1
+          ${{ env.PYTEST_XDIST }}
+          -m "${{ env.PYTEST_MARKER }}"
 
       - name: Upload Coverage
         uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # v5.5.1
@@ -295,6 +298,8 @@ jobs:
       ErrorActionPreference: Stop  # powershell exit on first error
       CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'defaults' }}
       PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial' || 'not serial and not slow' }}
+      # Serial tests run without xdist (-n auto) to avoid race conditions
+      PYTEST_XDIST: ${{ matrix.test-type == 'serial' && ' ' || '-n auto' }}
 
     steps:
       - name: Checkout Source
@@ -350,13 +355,12 @@ jobs:
       - name: Run Tests
         # Windows is sensitive to long paths, using `--basetemp=${{ runner.temp }} to
         # keep the test directories shorter
-        shell: bash
-        run: |
-          if [ "${{ matrix.test-type }}" = "serial" ]; then
-            pytest --cov=conda_build --basetemp=${{ runner.temp }} -m "${{ env.PYTEST_MARKER }}"
-          else
-            pytest --cov=conda_build --basetemp=${{ runner.temp }} -n auto -m "${{ env.PYTEST_MARKER }}"
-          fi
+        run: >
+          pytest
+          --cov=conda_build
+          --basetemp=${{ runner.temp }}
+          ${{ env.PYTEST_XDIST }}
+          -m "${{ env.PYTEST_MARKER }}"
 
       - name: Upload Coverage
         uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # v5.5.1
@@ -404,6 +408,8 @@ jobs:
     env:
       CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'defaults' }}
       PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial' || 'not serial' }}
+      # Serial tests run without xdist (-n auto) to avoid race conditions
+      PYTEST_XDIST: ${{ matrix.test-type == 'serial' && ' ' || '-n auto' }}
 
     steps:
       - name: Checkout Source
@@ -468,12 +474,11 @@ jobs:
         run: conda list --show-channel-urls
 
       - name: Run Tests
-        run: |
-          if [ "${{ matrix.test-type }}" = "serial" ]; then
-            pytest --cov=conda_build -m "${{ env.PYTEST_MARKER }}"
-          else
-            pytest --cov=conda_build -n auto -m "${{ env.PYTEST_MARKER }}"
-          fi
+        run: >
+          pytest
+          --cov=conda_build
+          ${{ env.PYTEST_XDIST }}
+          -m "${{ env.PYTEST_MARKER }}"
         env:
           CONDA_BUILD_SYSROOT: ${{ env.MACOSX_SDK_ROOT }}
 
