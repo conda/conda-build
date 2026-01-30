@@ -37,6 +37,7 @@ Authors are sorted alphabetically.
 * Carsten Haubold
 * Casey Clements
 * Catherine
+* Charles Bousseau
 * Cheng H. Lee
 * Chris Hogan
 * Chris Osborn
@@ -230,6 +231,7 @@ Authors are sorted alphabetically.
 * Thomas Holder
 * Thomas Kluyver
 * Thomas Lam
+* Tianxiang Bian
 * Tim Paine
 * Tim Snyder
 * Tobias Fischer
