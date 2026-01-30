@@ -10,6 +10,7 @@ from conda_build.config import CondaPkgFormat
 from .utils import metadata_dir
 
 
+@pytest.mark.serial
 @pytest.mark.parametrize("pkg_format,pkg_ext", [(None, ".tar.bz2"), ("2", ".conda")])
 def test_conda_pkg_format(
     pkg_format, pkg_ext, testing_config, monkeypatch, capfd, request
