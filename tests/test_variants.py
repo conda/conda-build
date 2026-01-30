@@ -667,6 +667,7 @@ def test_exclusive_config_file():
     on_mac and platform.machine() == "arm64",
     reason="M1 Mac-specific file system error related to this test",
 )
+@pytest.mark.serial
 def test_inner_python_loop_with_output(testing_config):
     outputs = api.get_output_file_paths(
         os.path.join(variants_dir, "test_python_as_subpackage_loop"),

@@ -1140,6 +1140,7 @@ def test_build_expands_wildcards(mocker):
     )
 
 
+@pytest.mark.serial
 @pytest.mark.parametrize("set_build_id", [True, False])
 def test_remove_workdir_default(testing_config, caplog, set_build_id):
     recipe = os.path.join(metadata_dir, "_keep_work_dir")
@@ -1753,6 +1754,7 @@ def test_python_site_packages_path(testing_config):
     assert index["python_site_packages_path"] == "some/path"
 
 
+@pytest.mark.serial
 def test_overlinking_detection(
     testing_config, testing_workdir, variants_conda_build_sysroot
 ):
