@@ -33,7 +33,6 @@ requirements:
     - chardet
     - conda >=25.11.0
     - conda-index >=0.4.0
-    - conda-libmamba-solver >=25.11.0
     - conda-package-handling >=2.2.0
     - evalidate >=2,<3.0a0
     - filelock
@@ -58,6 +57,7 @@ requirements:
     - tomli                        # [py<311]
     - tqdm
   run_constrained:
+    - conda-libmamba-solver >=25.11.0
     - conda-verify  >=3.1.0
 
 test:
