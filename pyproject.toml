@@ -145,6 +145,8 @@ filterwarnings = [
   "ignore:conda.base.context.Context.restore_free_channel is deprecated:DeprecationWarning",
   # ignore conda PathType -> PathEnum rename deprecation
   "ignore:conda.models.enums.PathType is pending deprecation:PendingDeprecationWarning",
+  # ignore conda CONDA_PACKAGE_EXTENSIONS deprecation
+  "ignore:conda.base.constants.CONDA_PACKAGE_EXTENSIONS is pending deprecation:PendingDeprecationWarning",
 ]
 markers = [
   "serial: execute test serially (to avoid race conditions)",

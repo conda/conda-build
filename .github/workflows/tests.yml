@@ -102,6 +102,8 @@ jobs:
       CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev::' || '' }}
       CONDA_VERSION: ${{ contains('canary|release', matrix.conda-version) && 'conda' || format('conda={0}', matrix.conda-version) }}
       PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial' || 'not serial' }}
+      # Serial tests run without xdist (-n auto) to avoid race conditions
+      PYTEST_XDIST: ${{ matrix.test-type == 'serial' && ' ' || '-n auto' }}
 
     steps:
       - name: Free Disk Space
@@ -185,7 +187,7 @@ jobs:
           --cov=conda_build
           --reruns 3
           --reruns-delay 1
-          -n auto
+          ${{ env.PYTEST_XDIST }}
           -m "${{ env.PYTEST_MARKER }}"
 
       - name: Upload Coverage
@@ -296,6 +298,8 @@ jobs:
       ErrorActionPreference: Stop  # powershell exit on first error
       CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'defaults' }}
       PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial' || 'not serial and not slow' }}
+      # Serial tests run without xdist (-n auto) to avoid race conditions
+      PYTEST_XDIST: ${{ matrix.test-type == 'serial' && ' ' || '-n auto' }}
 
     steps:
       - name: Checkout Source
@@ -355,7 +359,7 @@ jobs:
           pytest
           --cov=conda_build
           --basetemp=${{ runner.temp }}
-          -n auto
+          ${{ env.PYTEST_XDIST }}
           -m "${{ env.PYTEST_MARKER }}"
 
       - name: Upload Coverage
@@ -404,6 +408,8 @@ jobs:
     env:
       CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'defaults' }}
       PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial' || 'not serial' }}
+      # Serial tests run without xdist (-n auto) to avoid race conditions
+      PYTEST_XDIST: ${{ matrix.test-type == 'serial' && ' ' || '-n auto' }}
 
     steps:
       - name: Checkout Source
@@ -471,7 +477,7 @@ jobs:
         run: >
           pytest
           --cov=conda_build
-          -n auto
+          ${{ env.PYTEST_XDIST }}
           -m "${{ env.PYTEST_MARKER }}"
         env:
           CONDA_BUILD_SYSROOT: ${{ env.MACOSX_SDK_ROOT }}
