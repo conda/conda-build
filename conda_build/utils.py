@@ -51,9 +51,8 @@ import filelock
 import libarchive
 import yaml
 from conda.base.constants import (
-    CONDA_PACKAGE_EXTENSION_V1,  # noqa: F401
-    CONDA_PACKAGE_EXTENSION_V2,  # noqa: F401
-    CONDA_PACKAGE_EXTENSIONS,
+    CONDA_PACKAGE_EXTENSION_V1,
+    CONDA_PACKAGE_EXTENSION_V2,
     KNOWN_SUBDIRS,
 )
 from conda.base.context import context
@@ -78,6 +77,8 @@ if TYPE_CHECKING:
     T = TypeVar("T")
     K = TypeVar("K")
     V = TypeVar("V")
+
+CONDA_PACKAGE_EXTENSIONS = (CONDA_PACKAGE_EXTENSION_V2, CONDA_PACKAGE_EXTENSION_V1)
 
 on_win = sys.platform == "win32"
 on_mac = sys.platform == "darwin"
