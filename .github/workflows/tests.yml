@@ -88,10 +88,10 @@ jobs:
         include:
           # minimum Python/conda combo
           - python-version: '3.10'
-            conda-version: 24.11.0
+            conda-version: 25.11.0
             test-type: serial
           - python-version: '3.10'
-            conda-version: 24.11.0
+            conda-version: 25.11.0
             test-type: parallel
           # maximum Python/conda combo
           - python-version: '3.13'
@@ -417,7 +417,7 @@ jobs:
             conda-version: canary
             test-type: parallel
     env:
-      CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'defaults' }}
+      CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'conda-forge' }}
       # Exclude benchmark tests from regular CI runs
       PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial and not benchmark' || 'not serial and not benchmark' }}
 
