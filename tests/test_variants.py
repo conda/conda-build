@@ -745,7 +745,7 @@ def test_top_level_finalized(testing_config):
     recipe = os.path.join(variants_dir, "30_top_level_finalized")
     outputs = api.build(recipe, config=testing_config)
     xzcat_output = package_has_file(outputs[0], "xzcat_output")
-    assert "5.4.2" in xzcat_output
+    assert "5.6" in xzcat_output
 
 
 def test_variant_subkeys_retained():

@@ -987,13 +987,9 @@ def _clone_template_env(
 ) -> bool:
     """Clone a template environment to the target prefix if it satisfies the specs.
 
-    Uses platform-specific fast copy methods where available:
-    - macOS (APFS): cp -c for copy-on-write (~1.8s)
-    - Linux: cp --reflink=auto for reflinks on btrfs/xfs, else regular copy
-    - Windows: shutil.copytree (~2.5s)
-
-    This is faster than creating an environment from scratch (~10s) because
-    it avoids the conda solver and package extraction steps.
+    Uses `conda create --clone` to properly clone the environment, which handles
+    prefix replacement in scripts and metadata files. This is faster than creating
+    an environment from scratch (~10s) because it avoids the conda solver.
 
     This function only clones if the template environment contains all the
     packages required by the specs (checked by package name only, not version).
@@ -1011,19 +1007,12 @@ def _clone_template_env(
         template_prefix_data = PrefixData(str(template_path))
         installed_names = {rec.name for rec in template_prefix_data.iter_records()}
 
-        # Extract package names from specs (handle MatchSpec format)
-        required_names = set()
-        for spec in specs:
-            if isinstance(spec, str):
-                # Parse "python>=3.10" or "python" format
-                name = (
-                    spec.split()[0]
-                    .split("=")[0]
-                    .split(">")[0]
-                    .split("<")[0]
-                    .split("!")[0]
-                )
-                required_names.add(name)
+        # Extract package names from specs using MatchSpec for proper parsing
+        # This handles all spec formats including version constraints like ~=, >=, etc.
+        # and specs with brackets like numpy[version='>1.0']
+        required_names = {
+            MatchSpec(spec).name for spec in specs if isinstance(spec, str)
+        }
 
         # Only clone if template has all required packages
         missing = required_names - installed_names
@@ -1039,44 +1028,35 @@ def _clone_template_env(
         # If we can't check the template, fall back to normal creation
         return False
 
-    # Template satisfies our needs, clone it using the fastest available method
-    # Platform-specific optimizations:
-    # - macOS (APFS): cp -c for copy-on-write cloning (~1.8s)
-    # - Linux (btrfs/xfs): cp --reflink=auto for reflink copies
-    # - Windows/fallback: shutil.copytree (~2.5s)
+    # Template satisfies our needs, clone it using conda's clone functionality
+    # This properly handles prefix replacement in scripts and metadata files
     log = utils.get_logger(__name__)
     try:
-        target_prefix = Path(target_prefix)
-        template_path = Path(template_path)
-
-        # Try platform-specific fast copy methods first
-        if sys.platform == "darwin":
-            # macOS: APFS copy-on-write
-            result = subprocess.run(
-                ["cp", "-cR", str(template_path), str(target_prefix)],
-                capture_output=True,
-            )
-            if result.returncode == 0:
-                return True
-            log.debug("APFS clone failed, falling back to shutil.copytree")
-
-        elif sys.platform.startswith("linux"):
-            # Linux: try reflink (works on btrfs, xfs with reflink support)
-            # --reflink=auto falls back to regular copy if not supported
-            result = subprocess.run(
-                ["cp", "-R", "--reflink=auto", str(template_path), str(target_prefix)],
-                capture_output=True,
-            )
-            if result.returncode == 0:
-                return True
-            log.debug("Linux cp failed, falling back to shutil.copytree")
-
-        # Windows or fallback: use Python's cross-platform copy
-        shutil.copytree(template_path, target_prefix)
-        return True
-    except (OSError, shutil.Error, subprocess.SubprocessError) as e:
+        # Use conda create --clone for proper prefix replacement
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "conda",
+                "create",
+                "--clone",
+                str(template_path),
+                "-p",
+                str(target_prefix),
+                "-y",
+                "-q",
+            ],
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode == 0:
+            return True
+        log.debug("conda clone failed: %s", result.stderr)
+        return False
+    except (OSError, subprocess.SubprocessError) as e:
         # If clone fails, clean up and fall back to normal creation
         log.debug("Template clone failed: %s", e)
+        target_prefix = Path(target_prefix)
         if target_prefix.exists():
             shutil.rmtree(target_prefix, ignore_errors=True)
         return False
