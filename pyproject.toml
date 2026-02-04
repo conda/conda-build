@@ -24,7 +24,7 @@ classifiers = [
 dependencies = [
   "beautifulsoup4",
   "chardet",
-  "conda >=24.11.0",
+  "conda >=25.11.0",
   # Disabled due to conda-index not being available on PyPI
   # "conda-index >=0.4.0",
   "conda-package-handling >=2.2.0",
@@ -125,8 +125,6 @@ filterwarnings = [
   'ignore:\s+`numpy.distutils` is deprecated:DeprecationWarning:conda_build._load_setup_py_data',
   # ignore conda-package-streaming error
   "ignore:conda.core.index._supplement_index_with_system is pending deprecation:PendingDeprecationWarning:conda",
-  # ignore tarfile Python 3.14 warning
-  "ignore:Python 3.14 will, by default, filter extracted tar archives:DeprecationWarning",
   # TEMPORARY: Remove once CLS is released with https://github.com/conda/conda-libmamba-solver/pull/691
   "ignore:conda.plugins.CondaSolver:PendingDeprecationWarning",
   "ignore:conda.plugins.CondaSolver:DeprecationWarning",
@@ -142,10 +140,10 @@ filterwarnings = [
   # ignore conda link PrefixActions deprecation
   "ignore:conda.core.link.PrefixActions is deprecated and will be removed in 26.3:DeprecationWarning",
   "ignore:conda.core.link.PrefixActions is pending deprecation and will be removed in 26.3:PendingDeprecationWarning",
-  # ignore conda context restore_free_channel deprecation
-  "ignore:conda.base.context.Context.restore_free_channel is deprecated:DeprecationWarning",
   # ignore conda PathType -> PathEnum rename deprecation
   "ignore:conda.models.enums.PathType is pending deprecation:PendingDeprecationWarning",
+  # ignore conda CONDA_PACKAGE_EXTENSIONS deprecation (use plugin_manager.get_package_extractors() instead)
+  "ignore:conda.base.constants.CONDA_PACKAGE_EXTENSIONS is pending deprecation:PendingDeprecationWarning",
 ]
 markers = [
   "serial: execute test serially (to avoid race conditions)",

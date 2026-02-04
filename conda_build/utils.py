@@ -51,9 +51,8 @@ import filelock
 import libarchive
 import yaml
 from conda.base.constants import (
-    CONDA_PACKAGE_EXTENSION_V1,  # noqa: F401
-    CONDA_PACKAGE_EXTENSION_V2,  # noqa: F401
-    CONDA_PACKAGE_EXTENSIONS,
+    CONDA_PACKAGE_EXTENSION_V1,
+    CONDA_PACKAGE_EXTENSION_V2,
     KNOWN_SUBDIRS,
 )
 from conda.base.context import context
@@ -78,6 +77,8 @@ if TYPE_CHECKING:
     T = TypeVar("T")
     K = TypeVar("K")
     V = TypeVar("V")
+
+CONDA_PACKAGE_EXTENSIONS = (CONDA_PACKAGE_EXTENSION_V2, CONDA_PACKAGE_EXTENSION_V1)
 
 on_win = sys.platform == "win32"
 on_mac = sys.platform == "darwin"
@@ -822,7 +823,13 @@ uncompress (or gunzip) is required to unarchive .z source files.
             sys.exit("tarball contains unsafe path: " + member.name + " cwd is: " + cwd)
         members[i] = member
 
-    t.extractall(path=dir_path)
+    if sys.version_info >= (3, 12):
+        # PEP 706: https://peps.python.org/pep-0706/. The default filter changed to "data" in Python 3.14.
+        # Use "fully_trusted" to maintain same functionality with Python 3.12 and earlier.
+        # TODO: Investigate if we can use "data" instead of "fully_trusted" in the future.
+        t.extractall(path=dir_path, filter="fully_trusted")
+    else:
+        t.extractall(path=dir_path)
     t.close()
 
 
