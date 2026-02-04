@@ -21,7 +21,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from conda.base.constants import (
-    CONDA_PACKAGE_EXTENSIONS,
     DEFAULTS_CHANNEL_NAME,
     UNKNOWN_CHANNEL,
 )
@@ -49,6 +48,7 @@ from .features import feature_list
 from .index import get_build_index
 from .os_utils import external
 from .utils import (
+    CONDA_PACKAGE_EXTENSIONS,
     ensure_list,
     env_var,
     on_mac,
