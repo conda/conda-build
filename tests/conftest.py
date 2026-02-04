@@ -259,14 +259,10 @@ def warm_package_cache(tmp_path_factory: pytest.TempPathFactory) -> Path | None:
     This creates a persistent template environment with commonly-used packages
     (Python, pip, setuptools) which:
     1. Forces conda to download and extract packages into the cache
-    2. Provides a template that can be cloned for faster test env creation
+    2. Provides a template that can be cloned via `conda create --clone` for
+       faster test env creation with proper prefix replacement
 
     The template environment is kept for the duration of the test session.
-
-    Cross-platform support:
-    - macOS: Uses APFS copy-on-write for fast cloning (~1.8s)
-    - Linux: Uses reflinks if available (btrfs/xfs), else regular copy (~2.5s)
-    - Windows: Uses shutil.copytree (~2.5s)
 
     Returns:
         Path to the template environment, or None if creation failed.

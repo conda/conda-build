@@ -1,6 +1,6 @@
 ### Enhancements
 
-* Add `test_env_template` config option to speed up environment creation by cloning from a template environment instead of creating from scratch. Uses platform-specific fast copy methods: APFS copy-on-write on macOS, reflinks on Linux (btrfs/xfs), and `shutil.copytree` elsewhere. (#5904)
+* Add `test_env_template` config option to speed up environment creation by cloning from a template environment instead of creating from scratch. Uses `conda create --clone` to properly handle prefix replacement in scripts and metadata files. (#5904)
 
 ### Bug fixes
 
