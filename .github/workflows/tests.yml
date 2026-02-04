@@ -417,7 +417,7 @@ jobs:
             conda-version: canary
             test-type: parallel
     env:
-      CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'conda-forge' }}
+      CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'defaults' }}
       # Exclude benchmark tests from regular CI runs
       PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial and not benchmark' || 'not serial and not benchmark' }}
 
