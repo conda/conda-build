@@ -1,5 +1,50 @@
 [//]: # (current developments)
 
+## 26.1.0 (2026-01-29)
+
+### Enhancements
+
+* Enable `echo on` for Windows build scripts. (#5803)
+* Add support for [CEP 28](https://github.com/conda/ceps/blob/main/cep-0028.md) (customizable system DLL linkage checks for Windows). (#5806)
+* Add riscv64 architecture support to the `cdt()` Jinja function. (#5846)
+
+### Bug fixes
+
+* Handle unknown dynamic tags in liefldd. (#5665 via #5778)
+* Delete rpath before adding rpath on macOS to avoid errors with not having enough space to add rpath. (#5855 via #5856)
+* Don't fail on empty source archive. Ignore and continue instead. (#5854 via #5861)
+* Fix `PendingDeprecationWarning` for `conda.models.enums.PathType` by using the new `PathEnum` name with backward compatibility. (#5901)
+
+### Deprecations
+
+* Stop warning about failed `conda-verify` imports. Errors will be logged as debug statements. (#5841 via #5844)
+* Bump minimum `conda` version to 25.11.0 and `conda-libmamba-solver` to 25.11.0. Remove obsolete `CondaSolver` deprecation warning filters. (#5905)
+* Remove obsolete `restore_free_channel` deprecation warning filter. This property was removed in conda 25.9.0. (#5905)
+
+### Docs
+
+* Document `conda_build_config.yaml` variable type differences in selectors vs Jinja2 expressions (#5852 via #5887)
+
+### Other
+
+* Use `conda-forge` channel for macOS Intel (osx-64) CI tests since conda 25.11+ is not available in `defaults` channel for that platform. (#5905)
+
+### Contributors
+
+* @cbouss
+* @conda-bot
+* @isuruf
+* @jaimergp
+* @jsmolic
+* @jezdez
+* @kathatherine
+* @kenodegard
+* @bitsk
+* @dependabot[bot]
+* @pre-commit-ci[bot]
+
+
+
 ## 25.11.1 (2025-12-04)
 
 ### Bug fixes
