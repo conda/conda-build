@@ -127,11 +127,16 @@ def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -
             for recipe_dir in parsed_args.recipe
         ]
     elif command == "render":
-        cmd = ["rattler-build", "build", "--render-only"] + [
-            f"--recipe={join(parsed_args.recipe, 'recipe.yaml')}"
+        cmd = [
+            "rattler-build",
+            "build",
+            "--render-only",
+            f"--recipe={join(parsed_args.recipe, 'recipe.yaml')}",
         ]
     elif command == "debug":
-        cmd = ["rattler-build", "debug"] + [
+        cmd = [
+            "rattler-build",
+            "debug",
             "--recipe",
             parsed_args.recipe_or_package_file_path,
         ]
@@ -170,7 +175,7 @@ def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -
         ]
     )
     if context.channel_priority == "strict":
-        cmd.extend(["--channel-priority strict"])
+        cmd.extend(["--channel-priority", "strict"])
     else:
         cmd.extend(["--channel-priority", "disabled"])
 
@@ -180,12 +185,10 @@ def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -
                 [f"-m={variant}" for variant in parsed_args.variant_config_files]
             )
         if config.verbose:
-            cmd.extend(["--verbose"])
+            cmd.append("--verbose")
         if config.exclusive_config_files:
-            cmd.extend(
-                [f"-m={config.exclusive_config_files[0]}"]
-                + ["--ignore-recipe-variants"]
-            )
+            cmd.extend([f"-m={variant}" for variant in config.exclusive_config_files])
+            cmd.append("--ignore-recipe-variants")
 
     if command == "debug":
         if parsed_args.output_id:
@@ -199,26 +202,26 @@ def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -
         )
         if parsed_args.extra_meta:
             for k, v in parsed_args.extra_meta.items():
-                cmd.extend([f"--extra-meta={k}={v}"])
+                cmd.append(f"--extra-meta={k}={v}")
         if parsed_args.output_folder:
             cmd.extend(["--output-dir", parsed_args.output_folder])
         else:
             cmd.extend(["--output-dir", config.croot])
         if not parsed_args.set_build_id:
-            cmd.extend(["--no-build-id"])
+            cmd.append("--no-build-id")
         if parsed_args.debug:
-            cmd.extend(["--debug"])
+            cmd.append("--debug")
         if parsed_args.notest:
             cmd.extend(["--test", "skip"])
         if parsed_args.quiet:
-            cmd.extend(["-q"])
+            cmd.append("-q")
         if parsed_args.skip_existing != "none":
             if parsed_args.skip_existing == "local":
-                cmd.extend(["--skip-existing local"])
+                cmd.append("--skip-existing local")
             elif parsed_args.skip_existing == "all":
-                cmd.extend(["--skip-existing all"])
+                cmd.append("--skip-existing all")
         if not parsed_args.include_recipe:
-            cmd.extend(["--no-include-recipe"])
+            cmd.append("--no-include-recipe")
         if parsed_args.conda_pkg_format == CondaPkgFormat.V2:
             cmd.extend(
                 ["--package-format", f".conda:{parsed_args.zstd_compression_level}"]
@@ -228,7 +231,7 @@ def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -
 
     try:
         rattler_cmd = find_rattler_build()
-        cmd = [rattler_cmd] + cmd[1:]
+        cmd = [rattler_cmd, *cmd[1:]]
         print("Running rattler:", shlex.join(cmd))
         subprocess.run(cmd, check=True)
         return 0
