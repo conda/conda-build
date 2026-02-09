@@ -217,7 +217,7 @@ def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -
             cmd.append("-q")
         if parsed_args.skip_existing != "none":
             if parsed_args.skip_existing == "local":
-                cmd.append("--skip-existing local")
+                cmd.append("--skip-existing=local")
             elif parsed_args.skip_existing == "all":
                 cmd.append("--skip-existing all")
         if not parsed_args.include_recipe:
