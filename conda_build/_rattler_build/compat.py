@@ -180,15 +180,17 @@ def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -
         cmd.extend(["--channel-priority", "disabled"])
 
     if command in ("build", "render"):
-        if parsed_args.variant_config_files:
-            cmd.extend(
-                [f"-m={variant}" for variant in parsed_args.variant_config_files]
-            )
+        # Ignore rattler's variant auto-discovery and
+        # use conda-build's logic for variant config file priority
+        cmd.extend(["--ignore-recipe-variants"])
+        from ..variants import find_config_files
+
+        config_files = find_config_files(Path(parsed_args.recipe[0]), config)
+
+        cmd.extend([f"-m={variant}" for variant in config_files])
+
         if config.verbose:
             cmd.append("--verbose")
-        if config.exclusive_config_files:
-            cmd.extend([f"-m={variant}" for variant in config.exclusive_config_files])
-            cmd.append("--ignore-recipe-variants")
 
     if command == "debug":
         if parsed_args.output_id:
