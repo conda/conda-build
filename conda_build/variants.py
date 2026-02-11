@@ -215,7 +215,11 @@ def find_config_files(
         2. user config files
            (see context.conda_build["config_file"] or ~/conda_build_config.yaml)
         3. cwd config files (see ./conda_build_config.yaml)
-        4. recipe config files (see ${RECIPE_DIR}/conda_build_config.yaml)
+        4. recipe config files:
+            - v0 recipes: ${RECIPE_DIR}/conda_build_config.yaml
+            - v1 recipes:
+                a) single-recipe: ${RECIPE_DIR}/{conda_build_config.yaml, variants.yaml)
+                b) multi-recipe case does not support having any recipe config files
         5. additional config files (see config.variant_config_files)
 
     .. note::
@@ -226,6 +230,8 @@ def find_config_files(
     :param config: config object specifying config file settings
                    (see exclusive_config_files, ignore_system_variants, and variant_config_files)
     :type config: :class:`Config`
+    :param recipe_config_filenames: list containing candidate names for recipe config files
+    :type recipe_config_filenames: set, optional
     :return: List of config files
     :rtype: `list` of paths (`str`)
     """
@@ -255,7 +261,6 @@ def find_config_files(
         else None
     )
     if path is not None:
-        print(recipe_config_filenames)
         for cfg_name in recipe_config_filenames:
             cfg = resolve(os.path.join(path, cfg_name))
             if os.path.isfile(cfg):
