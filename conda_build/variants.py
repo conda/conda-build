@@ -206,7 +206,9 @@ def validate_spec(src, spec):
         )
 
 
-def find_config_files(metadata_or_path, config):
+def find_config_files(
+    metadata_or_path, config, recipe_config_filenames={"conda_build_config.yaml"}
+):
     """
     Find config files to load. Config files are stacked in the following order:
         1. exclusive config files (see config.exclusive_config_files)
@@ -241,15 +243,25 @@ def find_config_files(metadata_or_path, config):
         if os.path.isfile(cfg):
             files.append(cfg)
 
+        # cwd config file
         cfg = resolve("conda_build_config.yaml")
         if os.path.isfile(cfg):
             files.append(cfg)
 
-    path = getattr(metadata_or_path, "path", metadata_or_path)
-    cfg = resolve(os.path.join(path, "conda_build_config.yaml"))
-    if os.path.isfile(cfg):
-        files.append(cfg)
+    # recipe config
+    path = (
+        getattr(metadata_or_path, "path", metadata_or_path)
+        if metadata_or_path is not None
+        else None
+    )
+    if path is not None:
+        print(recipe_config_filenames)
+        for cfg_name in recipe_config_filenames:
+            cfg = resolve(os.path.join(path, cfg_name))
+            if os.path.isfile(cfg):
+                files.append(cfg)
 
+    # additional config file
     files.extend([resolve(f) for f in ensure_list(config.variant_config_files)])
 
     return files

@@ -13,6 +13,8 @@ from conda.base.context import context
 from ..config import CondaPkgFormat, Config
 from ..utils import on_win
 
+CONFIG_FILES = {"conda_build_config.yaml", "variants.yaml"}
+
 
 def find_rattler_build() -> str:
     """Find rattler-build executable."""
@@ -180,12 +182,35 @@ def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -
         cmd.extend(["--channel-priority", "disabled"])
 
     if command in ("build", "render"):
-        # Ignore rattler's variant auto-discovery and
-        # use conda-build's logic for variant config file priority
-        cmd.extend(["--ignore-recipe-variants"])
+        # Ignore rattler's variant auto-discovery
+        cmd.append("--ignore-recipe-variants")
+
         from ..variants import find_config_files
 
-        config_files = find_config_files(Path(parsed_args.recipe[0]), config)
+        if len(parsed_args.recipe) > 1:
+            # multi-recipe case: check if any has cbc or variants.yaml
+            # if yes -> unsupported case, error out
+            # if no  -> find config files
+            recipes_with_cfg = [
+                recipe
+                for recipe in parsed_args.recipe
+                if any(Path(recipe, cfg).is_file() for cfg in CONFIG_FILES)
+            ]
+            if recipes_with_cfg:
+                raise ValueError(
+                    f"Recipe configuration files detected but multiple recipes were passed: {recipes_with_cfg}"
+                )
+            else:
+                config_files = find_config_files(
+                    metadata_or_path=None, config=config, recipe_config_filenames=None
+                )
+        else:
+            # single-recipe case: include recipe config files if any exist
+            config_files = find_config_files(
+                config,
+                Path(parsed_args.recipe[0]),
+                recipe_config_filenames=CONFIG_FILES,
+            )
 
         cmd.extend([f"-m={variant}" for variant in config_files])
 
