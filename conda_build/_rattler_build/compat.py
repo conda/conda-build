@@ -202,13 +202,13 @@ def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -
                 )
             else:
                 config_files = find_config_files(
-                    metadata_or_path=None, config=config, recipe_config_filenames=None
+                    None, config, recipe_config_filenames=None
                 )
         else:
             # single-recipe case: include recipe config files if any exist
             config_files = find_config_files(
-                config,
                 Path(parsed_args.recipe[0]),
+                config,
                 recipe_config_filenames=CONFIG_FILES,
             )
 
