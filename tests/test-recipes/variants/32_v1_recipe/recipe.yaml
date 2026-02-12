@@ -1,0 +1,47 @@
+context:
+  version: 9.0.2
+
+package:
+  name: pytest
+  version: ${{ version }}
+
+source:
+- url: https://pypi.org/packages/source/p/pytest/pytest-${{ version }}.tar.gz
+  sha256: 75186651a92bd89611d1d9fc20f0b4345fd827c41ccd5c299a868a05d70edf11
+
+build:
+  script: ${{ PYTHON }} -m pip install .
+  python:
+    entry_points:
+    - py.test = pytest:console_main
+    - pytest = pytest:console_main
+  noarch: python
+
+requirements:
+  host:
+  - python >=3.10
+  - setuptools>=77
+  - setuptools-scm>=6.2.3
+  - pip
+  run:
+  - python >=3.10
+  - colorama >=0.4 # sys_platform == "win32"
+  - exceptiongroup >=1 # python_version < "3.11"
+  - iniconfig >=1.0.1
+  - packaging >=22
+  - pluggy <2,>=1.5
+  - pygments >=2.7.2
+  - tomli >=1
+  - argcomplete  # extra == "dev"
+  - attrs >=19.2 # extra == "dev"
+  - hypothesis >=3.56 # extra == "dev"
+  - mock  # extra == "dev"
+  - requests  # extra == "dev"
+  - setuptools  # extra == "dev"
+  - xmlschema  # extra == "dev"
+
+tests:
+- python:
+    imports:
+    - pytest
+    pip_check: true
