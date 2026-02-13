@@ -206,14 +206,20 @@ def validate_spec(src, spec):
         )
 
 
-def find_config_files(metadata_or_path, config):
+def find_config_files(
+    metadata_or_path, config, recipe_config_filenames={"conda_build_config.yaml"}
+):
     """
     Find config files to load. Config files are stacked in the following order:
         1. exclusive config files (see config.exclusive_config_files)
         2. user config files
            (see context.conda_build["config_file"] or ~/conda_build_config.yaml)
         3. cwd config files (see ./conda_build_config.yaml)
-        4. recipe config files (see ${RECIPE_DIR}/conda_build_config.yaml)
+        4. recipe config files:
+            - v0 recipes: ${RECIPE_DIR}/conda_build_config.yaml
+            - v1 recipes:
+                a) single-recipe: ${RECIPE_DIR}/{conda_build_config.yaml, variants.yaml)
+                b) multi-recipe case does not support having any recipe config files
         5. additional config files (see config.variant_config_files)
 
     .. note::
@@ -224,6 +230,8 @@ def find_config_files(metadata_or_path, config):
     :param config: config object specifying config file settings
                    (see exclusive_config_files, ignore_system_variants, and variant_config_files)
     :type config: :class:`Config`
+    :param recipe_config_filenames: list containing candidate names for recipe config files
+    :type recipe_config_filenames: set, optional
     :return: List of config files
     :rtype: `list` of paths (`str`)
     """
@@ -241,15 +249,24 @@ def find_config_files(metadata_or_path, config):
         if os.path.isfile(cfg):
             files.append(cfg)
 
+        # cwd config file
         cfg = resolve("conda_build_config.yaml")
         if os.path.isfile(cfg):
             files.append(cfg)
 
-    path = getattr(metadata_or_path, "path", metadata_or_path)
-    cfg = resolve(os.path.join(path, "conda_build_config.yaml"))
-    if os.path.isfile(cfg):
-        files.append(cfg)
+    # recipe config
+    path = (
+        getattr(metadata_or_path, "path", metadata_or_path)
+        if metadata_or_path is not None
+        else None
+    )
+    if path is not None:
+        for cfg_name in recipe_config_filenames:
+            cfg = resolve(os.path.join(path, cfg_name))
+            if os.path.isfile(cfg):
+                files.append(cfg)
 
+    # additional config file
     files.extend([resolve(f) for f in ensure_list(config.variant_config_files)])
 
     return files

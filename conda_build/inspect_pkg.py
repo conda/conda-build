@@ -129,9 +129,11 @@ def print_linkages(
     for prec, links in sorted(
         depmap.items(),
         key=(
-            lambda key: (0, key[0].name)
-            if isinstance(key[0], PrefixRecord)
-            else sort_order.get(key[0], (4, key[0]))
+            lambda key: (
+                (0, key[0].name)
+                if isinstance(key[0], PrefixRecord)
+                else sort_order.get(key[0], (4, key[0]))
+            )
         ),
     ):
         output_string += f"{prec}:\n"
