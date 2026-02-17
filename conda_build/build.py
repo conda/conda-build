@@ -255,7 +255,15 @@ def regex_files_rg(
     ]
     args_len = len(b" ".join(args_base))
     file_lists = list(
-        chunks(prefix_files, (32760 if utils.on_win else 131071) - args_len)
+        chunks(
+            prefix_files,
+            (
+                float(os.environ.get("CONDA_BLD_REGEX_CHUNK_SIZE", 32760))
+                if utils.on_win
+                else 131071
+            )
+            - args_len,
+        )
     )
     for file_list in file_lists:
         args = args_base[:] + file_list
