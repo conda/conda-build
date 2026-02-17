@@ -43,7 +43,12 @@ from conda.misc import walk_prefix
 from conda.models.records import PrefixRecord
 
 from . import utils
-from .exceptions import OverDependingError, OverLinkingError, RunPathError
+from .exceptions import (
+    CondaBuildException,
+    OverDependingError,
+    OverLinkingError,
+    RunPathError,
+)
 from .inspect_pkg import which_package
 from .os_utils import external, macho
 from .os_utils.liefldd import (
@@ -64,6 +69,7 @@ from .os_utils.pyldd import (
 from .utils import (
     FALLBACK_MENUINST_SCHEMA,
     VALID_SCHEMA_LOCATIONS,
+    merge_dicts_of_lists,
     on_mac,
     on_win,
     prefix_files,
@@ -492,26 +498,27 @@ def mk_relative_osx(path, host_prefix, m, files, rpaths=("lib",)):
 
     if names:
         existing_rpaths = macho.get_rpaths(path, build_prefix=prefix)
+        # Remove rpaths that start with SRC_DIR
+        for rpath in existing_rpaths:
+            if rpath.startswith(base_prefix) and not rpath.startswith(host_prefix):
+                macho.delete_rpath(path, rpath, build_prefix=prefix, verbose=True)
+
         # Add an rpath to every executable to increase the chances of it
         # being found.
         for rpath in rpaths:
             # Escape hatch for when you really don't want any rpaths added.
             if rpath == "":
                 continue
-            rpath_new = join(
-                "@loader_path", relpath(join(host_prefix, rpath), dirname(path)), ""
-            ).replace("/./", "/")
-            macho.add_rpath(path, rpath_new, build_prefix=prefix, verbose=True)
             full_rpath = join(host_prefix, rpath)
             for existing_rpath in existing_rpaths:
                 if normpath(existing_rpath) == normpath(full_rpath):
                     macho.delete_rpath(
                         path, existing_rpath, build_prefix=prefix, verbose=True
                     )
-
-        for rpath in existing_rpaths:
-            if rpath.startswith(base_prefix) and not rpath.startswith(host_prefix):
-                macho.delete_rpath(path, rpath, build_prefix=prefix, verbose=True)
+            rpath_new = join(
+                "@loader_path", relpath(join(host_prefix, rpath), dirname(path)), ""
+            ).replace("/./", "/")
+            macho.add_rpath(path, rpath_new, build_prefix=prefix, verbose=True)
     if s:
         # Skip for stub files, which have to use binary_has_prefix_files to be
         # made relocatable.
@@ -848,6 +855,51 @@ DEFAULT_WIN_WHITELIST = [
 ]
 
 
+def _expand_dsolist(dsolist):
+    result = []
+    for d in dsolist:
+        if d.startswith("*"):
+            result.append(d)
+        else:
+            result.extend(
+                [f"**/{basename(f)}" for f in sorted(utils.glob(d, recursive=True))]
+            )
+    return result
+
+
+def _get_dsolists_prefix(prefix, subdir):
+    allow = []
+    deny = []
+    for fname in sorted(
+        utils.glob(
+            join(prefix, "etc", "conda-build", "dsolists.d", "*.json"),
+            recursive=True,
+        )
+    ):
+        with open(fname) as f:
+            contents = json.load(f)
+            if "version" not in contents:
+                raise ValueError("dsolist JSON format requires a version attribute.")
+            version = contents["version"]
+            if version != 1:
+                raise ValueError(f"dsolist version={version} not recognized.")
+            if contents["subdir"] != subdir:
+                continue
+            allow.extend(contents.get("allow", []))
+            deny.extend(contents.get("deny", []))
+    return {"allow": _expand_dsolist(allow), "deny": _expand_dsolist(deny)}
+
+
+def _get_dsolists(build_prefix, host_prefix, subdir):
+    result = merge_dicts_of_lists(
+        _get_dsolists_prefix(build_prefix, subdir),
+        _get_dsolists_prefix(host_prefix, subdir),
+    )
+    if subdir.startswith("win-") and (result["allow"] or result["deny"]):
+        result["allow"].extend(_expand_dsolist(["C:/Windows/System32/**/*.dll"]))
+    return result
+
+
 def _collect_needed_dsos(
     sysroots_files,
     files,
@@ -1008,6 +1060,7 @@ def caseless_sepless_fnmatch(paths, pat):
 def _lookup_in_sysroots_and_whitelist(
     errors,
     whitelist,
+    denylist,
     needed_dso,
     sysroots_files,
     msg_prelude,
@@ -1085,6 +1138,8 @@ def _lookup_in_sysroots_and_whitelist(
             # We should pass in multiple paths at once to this, but the code isn't structured for that.
             in_whitelist = any(
                 [caseless_sepless_fnmatch([needed_dso_w], w) for w in whitelist]
+            ) and not any(
+                [caseless_sepless_fnmatch([needed_dso_w], w) for w in denylist]
             )
             if in_whitelist:
                 n_dso_p = f"Needed DSO {needed_dso_w}"
@@ -1109,6 +1164,7 @@ def _lookup_in_prefix_packages(
     files,
     run_prefix,
     whitelist,
+    denylist,
     info_prelude,
     msg_prelude,
     warn_prelude,
@@ -1126,7 +1182,9 @@ def _lookup_in_prefix_packages(
     for prec in precs_in_reqs:
         if prec in lib_packages:
             lib_packages_used.add(prec)
-    in_whitelist = any([fnmatch(in_prefix_dso, w) for w in whitelist])
+    in_whitelist = any([fnmatch(in_prefix_dso, w) for w in whitelist]) and not any(
+        [fnmatch(in_prefix_dso, w) for w in denylist]
+    )
     if len(precs_in_reqs) == 1:
         _print_msg(
             errors,
@@ -1187,6 +1245,7 @@ def _show_linking_messages(
     lib_packages,
     lib_packages_used,
     whitelist,
+    denylist,
     sysroots,
     sysroot_prefix,
     sysroot_substitution,
@@ -1239,6 +1298,7 @@ def _show_linking_messages(
                     files,
                     run_prefix,
                     whitelist,
+                    denylist,
                     info_prelude,
                     msg_prelude,
                     warn_prelude,
@@ -1257,6 +1317,7 @@ def _show_linking_messages(
                 _lookup_in_sysroots_and_whitelist(
                     errors,
                     whitelist,
+                    denylist,
                     needed_dso,
                     sysroots,
                     msg_prelude,
@@ -1368,6 +1429,7 @@ def check_overlinking_impl(
             for sysroot in utils.glob(join(sysroot_prefix, "**", "sysroot"))
         ]
     whitelist = []
+    denylist = []
     vendoring_record = dict()
     # When build_is_host is True we perform file existence checks for files in the sysroot (e.g. C:\Windows)
     # When build_is_host is False we must skip things that match the whitelist from the prefix_owners (we could
@@ -1384,9 +1446,12 @@ def check_overlinking_impl(
             sysroots = ["/usr/lib", "/opt/X11", "/System/Library/Frameworks"]
             whitelist = DEFAULT_MAC_WHITELIST
             build_is_host = True if on_mac else False
-        elif subdir.startswith("win"):
-            sysroots = ["C:/Windows"]
-            whitelist = DEFAULT_WIN_WHITELIST
+        elif subdir.startswith("win-"):
+            dsolists = _get_dsolists(build_prefix, run_prefix, subdir)
+            whitelist, denylist = dsolists["allow"], dsolists["deny"]
+            if not whitelist and not denylist:
+                sysroots = ["C:/Windows"]
+                whitelist = DEFAULT_WIN_WHITELIST
             build_is_host = True if on_win else False
 
     whitelist += missing_dso_whitelist or []
@@ -1490,6 +1555,9 @@ def check_overlinking_impl(
                     in_whitelist = any(
                         [caseless_sepless_fnmatch([orig], w) for w in whitelist]
                     )
+                in_whitelist = in_whitelist and not any(
+                    [caseless_sepless_fnmatch([orig], w) for w in denylist]
+                )
                 if not in_whitelist:
                     if resolved in prefix_owners[build_prefix]:
                         print(f"  ERROR :: {needed_dso} in prefix_owners[build_prefix]")
@@ -1519,6 +1587,7 @@ def check_overlinking_impl(
         lib_packages,
         lib_packages_used,
         whitelist,
+        denylist,
         sysroots_files,
         sysroot_prefix,
         sysroot_substitution,
@@ -1705,11 +1774,8 @@ def _build_validator(url):
     log = utils.get_logger(__name__, dedupe=False)
 
     if not url.startswith(VALID_SCHEMA_LOCATIONS):
-        log.warning(
-            "JSON Schema at '%s' URL doesn't match any of the valid locations: %s. "
-            "This will be an error in 25.11.",  # FUTURE: Raise in 25.11
-            url,
-            VALID_SCHEMA_LOCATIONS,
+        raise ValueError(
+            f"JSON Schema at '{url}' URL doesn't match any of the valid locations: {VALID_SCHEMA_LOCATIONS}."
         )
     log = utils.get_logger(__name__, dedupe=False)
     try:
@@ -1744,12 +1810,7 @@ def _check_one_menuinst_json(json_file):
         loaded = json.loads(text)
         schema_url = loaded.get("$schema")
         if not schema_url:
-            log.warning(
-                "Invalid empty value for $schema. '%s' won't be validated. "
-                "This will be an error in 25.11.",  # FUTURE: Raise in 25.11
-                json_file,
-            )
-            return
+            raise ValueError(f"Invalid empty value for `$schema` in '{json_file}'.")
         elif schema_url == "https://json-schema.org/draft-07/schema":
             # This is for compatibility with menuinst files built as per the wrong
             # recommendations of menuinst >=2,<=2.2
@@ -1760,17 +1821,11 @@ def _check_one_menuinst_json(json_file):
             schema_url = FALLBACK_MENUINST_SCHEMA
         validator = _build_validator(schema_url)
         if validator is None:
-            # FUTURE: Raise in 25.11
-            log.warning("Could not build validator. This will be an error in 25.11.")
-            return
+            raise RuntimeError(f"Could not build validator for schema '{schema_url}'.")
         validator.validate(loaded)
-    except (jsonschema.ValidationError, json.JSONDecodeError, OSError) as exc:
-        log.warning(
-            # FUTURE: Raise in 25.11
-            "'%s' is not a valid menuinst JSON document! This will be an error in 25.11.",
-            json_file,
-            exc_info=exc,
-        )
+    except (jsonschema.ValidationError, json.JSONDecodeError, OSError):
+        # Raise exception - invalid menuinst JSON is now an error
+        raise CondaBuildException(f"Invalid menuinst JSON document: {json_file}")
     else:
         log.info("'%s' is a valid menuinst JSON document", json_file)
 

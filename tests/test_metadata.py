@@ -27,6 +27,7 @@ from conda_build.metadata import (
     _hash_dependencies,
     check_bad_chrs,
     eval_selector,
+    get_output_dicts_from_metadata,
     get_selectors,
     sanitize,
     select_lines,
@@ -827,3 +828,57 @@ def test_extract_single_output_text_with_jinja_is_broken():
     # We of course want to obtain output3, but the buggy behaviour gave us output2.
     assert "output3" not in output
     assert "output2" in output
+
+
+@pytest.mark.parametrize(
+    "meta_yaml",
+    [
+        # Case 1: Top-level only recipe
+        textwrap.dedent("""
+        package:
+          name: foo
+          version: 1.0
+          requirements:
+            build:
+              - {{ compiler('c') }}
+        """),
+        # Case 2: Recipe with a single outputs section
+        textwrap.dedent("""
+        package:
+          name: foo
+          version: 1.0
+
+        outputs:
+          - name: foo
+            requirements:
+              build:
+                - {{ compiler('c') }}
+        """),
+    ],
+)
+def test_extract_single_output_text_logging_warning(meta_yaml, caplog, tmp_path):
+    """
+    Verify that the parsed outputs warning will not be printed when parsing single-output recipes
+    """
+
+    # create a temporary test recipe
+    recipe_dir = tmp_path / "recipe"
+    recipe_dir.mkdir()
+    (recipe_dir / "meta.yaml").write_text(meta_yaml)
+
+    metadata = MetaData(recipe_dir)
+    output = get_output_dicts_from_metadata(metadata)
+
+    with caplog.at_level("WARNING"):
+        metadata.extract_single_output_text(output, getattr(metadata, "type", None))
+
+    expected_message = (
+        "Number of parsed outputs does not match detected raw metadata blocks. "
+        "Identified output block may be wrong! "
+        "If you are using Jinja conditionals to include or exclude outputs, "
+        "consider using `skip: true  # [condition]` instead."
+    )
+
+    # Check if the specific warning message is in logs
+    for record in caplog.records:
+        assert expected_message not in caplog.text

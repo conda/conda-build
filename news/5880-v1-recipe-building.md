@@ -1,6 +1,6 @@
 ### Enhancements
 
-* <news item>
+* Add support for building v1 recipes via `rattler-build` CLI (#5880).
 
 ### Bug fixes
 
@@ -16,4 +16,4 @@
 
 ### Other
 
-* Avoid redundant isfile() check in sha256_checksum (#5422)
+* <news item>

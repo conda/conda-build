@@ -9,7 +9,9 @@ from typing import TYPE_CHECKING
 from conda.base.context import context
 
 from .. import api
-from ..utils import on_win
+from .._rattler_build.compat import check_arguments_rattler, run_rattler
+from ..config import get_or_merge_config
+from ..utils import is_v1_recipe, on_win
 from . import validators as valid
 from .main_render import get_render_parser
 
@@ -97,6 +99,13 @@ def execute(args: Sequence[str] | None = None) -> int:
     parser = get_parser()
     parsed = parser.parse_args(args)
     context.__init__(argparse_args=parsed)
+
+    if is_v1_recipe(parsed.recipe_or_package_file_path):
+        config = get_or_merge_config(None, **parsed.__dict__)
+        parsed_only_recipe = parser.parse_args([parsed.recipe_or_package_file_path])
+        check_arguments_rattler(parser.prog.split()[-1], parsed, parsed_only_recipe)
+        parsed.recipe = parsed.recipe_or_package_file_path
+        return run_rattler(parsed, config)
 
     try:
         activation_string = api.debug(

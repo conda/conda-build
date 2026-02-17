@@ -1,8 +1,9 @@
 beautifulsoup4
 chardet
-conda >=24.11.0
+conda >=25.11.0
+conda-forge::rattler-build
 conda-index >=0.4.0
-conda-libmamba-solver >=25.4.0  # ensure we use libmamba
+conda-libmamba-solver >=25.11.0  # includes fix for CondaSolver deprecation warnings
 conda-package-handling >=2.2.0
 editables
 evalidate >=2,<3.0a0
@@ -18,7 +19,7 @@ pkginfo
 psutil
 py-lief
 pytest-rerunfailures  # for handling flaky tests
-python >=3.9
+python >=3.10
 python-libarchive-c
 pytz
 pyyaml

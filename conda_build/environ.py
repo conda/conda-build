@@ -19,13 +19,11 @@ from os.path import join, normpath
 from typing import TYPE_CHECKING
 
 from conda.base.constants import (
-    CONDA_PACKAGE_EXTENSIONS,
     DEFAULTS_CHANNEL_NAME,
     UNKNOWN_CHANNEL,
 )
 from conda.base.context import context, reset_context
 from conda.common.io import env_vars
-from conda.core.index import LAST_CHANNEL_URLS
 from conda.core.link import PrefixSetup, UnlinkLinkTransaction
 from conda.core.package_cache_data import PackageCacheData, ProgressiveFetchExtract
 from conda.core.prefix_data import PrefixData
@@ -38,7 +36,7 @@ from conda.exceptions import (
     UnsatisfiableError,
 )
 from conda.gateways.disk.create import TemporaryDirectory
-from conda.models.channel import Channel, prioritize_channels
+from conda.models.channel import Channel
 from conda.models.match_spec import MatchSpec
 from conda.models.records import PackageRecord
 
@@ -48,6 +46,7 @@ from .features import feature_list
 from .index import get_build_index
 from .os_utils import external
 from .utils import (
+    CONDA_PACKAGE_EXTENSIONS,
     ensure_list,
     env_var,
     on_mac,
@@ -61,6 +60,8 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
     from pathlib import Path
     from typing import Any, TypedDict
+
+    from conda.core.index import Index
 
     from .config import Config
     from .metadata import MetaData
@@ -744,14 +745,18 @@ def linux_vars(m, get_default, prefix):
     # the GNU triplet is powerpc, not ppc. This matters.
     if build_arch.startswith("ppc"):
         build_arch = build_arch.replace("ppc", "powerpc")
-    if (
-        build_arch.startswith("powerpc")
-        or build_arch.startswith("aarch64")
-        or build_arch.startswith("s390x")
-    ):
-        build_distro = "cos7"
+    # Check if cdt_name is specified in the variant first
+    # Default based on architecture if not specified
+    if build_arch.startswith(("powerpc", "aarch64", "s390x")):
+        default_build_distro = "cos7"
     else:
-        build_distro = "cos6"
+        default_build_distro = "cos6"
+
+    # Override with variant value if provided
+    if m.config.variant:
+        build_distro = m.config.variant.get("cdt_name", default_build_distro)
+    else:
+        build_distro = default_build_distro
     # There is also QEMU_SET_ENV, but that needs to be
     # filtered so it only contains the result of `linux_vars`
     # which, before this change was empty, and after it only
@@ -1258,7 +1263,7 @@ def get_pinned_deps(m, section):
 #       checks for this name in the call stack explicitly.
 def install_actions(
     prefix: str | os.PathLike | Path,
-    index,
+    index: Index,
     specs: Iterable[str | MatchSpec],
     subdir: str | None = None,
 ) -> InstallActionsType:
@@ -1276,25 +1281,8 @@ def install_actions(
         },
         callback=reset_context,
     ):
-        # a hack since in conda-build we don't track channel_priority_map
-        channels: tuple[Channel, ...] | None
-        subdirs: tuple[str, ...] | None
-        if LAST_CHANNEL_URLS:
-            channel_priority_map = prioritize_channels(LAST_CHANNEL_URLS)
-            # tuple(dict.fromkeys(...)) removes duplicates while preserving input order.
-            channels = tuple(
-                dict.fromkeys(Channel(url) for url in channel_priority_map)
-            )
-            subdirs = (
-                tuple(
-                    dict.fromkeys(
-                        subdir for channel in channels if (subdir := channel.subdir)
-                    )
-                )
-                or context.subdirs
-            )
-        else:
-            channels = subdirs = None
+        channels: tuple[Channel, ...] | None = tuple(index.expanded_channels) or None
+        subdirs: tuple[str, ...] | None = tuple(index._subdirs) or None
 
         mspecs = tuple(MatchSpec(spec) for spec in specs)
 

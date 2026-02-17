@@ -1,5 +1,140 @@
 [//]: # (current developments)
 
+## 26.1.0 (2026-01-29)
+
+### Enhancements
+
+* Enable `echo on` for Windows build scripts. (#5803)
+* Add support for [CEP 28](https://github.com/conda/ceps/blob/main/cep-0028.md) (customizable system DLL linkage checks for Windows). (#5806)
+* Add riscv64 architecture support to the `cdt()` Jinja function. (#5846)
+
+### Bug fixes
+
+* Handle unknown dynamic tags in liefldd. (#5665 via #5778)
+* Delete rpath before adding rpath on macOS to avoid errors with not having enough space to add rpath. (#5855 via #5856)
+* Don't fail on empty source archive. Ignore and continue instead. (#5854 via #5861)
+* Fix `PendingDeprecationWarning` for `conda.models.enums.PathType` by using the new `PathEnum` name with backward compatibility. (#5901)
+
+### Deprecations
+
+* Stop warning about failed `conda-verify` imports. Errors will be logged as debug statements. (#5841 via #5844)
+* Bump minimum `conda` version to 25.11.0 and `conda-libmamba-solver` to 25.11.0. Remove obsolete `CondaSolver` deprecation warning filters. (#5905)
+* Remove obsolete `restore_free_channel` deprecation warning filter. This property was removed in conda 25.9.0. (#5905)
+
+### Docs
+
+* Document `conda_build_config.yaml` variable type differences in selectors vs Jinja2 expressions (#5852 via #5887)
+
+### Other
+
+* Use `conda-forge` channel for macOS Intel (osx-64) CI tests since conda 25.11+ is not available in `defaults` channel for that platform. (#5905)
+
+### Contributors
+
+* @cbouss
+* @conda-bot
+* @isuruf
+* @jaimergp
+* @jsmolic
+* @jezdez
+* @kathatherine
+* @kenodegard
+* @bitsk
+* @dependabot[bot]
+* @pre-commit-ci[bot]
+
+
+
+## 25.11.1 (2025-12-04)
+
+### Bug fixes
+
+* Prevent empty channel lists from being passed to host environment creation. (#5857)
+
+### Deprecations
+
+* Remove fallback imports for `conda.core.index.Index`. (#5857)
+
+### Contributors
+
+* @jezdez
+
+
+
+## 25.11.0 (2025-11-20)
+
+### Enhancements
+
+* Allow the PyYAML loader to be specified when calling `conda_build.variants.parse_config_file`. (#5800)
+* Raise `menuinst` JSON validation errors, which used to be warnings. (#5828)
+
+### Bug fixes
+
+* Fix `BUILD` environment variable to respect `cdt_name` variant configuration. Previously, BUILD was hardcoded to use `cos6` or `cos7` based on architecture, ignoring the `cdt_name` variant when specified. Now, if `cdt_name` is provided in the variant configuration, it will be used in the BUILD variable. Otherwise, it falls back to the architecture-based default. (#5733)
+* Fix Windows MSVC version detection for Python 3.5+. (#5807, #5818)
+* Update CMake generator handling for CMake 4 compatibility. CMake 2 compatibility was dropped in CMake 4. (#5807)
+* Fix `set_regex` when finding used variables inside jinja statements. (#5812 via #5811)
+
+### Deprecations
+
+* Remove Python 3.9 support. The minimum supported Python version is now 3.10. (#5807)
+
+### Other
+
+* Add Python 3.13 to Linux test matrix. (#5807)
+* Fix conda deprecation warning filters to prevent CI test failures with strict validation. (#5807)
+
+### Contributors
+
+* @conda-bot
+* @isuruf
+* @jaimergp
+* @kenodegard
+* @ryanskeith
+* @shermansiu made their first contribution in https://github.com/conda/conda-build/pull/5800
+* @dependabot[bot]
+* @pre-commit-ci[bot]
+
+
+
+## 25.9.0 (2025-09-26)
+
+### Bug fixes
+
+* Import `CondaSubcommand` from its canonical location to avoid deprecation warnings. (#5747)
+* Run outputs parsing check only for multi-output recipes. (#5655 via #5747)
+
+### Deprecations
+
+* Use `conda.common.path.unix_path_to_win` instead of deprecated `conda.utils.unix_path_to_win`. (#5790)
+* Use `conda.common.path.BIN_DIRECTORY` instead of removed `conda.testing.integration.BIN_DIRECTORY`. (#5790)
+
+### Docs
+
+* Add documentation for package format configuration for command line and configuration in `.condarc`. (#5687)
+* Update package naming conventions documentation to clarify the default package format. (#5687)
+* Create new configuration documentation that briefly summarizes configuration precedence and options. (#5687)
+
+### Other
+
+* Avoid redundant `isfile()` check in `conda_build.utils.sha256_checksum`. (#5422)
+
+### Contributors
+
+* @ColemanTom
+* @conda-bot
+* @dholth
+* @jaimergp
+* @jsmolic
+* @jezdez
+* @kenodegard
+* @roryyorke
+* @ryanskeith
+* @dependabot[bot]
+* @pre-commit-ci[bot]
+
+
+
 ## 25.7.0 (2025-07-31)
 
 ### Deprecations

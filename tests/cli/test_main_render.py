@@ -163,3 +163,11 @@ def test_render_with_python_arg_CLI_reduces_subspace(capfd):
     main_render.execute(args)
     out, err = capfd.readouterr()
     assert len(out.splitlines()) == 1
+
+
+def test_render_with_v1_recipe() -> None:
+    """Test rendering a v1 recipe (recipe.yaml)"""
+    recipe = os.path.join(metadata_dir, "..", "variants", "32_v1_recipe")
+
+    args = [recipe]
+    assert main_render.execute(args) == 0

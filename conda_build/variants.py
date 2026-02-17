@@ -66,18 +66,21 @@ DEFAULT_COMPILERS = {
             "3.3": "vs2010",
             "3.4": "vs2010",
             "3.5": "vs2017",
+            "3.6": "vs2022",
         },
         "cxx": {
             "2.7": "vs2008",
             "3.3": "vs2010",
             "3.4": "vs2010",
             "3.5": "vs2017",
+            "3.6": "vs2022",
         },
         "vc": {
             "2.7": "9",
             "3.3": "10",
             "3.4": "10",
             "3.5": "14",
+            "3.6": "17",
         },
         "fortran": "gfortran",
     },
@@ -137,13 +140,13 @@ def get_default_variant(config):
     return base
 
 
-def parse_config_file(path, config):
+def parse_config_file(path, config, loader=yaml.loader.BaseLoader):
     from .metadata import get_selectors, select_lines
 
     with open(path) as f:
         contents = f.read()
     contents = select_lines(contents, get_selectors(config), variants_in_place=False)
-    content = yaml.load(contents, Loader=yaml.loader.BaseLoader) or {}
+    content = yaml.load(contents, Loader=loader) or {}
     trim_empty_keys(content)
     return content
 
@@ -203,14 +206,20 @@ def validate_spec(src, spec):
         )
 
 
-def find_config_files(metadata_or_path, config):
+def find_config_files(
+    metadata_or_path, config, recipe_config_filenames={"conda_build_config.yaml"}
+):
     """
     Find config files to load. Config files are stacked in the following order:
         1. exclusive config files (see config.exclusive_config_files)
         2. user config files
            (see context.conda_build["config_file"] or ~/conda_build_config.yaml)
         3. cwd config files (see ./conda_build_config.yaml)
-        4. recipe config files (see ${RECIPE_DIR}/conda_build_config.yaml)
+        4. recipe config files:
+            - v0 recipes: ${RECIPE_DIR}/conda_build_config.yaml
+            - v1 recipes:
+                a) single-recipe: ${RECIPE_DIR}/{conda_build_config.yaml, variants.yaml)
+                b) multi-recipe case does not support having any recipe config files
         5. additional config files (see config.variant_config_files)
 
     .. note::
@@ -221,6 +230,8 @@ def find_config_files(metadata_or_path, config):
     :param config: config object specifying config file settings
                    (see exclusive_config_files, ignore_system_variants, and variant_config_files)
     :type config: :class:`Config`
+    :param recipe_config_filenames: list containing candidate names for recipe config files
+    :type recipe_config_filenames: set, optional
     :return: List of config files
     :rtype: `list` of paths (`str`)
     """
@@ -238,15 +249,24 @@ def find_config_files(metadata_or_path, config):
         if os.path.isfile(cfg):
             files.append(cfg)
 
+        # cwd config file
         cfg = resolve("conda_build_config.yaml")
         if os.path.isfile(cfg):
             files.append(cfg)
 
-    path = getattr(metadata_or_path, "path", metadata_or_path)
-    cfg = resolve(os.path.join(path, "conda_build_config.yaml"))
-    if os.path.isfile(cfg):
-        files.append(cfg)
+    # recipe config
+    path = (
+        getattr(metadata_or_path, "path", metadata_or_path)
+        if metadata_or_path is not None
+        else None
+    )
+    if path is not None:
+        for cfg_name in recipe_config_filenames:
+            cfg = resolve(os.path.join(path, cfg_name))
+            if os.path.isfile(cfg):
+                files.append(cfg)
 
+    # additional config file
     files.extend([resolve(f) for f in ensure_list(config.variant_config_files)])
 
     return files
@@ -774,8 +794,7 @@ def find_used_variables_in_text(variant, recipe_text, selectors_only=False):
         )
         set_regex = (
             r"(?:^|[^\{])\{%\s*set\s*.*\s*=\s*.*"
-            + v_regex
-            + r"(?![a-zA-Z_0-9])(?:[^%]*?)?%\}"
+            r"(?<![a-zA-Z_0-9])" + v_regex + r"(?![a-zA-Z_0-9])(?:[^%]*?)?%\}"
         )
         # plain req name, no version spec.  Look for end of line after name, or comment or selector
         requirement_regex = rf"^\s+\-\s+{v_req_regex}\s*(?:\s[\[#]|$)"

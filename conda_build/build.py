@@ -33,7 +33,13 @@ from conda.core.prefix_data import PrefixData
 from conda.exceptions import CondaError, NoPackagesFoundError, UnsatisfiableError
 from conda.gateways.disk.create import TemporaryDirectory
 from conda.models.channel import Channel
-from conda.models.enums import FileMode, PathType
+from conda.models.enums import FileMode
+
+try:
+    from conda.models.enums import PathEnum as PathType
+except ImportError:
+    # FUTURE: remove for `conda>=26.9`
+    from conda.models.enums import PathType
 from conda.models.match_spec import MatchSpec
 from conda.utils import url_path
 
@@ -1939,11 +1945,11 @@ def bundle_conda(
             # we do the import here because we want to respect logger level context
             try:
                 from conda_verify.verify import Verify
-            except ImportError:
+            except ImportError as exc:
                 Verify = None
-                log.warning(
-                    "Importing conda-verify failed.  Please be sure to test your packages.  "
-                    "conda install conda-verify to make this message go away."
+                log.debug(
+                    "Importing conda-verify failed. Skipping extra checks...",
+                    exc_info=exc,
                 )
             if getattr(metadata.config, "verify", False) and Verify:
                 verifier = Verify()
