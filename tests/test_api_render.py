@@ -127,8 +127,7 @@ def test_transitive_subpackage_dependency(testing_config):
     metadata = api.render(recipe_dir, config=testing_config)[1][0]
     assert not metadata.get_value("requirements/run")
     assert any(
-        req.startswith("openssl 1.0.2")
-        for req in metadata.get_value("requirements/host")
+        req.startswith("openssl 3.0") for req in metadata.get_value("requirements/host")
     )
 
 
