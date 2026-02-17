@@ -1,6 +1,7 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
 import os
+import sys
 
 import pytest
 
@@ -57,3 +58,16 @@ def test_skeleton_pypi_arguments_work(testing_workdir):
     metadata = api.render("photutils")[0][0]
     assert "--offline" in metadata.meta["build"]["script"]
     assert metadata.version() == "1.10.0"
+
+
+@pytest.mark.slow
+@pytest.mark.skipif(sys.version_info < (3, 11), reason="requires python3.11 or higher")
+def test_v1_recipe_generation(testing_workdir):
+    """
+    Test v1 recipe generation
+    """
+    args = ["--output-format=v1", "pypi", "botocore"]
+    main_skeleton.execute(args)
+    assert os.path.isfile("botocore/recipe.yaml")
+    with open(os.path.join("botocore", "recipe.yaml")) as f:
+        assert "botocore" in f.read()

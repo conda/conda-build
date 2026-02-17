@@ -102,6 +102,7 @@ jobs:
       CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev::' || '' }}
       CONDA_VERSION: ${{ contains('canary|release', matrix.conda-version) && 'conda' || format('conda={0}', matrix.conda-version) }}
       PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial' || 'not serial' }}
+      REQUIREMENTS_V1_RECIPE_FORMAT: ${{ matrix.python-version != '3.10' && '--file tests/requirements-v1-recipe-format.txt' || ''}}
 
     steps:
       - name: Free Disk Space
@@ -165,6 +166,7 @@ jobs:
           --file tests/requirements.txt
           --file tests/requirements-${{ runner.os }}.txt
           --file tests/requirements-ci.txt
+          ${{ env.REQUIREMENTS_V1_RECIPE_FORMAT }}
           python=${{ matrix.python-version }}
           ${{ env.CONDA_CHANNEL_LABEL }}${{ env.CONDA_VERSION }}
 
@@ -296,6 +298,7 @@ jobs:
       ErrorActionPreference: Stop  # powershell exit on first error
       CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'defaults' }}
       PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial' || 'not serial and not slow' }}
+      REQUIREMENTS_V1_RECIPE_FORMAT: ${{ matrix.python-version != '3.10' && '--file tests/requirements-v1-recipe-format.txt' || ''}}
 
     steps:
       - name: Checkout Source
@@ -334,6 +337,7 @@ jobs:
           --file tests\requirements.txt
           --file tests\requirements-${{ runner.os }}.txt
           --file tests\requirements-ci.txt
+          ${{ env.REQUIREMENTS_V1_RECIPE_FORMAT }}
           python=${{ matrix.python-version }}
           ${{ env.CONDA_CHANNEL_LABEL }}::conda
 
@@ -405,6 +409,7 @@ jobs:
       # Use conda-forge for release tests since conda 25.11+ is not in defaults for osx-64
       CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'conda-forge' }}
       PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial' || 'not serial' }}
+      REQUIREMENTS_V1_RECIPE_FORMAT: ${{ matrix.python-version != '3.10' && '--file tests/requirements-v1-recipe-format.txt' || ''}}
 
     steps:
       - name: Checkout Source
@@ -454,6 +459,7 @@ jobs:
           --file tests/requirements.txt
           --file tests/requirements-${{ runner.os }}.txt
           --file tests/requirements-ci.txt
+          ${{ env.REQUIREMENTS_V1_RECIPE_FORMAT }}
           python=${{ matrix.python-version }}
           ${{ env.CONDA_CHANNEL_LABEL }}::conda
 
