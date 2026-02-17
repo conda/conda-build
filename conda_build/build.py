@@ -82,6 +82,8 @@ from .render import (
 )
 from .utils import (
     CONDA_PACKAGE_EXTENSIONS,
+    MAX_CMD_LINE_LENGTH,
+    chunks,
     create_file_with_permissions,
     env_var,
     glob,
@@ -199,26 +201,6 @@ def prefix_replacement_excluded(path):
     return False
 
 
-# It may be that when using the list form of passing args to subprocess
-# what matters is the number of arguments rather than the accumulated
-# string length. In that case, len(l[i]) should become 1, and we should
-# pass this in instead. It could also depend on the platform. We should
-# test this!
-def chunks(line, n):
-    # For item i in a range that is a length of l,
-    size = 0
-    start = 0
-    for i in range(0, len(line)):
-        # + 3 incase a shell is used: 1 space and 2 quotes.
-        size = size + len(line[i]) + 3
-        if i == len(line) - 1:
-            yield line[start : i + 1]
-        elif size > n:
-            yield line[start : i + 1]
-            start = i
-            size = 0
-
-
 def get_bytes_or_text_as_bytes(parent):
     if "bytes" in parent:
         return parent["bytes"]
@@ -254,9 +236,8 @@ def regex_files_rg(
         os.path.join(pu, f.replace("/", os.sep).encode("utf-8")) for f in files
     ]
     args_len = len(b" ".join(args_base))
-    file_lists = list(
-        chunks(prefix_files, (32760 if utils.on_win else 131071) - args_len)
-    )
+    # chunk them to avoid too long comand lines:
+    file_lists = chunks(prefix_files, MAX_CMD_LINE_LENGTH - args_len)
     for file_list in file_lists:
         args = args_base[:] + file_list
         # This will not work now our args are binary strings:
