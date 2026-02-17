@@ -21,7 +21,6 @@ py-lief
 pytest-rerunfailures  # for handling flaky tests
 python >=3.10
 python-libarchive-c
-pytz
 pyyaml
 requests
 ripgrep  # for faster grep
