@@ -12,6 +12,7 @@ from rattler_build.tool_config import PlatformConfig, ToolConfiguration
 from rattler_build.variant_config import VariantConfig
 
 from ..config import CondaPkgFormat, Config
+from ..exceptions import CondaBuildUserError
 
 CONFIG_FILES = {"conda_build_config.yaml", "variants.yaml"}
 
@@ -87,28 +88,124 @@ def check_arguments_rattler(
         )
 
 
+def process_recipes(
+    recipes: list[str],
+    variant_config: VariantConfig,
+    render_config: RenderConfig,
+    tool_config: ToolConfiguration,
+    command: str,
+    output_dir: str,
+    channels: list[str],
+    show_logs: bool,
+    no_build_id: bool,
+    package_format: str,
+    no_include_recipe: bool,
+    debug: bool,
+) -> int:
+    import yaml
+
+    succeeded: list[str] = []
+    failed: dict[str, str] = {}
+
+    for recipe_path in recipes:
+        recipe_path_str = str(recipe_path)
+        try:
+            # load the recipe file
+            try:
+                recipe = Stage0Recipe.from_file(Path(recipe_path))
+            except Exception as e:
+                raise CondaBuildUserError(
+                    f"Failed to process recipe {recipe_path}: {str(e)}"
+                )
+
+            # render the recipe
+            try:
+                rendered = recipe.render(variant_config, render_config)
+            except Exception as e:
+                raise CondaBuildUserError(
+                    f"Failed to render recipe {recipe_path}: {str(e)}"
+                )
+
+            if command == "render":
+                data = rendered[0].recipe.to_dict()
+                print(yaml.safe_dump(data, indent=2, sort_keys=False))
+                succeeded.append(recipe_path_str)
+                continue
+
+            # build all rendered variants
+            for i, variant in enumerate(rendered, 1):
+                print(
+                    f"\n🔨 Building variant {i}/{len(rendered)} "
+                    f"for recipe {recipe_path}"
+                )
+
+                try:
+                    with RichProgressCallback(show_logs=show_logs) as progress_callback:
+                        variant.run_build(
+                            tool_config=tool_config,
+                            output_dir=output_dir,
+                            channels=channels,
+                            progress_callback=progress_callback,
+                            no_build_id=no_build_id,
+                            package_format=package_format,
+                            no_include_recipe=no_include_recipe,
+                            debug=debug,
+                        )
+                except Exception as e:
+                    print(f"Build failed for recipe {recipe_path}: {str(e)}")
+                    raise
+
+            # if all variants built without raising, mark recipe as succeeded
+            succeeded.append(recipe_path_str)
+
+        except Exception as e:
+            # catch any failure for this recipe and continue with the next
+            failed[recipe_path_str] = str(e)
+            print(f"Skipping remaining work for recipe {recipe_path}.")
+
+    # summary
+    print("\n=== Build summary ===")
+    if succeeded:
+        print("Succeeded:")
+        for path in succeeded:
+            print(f"  - {path}")
+    else:
+        print("Succeeded: none")
+
+    if failed:
+        print("\nFailed:")
+        for path, error in failed.items():
+            print(f"  - {path}: {error}")
+    else:
+        print("\nFailed: none")
+
+    return 1 if failed else 0
+
+
 def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -> int:
     """Run rattler-build for v1 recipes"""
     if command not in ("build", "render", "debug"):
         raise ValueError(f"Unrecognized subcommand: {command}")
 
     # Initialize configuration defaults
-    test_strategy = None
-    skip_existing = None
-    noarch_build_platform = None
-    channel_priority = None
-    output_dir = config.croot
-    no_include_recipe = False
-    no_build_id = False
-    package_format = None
-    debug = False
-    channels = []
-    extra_context = {}
-    show_logs = not parsed_args.quiet
-    target_platform = config.variant.get("host_platform", config.subdir)
-    build_platform = config.variant.get("build_platform", config.subdir)
-    host_platform = config.variant.get("target_platform", config.subdir)
-    noarch_build_platform = config.variant.get("noarch_build_platform", config.subdir)
+    test_strategy: str | None = None
+    skip_existing: bool | None = None
+    noarch_build_platform: str | None = None
+    channel_priority: str | None = None
+    output_dir: str = config.croot
+    no_include_recipe: bool = False
+    no_build_id: bool = False
+    package_format: str | None = None
+    debug: bool = False
+    channels: list[str] = []
+    extra_context: dict[str] = {}
+    show_logs: bool = getattr(parsed_args, "quiet", False) is False
+    target_platform: str = config.variant.get("host_platform", config.subdir)
+    build_platform: str = config.variant.get("build_platform", config.subdir)
+    host_platform: str = config.variant.get("target_platform", config.subdir)
+    noarch_build_platform: str = config.variant.get(
+        "noarch_build_platform", config.subdir
+    )
 
     # TODO: investigate why is config.channel_urls
     # does not pick up condarc settings, need to use context.channels
@@ -169,7 +266,7 @@ def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -
     # TODO: output_name does not exist in python bindings
     # if parsed_args.output_id:
     # cmd.extend(["--output-name", parsed_args.output_id])
-    elif command == "build":
+    if command == "build":
         if parsed_args.extra_meta:
             extra_context.update(parsed_args.extra_meta)
         if parsed_args.output_folder:
@@ -198,13 +295,11 @@ def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -
 
         from ..variants import find_config_files
 
-        results = []
-
         # configure variant
         for variant in config_files:
             variant_config = VariantConfig.from_file(variant)
 
-        # coon tool / platform / render configuration
+        # common tool / platform / render configuration
         tool_config = ToolConfiguration(
             test_strategy=test_strategy,
             skip_existing=skip_existing,
@@ -223,51 +318,17 @@ def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -
             extra_context=extra_context,
         )
 
-        # iterate over all recipes
-        for recipe_path in recipes:
-            recipe = Stage0Recipe.from_file(Path(recipe_path))
-
-            variant_config = None
-            for variant_file in config_files:
-                variant_config = VariantConfig.from_file(variant_file)
-
-            # render the recipe
-            rendered = recipe.render(variant_config, render_config)
-
-            if command == "render":
-                import json
-
-                data = rendered[0].recipe.to_dict()
-                print(json.dumps(data, indent=2, sort_keys=True))
-                continue
-
-            # build all rendered variants
-            for i, variant in enumerate(rendered, 1):
-                print(
-                    f"\n🔨 Building variant {i}/{len(rendered)} "
-                    f"for recipe {recipe_path}"
-                )
-
-                with RichProgressCallback(show_logs=show_logs) as progress_callback:
-                    result = variant.run_build(
-                        tool_config=tool_config,
-                        output_dir=output_dir,
-                        channels=channels,
-                        progress_callback=progress_callback,
-                        recipe_path=recipe_path,
-                        no_build_id=no_build_id,
-                        package_format=package_format,
-                        no_include_recipe=no_include_recipe,
-                        debug=debug,
-                    )
-                    results.append(result)
-
-                    print("\n" + "=" * 60)
-                    print("Build Result:")
-                    print("=" * 60)
-                    print(f"   Package: {result.name} {result.version}")
-                    print(f"   Build string: {result.build_string}")
-                    print(f"   Platform: {result.platform}")
-                    print(f"   Build time: {result.build_time:.2f}s")
-
-        return 0
+        return process_recipes(
+            recipes=recipes,
+            variant_config=variant_config,
+            render_config=render_config,
+            tool_config=tool_config,
+            command=command,
+            output_dir=output_dir,
+            channels=channels,
+            show_logs=show_logs,
+            no_build_id=no_build_id,
+            package_format=package_format,
+            no_include_recipe=no_include_recipe,
+            debug=debug,
+        )
