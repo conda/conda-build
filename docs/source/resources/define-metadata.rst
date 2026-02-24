@@ -1377,7 +1377,9 @@ in conda-build 2.1.0.
    default packaging behavior of conda-build is bypassed. In other
    words, if any subpackage is specified, then you do not get the
    normal top-level build for this recipe without explicitly
-   defining a subpackage for it. This is an alternative to the
+   defining a subpackage for it. But having a subpackage with the same
+   name as the top-level should be avoided, as this leads to a number
+   of unintended and hard to understand bugs. This is an alternative to the
    existing behavior, not an addition to it. For more information,
    see :ref:`implicit_metapackages`. Each output may have its own version and
    requirements. Additionally, subpackages may impose downstream pinning similarly
@@ -1538,11 +1540,13 @@ Implicit metapackages
 
 When viewing the top-level package as a collection of smaller
 subpackages, it may be convenient to define the top-level
-package as a composition of several subpackages. If you do this
-and you do not define a subpackage name that matches the
-top-level package/name, conda-build creates a metapackage for
-you. This metapackage has runtime requirements drawn from its
-dependency subpackages, for the sake of accurate build strings.
+package as a composition of several subpackages. If you do this,
+do not define a subpackage name that matches the top-level
+package/name, as this will lead to a number of unintended and
+hard to understand bugs. Also, if you avoid such a name clash,
+conda-build creates a metapackage for you. This metapackage
+has runtime requirements drawn from its dependency subpackages,
+for the sake of accurate build strings.
 
 EXAMPLE: In this example, a metapackage for ``subpackage-example``
 will be created. It will have runtime dependencies on
