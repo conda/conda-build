@@ -68,7 +68,9 @@ from .os_utils.pyldd import (
 )
 from .utils import (
     FALLBACK_MENUINST_SCHEMA,
+    MAX_CMD_LINE_LENGTH,
     VALID_SCHEMA_LOCATIONS,
+    chunks,
     merge_dicts_of_lists,
     on_mac,
     on_win,
@@ -317,26 +319,10 @@ def compile_missing_pyc(files, cwd, python_exe, skip_compile_pyc=()):
             print("compiling .pyc files... failed as no python interpreter was found")
         else:
             print("compiling .pyc files...")
-            # We avoid command lines longer than 8190
-            if on_win:
-                limit = 8190
-            else:
-                limit = 32760
-            limit -= len(compile_files) * 2
-            lower_limit = len(max(compile_files, key=len)) + 1
-            if limit < lower_limit:
-                limit = lower_limit
-            groups = [[]]
             args = [python_exe, "-Wi", "-m", "py_compile"]
-            args_len = length = len(" ".join(args)) + 1
-            for f in compile_files:
-                length_this = len(f) + 1
-                if length_this + length > limit:
-                    groups.append([])
-                    length = args_len
-                else:
-                    length += length_this
-                groups[len(groups) - 1].append(f)
+            args_len = len(" ".join(args)) + 1
+            # chunk them to avoid too long comand lines:
+            groups = chunks(compile_files, MAX_CMD_LINE_LENGTH - args_len)
             for group in groups:
                 call(args + group, cwd=cwd)
 
