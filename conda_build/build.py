@@ -3209,7 +3209,7 @@ def write_test_scripts(
             if utils.on_win:
                 tf.write(
                     'set "CONDA_SHLVL=" '
-                    "&& @CALL {}\\condabin\\conda_hook.bat {}"
+                    '&& @CALL "{}\\condabin\\conda_hook.bat" {}'
                     "&& set CONDA_EXE={python_exe}"
                     "&& set CONDA_PYTHON_EXE={python_exe}"
                     "&& set _CE_I={}"
