@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import platform
 import re
 import subprocess
 import sys
@@ -143,6 +144,8 @@ def test_recipe_builds(
         pytest.xfail("Numpy build doesn't run on Python 3.13 yet.")
     elif recipe.name == "dll_linking_fail":
         pytest.xfail("Recipe being built needs to fail linking tests.")
+    elif recipe.name == "r_test_import" and on_mac and platform.machine() == "arm64":
+        pytest.skip("r-base not available on osx-arm64 in defaults channel")
 
     # These variables are defined solely for testing purposes,
     # so they can be checked within build scripts
@@ -1478,6 +1481,10 @@ def test_failed_recipe_leaves_folders(testing_config):
 
 
 @pytest.mark.sanity
+@pytest.mark.skipif(
+    on_mac and platform.machine() == "arm64",
+    reason="r-base not available on osx-arm64 in defaults channel",
+)
 def test_only_r_env_vars_defined(testing_config):
     recipe = os.path.join(metadata_dir, "_r_env_defined")
     api.build(recipe, config=testing_config)
@@ -2051,6 +2058,10 @@ def test_add_pip_as_python_dependency_from_condarc_file(
     # clear cache
     mocker.patch("conda.base.context.Context.pkgs_dirs", pkgs_dirs := (str(tmp_path),))
     assert context.pkgs_dirs == pkgs_dirs
+
+    # Disable template environment cloning for this test since the template
+    # includes pip, which would defeat the purpose of testing pip's absence
+    testing_metadata.config.test_env_template = None
 
     testing_metadata.meta["build"]["script"] = ['python -c "import pip"']
     testing_metadata.meta["requirements"]["host"] = ["python"]

@@ -88,7 +88,7 @@ def testing_homedir() -> Iterator[Path]:
 
 
 @pytest.fixture(scope="function")
-def testing_config(testing_workdir):
+def testing_config(testing_workdir, warm_package_cache):
     def boolify(v):
         return v == "true"
 
@@ -110,6 +110,8 @@ def testing_config(testing_workdir):
         ignore_verify_codes=ignore_verify_codes_default,
         exit_on_verify_error=exit_on_verify_error_default,
         conda_pkg_format=conda_pkg_format_default,
+        # Use template environment for faster test env creation when available
+        test_env_template=str(warm_package_cache) if warm_package_cache else None,
     )
 
     if on_mac and "CONDA_BUILD_SYSROOT" in os.environ:
@@ -248,6 +250,68 @@ def variants_conda_build_sysroot(monkeypatch, request):
     monkeypatch.setenv("MACOSX_DEPLOYMENT_TARGET", mdt)
 
     return request.param
+
+
+@pytest.fixture(scope="session", autouse=True)
+def warm_package_cache(tmp_path_factory: pytest.TempPathFactory) -> Path | None:
+    """Pre-warm the conda package cache and create a template environment.
+
+    This creates a persistent template environment with commonly-used packages
+    (Python, pip, setuptools) which:
+    1. Forces conda to download and extract packages into the cache
+    2. Provides a template that can be cloned via `conda create --clone` for
+       faster test env creation with proper prefix replacement
+
+    The template environment is kept for the duration of the test session.
+
+    Returns:
+        Path to the template environment, or None if creation failed.
+    """
+    from conda.base.context import context
+
+    # Skip warmup if cache already has Python extracted (common in CI with cached pkgs_dir)
+    pkgs_dir = context.pkgs_dirs[0] if context.pkgs_dirs else None
+    if pkgs_dir:
+        cached_pythons = list(Path(pkgs_dir).glob("python-3.1*"))
+        if cached_pythons:
+            # Cache is warm, but still create template env for potential cloning
+            pass
+
+    # Create a template environment that persists for the session
+    # Include common packages that most test builds need
+    template_env = tmp_path_factory.mktemp("template_env", numbered=False)
+
+    # Find conda executable - use sys.executable for cross-platform reliability
+    conda_cmd = [sys.executable, "-m", "conda"]
+
+    try:
+        subprocess.run(
+            [
+                *conda_cmd,
+                "create",
+                "-p",
+                str(template_env),
+                # Core Python
+                "python",
+                "pip",
+                "setuptools",
+                # Common build dependencies (often pulled in by solver)
+                "expat",
+                "-y",
+                "-q",
+                "--no-shortcuts",
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        return template_env
+    except subprocess.CalledProcessError as e:
+        # Don't fail tests if template creation fails
+        import warnings
+
+        warnings.warn(f"Failed to create template environment: {e.stderr}")
+        return None
 
 
 @pytest.fixture(scope="session")
