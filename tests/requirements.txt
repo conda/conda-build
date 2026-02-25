@@ -17,6 +17,7 @@ pip
 pkginfo
 psutil
 py-lief
+py-rattler-build
 pytest-rerunfailures  # for handling flaky tests
 python >=3.10
 python-libarchive-c
