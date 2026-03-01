@@ -1,53 +1,20 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
 import argparse
-import shlex
-import shutil
-import subprocess
-import sys
 from os.path import join
 from pathlib import Path
 
 from conda.base.context import context
+from rattler_build.progress import RichProgressCallback
+from rattler_build.render import RenderConfig
+from rattler_build.stage0 import Stage0Recipe
+from rattler_build.tool_config import PlatformConfig, ToolConfiguration
+from rattler_build.variant_config import VariantConfig
 
 from ..config import CondaPkgFormat, Config
-from ..utils import on_win
+from ..exceptions import CondaBuildUserError
 
 CONFIG_FILES = {"conda_build_config.yaml", "variants.yaml"}
-
-
-def find_rattler_build() -> str:
-    """Find rattler-build executable."""
-    executable_dir = Path(sys.executable).parent
-    resolved_dir = Path(sys.executable).resolve().parent
-
-    if on_win:
-        # on Windows: rattler-build can be in $PREFIX/Library/bin or $PREFIX/Scripts
-        candidate_dirs = [
-            executable_dir / "Library" / "bin",
-            executable_dir / "Scripts",
-            resolved_dir / "Library" / "bin",
-            resolved_dir / "Scripts",
-            executable_dir,
-            resolved_dir,
-        ]
-        executable_name = "rattler-build.exe"
-    else:
-        # On Unix: both python and rattler-build are in $PREFIX/bin
-        candidate_dirs = [
-            executable_dir,
-            resolved_dir,
-        ]
-        executable_name = "rattler-build"
-
-    # Check candidate directories
-    for directory in candidate_dirs:
-        rattler_path = directory / executable_name
-        if rattler_path.exists():
-            return str(rattler_path)
-
-    # Fallback to PATH
-    return shutil.which("rattler-build") or "rattler-build"
 
 
 def check_arguments_rattler(
@@ -121,69 +88,148 @@ def check_arguments_rattler(
         )
 
 
+def process_recipes(
+    recipes: list[str],
+    variant_config: VariantConfig,
+    render_config: RenderConfig,
+    tool_config: ToolConfiguration,
+    command: str,
+    output_dir: str,
+    channels: list[str],
+    show_logs: bool,
+    no_build_id: bool,
+    package_format: str,
+    no_include_recipe: bool,
+    debug: bool,
+) -> int:
+    import yaml
+
+    succeeded: list[str] = []
+    failed: dict[str, str] = {}
+
+    for recipe_path in recipes:
+        recipe_path_str = str(recipe_path)
+        try:
+            # load the recipe file
+            try:
+                recipe = Stage0Recipe.from_file(Path(recipe_path))
+            except Exception as e:
+                raise CondaBuildUserError(
+                    f"Failed to process recipe {recipe_path}: {str(e)}"
+                )
+
+            # render the recipe
+            try:
+                rendered = recipe.render(variant_config, render_config)
+            except Exception as e:
+                raise CondaBuildUserError(
+                    f"Failed to render recipe {recipe_path}: {str(e)}"
+                )
+
+            if command == "render":
+                data = rendered[0].recipe.to_dict()
+                print(yaml.safe_dump(data, indent=2, sort_keys=False))
+                succeeded.append(recipe_path_str)
+                continue
+
+            # build all rendered variants
+            for i, variant in enumerate(rendered, 1):
+                print(
+                    f"\n🔨 Building variant {i}/{len(rendered)} "
+                    f"for recipe {recipe_path}"
+                )
+
+                try:
+                    with RichProgressCallback(show_logs=show_logs) as progress_callback:
+                        variant.run_build(
+                            tool_config=tool_config,
+                            output_dir=output_dir,
+                            channels=channels,
+                            progress_callback=progress_callback,
+                            no_build_id=no_build_id,
+                            package_format=package_format,
+                            no_include_recipe=no_include_recipe,
+                            debug=debug,
+                        )
+                except Exception as e:
+                    print(f"Build failed for recipe {recipe_path}: {str(e)}")
+                    raise
+
+            # if all variants built without raising, mark recipe as succeeded
+            succeeded.append(recipe_path_str)
+
+        except Exception as e:
+            # catch any failure for this recipe and continue with the next
+            failed[recipe_path_str] = str(e)
+            print(f"Skipping remaining work for recipe {recipe_path}.")
+
+    # summary
+    print("\n=== Build summary ===")
+    if succeeded:
+        print("Succeeded:")
+        for path in succeeded:
+            print(f"  - {path}")
+    else:
+        print("Succeeded: none")
+
+    if failed:
+        print("\nFailed:")
+        for path, error in failed.items():
+            print(f"  - {path}: {error}")
+    else:
+        print("\nFailed: none")
+
+    return 1 if failed else 0
+
+
 def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -> int:
     """Run rattler-build for v1 recipes"""
-    if command == "build":
-        cmd = ["rattler-build", "build"] + [
-            f"--recipe={join(recipe_dir, 'recipe.yaml')}"
-            for recipe_dir in parsed_args.recipe
-        ]
-    elif command == "render":
-        cmd = [
-            "rattler-build",
-            "build",
-            "--render-only",
-            f"--recipe={join(parsed_args.recipe, 'recipe.yaml')}",
-        ]
-    elif command == "debug":
-        cmd = [
-            "rattler-build",
-            "debug",
-            "--recipe",
-            parsed_args.recipe_or_package_file_path,
-        ]
-    else:
+    if command not in ("build", "render", "debug"):
         raise ValueError(f"Unrecognized subcommand: {command}")
 
-    # common configuration
+    # Initialize configuration defaults
+    test_strategy: str | None = None
+    skip_existing: bool | None = None
+    noarch_build_platform: str | None = None
+    channel_priority: str | None = None
+    output_dir: str = config.croot
+    no_include_recipe: bool = False
+    no_build_id: bool = False
+    package_format: str | None = None
+    debug: bool = False
+    channels: list[str] = []
+    extra_context: dict[str] = {}
+    show_logs: bool = getattr(parsed_args, "quiet", False) is False
+    target_platform: str = config.variant.get("host_platform", config.subdir)
+    build_platform: str = config.variant.get("build_platform", config.subdir)
+    host_platform: str = config.variant.get("target_platform", config.subdir)
+    noarch_build_platform: str = config.variant.get(
+        "noarch_build_platform", config.subdir
+    )
+
+    # TODO: investigate why is config.channel_urls
+    # does not pick up condarc settings, need to use context.channels
+    channels = list(context.channels)
     if config.channel_urls:
         for url in config.channel_urls:
+            # TODO: fix -c local
+            # TypeError: argument 'channels': 'Channel' object cannot be cast as 'str'
             if url in context.custom_multichannels:
-                cmd.extend(
-                    [
-                        f"--channel={local_url}"
-                        for local_url in context.custom_multichannels[url]
-                    ]
+                channels.extend(
+                    [local_url for local_url in context.custom_multichannels[url]]
                 )
             else:
-                cmd.append(f"--channel={url}")
-    cmd.extend(
-        ["--build-platform", config.variant.get("build_platform", config.subdir)]
-    )
-    cmd.extend(
-        [
-            "--host-platform",
-            config.variant.get(
-                "host_platform", config.variant.get("target_platform", config.subdir)
-            ),
-        ]
-    )
-    cmd.extend(
-        [
-            "--target-platform",
-            config.variant.get(
-                "target_platform", config.variant.get("host_platform", config.subdir)
-            ),
-        ]
-    )
+                channels.append(url)
+
     if context.channel_priority == "strict":
-        cmd.extend(["--channel-priority", "strict"])
+        channel_priority = "strict"
     else:
-        cmd.extend(["--channel-priority", "disabled"])
+        channel_priority = "disabled"
 
     if command in ("build", "render"):
-        # Ignore rattler's variant auto-discovery
-        cmd.append("--ignore-recipe-variants")
+        # TODO: --ignore-recipe-variants only available via deprecated
+        # rattler_build.cli_api:build_recipes()
+        # cmd.append("--ignore-recipe-variants")
 
         from ..variants import find_config_files
 
@@ -212,56 +258,77 @@ def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -
                 recipe_config_filenames=CONFIG_FILES,
             )
 
-        cmd.extend([f"-m={variant}" for variant in config_files])
+        # if config.verbose:
+        # TODO: find this option in py-rattler-build
+        # cmd.append("--verbose")
 
-        if config.verbose:
-            cmd.append("--verbose")
-
-    if command == "debug":
-        if parsed_args.output_id:
-            cmd.extend(["--output-name", parsed_args.output_id])
-    elif command == "build":
-        cmd.extend(
-            [
-                "--noarch-build-platform",
-                config.variant.get("noarch_build_platform", config.subdir),
-            ]
-        )
+    # if command == "debug":
+    # TODO: output_name does not exist in python bindings
+    # if parsed_args.output_id:
+    # cmd.extend(["--output-name", parsed_args.output_id])
+    if command == "build":
         if parsed_args.extra_meta:
-            for k, v in parsed_args.extra_meta.items():
-                cmd.append(f"--extra-meta={k}={v}")
+            extra_context.update(parsed_args.extra_meta)
         if parsed_args.output_folder:
-            cmd.extend(["--output-dir", parsed_args.output_folder])
-        else:
-            cmd.extend(["--output-dir", config.croot])
-        if not parsed_args.set_build_id:
-            cmd.append("--no-build-id")
-        if parsed_args.debug:
-            cmd.append("--debug")
-        if parsed_args.notest:
-            cmd.extend(["--test", "skip"])
-        if parsed_args.quiet:
-            cmd.append("-q")
-        if parsed_args.skip_existing != "none":
-            if parsed_args.skip_existing == "local":
-                cmd.append("--skip-existing=local")
-            elif parsed_args.skip_existing == "all":
-                cmd.append("--skip-existing=all")
-        if not parsed_args.include_recipe:
-            cmd.append("--no-include-recipe")
+            output_dir = parsed_args.output_folder
+        no_build_id = not parsed_args.set_build_id
+        debug = parsed_args.debug
+        test_strategy = "skip" if parsed_args.notest else "native"
+        # if parsed_args.quiet:
+        # TODO: quiet does not exist in py-rattler-build
+        # cmd.append("-q")
+        skip_existing = parsed_args.skip_existing or "none"
+        no_include_recipe = not parsed_args.include_recipe
         if parsed_args.conda_pkg_format == CondaPkgFormat.V2:
-            cmd.extend(
-                ["--package-format", f".conda:{parsed_args.zstd_compression_level}"]
-            )
+            package_format = "conda"
         else:
-            cmd.extend(["--package-format", ".tar.bz2"])
+            package_format = ".tar.bz2"
 
-    try:
-        rattler_cmd = find_rattler_build()
-        cmd = [rattler_cmd, *cmd[1:]]
-        print("Running rattler:", shlex.join(cmd))
-        subprocess.run(cmd, check=True)
-        return 0
-    except subprocess.CalledProcessError as e:
-        print(f"rattler failed: {e}", file=sys.stderr)
-        return e.returncode
+    if command in ("build", "render"):
+        if command == "render":
+            recipe_path = join(parsed_args.recipe, "recipe.yaml")
+            recipes = [recipe_path]
+        else:
+            recipes = [
+                join(recipe_dir, "recipe.yaml") for recipe_dir in parsed_args.recipe
+            ]
+
+        from ..variants import find_config_files
+
+        # configure variant
+        for variant in config_files:
+            variant_config = VariantConfig.from_file(variant)
+
+        # common tool / platform / render configuration
+        tool_config = ToolConfiguration(
+            test_strategy=test_strategy,
+            skip_existing=skip_existing,
+            noarch_build_platform=noarch_build_platform,
+            channel_priority=channel_priority,
+        )
+
+        platform_config = PlatformConfig(
+            target_platform=target_platform,
+            build_platform=build_platform,
+            host_platform=host_platform,
+        )
+
+        render_config = RenderConfig(
+            platform=platform_config,
+            extra_context=extra_context,
+        )
+
+        return process_recipes(
+            recipes=recipes,
+            variant_config=variant_config,
+            render_config=render_config,
+            tool_config=tool_config,
+            command=command,
+            output_dir=output_dir,
+            channels=channels,
+            show_logs=show_logs,
+            no_build_id=no_build_id,
+            package_format=package_format,
+            no_include_recipe=no_include_recipe,
+            debug=debug,
+        )

@@ -1,7 +1,7 @@
 beautifulsoup4
 chardet
 conda >=25.11.0
-conda-forge::rattler-build
+conda-forge::py-rattler-build >=0.58.0 # v1 recipe support
 conda-index >=0.4.0
 conda-libmamba-solver >=25.11.0  # includes fix for CondaSolver deprecation warnings
 conda-package-handling >=2.2.0
