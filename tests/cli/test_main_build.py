@@ -550,9 +550,23 @@ def test_build_with_empty_channel_fails(empty_channel: Path) -> None:
         )
 
 
-def test_build_with_v1_recipe() -> None:
+def test_build_v1_recipe() -> None:
     """Test building a v1 recipe"""
     recipe = os.path.join(metadata_dir, "..", "variants", "32_v1_recipe")
 
-    args = [recipe]
+    args = [recipe, "-c", "conda-forge"]
     assert main_build.execute(args) == 0
+
+
+def test_build_v1_recipe_multi_output(testing_workdir: str) -> None:
+    """Test building a multi-output v1 recipe"""
+    recipe = os.path.join(metadata_dir, "..", "variants", "33_v1_recipe_multi_output")
+
+    out = Path(testing_workdir, "out")
+    out.mkdir(parents=True)
+
+    args = [recipe, "--output-folder", str(out), "-c", "conda-forge"]
+    assert main_build.execute(args) == 0
+
+    conda_packages = list(out.rglob("*.conda"))
+    assert len(conda_packages) == 2
