@@ -4,10 +4,12 @@ import argparse
 from os.path import join
 from pathlib import Path
 
+from conda import CondaError
 from conda.base.context import context
+from rattler_build import RattlerBuildError
 from rattler_build.progress import RichProgressCallback
 from rattler_build.render import RenderConfig
-from rattler_build.stage0 import Stage0Recipe
+from rattler_build.stage0 import MultiOutputRecipe, Stage0Recipe
 from rattler_build.tool_config import PlatformConfig, ToolConfiguration
 from rattler_build.variant_config import VariantConfig
 
@@ -91,8 +93,6 @@ def check_arguments_rattler(
 def process_recipes(
     recipes: list[str],
     variant_config: VariantConfig,
-    render_config: RenderConfig,
-    tool_config: ToolConfiguration,
     command: str,
     output_dir: str,
     channels: list[str],
@@ -101,6 +101,15 @@ def process_recipes(
     package_format: str,
     no_include_recipe: bool,
     debug: bool,
+    target_platform: str,
+    build_platform: str,
+    host_platform: str,
+    experimental: bool,
+    extra_context: dict[str],
+    test_strategy: str,
+    skip_existing: bool,
+    noarch_build_platform: str,
+    channel_priority: str,
 ) -> int:
     import yaml
 
@@ -113,10 +122,36 @@ def process_recipes(
             # load the recipe file
             try:
                 recipe = Stage0Recipe.from_file(Path(recipe_path))
-            except Exception as e:
+            except RattlerBuildError as e:
                 raise CondaBuildUserError(
                     f"Failed to process recipe {recipe_path}: {str(e)}"
                 )
+
+            if isinstance(recipe, MultiOutputRecipe):
+                for idx, output in enumerate(recipe.outputs, 1):
+                    output_dict = output.to_dict()
+                    if "staging" in output_dict:
+                        experimental = True
+
+            # common tool / platform / render configuration
+            tool_config = ToolConfiguration(
+                test_strategy=test_strategy,
+                skip_existing=skip_existing,
+                noarch_build_platform=noarch_build_platform,
+                channel_priority=channel_priority,
+            )
+
+            platform_config = PlatformConfig(
+                target_platform=target_platform,
+                build_platform=build_platform,
+                host_platform=host_platform,
+                experimental=experimental,
+            )
+
+            render_config = RenderConfig(
+                platform=platform_config,
+                extra_context=extra_context,
+            )
 
             # render the recipe
             try:
@@ -127,8 +162,9 @@ def process_recipes(
                 )
 
             if command == "render":
-                data = rendered[0].recipe.to_dict()
-                print(yaml.safe_dump(data, indent=2, sort_keys=False))
+                for item in rendered:
+                    data = item.recipe.to_dict()
+                    print(yaml.safe_dump(data, indent=2, sort_keys=False))
                 succeeded.append(recipe_path_str)
                 continue
 
@@ -151,9 +187,8 @@ def process_recipes(
                             no_include_recipe=no_include_recipe,
                             debug=debug,
                         )
-                except Exception as e:
-                    print(f"Build failed for recipe {recipe_path}: {str(e)}")
-                    raise
+                except RattlerBuildError as e:
+                    raise CondaError(f"Build failed for recipe {recipe_path}: {str(e)}")
 
             # if all variants built without raising, mark recipe as succeeded
             succeeded.append(recipe_path_str)
@@ -195,6 +230,7 @@ def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -
     output_dir: str = config.croot
     no_include_recipe: bool = False
     no_build_id: bool = False
+    experimental: bool = False
     package_format: str | None = None
     debug: bool = False
     channels: list[str] = []
@@ -206,6 +242,7 @@ def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -
     noarch_build_platform: str = config.variant.get(
         "noarch_build_platform", config.subdir
     )
+    variant_config: VariantConfig = VariantConfig()
 
     # TODO: investigate why is config.channel_urls
     # does not pick up condarc settings, need to use context.channels
@@ -293,36 +330,14 @@ def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -
                 join(recipe_dir, "recipe.yaml") for recipe_dir in parsed_args.recipe
             ]
 
-        from ..variants import find_config_files
-
         # configure variant
-        for variant in config_files:
-            variant_config = VariantConfig.from_file(variant)
-
-        # common tool / platform / render configuration
-        tool_config = ToolConfiguration(
-            test_strategy=test_strategy,
-            skip_existing=skip_existing,
-            noarch_build_platform=noarch_build_platform,
-            channel_priority=channel_priority,
-        )
-
-        platform_config = PlatformConfig(
-            target_platform=target_platform,
-            build_platform=build_platform,
-            host_platform=host_platform,
-        )
-
-        render_config = RenderConfig(
-            platform=platform_config,
-            extra_context=extra_context,
-        )
+        if config_files:
+            for variant in config_files:
+                variant_config = VariantConfig.from_file(variant)
 
         return process_recipes(
             recipes=recipes,
             variant_config=variant_config,
-            render_config=render_config,
-            tool_config=tool_config,
             command=command,
             output_dir=output_dir,
             channels=channels,
@@ -331,4 +346,13 @@ def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -
             package_format=package_format,
             no_include_recipe=no_include_recipe,
             debug=debug,
+            target_platform=target_platform,
+            build_platform=build_platform,
+            host_platform=host_platform,
+            experimental=experimental,
+            extra_context=extra_context,
+            test_strategy=test_strategy,
+            skip_existing=skip_existing,
+            noarch_build_platform=noarch_build_platform,
+            channel_priority=channel_priority,
         )
