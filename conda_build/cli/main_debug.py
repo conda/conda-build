@@ -105,7 +105,8 @@ def execute(args: Sequence[str] | None = None) -> int:
         parsed_only_recipe = parser.parse_args([parsed.recipe_or_package_file_path])
         check_arguments_rattler(parser.prog.split()[-1], parsed, parsed_only_recipe)
         parsed.recipe = parsed.recipe_or_package_file_path
-        return run_rattler(parsed, config)
+        command = parser.prog.split()[-1]
+        return run_rattler(command, parsed, config)
 
     try:
         activation_string = api.debug(

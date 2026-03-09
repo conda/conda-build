@@ -554,7 +554,7 @@ def test_build_v1_recipe() -> None:
     """Test building a v1 recipe"""
     recipe = os.path.join(metadata_dir, "..", "variants", "32_v1_recipe")
 
-    args = [recipe, "-c", "conda-forge"]
+    args = [recipe, "-c", "conda-forge", "--override-channels"]
     assert main_build.execute(args) == 0
 
 
@@ -565,7 +565,14 @@ def test_build_v1_recipe_multi_output(testing_workdir: str) -> None:
     out = Path(testing_workdir, "out")
     out.mkdir(parents=True)
 
-    args = [recipe, "--output-folder", str(out), "-c", "conda-forge"]
+    args = [
+        recipe,
+        "--output-folder",
+        str(out),
+        "-c",
+        "conda-forge",
+        "--override-channels",
+    ]
     assert main_build.execute(args) == 0
 
     conda_packages = list(out.rglob("*.conda"))
