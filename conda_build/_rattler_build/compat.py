@@ -4,9 +4,13 @@ import argparse
 from os.path import join
 from pathlib import Path
 
-from conda import CondaError
+import yaml
 from conda.base.context import context
-from rattler_build import RattlerBuildError
+from conda.exceptions import CondaError
+from rattler_build import (
+    RattlerBuildError,
+    RecipeParseError,
+)
 from rattler_build.progress import RichProgressCallback
 from rattler_build.render import RenderConfig
 from rattler_build.stage0 import MultiOutputRecipe, Stage0Recipe
@@ -57,6 +61,7 @@ def check_arguments_rattler(
             "conda_pkg_format",
             "zstd_compression_level",
             "channel",
+            "override_channels",
         },
         "render": {
             "recipe",
@@ -64,12 +69,14 @@ def check_arguments_rattler(
             "verbose",
             "exclusive_config_files",
             "channel",
+            "override_channels",
         },
         "debug": {
             "recipe",
             "output_id",
             "variant_config_files",
             "exclusive_config_files",
+            "override_channels",
         },
     }
 
@@ -111,92 +118,91 @@ def process_recipes(
     noarch_build_platform: str,
     channel_priority: str,
 ) -> int:
-    import yaml
 
     succeeded: list[str] = []
     failed: dict[str, str] = {}
+    errors: list[Exception] = []
 
     for recipe_path in recipes:
         recipe_path_str = str(recipe_path)
+
+        # load the recipe file
         try:
-            # load the recipe file
-            try:
-                recipe = Stage0Recipe.from_file(Path(recipe_path))
-            except RattlerBuildError as e:
-                raise CondaBuildUserError(
-                    f"Failed to process recipe {recipe_path}: {str(e)}"
-                )
-
-            if isinstance(recipe, MultiOutputRecipe):
-                for idx, output in enumerate(recipe.outputs, 1):
-                    output_dict = output.to_dict()
-                    if "staging" in output_dict:
-                        experimental = True
-
-            # common tool / platform / render configuration
-            tool_config = ToolConfiguration(
-                test_strategy=test_strategy,
-                skip_existing=skip_existing,
-                noarch_build_platform=noarch_build_platform,
-                channel_priority=channel_priority,
+            recipe = Stage0Recipe.from_file(Path(recipe_path))
+        except RecipeParseError as e:
+            err = CondaBuildUserError(
+                f"Failed to process recipe {recipe_path}: {str(e)}"
             )
-
-            platform_config = PlatformConfig(
-                target_platform=target_platform,
-                build_platform=build_platform,
-                host_platform=host_platform,
-                experimental=experimental,
-            )
-
-            render_config = RenderConfig(
-                platform=platform_config,
-                extra_context=extra_context,
-            )
-
-            # render the recipe
-            try:
-                rendered = recipe.render(variant_config, render_config)
-            except Exception as e:
-                raise CondaBuildUserError(
-                    f"Failed to render recipe {recipe_path}: {str(e)}"
-                )
-
-            if command == "render":
-                for item in rendered:
-                    data = item.recipe.to_dict()
-                    print(yaml.safe_dump(data, indent=2, sort_keys=False))
-                succeeded.append(recipe_path_str)
-                continue
-
-            # build all rendered variants
-            for i, variant in enumerate(rendered, 1):
-                print(
-                    f"\n🔨 Building variant {i}/{len(rendered)} "
-                    f"for recipe {recipe_path}"
-                )
-
-                try:
-                    with RichProgressCallback(show_logs=show_logs) as progress_callback:
-                        variant.run_build(
-                            tool_config=tool_config,
-                            output_dir=output_dir,
-                            channels=channels,
-                            progress_callback=progress_callback,
-                            no_build_id=no_build_id,
-                            package_format=package_format,
-                            no_include_recipe=no_include_recipe,
-                            debug=debug,
-                        )
-                except RattlerBuildError as e:
-                    raise CondaError(f"Build failed for recipe {recipe_path}: {str(e)}")
-
-            # if all variants built without raising, mark recipe as succeeded
-            succeeded.append(recipe_path_str)
-
-        except Exception as e:
-            # catch any failure for this recipe and continue with the next
+            errors.append(err)
             failed[recipe_path_str] = str(e)
-            print(f"Skipping remaining work for recipe {recipe_path}.")
+            continue
+
+        if isinstance(recipe, MultiOutputRecipe):
+            for output in recipe.outputs:
+                output_dict = output.to_dict()
+                print(output_dict)
+                if "staging" in output_dict:
+                    experimental = True
+
+        # common tool / platform / render configuration
+        tool_config = ToolConfiguration(
+            test_strategy=test_strategy,
+            skip_existing=skip_existing,
+            noarch_build_platform=noarch_build_platform,
+            channel_priority=channel_priority,
+        )
+
+        platform_config = PlatformConfig(
+            target_platform=target_platform,
+            build_platform=build_platform,
+            host_platform=host_platform,
+            experimental=experimental,
+        )
+
+        render_config = RenderConfig(
+            platform=platform_config,
+            extra_context=extra_context,
+        )
+
+        # render the recipe
+        try:
+            rendered = recipe.render(variant_config, render_config)
+        except RattlerBuildError as e:
+            err = CondaBuildUserError(
+                f"Failed to render recipe {recipe_path}: {str(e)}"
+            )
+            errors.append(err)
+            failed[recipe_path_str] = str(e)
+            continue
+
+        if command == "render":
+            for item in rendered:
+                data = item.recipe.to_dict()
+                print(yaml.safe_dump(data, indent=2, sort_keys=False))
+            succeeded.append(recipe_path_str)
+            continue
+
+        # build all rendered variants
+        for i, variant in enumerate(rendered, 1):
+            print(f"\n🔨 Building variant {i}/{len(rendered)} for recipe {recipe_path}")
+
+            try:
+                with RichProgressCallback(show_logs=show_logs) as progress_callback:
+                    variant.run_build(
+                        tool_config=tool_config,
+                        output_dir=output_dir,
+                        channels=channels,
+                        progress_callback=progress_callback,
+                        no_build_id=no_build_id,
+                        package_format=package_format,
+                        no_include_recipe=no_include_recipe,
+                        debug=debug,
+                    )
+            except RattlerBuildError as e:
+                err = CondaError(f"Build failed for recipe {recipe_path}: {str(e)}")
+
+        # if all variants built without raising, mark recipe as succeeded
+        succeeded.append(recipe_path_str)
 
     # summary
     print("\n=== Build summary ===")
@@ -213,6 +219,9 @@ def process_recipes(
             print(f"  - {path}: {error}")
     else:
         print("\nFailed: none")
+
+    if errors:
+        raise CondaBuildUserError(errors)
 
     return 1 if failed else 0
 
@@ -232,7 +241,7 @@ def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -
     no_build_id: bool = False
     experimental: bool = False
     package_format: str | None = None
-    debug: bool = False
+    debug: bool = command == "debug"
     channels: list[str] = []
     extra_context: dict[str] = {}
     show_logs: bool = getattr(parsed_args, "quiet", False) is False
@@ -246,24 +255,33 @@ def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -
 
     # TODO: investigate why is config.channel_urls
     # does not pick up condarc settings, need to use context.channels
-    channels = list(context.channels)
-    if config.channel_urls:
-        for url in config.channel_urls:
-            # TODO: fix -c local
-            # TypeError: argument 'channels': 'Channel' object cannot be cast as 'str'
-            if url in context.custom_multichannels:
-                channels.extend(
-                    [local_url for local_url in context.custom_multichannels[url]]
-                )
-            else:
-                channels.append(url)
+    if parsed_args.override_channels:
+        if not parsed_args.channel:
+            raise CondaBuildUserError(
+                "Channels must be specified using -c/--channel argument when --override-channels is used."
+            )
+        channels = list(parsed_args.channel)
+    else:
+        channels = list(context.channels)
+        if config.channel_urls:
+            for url in config.channel_urls:
+                # TODO: fix -c local
+                # TypeError: argument 'channels': 'Channel' object cannot be cast as 'str'
+                if url in context.custom_multichannels:
+                    channels.extend(
+                        [local_url for local_url in context.custom_multichannels[url]]
+                    )
+                else:
+                    channels.append(url)
+
+    channels = list(dict.fromkeys(channels))
 
     if context.channel_priority == "strict":
         channel_priority = "strict"
     else:
         channel_priority = "disabled"
 
-    if command in ("build", "render"):
+    if command in ("build", "render", "debug"):
         # TODO: --ignore-recipe-variants only available via deprecated
         # rattler_build.cli_api:build_recipes()
         # cmd.append("--ignore-recipe-variants")
@@ -299,7 +317,6 @@ def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -
         # TODO: find this option in py-rattler-build
         # cmd.append("--verbose")
 
-    # if command == "debug":
     # TODO: output_name does not exist in python bindings
     # if parsed_args.output_id:
     # cmd.extend(["--output-name", parsed_args.output_id])
@@ -309,7 +326,6 @@ def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -
         if parsed_args.output_folder:
             output_dir = parsed_args.output_folder
         no_build_id = not parsed_args.set_build_id
-        debug = parsed_args.debug
         test_strategy = "skip" if parsed_args.notest else "native"
         # if parsed_args.quiet:
         # TODO: quiet does not exist in py-rattler-build
@@ -321,8 +337,8 @@ def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -
         else:
             package_format = ".tar.bz2"
 
-    if command in ("build", "render"):
-        if command == "render":
+    if command in ("build", "render", "debug"):
+        if command in ("render", "debug"):
             recipe_path = join(parsed_args.recipe, "recipe.yaml")
             recipes = [recipe_path]
         else:
