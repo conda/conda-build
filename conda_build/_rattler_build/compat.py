@@ -6,7 +6,6 @@ from pathlib import Path
 
 import yaml
 from conda.base.context import context
-from conda.exceptions import CondaError
 from rattler_build import (
     RattlerBuildError,
     RecipeParseError,
@@ -121,7 +120,6 @@ def process_recipes(
 
     succeeded: list[str] = []
     failed: dict[str, str] = {}
-    errors: list[Exception] = []
 
     for recipe_path in recipes:
         recipe_path_str = str(recipe_path)
@@ -131,10 +129,9 @@ def process_recipes(
             recipe = Stage0Recipe.from_file(Path(recipe_path))
         except RecipeParseError as e:
             err = CondaBuildUserError(
-                f"Failed to process recipe {recipe_path}: {str(e)}"
+                f"Failed to process recipe file {recipe_path}: {str(e)}"
             )
-            errors.append(err)
-            failed[recipe_path_str] = str(e)
+            failed[recipe_path_str] = str(err)
             continue
 
         if isinstance(recipe, MultiOutputRecipe):
@@ -171,8 +168,7 @@ def process_recipes(
             err = CondaBuildUserError(
                 f"Failed to render recipe {recipe_path}: {str(e)}"
             )
-            errors.append(err)
-            failed[recipe_path_str] = str(e)
+            failed[recipe_path_str] = str(err)
             continue
 
         if command == "render":
@@ -198,8 +194,10 @@ def process_recipes(
                     debug=debug,
                 )
             except RattlerBuildError as e:
-                err = CondaError(f"Build failed for recipe {recipe_path}: {str(e)}")
-                failed[recipe_path_str] = str(e)
+                err = CondaBuildUserError(
+                    f"Failed to build recipe {recipe_path}: {str(e)}"
+                )
+                failed[recipe_path_str] = str(err)
                 continue
 
         # if all variants built without raising, mark recipe as succeeded
@@ -216,13 +214,12 @@ def process_recipes(
 
     if failed:
         print("\nFailed:")
-        for path, error in failed.items():
-            print(f"  - {path}: {error}")
+        msg = "Recipe build failures:\n" + "\n".join(
+            f"  - {p}: {e}" for p, e in failed.items()
+        )
+        raise CondaBuildUserError(msg)
     else:
         print("\nFailed: none")
-
-    if errors:
-        raise CondaBuildUserError(errors)
 
     return 1 if failed else 0
 
