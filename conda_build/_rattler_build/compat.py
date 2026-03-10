@@ -11,7 +11,7 @@ from rattler_build import (
     RattlerBuildError,
     RecipeParseError,
 )
-from rattler_build.progress import RichProgressCallback
+from rattler_build.progress import SimpleProgressCallback
 from rattler_build.render import RenderConfig
 from rattler_build.stage0 import MultiOutputRecipe, Stage0Recipe
 from rattler_build.tool_config import PlatformConfig, ToolConfiguration
@@ -187,19 +187,20 @@ def process_recipes(
             print(f"\n🔨 Building variant {i}/{len(rendered)} for recipe {recipe_path}")
 
             try:
-                with RichProgressCallback(show_logs=show_logs) as progress_callback:
-                    variant.run_build(
-                        tool_config=tool_config,
-                        output_dir=output_dir,
-                        channels=channels,
-                        progress_callback=progress_callback,
-                        no_build_id=no_build_id,
-                        package_format=package_format,
-                        no_include_recipe=no_include_recipe,
-                        debug=debug,
-                    )
+                variant.run_build(
+                    tool_config=tool_config,
+                    output_dir=output_dir,
+                    channels=channels,
+                    progress_callback=SimpleProgressCallback(),
+                    no_build_id=no_build_id,
+                    package_format=package_format,
+                    no_include_recipe=no_include_recipe,
+                    debug=debug,
+                )
             except RattlerBuildError as e:
                 err = CondaError(f"Build failed for recipe {recipe_path}: {str(e)}")
+                failed[recipe_path_str] = str(e)
+                continue
 
         # if all variants built without raising, mark recipe as succeeded
         succeeded.append(recipe_path_str)
