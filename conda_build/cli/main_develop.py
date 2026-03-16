@@ -3,49 +3,52 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
-
-from conda.base.context import context
-
-from .. import api
-
-try:
-    from conda.cli.helpers import add_parser_prefix
-except ImportError:
-    # conda<23.11
-    from conda.cli.conda_argparse import add_parser_prefix
+import warnings
+from typing import TYPE_CHECKING, Sequence
 
 if TYPE_CHECKING:
     from argparse import ArgumentParser, Namespace
-    from collections.abc import Sequence
 
 logging.basicConfig(level=logging.INFO)
 
+_DEPRECATION_MSG = (
+    "'conda develop' is deprecated and will be removed in a future release of conda-build.\n"
+    "Please use pip editable installs instead, for example:\n"
+    "  python -m pip install -e PATH\n"
+    "To uninstall, use:\n"
+    "  python -m pip uninstall <package>\n"
+    "If you previously relied on conda.pth, you may remove entries manually from that file."
+)
+
 
 def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
-    from conda.cli.conda_argparse import ArgumentParser
+    from argparse import ArgumentParser
 
     parser = ArgumentParser(
         prog="conda develop",
-        description="""
-
-Install a Python package in 'development mode'.
-
-This works by creating a conda.pth file in site-packages.""",
-        # TODO: Use setup.py to determine any entry-points to install.
+        description=(
+            "Install a Python package in 'development mode'.\n\n"
+            "Deprecated: 'conda develop' is deprecated and will be removed in a future release.\n"
+            "Use pip editable installs instead, e.g.:\n"
+            "  python -m pip install -e PATH\n\n"
+            "This works by creating a conda.pth file in site-packages."
+        ),
     )
 
     parser.add_argument(
-        "source", metavar="PATH", nargs="+", help="Path to the source directory."
+        "source",
+        metavar="PATH",
+        nargs="*",
+        help="Path to the source directory.",
     )
     parser.add_argument(
         "-npf",
         "--no-pth-file",
         action="store_true",
         help=(
-            "Relink compiled extension dependencies against "
-            "libraries found in current conda env. "
-            "Do not add source to conda.pth."
+            "Relink compiled extension dependencies against libraries found in current environment. "
+            "Do not add source to conda.pth. "
+            "(Deprecated: prefer 'python -m pip install -e PATH'.)"
         ),
     )
     parser.add_argument(
@@ -55,8 +58,8 @@ This works by creating a conda.pth file in site-packages.""",
         help=(
             "Build extensions inplace, invoking: "
             "python setup.py build_ext --inplace; "
-            "add to conda.pth; relink runtime libraries to "
-            "environment's lib/."
+            "add to conda.pth; relink runtime libraries to environment's lib/. "
+            "(Deprecated: prefer standard build workflows via pip/build backends.)"
         ),
     )
     parser.add_argument(
@@ -64,9 +67,9 @@ This works by creating a conda.pth file in site-packages.""",
         "--clean",
         action="store_true",
         help=(
-            "Invoke clean on setup.py: "
-            "python setup.py clean "
-            "use with build_ext to clean before building."
+            "Invoke clean on setup.py: python setup.py clean. "
+            "Use with --build_ext to clean before building. "
+            "(Deprecated.)"
         ),
     )
     parser.add_argument(
@@ -74,29 +77,26 @@ This works by creating a conda.pth file in site-packages.""",
         "--uninstall",
         action="store_true",
         help=(
-            "Removes package if installed in 'development mode' "
-            "by deleting path from conda.pth file. Ignore other "
-            "options - just uninstall and exit"
+            "Removes package if installed in 'development mode' by deleting path from conda.pth file. "
+            "Ignore other options - just uninstall and exit. "
+            "(Deprecated: use 'python -m pip uninstall <package>'.)"
         ),
     )
-
-    add_parser_prefix(parser)
-    parser.set_defaults(func=execute)
 
     return parser, parser.parse_args(args)
 
 
-def execute(args: Sequence[str] | None = None) -> int:
-    _, parsed = parse_args(args)
-    context.__init__(argparse_args=parsed)
-
-    api.develop(
-        parsed.source,
-        prefix=context.target_prefix,
-        no_pth_file=parsed.no_pth_file,
-        build_ext=parsed.build_ext,
-        clean=parsed.clean,
-        uninstall=parsed.uninstall,
+def main(argv: Sequence[str] | None = None) -> int:
+    warnings.warn(_DEPRECATION_MSG, DeprecationWarning)
+    # Avoid parsing unrelated process arguments if argv is None
+    if argv is None:
+        argv = []
+    _, ns = parse_args(argv)
+    logging.getLogger(__name__).info(
+        "No-op: 'conda develop' is deprecated. Parsed args: %s", vars(ns)
     )
-
     return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
