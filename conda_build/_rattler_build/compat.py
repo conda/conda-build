@@ -70,13 +70,6 @@ def check_arguments_rattler(
             "channel",
             "override_channels",
         },
-        "debug": {
-            "recipe",
-            "output_id",
-            "variant_config_files",
-            "exclusive_config_files",
-            "override_channels",
-        },
     }
 
     # check for unsupported CLI arguments
@@ -106,7 +99,6 @@ def process_recipes(
     no_build_id: bool,
     package_format: str,
     no_include_recipe: bool,
-    debug: bool,
     target_platform: str,
     build_platform: str,
     host_platform: str,
@@ -191,7 +183,6 @@ def process_recipes(
                     no_build_id=no_build_id,
                     package_format=package_format,
                     no_include_recipe=no_include_recipe,
-                    debug=debug,
                 )
             except RattlerBuildError as e:
                 err = CondaBuildUserError(
@@ -226,7 +217,7 @@ def process_recipes(
 
 def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -> int:
     """Run rattler-build for v1 recipes"""
-    if command not in ("build", "render", "debug"):
+    if command not in ("build", "render"):
         raise ValueError(f"Unrecognized subcommand: {command}")
 
     # Initialize configuration defaults
@@ -239,7 +230,6 @@ def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -
     no_build_id: bool = False
     experimental: bool = False
     package_format: str | None = None
-    debug: bool = command == "debug"
     channels: list[str] = []
     extra_context: dict[str] = {}
     show_logs: bool = getattr(parsed_args, "quiet", False) is False
@@ -279,9 +269,10 @@ def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -
     else:
         channel_priority = "disabled"
 
-    if command in ("build", "render", "debug"):
+    if command in ("build", "render"):
         # TODO: --ignore-recipe-variants only available via deprecated
         # rattler_build.cli_api:build_recipes()
+        # xref https://github.com/prefix-dev/rattler-build/issues/2334
         # cmd.append("--ignore-recipe-variants")
 
         from ..variants import find_config_files
@@ -335,8 +326,8 @@ def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -
         else:
             package_format = ".tar.bz2"
 
-    if command in ("build", "render", "debug"):
-        if command in ("render", "debug"):
+    if command in ("build", "render"):
+        if command in ("render"):
             recipe_path = join(parsed_args.recipe, "recipe.yaml")
             recipes = [recipe_path]
         else:
@@ -345,6 +336,8 @@ def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -
             ]
 
         # configure variant
+        # TODO: implement support for multiple config files
+        # xref https://github.com/prefix-dev/rattler-build/issues/2336
         if config_files:
             for variant in config_files:
                 variant_config = VariantConfig.from_file(variant)
@@ -359,7 +352,6 @@ def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -
             no_build_id=no_build_id,
             package_format=package_format,
             no_include_recipe=no_include_recipe,
-            debug=debug,
             target_platform=target_platform,
             build_platform=build_platform,
             host_platform=host_platform,
