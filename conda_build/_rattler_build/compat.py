@@ -12,7 +12,7 @@ from rattler_build import (
 )
 from rattler_build.progress import SimpleProgressCallback
 from rattler_build.render import RenderConfig
-from rattler_build.stage0 import MultiOutputRecipe, Stage0Recipe
+from rattler_build.stage0 import Stage0Recipe
 from rattler_build.tool_config import PlatformConfig, ToolConfiguration
 from rattler_build.variant_config import VariantConfig
 
@@ -99,15 +99,9 @@ def process_recipes(
     no_build_id: bool,
     package_format: str,
     no_include_recipe: bool,
-    target_platform: str,
-    build_platform: str,
-    host_platform: str,
-    experimental: bool,
-    extra_context: dict[str],
-    test_strategy: str,
-    skip_existing: bool,
-    noarch_build_platform: str,
-    channel_priority: str,
+    tool_config: ToolConfiguration,
+    platform_config: PlatformConfig,
+    render_config: RenderConfig,
 ) -> int:
 
     succeeded: list[str] = []
@@ -125,33 +119,6 @@ def process_recipes(
             )
             failed[recipe_path_str] = str(err)
             continue
-
-        if isinstance(recipe, MultiOutputRecipe):
-            for output in recipe.outputs:
-                output_dict = output.to_dict()
-                print(output_dict)
-                if "staging" in output_dict:
-                    experimental = True
-
-        # common tool / platform / render configuration
-        tool_config = ToolConfiguration(
-            test_strategy=test_strategy,
-            skip_existing=skip_existing,
-            noarch_build_platform=noarch_build_platform,
-            channel_priority=channel_priority,
-        )
-
-        platform_config = PlatformConfig(
-            target_platform=target_platform,
-            build_platform=build_platform,
-            host_platform=host_platform,
-            experimental=experimental,
-        )
-
-        render_config = RenderConfig(
-            platform=platform_config,
-            extra_context=extra_context,
-        )
 
         # render the recipe
         try:
@@ -228,7 +195,6 @@ def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -
     output_dir: str = config.croot
     no_include_recipe: bool = False
     no_build_id: bool = False
-    experimental: bool = False
     package_format: str | None = None
     channels: list[str] = []
     extra_context: dict[str] = {}
@@ -326,6 +292,25 @@ def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -
         else:
             package_format = ".tar.bz2"
 
+    # common tool / platform / render configuration
+    tool_config = ToolConfiguration(
+        test_strategy=test_strategy,
+        skip_existing=skip_existing,
+        noarch_build_platform=noarch_build_platform,
+        channel_priority=channel_priority,
+    )
+
+    platform_config = PlatformConfig(
+        target_platform=target_platform,
+        build_platform=build_platform,
+        host_platform=host_platform,
+    )
+
+    render_config = RenderConfig(
+        platform=platform_config,
+        extra_context=extra_context,
+    )
+
     if command in ("build", "render"):
         if command in ("render"):
             recipe_path = join(parsed_args.recipe, "recipe.yaml")
@@ -352,13 +337,7 @@ def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -
             no_build_id=no_build_id,
             package_format=package_format,
             no_include_recipe=no_include_recipe,
-            target_platform=target_platform,
-            build_platform=build_platform,
-            host_platform=host_platform,
-            experimental=experimental,
-            extra_context=extra_context,
-            test_strategy=test_strategy,
-            skip_existing=skip_existing,
-            noarch_build_platform=noarch_build_platform,
-            channel_priority=channel_priority,
+            tool_config=tool_config,
+            platform_config=platform_config,
+            render_config=render_config,
         )
