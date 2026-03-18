@@ -10,7 +10,7 @@ from rattler_build import (
     RattlerBuildError,
     RecipeParseError,
 )
-from rattler_build.progress import SimpleProgressCallback
+from rattler_build.progress import LogEvent, SimpleProgressCallback
 from rattler_build.render import RenderConfig
 from rattler_build.stage0 import Stage0Recipe
 from rattler_build.tool_config import PlatformConfig, ToolConfiguration
@@ -18,8 +18,24 @@ from rattler_build.variant_config import VariantConfig
 
 from ..config import CondaPkgFormat, Config
 from ..exceptions import CondaBuildUserError
+from ..utils import get_logger
 
 CONFIG_FILES = {"conda_build_config.yaml", "variants.yaml"}
+
+log = get_logger(__name__)
+
+
+class CondaProgressCallback(SimpleProgressCallback):
+    def __init__(self, show_logs: bool = True):
+        super().__init__()
+        self.show_logs = show_logs
+
+    def on_log(self, event: LogEvent) -> None:
+        if not self.show_logs:
+            return
+
+        level_name = {"error": "error", "warn": "warning"}.get(event.level, "info")
+        getattr(log, level_name)(event.message)
 
 
 def check_arguments_rattler(
@@ -139,14 +155,14 @@ def process_recipes(
 
         # build all rendered variants
         for i, variant in enumerate(rendered, 1):
-            print(f"\n🔨 Building variant {i}/{len(rendered)} for recipe {recipe_path}")
+            print(f"\nBuilding variant {i}/{len(rendered)} for recipe {recipe_path}")
 
             try:
                 variant.run_build(
                     tool_config=tool_config,
                     output_dir=output_dir,
                     channels=channels,
-                    progress_callback=SimpleProgressCallback(),
+                    progress_callback=CondaProgressCallback(show_logs=show_logs),
                     no_build_id=no_build_id,
                     package_format=package_format,
                     no_include_recipe=no_include_recipe,
