@@ -337,11 +337,10 @@ def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -
             ]
 
         # configure variant
-        # TODO: implement support for multiple config files
-        # xref https://github.com/prefix-dev/rattler-build/issues/2336
+        # merge config files in the order they are stacked
         if config_files:
             for variant in config_files:
-                variant_config = VariantConfig.from_file(variant)
+                variant_config = variant_config.merge(VariantConfig.from_file(variant))
 
         return process_recipes(
             recipes=recipes,
