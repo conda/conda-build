@@ -50,7 +50,7 @@ requirements:
     - pkginfo
     - psutil
     - py-lief
-    - py-rattler-build >=0.58.2
+    - py-rattler-build >=0.61.1
     - python
     - python-libarchive-c
     - pyyaml
