@@ -1,6 +1,6 @@
 Pillow==12.1.1
 PyYAML==6.0.3
-Sphinx<10
+Sphinx==9.1.0
 conda-sphinx-theme==0.4.0
 linkify-it-py==2.1.0
 myst-parser==5.0.0
