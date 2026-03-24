@@ -250,11 +250,6 @@ def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -
         channel_priority = "disabled"
 
     if command in ("build", "render"):
-        # TODO: --ignore-recipe-variants only available via deprecated
-        # rattler_build.cli_api:build_recipes()
-        # xref https://github.com/prefix-dev/rattler-build/issues/2334
-        # cmd.append("--ignore-recipe-variants")
-
         from ..variants import find_config_files
 
         if len(parsed_args.recipe) > 1:
