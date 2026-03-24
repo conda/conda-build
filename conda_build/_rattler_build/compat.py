@@ -63,7 +63,6 @@ def check_arguments_rattler(
         "build": {
             "recipe",
             "variant_config_files",
-            "verbose",
             "exclusive_config_files",
             "extra_meta",
             "output_folder",
@@ -81,7 +80,6 @@ def check_arguments_rattler(
         "render": {
             "recipe",
             "variant_config_files",
-            "verbose",
             "exclusive_config_files",
             "channel",
             "override_channels",
@@ -284,10 +282,6 @@ def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -
                 recipe_config_filenames=CONFIG_FILES,
             )
 
-        # if config.verbose:
-        # TODO: find this option in py-rattler-build
-        # cmd.append("--verbose")
-
     # TODO: output_name does not exist in python bindings
     # if parsed_args.output_id:
     # cmd.extend(["--output-name", parsed_args.output_id])
@@ -297,10 +291,6 @@ def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -
         if parsed_args.output_folder:
             output_dir = parsed_args.output_folder
         no_build_id = not parsed_args.set_build_id
-        test_strategy = "skip" if parsed_args.notest else "native"
-        # if parsed_args.quiet:
-        # TODO: quiet does not exist in py-rattler-build
-        # cmd.append("-q")
         skip_existing = parsed_args.skip_existing or "none"
         no_include_recipe = not parsed_args.include_recipe
         if parsed_args.conda_pkg_format == CondaPkgFormat.V2:
