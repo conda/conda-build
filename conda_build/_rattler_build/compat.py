@@ -1,5 +1,7 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
+
 import argparse
 from os.path import join
 from pathlib import Path
@@ -7,6 +9,7 @@ from pathlib import Path
 import yaml
 from conda.base.context import context
 from rattler_build import (
+    Package,
     RattlerBuildError,
     RecipeParseError,
 )
@@ -103,8 +106,8 @@ def check_arguments_rattler(
         )
 
 
-def process_recipes(
-    recipes: list[str],
+def process_recipe(
+    recipe_path: str,
     variant_config: VariantConfig,
     command: str,
     output_dir: str,
@@ -114,86 +117,70 @@ def process_recipes(
     package_format: str,
     no_include_recipe: bool,
     tool_config: ToolConfiguration,
-    platform_config: PlatformConfig,
     render_config: RenderConfig,
-) -> int:
+    parsed_args: argparse.Namespace,
+) -> tuple[bool, str | None, str | None]:
 
-    succeeded: list[str] = []
-    failed: dict[str, str] = {}
-
-    for recipe_path in recipes:
-        recipe_path_str = str(recipe_path)
-
-        # load the recipe file
-        try:
-            recipe = Stage0Recipe.from_file(Path(recipe_path))
-        except RecipeParseError as e:
-            err = CondaBuildUserError(
-                f"Failed to process recipe file {recipe_path}: {str(e)}"
-            )
-            failed[recipe_path_str] = str(err)
-            continue
-
-        # render the recipe
-        try:
-            rendered = recipe.render(variant_config, render_config)
-        except RattlerBuildError as e:
-            err = CondaBuildUserError(
-                f"Failed to render recipe {recipe_path}: {str(e)}"
-            )
-            failed[recipe_path_str] = str(err)
-            continue
-
-        if command == "render":
-            for item in rendered:
-                data = item.recipe.to_dict()
-                print(yaml.safe_dump(data, indent=2, sort_keys=False))
-            succeeded.append(recipe_path_str)
-            continue
-
-        # build all rendered variants
-        for i, variant in enumerate(rendered, 1):
-            print(f"\nBuilding variant {i}/{len(rendered)} for recipe {recipe_path}")
-
-            try:
-                variant.run_build(
-                    tool_config=tool_config,
-                    output_dir=output_dir,
-                    channels=channels,
-                    progress_callback=CondaProgressCallback(show_logs=show_logs),
-                    no_build_id=no_build_id,
-                    package_format=package_format,
-                    no_include_recipe=no_include_recipe,
-                )
-            except RattlerBuildError as e:
-                err = CondaBuildUserError(
-                    f"Failed to build recipe {recipe_path}: {str(e)}"
-                )
-                failed[recipe_path_str] = str(err)
-                continue
-
-        # if all variants built without raising, mark recipe as succeeded
-        succeeded.append(recipe_path_str)
-
-    # summary
-    print("\n=== Build summary ===")
-    if succeeded:
-        print("Succeeded:")
-        for path in succeeded:
-            print(f"  - {path}")
-    else:
-        print("Succeeded: none")
-
-    if failed:
-        print("\nFailed:")
-        msg = "Recipe build failures:\n" + "\n".join(
-            f"  - {p}: {e}" for p, e in failed.items()
+    try:
+        recipe = Stage0Recipe.from_file(Path(recipe_path))
+    except RecipeParseError as e:
+        err = CondaBuildUserError(
+            f"Failed to process recipe file {recipe_path}: {str(e)}"
         )
-        raise CondaBuildUserError(msg)
-    else:
-        print("\nFailed: none")
+        return False, str(err), None
 
-    return 1 if failed else 0
+    try:
+        rendered = recipe.render(variant_config, render_config)
+    except RattlerBuildError as e:
+        err = CondaBuildUserError(f"Failed to render recipe {recipe_path}: {str(e)}")
+        return False, str(err), None
+
+    if command == "render":
+        for item in rendered:
+            data = item.recipe.to_dict()
+            print(yaml.safe_dump(data, indent=2, sort_keys=False))
+        return True, None, None
+
+    for i, variant in enumerate(rendered, 1):
+        print(
+            f"\nBuilding variant {i}/{len(rendered)} for recipe {Path(recipe_path).absolute()}"
+        )
+
+        try:
+            build_result = variant.run_build(
+                tool_config=tool_config,
+                output_dir=output_dir,
+                channels=channels,
+                progress_callback=CondaProgressCallback(show_logs=show_logs),
+                no_build_id=no_build_id,
+                package_format=package_format,
+                no_include_recipe=no_include_recipe,
+            )
+        except RattlerBuildError as e:
+            err = CondaBuildUserError(f"Failed to build recipe {recipe_path}: {str(e)}")
+            return False, str(err), None
+
+        if not parsed_args.notest:
+            built_package_path = build_result.packages[0]
+            pkg = Package.from_file(built_package_path)
+
+            test_results = pkg.run_tests(
+                progress_callback=CondaProgressCallback(show_logs=show_logs)
+            )
+
+            test_failed = [r for r in test_results if not r.success]
+            if test_failed:
+                test_log = "\n\n".join("".join(r.output) for r in test_failed)
+                return (
+                    False,
+                    (
+                        f"Failed tests for recipe {Path(recipe_path).absolute()}: "
+                        f"{len(test_failed)} test(s) failed"
+                    ),
+                    test_log,
+                )
+
+    return True, None, None
 
 
 def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -> int:
@@ -202,7 +189,6 @@ def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -
         raise ValueError(f"Unrecognized subcommand: {command}")
 
     # Initialize configuration defaults
-    test_strategy: str | None = None
     skip_existing: bool | None = None
     noarch_build_platform: str | None = None
     channel_priority: str | None = None
@@ -295,7 +281,7 @@ def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -
 
     # common tool / platform / render configuration
     tool_config = ToolConfiguration(
-        test_strategy=test_strategy,
+        test_strategy=None,
         skip_existing=skip_existing,
         noarch_build_platform=noarch_build_platform,
         channel_priority=channel_priority,
@@ -327,17 +313,58 @@ def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -
             for variant in config_files:
                 variant_config = variant_config.merge(VariantConfig.from_file(variant))
 
-        return process_recipes(
-            recipes=recipes,
-            variant_config=variant_config,
-            command=command,
-            output_dir=output_dir,
-            channels=channels,
-            show_logs=show_logs,
-            no_build_id=no_build_id,
-            package_format=package_format,
-            no_include_recipe=no_include_recipe,
-            tool_config=tool_config,
-            platform_config=platform_config,
-            render_config=render_config,
-        )
+        succeeded: list[str] = []
+        failed: dict[str, str] = {}
+        failed_logs: dict[str, str] = {}
+
+        for recipe_path in recipes:
+            ok, err, test_log = process_recipe(
+                recipe_path=recipe_path,
+                variant_config=variant_config,
+                command=command,
+                output_dir=output_dir,
+                channels=channels,
+                show_logs=show_logs,
+                no_build_id=no_build_id,
+                package_format=package_format,
+                no_include_recipe=no_include_recipe,
+                tool_config=tool_config,
+                render_config=render_config,
+                parsed_args=parsed_args,
+            )
+            if ok:
+                succeeded.append(recipe_path)
+            else:
+                failed[recipe_path] = err or f"Failed recipe {recipe_path}"
+                if test_log:
+                    failed_logs[recipe_path] = test_log
+
+        # summary
+        print("\n=== Build summary ===")
+        if succeeded:
+            print("Succeeded:")
+            for path in succeeded:
+                print(f"  - {path}")
+        else:
+            print("Succeeded: none")
+
+        if failed:
+            print("\nFailed:")
+            for p, e in failed.items():
+                print(f"  - {Path(p).resolve()}")
+
+            if failed_logs and not show_logs:
+                print("\n=== Test logs ===")
+                for p, log in failed_logs.items():
+                    print(f"\n--- {Path(p).resolve()} ---")
+                    print(log, end="" if log.endswith("\n") else "\n")
+
+            msg = "Recipe build failures:\n" + "\n".join(
+                f"  - {Path(p).absolute()}: {e}" for p, e in failed.items()
+            )
+
+            raise CondaBuildUserError(msg)
+        else:
+            print("\nFailed: none")
+
+        return 1 if failed else 0
