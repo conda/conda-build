@@ -174,7 +174,7 @@ def process_recipe(
                 return (
                     False,
                     (
-                        f"Failed tests for recipe {Path(recipe_path).absolute()}: "
+                        f"Failed tests: "
                         f"{len(test_failed)} test(s) failed"
                     ),
                     test_log,
@@ -263,9 +263,6 @@ def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -
                 recipe_config_filenames=CONFIG_FILES,
             )
 
-    # TODO: output_name does not exist in python bindings
-    # if parsed_args.output_id:
-    # cmd.extend(["--output-name", parsed_args.output_id])
     if command == "build":
         if parsed_args.extra_meta:
             extra_context.update(parsed_args.extra_meta)
