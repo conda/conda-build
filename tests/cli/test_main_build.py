@@ -20,6 +20,7 @@ from conda_build.exceptions import CondaBuildUserError, DependencyNeedsBuildingE
 from conda_build.os_utils.external import find_executable
 from conda_build.utils import get_build_folders, on_win, package_has_file
 
+from .. import LOCAL_CHANNEL_PATH, METADATA_V2_PATH
 from ..utils import metadata_dir
 from ..utils import reset_config as _reset_config
 
@@ -42,31 +43,42 @@ def test_build_empty_sections(conda_build_test_recipe_envvar: str):
 
 
 @pytest.mark.serial
-def test_build_add_channel():
-    """This recipe requires the conda_build_test_requirement package, which is
-    only on the conda_build_test channel. This verifies that the -c argument
-    works."""
-
-    args = [
-        "-c",
-        "conda_build_test",
-        "--no-activate",
-        "--no-anaconda-upload",
-        os.path.join(metadata_dir, "_recipe_requiring_external_channel"),
-    ]
-    main_build.execute(args)
+def test_build_add_channel(
+    mock_channels: list[str],  # mock context.channels so its empty
+):
+    """This recipe requires the local-channel::small-executable package.
+    This verifies that the --channel argument works."""
+    main_build.execute(
+        [
+            f"--channel={LOCAL_CHANNEL_PATH}",
+            str(METADATA_V2_PATH / "recipe_requiring_external_channel"),
+        ]
+    )
 
 
-def test_build_without_channel_fails(testing_workdir):
-    # remove the conda forge channel from the arguments and make sure that we fail.  If we don't,
-    #    we probably have channels in condarc, and this is not a good test.
-    args = [
-        "--no-anaconda-upload",
-        "--no-activate",
-        os.path.join(metadata_dir, "_recipe_requiring_external_channel"),
-    ]
+def test_build_with_empty_channel_fails(
+    mock_channels: list[str],  # mock context.channels so its empty
+) -> None:
+    """This recipe requires the local-channel::small-executable package.
+    Since the channel is empty, we get a PackagesNotFoundError."""
+    with pytest.raises(PackagesNotFoundError):
+        main_build.execute(
+            [
+                str(METADATA_V2_PATH / "recipe_requiring_external_channel"),
+            ]
+        )
+
+
+def test_build_without_channel_fails():
+    """This recipe requires the local-channel::small-executable package.
+    Since the channel is missing the package, we get a DependencyNeedsBuildingError."""
+    # DependencyNeedsBuildingError → I found some packages just not the ones I need
     with pytest.raises(DependencyNeedsBuildingError):
-        main_build.execute(args)
+        main_build.execute(
+            [
+                str(METADATA_V2_PATH / "recipe_requiring_external_channel"),
+            ]
+        )
 
 
 def test_no_filename_hash(testing_workdir, testing_metadata, capfd):
@@ -537,17 +549,6 @@ def test_user_warning(tmpdir, recwarn):
 
     main_build.parse_args([str(dir_recipe_path)])
     assert not recwarn.list
-
-
-def test_build_with_empty_channel_fails(empty_channel: Path) -> None:
-    with pytest.raises(PackagesNotFoundError):
-        main_build.execute(
-            [
-                "--override-channels",
-                f"--channel={empty_channel}",
-                os.path.join(metadata_dir, "_recipe_requiring_external_channel"),
-            ]
-        )
 
 
 def test_build_with_v1_recipe() -> None:
