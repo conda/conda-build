@@ -12,8 +12,9 @@ from conda.base.context import context
 from yaml.parser import ParserError
 
 from .. import __version__, api
+from .._rattler_build.compat import check_arguments_rattler, run_rattler
 from ..config import get_channel_urls, get_or_merge_config
-from ..utils import LoggingContext
+from ..utils import LoggingContext, is_v1_recipe
 from ..variants import get_package_variants, set_language_env_vars
 
 try:
@@ -213,6 +214,13 @@ def execute(args: Sequence[str] | None = None) -> int:
     set_language_env_vars(variants)
 
     config.channel_urls = get_channel_urls(parsed.__dict__)
+
+    if is_v1_recipe(parsed.recipe):
+        parser, parsed_only_recipe = parse_args([parsed.recipe])
+        command = parser.prog.split()[-1]
+        check_arguments_rattler(command, parsed, parsed_only_recipe)
+
+        return run_rattler(command, parsed, config)
 
     if parsed.output:
         config.verbose = False

@@ -1411,8 +1411,8 @@ contents.
        files:
          - a-file
          - a-folder
-         - *.some-extension
-         - somefolder/*.some-extension
+         - "*.some-extension"
+         - "somefolder/*.some-extension"
 
 Greater control over file matching may be
 achieved by defining ``files`` as a dictionary separating files to
@@ -1431,11 +1431,11 @@ Files matching both include and exclude expressions will be excluded.
          include:
            - a-file
            - a-folder
-           - *.some-extension
-           - somefolder/*.some-extension
+           - "*.some-extension"
+           - "somefolder/*.some-extension"
          exclude:
-           - *.exclude-extension
-           - a-folder/**/*.some-extension
+           - "*.exclude-extension"
+           - "a-folder/**/*.some-extension"
 
 Scripts that create or move files into the build prefix can be
 any kind of script. Known script types need only specify the
