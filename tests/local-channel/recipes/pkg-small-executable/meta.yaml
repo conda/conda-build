@@ -1,5 +1,5 @@
 package:
-  name: small-executable
+  name: pkg-small-executable
   version: 1.0.0
 
 build:
@@ -19,4 +19,8 @@ build:
     - echo 'set "SMALL_EXE=small-var-cmd"' > ${PREFIX}/etc/conda/activate.d/small_executable.bat
 
 about:
-  summary: A small executable package
+  summary: A small executable package (local-channel test helper)
+
+extra:
+  test_purpose: >-
+    Minimal noarch package with small console shims and activate.d snippets.

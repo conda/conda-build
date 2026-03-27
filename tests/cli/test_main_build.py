@@ -46,7 +46,7 @@ def test_build_empty_sections(conda_build_test_recipe_envvar: str):
 def test_build_add_channel(
     mock_channels: list[str],  # mock context.channels so its empty
 ):
-    """This recipe requires the local-channel::small-executable package.
+    """This recipe requires the local-channel::pkg-small-executable package.
     This verifies that the --channel argument works."""
     main_build.execute(
         [
@@ -59,7 +59,7 @@ def test_build_add_channel(
 def test_build_with_empty_channel_fails(
     mock_channels: list[str],  # mock context.channels so its empty
 ) -> None:
-    """This recipe requires the local-channel::small-executable package.
+    """This recipe requires the local-channel::pkg-small-executable package.
     Since the channel is empty, we get a PackagesNotFoundError."""
     with pytest.raises(PackagesNotFoundError):
         main_build.execute(
@@ -70,7 +70,7 @@ def test_build_with_empty_channel_fails(
 
 
 def test_build_without_channel_fails():
-    """This recipe requires the local-channel::small-executable package.
+    """This recipe requires the local-channel::pkg-small-executable package.
     Since the channel is missing the package, we get a DependencyNeedsBuildingError."""
     # DependencyNeedsBuildingError → I found some packages just not the ones I need
     with pytest.raises(DependencyNeedsBuildingError):

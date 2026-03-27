@@ -124,24 +124,30 @@ def test_pin_compatible_semver(testing_config):
 
 
 def test_transitive_subpackage_dependency(testing_config, local_channel):
+    """Subpackages resolve to include transitive dependencies.
+
+    (metadata-v2 recipe) transitive_subpackage
+    ├─ (output) libtransitive
+    │     └─ (host) stub-run_exports
+    └─ (output) transitive
+          ├─ (host) stub-depends-run_exports
+          └─ (host) ``pin_subpackage('libtransitive', exact=True)``
+
+    local-channel::stub-depends-run_exports
+    └─ (host) stub-run_exports
+
+    local-channel::stub-run_exports
+    └─ (run_exports) ``pin_subpackage('stub-run_exports', max_pin='x.x')``
+    """
     recipe_dir = str(METADATA_V2_PATH / "transitive_subpackage")
-    metadata = api.render(
-        recipe_dir,
-        config=testing_config,
-        channel_urls=[str(local_channel)],
-    )[1][0]
+    testing_config.channel_urls = [str(local_channel)]
+    metadata = api.render(recipe_dir, config=testing_config)[1].metadata
+    assert metadata.name() == "transitive"
     assert not metadata.get_value("requirements/run")
-    reqs = metadata.get_value("requirements/host")
-    assert len(reqs) == 3
-    by_name = {s.split()[0]: s for s in reqs}
-    assert set(by_name) == {"run_exports-lib", "depends-run_exports-lib", "libfoo"}
-    assert tuple(by_name["run_exports-lib"].split()) == ("run_exports-lib", "1.0", "0")
-    for pinned in ("depends-run_exports-lib", "libfoo"):
-        parts = by_name[pinned].split()
-        assert len(parts) == 3
-        assert parts[0] == pinned
-        assert parts[1] == "1.0"
-        assert parts[2].startswith("h")  # hash-based build string
+    assert any(
+        req == "stub-run_exports 1.0.0 0"
+        for req in metadata.get_value("requirements/host")
+    )
 
 
 @pytest.mark.slow

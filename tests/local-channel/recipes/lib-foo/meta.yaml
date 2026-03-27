@@ -1,0 +1,11 @@
+package:
+  name: lib-foo
+  version: 1.0.0
+
+build:
+  number: 0
+
+extra:
+  test_purpose: >-
+    Stub shared libraries (libfoo*) installed under PREFIX for lightweight packaging and
+    install-layout checks.

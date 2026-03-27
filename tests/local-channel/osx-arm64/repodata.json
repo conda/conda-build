@@ -4,33 +4,57 @@
   },
   "packages": {},
   "packages.conda": {
-    "depends-run_exports-lib-1.0-h2754481_0.conda": {
-      "build": "h2754481_0",
+    "lib-bar-1.0.0-0.conda": {
+      "build": "0",
       "build_number": 0,
-      "depends": [
-        "run_exports-lib >=2.0,<2.1.0a0"
-      ],
-      "md5": "865e803ee6d1616c28fbf3feaf776ea1",
-      "name": "depends-run_exports-lib",
-      "sha256": "1144367d9658aef3d1fadf7ede96217ec1d8c7b3aae4d732478aa10114f4d6e5",
-      "size": 4094,
+      "depends": [],
+      "md5": "6e791391a4193cd145fef1df4d07d4e3",
+      "name": "lib-bar",
+      "sha256": "aafe0b45499ce489200165bc4604c50db914824fb6a33e33d72ccf782e2a8e1a",
+      "size": 4582,
       "subdir": "osx-arm64",
-      "timestamp": 1774589811564,
-      "version": "1.0"
+      "timestamp": 1774634665449,
+      "version": "1.0.0"
     },
-    "depends-run_exports-lib-1.0-hf0f569a_0.conda": {
-      "build": "hf0f569a_0",
+    "lib-foo-1.0.0-0.conda": {
+      "build": "0",
+      "build_number": 0,
+      "depends": [],
+      "md5": "77a783d37367db72b8f951c21a842f21",
+      "name": "lib-foo",
+      "sha256": "98dccdf24ad4b324e8e13040a837ccd196f11ce3b920b5eb1be2793f5db1fe87",
+      "size": 4659,
+      "subdir": "osx-arm64",
+      "timestamp": 1774634668349,
+      "version": "1.0.0"
+    },
+    "stub-depends-run_exports-1.0.0-h038ad7a_0.conda": {
+      "build": "h038ad7a_0",
       "build_number": 0,
       "depends": [
-        "run_exports-lib >=1.0,<1.1.0a0"
+        "stub-run_exports >=2.0.0,<2.0.1.0a0"
       ],
-      "md5": "2683d84a4216ec1391e8cdf0a5a05c2c",
-      "name": "depends-run_exports-lib",
-      "sha256": "4fed19e408f1a02b94271b61ecf2ff65093179faa8df5231680d9ba42a59e50e",
-      "size": 4096,
+      "md5": "bdcd058bf7c3e4e5199f4ecf7c24c01b",
+      "name": "stub-depends-run_exports",
+      "sha256": "af801876141da42c12512b90e271653536c354436be9ec9be9fb49001197f57a",
+      "size": 4210,
       "subdir": "osx-arm64",
-      "timestamp": 1774589808402,
-      "version": "1.0"
+      "timestamp": 1774634676275,
+      "version": "1.0.0"
+    },
+    "stub-depends-run_exports-1.0.0-h0bdb962_0.conda": {
+      "build": "h0bdb962_0",
+      "build_number": 0,
+      "depends": [
+        "stub-run_exports >=1.0.0,<1.0.1.0a0"
+      ],
+      "md5": "5275d436b67462f651b59a59a93778ff",
+      "name": "stub-depends-run_exports",
+      "sha256": "fc561f2c72fde177e258226aed9a5d342f68b269307b367665023b9f2e23fd74",
+      "size": 4203,
+      "subdir": "osx-arm64",
+      "timestamp": 1774634679519,
+      "version": "1.0.0"
     }
   },
   "removed": [],

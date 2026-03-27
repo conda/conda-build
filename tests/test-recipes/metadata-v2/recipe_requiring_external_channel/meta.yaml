@@ -5,4 +5,4 @@ package:
 requirements:
   build:
     # package that does not exist on defaults, but only on our test channel
-    - small-executable
+    - pkg-small-executable

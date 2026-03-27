@@ -1,4 +1,4 @@
-run_exports_lib:
-  - 1.0
-depends_run_exports_lib:
-  - 1.0
+stub_run_exports:
+  - 1.0.0
+stub_depends_run_exports:
+  - 1.0.0

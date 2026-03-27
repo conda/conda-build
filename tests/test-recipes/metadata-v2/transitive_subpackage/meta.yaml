@@ -1,15 +1,15 @@
 package:
-  name: foo_split
-  version: 1.0
+  name: transitive_subpackage
+  version: 1.0.0
 
 outputs:
-  - name: libfoo
+  - name: libtransitive
     requirements:
       host:
-        - run_exports-lib {{ run_exports_lib }}
+        - stub-run_exports {{ stub_run_exports }}
 
-  - name: foo
+  - name: transitive
     requirements:
       host:
-        - depends-run_exports-lib {{ depends_run_exports_lib }}
-        - {{ pin_subpackage('libfoo', exact=True) }}
+        - stub-depends-run_exports {{ stub_depends_run_exports }}
+        - {{ pin_subpackage('libtransitive', exact=True) }}

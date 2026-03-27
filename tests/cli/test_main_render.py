@@ -27,7 +27,7 @@ def test_render_add_channel(
     tmp_path: Path,
     mock_channels: list[str],  # mock context.channels so its empty
 ) -> None:
-    """This recipe requires the local-channel::small-executable package.
+    """This recipe requires the local-channel::pkg-small-executable package.
     This verifies that the --channel argument works."""
     rendered_filename = tmp_path / "out.yaml"
     main_render.execute(
@@ -41,7 +41,7 @@ def test_render_add_channel(
     rendered_meta = yaml.safe_load(rendered_filename.read_text())
     reqs = rendered_meta["requirements"]["build"]
     assert len(reqs) == 1
-    assert reqs[0] == "small-executable 1.0.0 0"
+    assert reqs[0] == "pkg-small-executable 1.0.0 0"
 
 
 def test_render_with_empty_channel_fails(
