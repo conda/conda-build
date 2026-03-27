@@ -1,15 +1,15 @@
 package:
   name: foo_split
-  version: 1.0.0
+  version: 1.0
 
 outputs:
   - name: libfoo
     requirements:
       host:
-        - openssl
+        - run_exports-lib {{ run_exports_lib }}
 
   - name: foo
     requirements:
       host:
-        - python
+        - depends-run_exports-lib {{ depends_run_exports_lib }}
         - {{ pin_subpackage('libfoo', exact=True) }}

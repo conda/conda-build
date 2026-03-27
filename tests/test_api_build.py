@@ -61,6 +61,7 @@ from conda_build.utils import (
     walk,
 )
 
+from . import METADATA_V2_PATH
 from .utils import (
     add_mangling,
     fail_dir,
@@ -144,6 +145,30 @@ def test_recipe_builds(
     elif recipe.name == "dll_linking_fail":
         pytest.xfail("Recipe being built needs to fail linking tests.")
 
+    # These variables are defined solely for testing purposes,
+    # so they can be checked within build scripts
+    testing_config.activate = True
+    monkeypatch.setenv("CONDA_TEST_VAR", "conda_test")
+    monkeypatch.setenv("CONDA_TEST_VAR_2", "conda_test_2")
+    api.build(str(recipe), config=testing_config)
+
+
+@pytest.mark.slow
+@pytest.mark.serial
+@pytest.mark.parametrize(
+    "recipe",
+    [
+        pytest.param(recipe, id=recipe.name)
+        for recipe in get_valid_recipes(METADATA_V2_PATH)
+    ],
+)
+def test_recipe_builds_v2(
+    recipe: Path,
+    testing_config,
+    monkeypatch: pytest.MonkeyPatch,
+    conda_build_test_recipe_envvar: str,
+    local_channel: Path,
+):
     # These variables are defined solely for testing purposes,
     # so they can be checked within build scripts
     testing_config.activate = True

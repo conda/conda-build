@@ -19,6 +19,7 @@ from conda_build import api, render
 from conda_build.exceptions import CondaBuildUserError
 from conda_build.variants import validate_spec
 
+from . import METADATA_V2_PATH
 from .utils import metadata_dir, variants_dir
 
 
@@ -122,14 +123,25 @@ def test_pin_compatible_semver(testing_config):
     assert "zlib >=1.2.11,<2.0a0" in metadata.get_value("requirements/run")
 
 
-def test_transitive_subpackage_dependency(testing_config):
-    recipe_dir = os.path.join(metadata_dir, "transitive_subpackage")
-    metadata = api.render(recipe_dir, config=testing_config)[1][0]
+def test_transitive_subpackage_dependency(testing_config, local_channel):
+    recipe_dir = str(METADATA_V2_PATH / "transitive_subpackage")
+    metadata = api.render(
+        recipe_dir,
+        config=testing_config,
+        channel_urls=[str(local_channel)],
+    )[1][0]
     assert not metadata.get_value("requirements/run")
-    assert any(
-        req.startswith("openssl 1.0.2")
-        for req in metadata.get_value("requirements/host")
-    )
+    reqs = metadata.get_value("requirements/host")
+    assert len(reqs) == 3
+    by_name = {s.split()[0]: s for s in reqs}
+    assert set(by_name) == {"run_exports-lib", "depends-run_exports-lib", "libfoo"}
+    assert tuple(by_name["run_exports-lib"].split()) == ("run_exports-lib", "1.0", "0")
+    for pinned in ("depends-run_exports-lib", "libfoo"):
+        parts = by_name[pinned].split()
+        assert len(parts) == 3
+        assert parts[0] == pinned
+        assert parts[1] == "1.0"
+        assert parts[2].startswith("h")  # hash-based build string
 
 
 @pytest.mark.slow

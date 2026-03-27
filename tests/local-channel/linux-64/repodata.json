@@ -1,0 +1,38 @@
+{
+  "info": {
+    "subdir": "linux-64"
+  },
+  "packages": {},
+  "packages.conda": {
+    "depends-run_exports-lib-1.0-h9f3fcab_0.conda": {
+      "build": "h9f3fcab_0",
+      "build_number": 0,
+      "depends": [
+        "run_exports-lib >=2.0,<2.1.0a0"
+      ],
+      "md5": "4605d10ef58817f58bda9745d0dcbcd3",
+      "name": "depends-run_exports-lib",
+      "sha256": "d9773f0806af333f58d0e32d617e711f2c63ea37328f4081636ef74de103c8fd",
+      "size": 4217,
+      "subdir": "linux-64",
+      "timestamp": 1774589911812,
+      "version": "1.0"
+    },
+    "depends-run_exports-lib-1.0-hc32fd6f_0.conda": {
+      "build": "hc32fd6f_0",
+      "build_number": 0,
+      "depends": [
+        "run_exports-lib >=1.0,<1.1.0a0"
+      ],
+      "md5": "4d20606202dc89ce39865a27ae2061f8",
+      "name": "depends-run_exports-lib",
+      "sha256": "d413d46018c471d765005974a43a44e958256f907a625c9f65b4f86e54383de8",
+      "size": 4218,
+      "subdir": "linux-64",
+      "timestamp": 1774589906860,
+      "version": "1.0"
+    }
+  },
+  "removed": [],
+  "repodata_version": 1
+}

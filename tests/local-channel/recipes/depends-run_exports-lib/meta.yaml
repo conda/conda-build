@@ -1,0 +1,7 @@
+package:
+  name: depends-run_exports-lib
+  version: 1.0
+
+requirements:
+  host:
+    - run_exports-lib {{ run_exports_lib }}

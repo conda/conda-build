@@ -7,4 +7,6 @@ Overview of package artifacts and their intended purpose.
 
 | Package | Version | Subdirs | Purpose |
 | --- | --- | --- | --- |
+| `depends-run_exports-lib` | `1.0` | `linux-64`<br>`osx-arm64`<br>`win-64` |  |
+| `run_exports-lib` | `1.0`<br>`2.0` | `noarch` |  |
 | `small-executable` | `1.0.0` | `noarch` |  |

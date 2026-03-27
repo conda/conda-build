@@ -32,7 +32,8 @@ repos:
             recipe/meta\.yaml |
             conda_build/templates/.*\.yaml |
             docs/click/meta\.yaml |
-            docs/source/user-guide/tutorials/meta\.yaml
+            docs/source/user-guide/tutorials/meta\.yaml |
+            tests/local-channel/recipes/.+/meta\.yaml
           )
       # catch git merge/rebase problems
       - id: check-merge-conflict
@@ -44,6 +45,9 @@ repos:
             tests/requirements.*\.txt
           )
         args: [--unique]
+      - id: pretty-format-json
+        args: [--autofix]
+        files: tests/local-channel/.+/repodata\.json
   # Python verification and formatting
   - repo: https://github.com/Lucas-C/pre-commit-hooks
     rev: v1.5.6

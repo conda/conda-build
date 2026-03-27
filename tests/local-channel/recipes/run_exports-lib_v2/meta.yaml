@@ -1,0 +1,8 @@
+package:
+  name: run_exports-lib
+  version: 2.0
+
+build:
+  noarch: generic
+  run_exports:
+    - {{ pin_subpackage('run_exports-lib', max_pin='x.x') }}
