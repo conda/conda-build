@@ -1990,6 +1990,15 @@ def test_clean_rpaths(testing_config):
     api.build(recipe, config=testing_config, activate=True)
 
 
+@pytest.mark.parametrize(
+    "channel", ["conda-forge"] if context.subdir == "osx-arm64" else ["defaults"]
+)
+def test_r_test_import(testing_config, mock_channels: list[str], channel: str):
+    mock_channels.append(channel)
+    recipe = os.path.join(metadata_dir, "_r_test_import")
+    api.build(recipe, config=testing_config)
+
+
 def test_script_env_warnings(testing_config, recwarn):
     recipe_dir = os.path.join(metadata_dir, "_script_env_warnings")
     token = "CONDA_BUILD_PYTEST_SCRIPT_ENV_TEST_TOKEN"
