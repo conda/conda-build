@@ -4,6 +4,32 @@
   },
   "packages": {},
   "packages.conda": {
+    "lib-bar-1.0.0-0.conda": {
+      "build": "0",
+      "build_number": 0,
+      "depends": [],
+      "md5": "15a25b940e157d69193a93f607b34eb0",
+      "name": "lib-bar",
+      "noarch": "generic",
+      "sha256": "076ce682e90de71da109307e3c52755da3ef31e0325e82ba4db2886629f126ec",
+      "size": 4561,
+      "subdir": "noarch",
+      "timestamp": 1774640391102,
+      "version": "1.0.0"
+    },
+    "lib-foo-1.0.0-0.conda": {
+      "build": "0",
+      "build_number": 0,
+      "depends": [],
+      "md5": "6eef112bad219c5d4e32a1f02c8349fa",
+      "name": "lib-foo",
+      "noarch": "generic",
+      "sha256": "cb696130b13e8ecf468cf8183f7caa1b51201d2951ef25c13e17b6cd2d701120",
+      "size": 4752,
+      "subdir": "noarch",
+      "timestamp": 1774640393980,
+      "version": "1.0.0"
+    },
     "pkg-small-executable-1.0.0-0.conda": {
       "build": "0",
       "build_number": 0,

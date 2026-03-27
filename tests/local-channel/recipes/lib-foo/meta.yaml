@@ -4,6 +4,21 @@ package:
 
 build:
   number: 0
+  noarch: generic
+  script:
+    - mkdir -p "${PREFIX}/lib"
+    - echo x > "${PREFIX}/lib/libfoo.dylib"
+    - echo x > "${PREFIX}/lib/libfoo16.16.dylib"
+    - echo x > "${PREFIX}/lib/libfoo16.dylib"
+    - echo x > "${PREFIX}/lib/libfoo.so"
+    - echo x > "${PREFIX}/lib/libfoo16.so"
+    - echo x > "${PREFIX}/lib/libfoo16.so.16"
+    - echo x > "${PREFIX}/lib/libfoo16.so.16.34.0"
+    - mkdir -p "${PREFIX}/Library/lib"
+    - echo x > "${PREFIX}/Library/lib/libfoo.lib"
+    - echo x > "${PREFIX}/Library/lib/libfoo16.lib"
+    - echo x > "${PREFIX}/Library/lib/libfoo16_static.lib"
+    - echo x > "${PREFIX}/Library/lib/libfoo_static.lib"
 
 extra:
   test_purpose: >-

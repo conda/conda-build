@@ -4,30 +4,6 @@
   },
   "packages": {},
   "packages.conda": {
-    "lib-bar-1.0.0-0.conda": {
-      "build": "0",
-      "build_number": 0,
-      "depends": [],
-      "md5": "6e791391a4193cd145fef1df4d07d4e3",
-      "name": "lib-bar",
-      "sha256": "aafe0b45499ce489200165bc4604c50db914824fb6a33e33d72ccf782e2a8e1a",
-      "size": 4582,
-      "subdir": "osx-arm64",
-      "timestamp": 1774634665449,
-      "version": "1.0.0"
-    },
-    "lib-foo-1.0.0-0.conda": {
-      "build": "0",
-      "build_number": 0,
-      "depends": [],
-      "md5": "77a783d37367db72b8f951c21a842f21",
-      "name": "lib-foo",
-      "sha256": "98dccdf24ad4b324e8e13040a837ccd196f11ce3b920b5eb1be2793f5db1fe87",
-      "size": 4659,
-      "subdir": "osx-arm64",
-      "timestamp": 1774634668349,
-      "version": "1.0.0"
-    },
     "stub-depends-run_exports-1.0.0-h038ad7a_0.conda": {
       "build": "h038ad7a_0",
       "build_number": 0,

@@ -4,6 +4,15 @@ package:
 
 build:
   number: 0
+  noarch: generic
+  script:
+    - mkdir -p "${PREFIX}/lib"
+    - echo x > "${PREFIX}/lib/libbar.9.dylib"
+    - echo x > "${PREFIX}/lib/libbar.dylib"
+    - echo x > "${PREFIX}/lib/libbar.so.9"
+    - echo x > "${PREFIX}/lib/libbar.so"
+    - mkdir -p "${PREFIX}/Library/lib"
+    - echo x > "${PREFIX}/Library/lib/libbar.lib"
 
 extra:
   test_purpose: >-

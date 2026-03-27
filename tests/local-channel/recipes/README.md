@@ -7,8 +7,8 @@ Overview of package artifacts and their intended purpose.
 
 | Package | Version | Subdirs | Purpose |
 | --- | --- | --- | --- |
-| `lib-bar` | `1.0.0` | `osx-arm64` | [#lib-bar](#lib-bar) |
-| `lib-foo` | `1.0.0` | `osx-arm64` | [#lib-foo](#lib-foo) |
+| `lib-bar` | `1.0.0` | `noarch` | [#lib-bar](#lib-bar) |
+| `lib-foo` | `1.0.0` | `noarch` | [#lib-foo](#lib-foo) |
 | `pkg-small-executable` | `1.0.0` | `noarch` | [#pkg-small-executable](#pkg-small-executable) |
 | `r-base` | `3.4`<br>`3.5` | `noarch` | [#r-base](#r-base) |
 | `stub-depends-run_exports` | `1.0.0` | `linux-64`<br>`osx-arm64`<br>`win-64` | [#stub-depends-run_exports](#stub-depends-run_exports) |

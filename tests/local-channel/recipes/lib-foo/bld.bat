@@ -1,5 +1,0 @@
-mkdir "%PREFIX%\Library\lib"
-echo x> "%PREFIX%\Library\lib\libfoo.lib"
-echo x> "%PREFIX%\Library\lib\libfoo16.lib"
-echo x> "%PREFIX%\Library\lib\libfoo16_static.lib"
-echo x> "%PREFIX%\Library\lib\libfoo_static.lib"
