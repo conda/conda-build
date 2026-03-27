@@ -1503,8 +1503,8 @@ def test_failed_recipe_leaves_folders(testing_config):
 
 
 @pytest.mark.sanity
-def test_only_r_env_vars_defined(testing_config):
-    recipe = os.path.join(metadata_dir, "_r_env_defined")
+def test_only_r_env_vars_defined(testing_config, local_channel: Path):
+    recipe = str(METADATA_V2_PATH / "r_env_defined")
     api.build(recipe, config=testing_config)
 
 

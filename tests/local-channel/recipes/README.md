@@ -10,7 +10,8 @@ Overview of package artifacts and their intended purpose.
 | `lib-bar` | `1.0.0` | `osx-arm64` | [#lib-bar](#lib-bar) |
 | `lib-foo` | `1.0.0` | `osx-arm64` | [#lib-foo](#lib-foo) |
 | `pkg-small-executable` | `1.0.0` | `noarch` | [#pkg-small-executable](#pkg-small-executable) |
-| `stub-depends-run_exports` | `1.0.0` | `linux-64`<br>`linux-aarch64`<br>`osx-arm64`<br>`win-64` | [#stub-depends-run_exports](#stub-depends-run_exports) |
+| `r-base` | `3.4`<br>`3.5` | `noarch` | [#r-base](#r-base) |
+| `stub-depends-run_exports` | `1.0.0` | `linux-64`<br>`osx-arm64`<br>`win-64` | [#stub-depends-run_exports](#stub-depends-run_exports) |
 | `stub-run_exports` | `1.0.0`<br>`2.0.0` | `noarch` | [#stub-run_exports](#stub-run_exports) |
 
 ## lib-bar
@@ -21,6 +22,9 @@ Stub shared libraries (libfoo*) installed under PREFIX for lightweight packaging
 
 ## pkg-small-executable
 Minimal noarch package with small console shims and activate.d snippets.
+
+## r-base
+Placeholder for the R base interpreter metapackage so tests can depend on r-base without using defaults or conda-forge (where subdirs such as osx-arm64 may lack builds).
 
 ## stub-depends-run_exports
 Minimal package with a host dependency whose pin comes from the variant matrix, so resolution must pick a matching build.

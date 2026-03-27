@@ -1,0 +1,12 @@
+package:
+  name: r-base
+  version: "{{ r_base }}"
+
+build:
+  number: 0
+  noarch: generic
+
+extra:
+  test_purpose: >-
+    Placeholder for the R base interpreter metapackage so tests can depend on r-base without
+    using defaults or conda-forge (where subdirs such as osx-arm64 may lack builds).

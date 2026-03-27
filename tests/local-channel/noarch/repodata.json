@@ -17,6 +17,32 @@
       "timestamp": 1774634662505,
       "version": "1.0.0"
     },
+    "r-base-3.4-0.conda": {
+      "build": "0",
+      "build_number": 0,
+      "depends": [],
+      "md5": "fafad359587697884cda25025999da58",
+      "name": "r-base",
+      "noarch": "generic",
+      "sha256": "d2ab8ac63c65948aa5f71e680222288bc9ecb1c1f17b00dabafc51bc2d65f109",
+      "size": 4142,
+      "subdir": "noarch",
+      "timestamp": 1774638036137,
+      "version": "3.4"
+    },
+    "r-base-3.5-0.conda": {
+      "build": "0",
+      "build_number": 0,
+      "depends": [],
+      "md5": "cdf3530c097bc8a0b1cbcd48a68913aa",
+      "name": "r-base",
+      "noarch": "generic",
+      "sha256": "aab1cd11e44a4f062b893f14c967c8ed6facfad585e9f3c84dc275e29d1c833f",
+      "size": 4148,
+      "subdir": "noarch",
+      "timestamp": 1774638036816,
+      "version": "3.5"
+    },
     "stub-run_exports-1.0.0-0.conda": {
       "build": "0",
       "build_number": 0,
@@ -30,6 +56,19 @@
       "timestamp": 1774634669144,
       "version": "1.0.0"
     },
+    "stub-run_exports-1.0.0-hbf21de9_0.conda": {
+      "build": "hbf21de9_0",
+      "build_number": 0,
+      "depends": [],
+      "md5": "b4462492728f43faec6760fa90b619d6",
+      "name": "stub-run_exports",
+      "noarch": "generic",
+      "sha256": "4cbcb1b14ab08c4a05e1ac290c81fa1ef446ba9b31db7fb22caedd31b791f5e6",
+      "size": 4278,
+      "subdir": "noarch",
+      "timestamp": 1774638155859,
+      "version": "1.0.0"
+    },
     "stub-run_exports-2.0.0-0.conda": {
       "build": "0",
       "build_number": 0,
@@ -41,6 +80,19 @@
       "size": 4199,
       "subdir": "noarch",
       "timestamp": 1774634670009,
+      "version": "2.0.0"
+    },
+    "stub-run_exports-2.0.0-hd49e8fe_0.conda": {
+      "build": "hd49e8fe_0",
+      "build_number": 0,
+      "depends": [],
+      "md5": "a4ee9f5a8f168b783c4178bb305685aa",
+      "name": "stub-run_exports",
+      "noarch": "generic",
+      "sha256": "88a58d3634a3fd69f0ed0852f246267ca081c41b1e8c586f5bb314265007d3f7",
+      "size": 4275,
+      "subdir": "noarch",
+      "timestamp": 1774638155178,
       "version": "2.0.0"
     }
   },
