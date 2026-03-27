@@ -471,21 +471,17 @@ def test_relative_path_test_artifact(
     main_build.execute(args)
 
 
-def test_test_extra_dep(testing_metadata):
-    testing_metadata.meta["test"]["imports"] = ["imagesize"]
+def test_test_extra_dep(testing_metadata, local_channel: Path):
+    testing_metadata.meta["test"]["commands"] = ["small"]
     api.output_yaml(testing_metadata, "meta.yaml")
     output = api.build(testing_metadata, notest=True, anaconda_upload=False)[0]
 
-    # tests version constraints.  CLI would quote this - "click <6.7"
-    args = [output, "-t", "--extra-deps", "imagesize <1.0"]
-    # extra_deps will add it in
-    main_build.execute(args)
+    # tests version constraints
+    main_build.execute([output, "-t", "--extra-deps", "pkg-small-executable <2.0.0"])
 
-    # missing click dep will fail tests
+    # missing small-executable dep will fail tests
     with pytest.raises(CondaBuildUserError):
-        args = [output, "-t"]
-        # extra_deps will add it in
-        main_build.execute(args)
+        main_build.execute([output, "-t"])
 
 
 @pytest.mark.parametrize(
