@@ -2,9 +2,9 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from __future__ import annotations
 
-import argparse
 from os.path import join
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import yaml
 from conda.base.context import context
@@ -13,15 +13,22 @@ from rattler_build import (
     RattlerBuildError,
     RecipeParseError,
 )
-from rattler_build.progress import LogEvent, SimpleProgressCallback
+from rattler_build.progress import SimpleProgressCallback
 from rattler_build.render import RenderConfig
 from rattler_build.stage0 import Stage0Recipe
 from rattler_build.tool_config import PlatformConfig, ToolConfiguration
 from rattler_build.variant_config import VariantConfig
 
-from ..config import CondaPkgFormat, Config
+from ..config import CondaPkgFormat
 from ..exceptions import CondaBuildUserError
 from ..utils import get_logger
+
+if TYPE_CHECKING:
+    import argparse
+
+    from rattler_build.progress import LogEvent
+
+    from ..config import Config
 
 CONFIG_FILES = {"conda_build_config.yaml", "variants.yaml"}
 
@@ -173,10 +180,7 @@ def process_recipe(
                 test_log = "\n\n".join("".join(r.output) for r in test_failed)
                 return (
                     False,
-                    (
-                        f"Failed tests: "
-                        f"{len(test_failed)} test(s) failed"
-                    ),
+                    (f"Failed tests: {len(test_failed)} test(s) failed"),
                     test_log,
                 )
 
