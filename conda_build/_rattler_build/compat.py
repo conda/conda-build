@@ -127,6 +127,15 @@ def process_recipe(
     render_config: RenderConfig,
     parsed_args: argparse.Namespace,
 ) -> tuple[bool, str | None, str | None]:
+    """
+    Function to parse, render and optionally build or test a conda packlage recipe using the py-rattler-build API.
+
+    Workflow:
+        - Load and parse the recipe via `Stage0Recipe.from_file()`
+        - Render the recipe variants according to the provided variant and render configuration objects
+        - Build each rendered variant using `variant.run_build()`
+        - If testing is enabled, run tests on the built package with `Package.run_tests()`
+    """
 
     try:
         recipe = Stage0Recipe.from_file(Path(recipe_path))
