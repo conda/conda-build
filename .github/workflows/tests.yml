@@ -383,7 +383,7 @@ jobs:
     needs: changes
     if: github.event_name == 'schedule' || needs.changes.outputs.code == 'true'
 
-    runs-on: macos-latest
+    runs-on: ${{ matrix.runs-on }}
     defaults:
       run:
         # https://github.com/conda-incubator/setup-miniconda#use-a-default-shell
@@ -392,20 +392,24 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # test lower version (w/ stable conda)
+          # test lower version (w/ osx-64 & stable conda)
           - python-version: '3.10'
             conda-version: release
             test-type: serial
+            runs-on: macos-15-intel  # osx-64
           - python-version: '3.10'
             conda-version: release
             test-type: parallel
-          # upper version (w/ canary conda)
+            runs-on: macos-15-intel  # osx-64
+          # upper version (w/ osx-arm64 & canary conda)
           - python-version: '3.14'
             conda-version: canary
             test-type: serial
+            runs-on: macos-latest  # osx-arm64
           - python-version: '3.14'
             conda-version: canary
             test-type: parallel
+            runs-on: macos-latest  # osx-arm64
     env:
       # Use conda-forge for release tests since conda 25.11+ is not in defaults for osx-64
       CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'conda-forge' }}
@@ -436,21 +440,25 @@ jobs:
 
       - name: SDK Download
         run: |
-          echo "MACOSX_SDK_DIR=${HOME}/macosx_sdks" >> "$GITHUB_ENV"
-          export MACOSX_SDK_DIR=${HOME}/macosx_sdks
-          echo "MACOSX_SDK_VERSION=10.15" >> "$GITHUB_ENV"
-          export MACOSX_SDK_VERSION=10.15
-          echo "MACOSX_SDK_ROOT=${MACOSX_SDK_DIR}/MacOSX${MACOSX_SDK_VERSION}.sdk" >> "$GITHUB_ENV"
-          export MACOSX_SDK_ROOT=${MACOSX_SDK_DIR}/MacOSX${MACOSX_SDK_VERSION}.sdk
+          if [ "${{ matrix.runs-on }}" = "macos-latest" ]; then
+            MACOSX_SDK_ROOT="$(xcrun --sdk macosx --show-sdk-path)"
+          else
+            MACOSX_SDK_VERSION=10.15
+            MACOSX_SDK_SHA256=ac75d9e0eb619881f5aa6240689fce862dcb8e123f710032b7409ff5f4c3d18b
 
-          if [ ! -d ${MACOSX_SDK_DIR} ]; then mkdir ${MACOSX_SDK_DIR}; fi
-          if [ ! -d ${MACOSX_SDK_ROOT} ]; then
-            url="https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX${MACOSX_SDK_VERSION}.sdk.tar.xz"
-            curl -L --output MacOSX${MACOSX_SDK_VERSION}.sdk.tar.xz "${url}"
-            sdk_sha256=ac75d9e0eb619881f5aa6240689fce862dcb8e123f710032b7409ff5f4c3d18b
-            echo "${sdk_sha256} *MacOSX${MACOSX_SDK_VERSION}.sdk.tar.xz" | shasum -a 256 -c
-            tar -xf MacOSX${MACOSX_SDK_VERSION}.sdk.tar.xz -C "${MACOSX_SDK_DIR}"
+            MACOSX_SDK_DIR="${HOME}/macosx_sdks"
+            if [ ! -d "${MACOSX_SDK_DIR}" ]; then mkdir "${MACOSX_SDK_DIR}"; fi
+
+            MACOSX_SDK_ROOT="${MACOSX_SDK_DIR}/MacOSX${MACOSX_SDK_VERSION}.sdk"
+            if [ ! -d "${MACOSX_SDK_ROOT}" ]; then
+              url="https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX${MACOSX_SDK_VERSION}.sdk.tar.xz"
+              curl -L --output "MacOSX${MACOSX_SDK_VERSION}.sdk.tar.xz" "${url}"
+
+              echo "${MACOSX_SDK_SHA256} *MacOSX${MACOSX_SDK_VERSION}.sdk.tar.xz" | shasum -a 256 -c
+              tar -xf "MacOSX${MACOSX_SDK_VERSION}.sdk.tar.xz" -C "${MACOSX_SDK_DIR}"
+            fi
           fi
+          echo "MACOSX_SDK_ROOT=${MACOSX_SDK_ROOT}" >> "$GITHUB_ENV"
 
       - name: Conda Install
         run: >
