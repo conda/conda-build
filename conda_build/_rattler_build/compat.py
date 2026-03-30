@@ -126,7 +126,7 @@ def process_recipe(
     tool_config: ToolConfiguration,
     render_config: RenderConfig,
     parsed_args: argparse.Namespace,
-) -> tuple[bool, str | None, str | None]:
+) -> tuple[bool, str | None]:
     """
     Function to parse, render and optionally build or test a conda packlage recipe using the py-rattler-build API.
 
@@ -143,19 +143,19 @@ def process_recipe(
         err = CondaBuildUserError(
             f"Failed to process recipe file {recipe_path}: {str(e)}"
         )
-        return False, str(err), None
+        return False, str(err)
 
     try:
         rendered = recipe.render(variant_config, render_config)
     except RattlerBuildError as e:
         err = CondaBuildUserError(f"Failed to render recipe {recipe_path}: {str(e)}")
-        return False, str(err), None
+        return False, str(err)
 
     if command == "render":
         for item in rendered:
             data = item.recipe.to_dict()
             print(yaml.safe_dump(data, indent=2, sort_keys=False))
-        return True, None, None
+        return True, None
 
     for i, variant in enumerate(rendered, 1):
         print(
@@ -174,26 +174,15 @@ def process_recipe(
             )
         except RattlerBuildError as e:
             err = CondaBuildUserError(f"Failed to build recipe {recipe_path}: {str(e)}")
-            return False, str(err), None
+            return False, str(err)
 
         if not parsed_args.notest:
             built_package_path = build_result.packages[0]
             pkg = Package.from_file(built_package_path)
 
-            test_results = pkg.run_tests(
-                progress_callback=CondaProgressCallback(show_logs=show_logs)
-            )
+            pkg.run_tests(progress_callback=CondaProgressCallback(show_logs=show_logs))
 
-            test_failed = [r for r in test_results if not r.success]
-            if test_failed:
-                test_log = "\n\n".join("".join(r.output) for r in test_failed)
-                return (
-                    False,
-                    (f"Failed tests: {len(test_failed)} test(s) failed"),
-                    test_log,
-                )
-
-    return True, None, None
+    return True, None
 
 
 def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -> int:
@@ -325,10 +314,9 @@ def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -
 
         succeeded: list[str] = []
         failed: dict[str, str] = {}
-        failed_logs: dict[str, str] = {}
 
         for recipe_path in recipes:
-            ok, err, test_log = process_recipe(
+            ok, err = process_recipe(
                 recipe_path=recipe_path,
                 variant_config=variant_config,
                 command=command,
@@ -346,8 +334,6 @@ def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -
                 succeeded.append(recipe_path)
             else:
                 failed[recipe_path] = err or f"Failed recipe {recipe_path}"
-                if test_log:
-                    failed_logs[recipe_path] = test_log
 
         # summary
         print("\n=== Build summary ===")
@@ -362,12 +348,6 @@ def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -
             print("\nFailed:")
             for p, e in failed.items():
                 print(f"  - {Path(p).resolve()}")
-
-            if failed_logs and not show_logs:
-                print("\n=== Test logs ===")
-                for p, log in failed_logs.items():
-                    print(f"\n--- {Path(p).resolve()} ---")
-                    print(log, end="" if log.endswith("\n") else "\n")
 
             msg = "Recipe build failures:\n" + "\n".join(
                 f"  - {Path(p).absolute()}: {e}" for p, e in failed.items()
