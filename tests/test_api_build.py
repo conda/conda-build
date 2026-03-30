@@ -2181,27 +2181,20 @@ def test_api_build_grpc_issue5645(monkeypatch, tmp_path, testing_config):
 
 
 @pytest.mark.skipif(
-    not on_mac, reason="needs to cross-compile from osx-64 to osx-arm64"
+    not on_mac,
+    reason="needs to cross-compile from osx-64 to osx-arm64",
 )
 def test_api_build_pytorch_cpu_issue5644(monkeypatch, tmp_path, testing_config):
     # this test has to cross-compile from osx-64 to osx-arm64
-    try:
-        if "CONDA_SUBDIR" in os.environ:
-            old_subdir = os.environ["CONDA_SUBDIR"]
-            has_old_subdir = True
-        else:
-            has_old_subdir = False
-            old_subdir = None
-        os.environ["CONDA_SUBDIR"] = "osx-64"
-
-        testing_config.channel_urls = ["conda-forge"]
-        monkeypatch.chdir(tmp_path)
-        api.build(str(metadata_path / "_pytorch_cpu"), config=testing_config)
-    finally:
-        if has_old_subdir:
-            os.environ["CONDA_SUBDIR"] = old_subdir
-        else:
-            del os.environ["CONDA_SUBDIR"]
+    # monkeypatch.setenv("CONDA_SUBDIR", "osx-64")
+    monkeypatch.chdir(tmp_path)
+    api.build(
+        str(metadata_path / "_pytorch_cpu"),
+        config=testing_config,
+        channel_urls=["conda-forge"],
+        platform="osx",
+        arch="64",
+    )
 
 
 @pytest.mark.skipif(on_win, reason="file permissions not relevant on Windows")
