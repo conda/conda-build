@@ -222,10 +222,20 @@ def test_noarch_with_platform_deps(testing_workdir, testing_config):
 def test_noarch_with_no_platform_deps(testing_workdir, testing_config):
     recipe_path = os.path.join(metadata_dir, "_noarch_with_no_platform_deps")
     build_ids = set()
-    for platform in ["osx", "linux", "win"]:
-        metadata = api.render(recipe_path, config=testing_config, platform=platform)[0][
-            0
-        ]
+    for platform, arch in [
+        ("osx", "64"),
+        ("osx", "arm64"),
+        ("linux", "64"),
+        ("linux", "aarch64"),
+        ("win", "64"),
+        ("win", "arm64"),
+    ]:
+        metadata = api.render(
+            recipe_path,
+            config=testing_config,
+            platform=platform,
+            arch=arch,
+        )[0][0]
         build_ids.add(metadata.build_id())
 
     assert len(build_ids) == 1
