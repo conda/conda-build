@@ -143,6 +143,17 @@ def test_recipe_builds(
         pytest.xfail("Numpy build doesn't run on Python 3.13 yet.")
     elif recipe.name == "dll_linking_fail":
         pytest.xfail("Recipe being built needs to fail linking tests.")
+    elif (
+        recipe.name
+        in (
+            "r_test_import",
+            "transitive_subpackage",
+            "always_include_files_glob",
+            "osx_rpath",
+        )
+        and context.subdir == "osx-arm64"
+    ):
+        pytest.skip("Recipe uses packages that are not available on osx-arm64")
 
     # These variables are defined solely for testing purposes,
     # so they can be checked within build scripts
@@ -1478,12 +1489,18 @@ def test_failed_recipe_leaves_folders(testing_config):
 
 
 @pytest.mark.sanity
+@pytest.mark.skipif(
+    context.subdir == "osx-arm64", reason="r-base package not available on osx-arm64"
+)
 def test_only_r_env_vars_defined(testing_config):
     recipe = os.path.join(metadata_dir, "_r_env_defined")
     api.build(recipe, config=testing_config)
 
 
 @pytest.mark.sanity
+@pytest.mark.skipif(
+    context.subdir == "osx-arm64", reason="perl package not available on osx-arm64"
+)
 def test_only_perl_env_vars_defined(testing_config):
     recipe = os.path.join(metadata_dir, "_perl_env_defined")
     api.build(recipe, config=testing_config)

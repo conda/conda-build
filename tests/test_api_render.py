@@ -122,6 +122,10 @@ def test_pin_compatible_semver(testing_config):
     assert "zlib >=1.2.11,<2.0a0" in metadata.get_value("requirements/run")
 
 
+@pytest.mark.skipif(
+    context.subdir == "osx-arm64",
+    reason="python=3.6 package not available on osx-arm64",
+)
 def test_transitive_subpackage_dependency(testing_config):
     recipe_dir = os.path.join(metadata_dir, "transitive_subpackage")
     metadata = api.render(recipe_dir, config=testing_config)[1][0]
