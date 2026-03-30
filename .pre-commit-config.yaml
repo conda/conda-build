@@ -32,7 +32,8 @@ repos:
             recipe/meta\.yaml |
             conda_build/templates/.*\.yaml |
             docs/click/meta\.yaml |
-            docs/source/user-guide/tutorials/meta\.yaml
+            docs/source/user-guide/tutorials/meta\.yaml |
+            tests/local-channel/recipes/.+/meta\.yaml
           )
       # catch git merge/rebase problems
       - id: check-merge-conflict
@@ -44,6 +45,9 @@ repos:
             tests/requirements.*\.txt
           )
         args: [--unique]
+      - id: pretty-format-json
+        args: [--autofix]
+        files: tests/local-channel/.+/repodata\.json
   # Python verification and formatting
   - repo: https://github.com/Lucas-C/pre-commit-hooks
     rev: v1.5.6
@@ -65,6 +69,27 @@ repos:
         args: [--fix]
       # compatible replacement for black
       - id: ruff-format
+  - repo: local
+    hooks:
+      - id: generate-test-recipes-readme
+        name: Generate test recipes README
+        entry: python tests/local-channel/recipes/generate_recipes_readme.py
+        language: python
+        language_version: python3.14
+        additional_dependencies: [pyyaml]
+        pass_filenames: false
+        files: |
+          (?x)^(
+            tests/local-channel/recipes/.+/meta.yaml |
+            tests/local-channel/recipes/generate_recipes_readme.py |
+            tests/local-channel/recipes/README.md
+          )$
+      # sphinx-autoapi doesn't support #: comments, use trailing docstrings instead
+      - id: no-sphinx-autodoc-comments
+        name: 'Disallow #: comments, require trailing docstrings'
+        entry: '^\s*#:'
+        language: pygrep
+        types: [python]
   - repo: https://github.com/macisamuele/language-formatters-pre-commit-hooks
     rev: v2.16.0
     hooks:

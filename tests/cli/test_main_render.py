@@ -12,6 +12,7 @@ from conda.exceptions import PackagesNotFoundError
 from conda_build import api
 from conda_build.cli import main_render
 
+from .. import LOCAL_CHANNEL_PATH, METADATA_V2_PATH
 from ..utils import metadata_dir
 
 if TYPE_CHECKING:
@@ -22,43 +23,35 @@ if TYPE_CHECKING:
     from conda_build.metadata import MetaData
 
 
-def test_render_add_channel(tmp_path: Path) -> None:
-    """This recipe requires the conda_build_test_requirement package, which is
-    only on the conda_build_test channel. This verifies that the -c argument
-    works for rendering."""
-    rendered_filename = os.path.join(tmp_path, "out.yaml")
-    args = [
-        "-c",
-        "conda_build_test",
-        os.path.join(metadata_dir, "_recipe_requiring_external_channel"),
-        "--file",
-        rendered_filename,
-    ]
-    main_render.execute(args)
-    with open(rendered_filename) as rendered_file:
-        rendered_meta = yaml.safe_load(rendered_file)
-    required_package_string = [
-        pkg
-        for pkg in rendered_meta["requirements"]["build"]
-        if "conda_build_test_requirement" in pkg
-    ][0]
-    required_package_details = required_package_string.split(" ")
-    assert len(required_package_details) > 1, (
-        "Expected version number on successful "
-        f"rendering, but got only {required_package_details}"
-    )
-    assert required_package_details[1] == "1.0", (
-        f"Expected version number 1.0 on successful rendering, but got {required_package_details[1]}"
+def test_render_add_channel(
+    tmp_path: Path,
+    mock_channels: list[str],  # mock context.channels so its empty
+) -> None:
+    """This recipe requires the local-channel::pkg-small-executable package.
+    This verifies that the --channel argument works."""
+    rendered_filename = tmp_path / "out.yaml"
+    main_render.execute(
+        [
+            f"--channel={LOCAL_CHANNEL_PATH}",
+            str(METADATA_V2_PATH / "recipe_requiring_external_channel"),
+            f"--file={rendered_filename}",
+        ]
     )
 
+    rendered_meta = yaml.safe_load(rendered_filename.read_text())
+    reqs = rendered_meta["requirements"]["build"]
+    assert len(reqs) == 1
+    assert reqs[0] == "pkg-small-executable 1.0.0 0"
 
-def test_render_with_empty_channel_fails(tmp_path: Path, empty_channel: Path) -> None:
+
+def test_render_with_empty_channel_fails(
+    tmp_path: Path,
+    mock_channels: list[str],  # mock context.channels so its empty
+) -> None:
     with pytest.raises(PackagesNotFoundError):
         main_render.execute(
             [
-                "--override-channels",
-                f"--channel={empty_channel}",
-                os.path.join(metadata_dir, "_recipe_requiring_external_channel"),
+                str(METADATA_V2_PATH / "recipe_requiring_external_channel"),
                 f"--file={tmp_path / 'out.yaml'}",
             ]
         )

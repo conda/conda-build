@@ -19,6 +19,7 @@ from conda_build import api, render
 from conda_build.exceptions import CondaBuildUserError
 from conda_build.variants import validate_spec
 
+from . import METADATA_V2_PATH
 from .utils import metadata_dir, variants_dir
 
 
@@ -122,12 +123,29 @@ def test_pin_compatible_semver(testing_config):
     assert "zlib >=1.2.11,<2.0a0" in metadata.get_value("requirements/run")
 
 
-def test_transitive_subpackage_dependency(testing_config):
-    recipe_dir = os.path.join(metadata_dir, "transitive_subpackage")
-    metadata = api.render(recipe_dir, config=testing_config)[1][0]
+def test_transitive_subpackage_dependency(testing_config, local_channel):
+    """Subpackages resolve to include transitive dependencies.
+
+    (metadata-v2 recipe) transitive_subpackage
+    ├─ (output) libtransitive
+    │     └─ (host) stub-run_exports
+    └─ (output) transitive
+          ├─ (host) stub-depends-run_exports
+          └─ (host) ``pin_subpackage('libtransitive', exact=True)``
+
+    local-channel::stub-depends-run_exports
+    └─ (host) stub-run_exports
+
+    local-channel::stub-run_exports
+    └─ (run_exports) ``pin_subpackage('stub-run_exports', max_pin='x.x')``
+    """
+    recipe_dir = str(METADATA_V2_PATH / "transitive_subpackage")
+    testing_config.channel_urls = [str(local_channel)]
+    metadata = api.render(recipe_dir, config=testing_config)[1].metadata
+    assert metadata.name() == "transitive"
     assert not metadata.get_value("requirements/run")
     assert any(
-        req.startswith("openssl 1.0.2")
+        req == "stub-run_exports 1.0.0 0"
         for req in metadata.get_value("requirements/host")
     )
 

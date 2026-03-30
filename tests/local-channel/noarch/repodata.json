@@ -1,0 +1,127 @@
+{
+  "info": {
+    "subdir": "noarch"
+  },
+  "packages": {},
+  "packages.conda": {
+    "lib-bar-1.0.0-0.conda": {
+      "build": "0",
+      "build_number": 0,
+      "depends": [],
+      "md5": "15a25b940e157d69193a93f607b34eb0",
+      "name": "lib-bar",
+      "noarch": "generic",
+      "sha256": "076ce682e90de71da109307e3c52755da3ef31e0325e82ba4db2886629f126ec",
+      "size": 4561,
+      "subdir": "noarch",
+      "timestamp": 1774640391102,
+      "version": "1.0.0"
+    },
+    "lib-foo-1.0.0-0.conda": {
+      "build": "0",
+      "build_number": 0,
+      "depends": [],
+      "md5": "6eef112bad219c5d4e32a1f02c8349fa",
+      "name": "lib-foo",
+      "noarch": "generic",
+      "sha256": "cb696130b13e8ecf468cf8183f7caa1b51201d2951ef25c13e17b6cd2d701120",
+      "size": 4752,
+      "subdir": "noarch",
+      "timestamp": 1774640393980,
+      "version": "1.0.0"
+    },
+    "pkg-small-executable-1.0.0-0.conda": {
+      "build": "0",
+      "build_number": 0,
+      "depends": [],
+      "md5": "7deba1572ae209e446a1b8f3ada291ec",
+      "name": "pkg-small-executable",
+      "noarch": "generic",
+      "sha256": "f7d922825498c11d1fee18ad3791525d9b0d49aa8f5e64d346f2036a82abb936",
+      "size": 5103,
+      "subdir": "noarch",
+      "timestamp": 1774634662505,
+      "version": "1.0.0"
+    },
+    "r-base-3.4-0.conda": {
+      "build": "0",
+      "build_number": 0,
+      "depends": [],
+      "md5": "fafad359587697884cda25025999da58",
+      "name": "r-base",
+      "noarch": "generic",
+      "sha256": "d2ab8ac63c65948aa5f71e680222288bc9ecb1c1f17b00dabafc51bc2d65f109",
+      "size": 4142,
+      "subdir": "noarch",
+      "timestamp": 1774638036137,
+      "version": "3.4"
+    },
+    "r-base-3.5-0.conda": {
+      "build": "0",
+      "build_number": 0,
+      "depends": [],
+      "md5": "cdf3530c097bc8a0b1cbcd48a68913aa",
+      "name": "r-base",
+      "noarch": "generic",
+      "sha256": "aab1cd11e44a4f062b893f14c967c8ed6facfad585e9f3c84dc275e29d1c833f",
+      "size": 4148,
+      "subdir": "noarch",
+      "timestamp": 1774638036816,
+      "version": "3.5"
+    },
+    "stub-run_exports-1.0.0-0.conda": {
+      "build": "0",
+      "build_number": 0,
+      "depends": [],
+      "md5": "392f07cc29f4e7f8b8c452d693808980",
+      "name": "stub-run_exports",
+      "noarch": "generic",
+      "sha256": "808c98546d67e002e422c312cb8a636023da72460ad30473adcef3b278977564",
+      "size": 4223,
+      "subdir": "noarch",
+      "timestamp": 1774634669144,
+      "version": "1.0.0"
+    },
+    "stub-run_exports-1.0.0-hbf21de9_0.conda": {
+      "build": "hbf21de9_0",
+      "build_number": 0,
+      "depends": [],
+      "md5": "b4462492728f43faec6760fa90b619d6",
+      "name": "stub-run_exports",
+      "noarch": "generic",
+      "sha256": "4cbcb1b14ab08c4a05e1ac290c81fa1ef446ba9b31db7fb22caedd31b791f5e6",
+      "size": 4278,
+      "subdir": "noarch",
+      "timestamp": 1774638155859,
+      "version": "1.0.0"
+    },
+    "stub-run_exports-2.0.0-0.conda": {
+      "build": "0",
+      "build_number": 0,
+      "depends": [],
+      "md5": "cd7a2c687707fd489388384bd4948084",
+      "name": "stub-run_exports",
+      "noarch": "generic",
+      "sha256": "289036e92b756bf97276594bc06c0414000a7c6c40e3bde8ac66f999f00ad1a3",
+      "size": 4199,
+      "subdir": "noarch",
+      "timestamp": 1774634670009,
+      "version": "2.0.0"
+    },
+    "stub-run_exports-2.0.0-hd49e8fe_0.conda": {
+      "build": "hd49e8fe_0",
+      "build_number": 0,
+      "depends": [],
+      "md5": "a4ee9f5a8f168b783c4178bb305685aa",
+      "name": "stub-run_exports",
+      "noarch": "generic",
+      "sha256": "88a58d3634a3fd69f0ed0852f246267ca081c41b1e8c586f5bb314265007d3f7",
+      "size": 4275,
+      "subdir": "noarch",
+      "timestamp": 1774638155178,
+      "version": "2.0.0"
+    }
+  },
+  "removed": [],
+  "repodata_version": 1
+}

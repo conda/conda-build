@@ -33,10 +33,13 @@ from conda_build.metadata import MetaData
 from conda_build.utils import check_call_env, copy_into, prepend_bin_path
 from conda_build.variants import get_default_variant
 
+from . import LOCAL_CHANNEL_PATH
+
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
     from pytest import FixtureRequest, MonkeyPatch
+    from pytest_mock import MockerFixture
 
 
 @pytest.hookimpl
@@ -282,3 +285,20 @@ def empty_channel(tmp_path_factory: pytest.TempPathFactory) -> Path:
     channel = tmp_path_factory.mktemp("empty_channel", numbered=False)
     update_index(channel)
     return channel
+
+
+@pytest.fixture
+def mock_channels(mocker: MockerFixture) -> list[str]:
+    channels: list[str] = []
+    mocker.patch(
+        "conda.base.context.Context.channels",
+        new_callable=mocker.PropertyMock,
+        return_value=channels,
+    )
+    return channels
+
+
+@pytest.fixture
+def local_channel(mock_channels: list[str]) -> Path:
+    mock_channels.append(str(LOCAL_CHANNEL_PATH))
+    return LOCAL_CHANNEL_PATH

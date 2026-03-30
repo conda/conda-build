@@ -1,0 +1,12 @@
+package:
+  name: stub-depends-run_exports
+  version: 1.0.0
+
+requirements:
+  host:
+    - stub-run_exports {{ stub_run_exports }}
+
+extra:
+  test_purpose: >-
+    Minimal package with a host dependency whose pin comes from the variant matrix, so
+    resolution must pick a matching build.

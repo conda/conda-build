@@ -1,0 +1,15 @@
+package:
+  name: transitive_subpackage
+  version: 1.0.0
+
+outputs:
+  - name: libtransitive
+    requirements:
+      host:
+        - stub-run_exports {{ stub_run_exports }}
+
+  - name: transitive
+    requirements:
+      host:
+        - stub-depends-run_exports {{ stub_depends_run_exports }}
+        - {{ pin_subpackage('libtransitive', exact=True) }}

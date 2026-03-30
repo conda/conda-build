@@ -1,0 +1,24 @@
+package:
+  name: test_r_env_var_present
+  version: 1.0
+
+requirements:
+  build:
+    - r-base
+  run:
+    - r-base
+
+test:
+  commands:
+    - test -n "${R:-}"  # [not win]
+    - test -n "${R_VER:-}"  # [not win]
+    - test -n "${CONDA_R:-}"  # [not win]
+    - test -z "${PERL:-}"  # [not win]
+    - test -z "${LUA:-}"  # [not win]
+    - test -z "${PYTHON:-}"  # [not win]
+    - 'if "%R%"=="" exit 1'  # [win]
+    - 'if "%R_VER%"=="" exit 1'  # [win]
+    - 'if "%CONDA_R%"=="" exit 1'  # [win]
+    - 'if not "%PERL%"=="" exit 1'  # [win]
+    - 'if not "%LUA%"=="" exit 1'  # [win]
+    - 'if not "%PYTHON%"=="" exit 1'  # [win]

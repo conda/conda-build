@@ -1,0 +1,12 @@
+package:
+  name: stub-run_exports
+  version: "{{ stub_run_exports }}"
+
+build:
+  noarch: generic
+  run_exports:
+    - {{ pin_subpackage('stub-run_exports', max_pin='x.x.x') }}
+
+extra:
+  test_purpose: >-
+    Minimal noarch package with run_exports re-pinning itself.

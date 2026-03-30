@@ -1,0 +1,38 @@
+{
+  "info": {
+    "subdir": "osx-arm64"
+  },
+  "packages": {},
+  "packages.conda": {
+    "stub-depends-run_exports-1.0.0-h038ad7a_0.conda": {
+      "build": "h038ad7a_0",
+      "build_number": 0,
+      "depends": [
+        "stub-run_exports >=2.0.0,<2.0.1.0a0"
+      ],
+      "md5": "bdcd058bf7c3e4e5199f4ecf7c24c01b",
+      "name": "stub-depends-run_exports",
+      "sha256": "af801876141da42c12512b90e271653536c354436be9ec9be9fb49001197f57a",
+      "size": 4210,
+      "subdir": "osx-arm64",
+      "timestamp": 1774634676275,
+      "version": "1.0.0"
+    },
+    "stub-depends-run_exports-1.0.0-h0bdb962_0.conda": {
+      "build": "h0bdb962_0",
+      "build_number": 0,
+      "depends": [
+        "stub-run_exports >=1.0.0,<1.0.1.0a0"
+      ],
+      "md5": "5275d436b67462f651b59a59a93778ff",
+      "name": "stub-depends-run_exports",
+      "sha256": "fc561f2c72fde177e258226aed9a5d342f68b269307b367665023b9f2e23fd74",
+      "size": 4203,
+      "subdir": "osx-arm64",
+      "timestamp": 1774634679519,
+      "version": "1.0.0"
+    }
+  },
+  "removed": [],
+  "repodata_version": 1
+}

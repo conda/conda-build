@@ -1,0 +1,38 @@
+{
+  "info": {
+    "subdir": "win-64"
+  },
+  "packages": {},
+  "packages.conda": {
+    "stub-depends-run_exports-1.0.0-h2e66cdf_0.conda": {
+      "build": "h2e66cdf_0",
+      "build_number": 0,
+      "depends": [
+        "stub-run_exports >=2.0.0,<2.1.0a0"
+      ],
+      "md5": "8b6a8db39b891a59a789afd8c9125438",
+      "name": "stub-depends-run_exports",
+      "sha256": "e064644b73c057b99b174f09e24bc283c535c9f9c9992afab0c56fad502b32da",
+      "size": 4720,
+      "subdir": "win-64",
+      "timestamp": 1774634744665,
+      "version": "1.0.0"
+    },
+    "stub-depends-run_exports-1.0.0-hfa5458a_0.conda": {
+      "build": "hfa5458a_0",
+      "build_number": 0,
+      "depends": [
+        "stub-run_exports >=1.0.0,<1.1.0a0"
+      ],
+      "md5": "92c22a20f327dbe980a4965e61619480",
+      "name": "stub-depends-run_exports",
+      "sha256": "9ec3933f9e85ae9760e67b8d2728296883f47a62b97d6541128da6e00d9c61be",
+      "size": 4739,
+      "subdir": "win-64",
+      "timestamp": 1774634766615,
+      "version": "1.0.0"
+    }
+  },
+  "removed": [],
+  "repodata_version": 1
+}
