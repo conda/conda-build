@@ -350,8 +350,11 @@ def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -
             for p, e in failed.items():
                 print(f"  - {Path(p).resolve()}")
 
-            msg = "Recipe build failures:\n" + "\n".join(
-                f"  - {Path(p).absolute()}: {e}" for p, e in failed.items()
+            msg = "\n".join(
+                [
+                    "Recipe build failures",
+                    *[f"  - {Path(p).absolute()}: {e}" for p, e in failed.items()],
+                ]
             )
 
             raise CondaBuildUserError(msg)
