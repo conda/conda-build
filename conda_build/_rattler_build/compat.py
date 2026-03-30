@@ -280,6 +280,7 @@ def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -
 
     # common tool / platform / render configuration
     tool_config = ToolConfiguration(
+        # test execution is handled manually in process_recipe()
         test_strategy=None,
         skip_existing=skip_existing,
         noarch_build_platform=noarch_build_platform,
