@@ -586,3 +586,20 @@ def test_build_v1_recipe_multi_output(testing_workdir: str) -> None:
 
     conda_packages = list(out.rglob("*.conda"))
     assert len(conda_packages) == 2
+
+
+def test_build_v1_recipe_result_report(capsys) -> None:
+    """Test for checking build summary report when building multiple recipes"""
+    recipe1 = os.path.join(metadata_dir, "..", "variants", "32_v1_recipe")
+    recipe2 = os.path.join(metadata_dir, "..", "variants", "33_v1_recipe_multi_output")
+
+    args = [recipe1, recipe2, "-c", "conda-forge", "--override-channels"]
+    assert main_build.execute(args) == 0
+
+    captured = capsys.readouterr()
+    output = captured.out + captured.err
+
+    assert "Tried to build 2 recipe files, resulting in 3 outputs." in output
+    assert "pytest: Succeeded" in output
+    assert "myproject-lib: Succeeded" in output
+    assert "myproject-tools: Succeeded" in output
