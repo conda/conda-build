@@ -22,11 +22,11 @@
 ### Contributors
 
 * @conda-bot
-* @danyeaw
+* @danyeaw made their first contribution in #5920
 * @jsmolic
 * @jezdez
 * @kenodegard
-* @opoplawski
+* @opoplawski made their first contribution in #5859
 * @ryanskeith
 * @dependabot[bot]
 * @pre-commit-ci[bot]
