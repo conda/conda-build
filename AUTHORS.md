@@ -53,6 +53,7 @@ Authors are sorted alphabetically.
 * Crystal Soja
 * Dan Blanchard
 * Dan Lovell
+* Dan Yeaw
 * Daniel Bast
 * Daniel Ching
 * Daniel Damiani
@@ -175,6 +176,7 @@ Authors are sorted alphabetically.
 * Nicola Soranzo
 * Oleg Alexandrov
 * Oleksandr Pavlyk
+* Orion Poplawski
 * Patrick Snape
 * Patrick Sodré
 * Paul Madden
