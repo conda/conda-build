@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 import ruamel.yaml
+from conda.base.context import context
 
 from conda_build import api
 from conda_build.skeletons.pypi import (
@@ -406,6 +407,10 @@ def test_pypi_with_version_arg(tmp_path: Path):
 
 
 @pytest.mark.slow
+@pytest.mark.skipif(
+    context.subdir == "osx-arm64",
+    reason="python=3.6 package not available on osx-arm64",
+)
 def test_pypi_with_extra_specs(tmp_path: Path, testing_config):
     # regression test for https://github.com/conda/conda-build/issues/1697
     # For mpi4py:
@@ -429,6 +434,10 @@ def test_pypi_with_extra_specs(tmp_path: Path, testing_config):
 
 
 @pytest.mark.slow
+@pytest.mark.skipif(
+    context.subdir == "osx-arm64",
+    reason="python=3.6 package not available on osx-arm64",
+)
 def test_pypi_with_version_inconsistency(tmp_path: Path, testing_config):
     # regression test for https://github.com/conda/conda-build/issues/189
     # For mpi4py:

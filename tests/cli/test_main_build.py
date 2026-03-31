@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
+from conda.base.context import context
 from conda.exceptions import PackagesNotFoundError
 
 from conda_build import api
@@ -42,6 +43,10 @@ def test_build_empty_sections(conda_build_test_recipe_envvar: str):
 
 
 @pytest.mark.serial
+@pytest.mark.skipif(
+    context.subdir == "osx-arm64",
+    reason="conda_build_test channel does not support osx-arm64",
+)
 def test_build_add_channel():
     """This recipe requires the conda_build_test_requirement package, which is
     only on the conda_build_test channel. This verifies that the -c argument
@@ -459,6 +464,10 @@ def test_relative_path_test_artifact(
     main_build.execute(args)
 
 
+@pytest.mark.skipif(
+    context.subdir == "osx-arm64",
+    reason="imagesize<1.0 package not available on osx-arm64",
+)
 def test_test_extra_dep(testing_metadata):
     testing_metadata.meta["test"]["imports"] = ["imagesize"]
     api.output_yaml(testing_metadata, "meta.yaml")

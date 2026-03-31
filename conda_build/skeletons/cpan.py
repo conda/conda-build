@@ -6,7 +6,6 @@ Tools for converting CPAN packages to conda recipes.
 
 from __future__ import annotations
 
-import codecs
 import gzip
 import hashlib
 import json
@@ -264,7 +263,8 @@ def get_cpan_api_url(url, colons):
                 output = output.decode("utf-8-sig")
             rel_dict = json.loads(output)
         except OSError:
-            rel_dict = json.loads(codecs.open(json_path, encoding="utf-8").read())
+            with open(json_path, encoding="utf-8") as fp:
+                rel_dict = json.load(fp)
         except CondaHTTPError:
             rel_dict = None
     return rel_dict
