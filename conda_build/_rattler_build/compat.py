@@ -234,8 +234,13 @@ def process_recipe(
                 continue
 
             try:
+                # tests are ran in a different directory than build, so we need to add the build
+                # directory manually as a file:// channel
+                test_channels = [Path(output_dir).resolve().as_uri(), *channels]
+
                 test_results = pkg.run_tests(
-                    progress_callback=CondaProgressCallback(show_logs=show_logs)
+                    progress_callback=CondaProgressCallback(show_logs=show_logs),
+                    channel=test_channels,
                 )
             except RattlerBuildError as e:
                 result.outputs.append(
