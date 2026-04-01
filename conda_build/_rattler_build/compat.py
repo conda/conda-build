@@ -426,7 +426,7 @@ def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -
             if failed:
                 msg = "\n".join(
                     [
-                        "Recipe render failures",
+                        "Recipe render failures:",
                         *[
                             f"  - {Path(r.recipe_path).resolve()}: {r.error or 'Unknown error'}"
                             for r in failed
@@ -477,9 +477,9 @@ def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -
                 elif recipe.error:
                     msg_lines.append(f"      - recipe: {recipe.error}")
 
-            print(end="\n")
-            raise CondaBuildUserError("\n".join(msg_lines))
+            if parsed_args.debug:
+                raise CondaBuildUserError("\n".join(msg_lines))
+            else:
+                return 1
 
         return 0
-
-    return 1 if failed else 0
