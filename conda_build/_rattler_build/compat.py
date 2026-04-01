@@ -297,8 +297,6 @@ def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -
     )
     variant_config: VariantConfig = VariantConfig()
 
-    # TODO: investigate why is config.channel_urls
-    # does not pick up condarc settings, need to use context.channels
     if parsed_args.override_channels:
         if not parsed_args.channel:
             raise CondaBuildUserError(
@@ -307,18 +305,9 @@ def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -
         channels = list(parsed_args.channel)
     else:
         channels = list(context.channels)
-        if config.channel_urls:
-            for url in config.channel_urls:
-                # TODO: fix -c local
-                # TypeError: argument 'channels': 'Channel' object cannot be cast as 'str'
-                if url in context.custom_multichannels:
-                    channels.extend(
-                        [local_url for local_url in context.custom_multichannels[url]]
-                    )
-                else:
-                    channels.append(url)
 
-    channels = list(dict.fromkeys(channels))
+    # Local and multichannel not supported yet, xref https://github.com/conda/rattler/issues/1327
+    channels = list(dict.fromkeys(c for c in channels if c != "local"))
 
     if context.channel_priority == "strict":
         channel_priority = "strict"
