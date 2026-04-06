@@ -1,5 +1,38 @@
 [//]: # (current developments)
 
+## 26.3.0 (2026-03-31)
+
+### Enhancements
+
+* Add support for building v1 recipes via `rattler-build` CLI (#5880).
+
+### Bug fixes
+
+* Update tarfile extraction to use explicit filter parameter for Python 3.14 compatibility. The default filter changes from `fully_trusted` to `data` in Python 3.14, so we now explicitly specify `fully_trusted` to maintain backward compatibility. Removed the deprecation warning suppression from pyproject.toml (#5912).
+* Inline `CONDA_PACKAGE_EXTENSIONS` to avoid import issues. (#5917)
+
+### Other
+
+* Drop unused `pytz` requirement. (#5859)
+* Update recipe to require `conda >=25.11.0` and `conda-libmamba-solver >=25.11.0`. (#5916)
+* Standardize BSD 3-Clause License text. (#5920)
+* Replace Python 3.6 with 3.13 in test matrix. (#5939)
+* Add Python 3.13 to test matrix. (#5941)
+
+### Contributors
+
+* @conda-bot
+* @danyeaw made their first contribution in #5920
+* @jsmolic
+* @jezdez
+* @kenodegard
+* @opoplawski made their first contribution in #5859
+* @ryanskeith
+* @dependabot[bot]
+* @pre-commit-ci[bot]
+
+
+
 ## 26.1.0 (2026-01-29)
 
 ### Enhancements
