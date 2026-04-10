@@ -13,9 +13,10 @@ from rattler_build import (
     RattlerBuildError,
     RecipeParseError,
 )
+from rattler_build.debug import DebugSession
 from rattler_build.progress import SimpleProgressCallback
 from rattler_build.render import RenderConfig
-from rattler_build.stage0 import Stage0Recipe
+from rattler_build.stage0 import MultiOutputRecipe, Stage0Recipe
 from rattler_build.tool_config import PlatformConfig, ToolConfiguration
 from rattler_build.variant_config import VariantConfig
 
@@ -125,6 +126,15 @@ def check_arguments_rattler(
             "channel",
             "override_channels",
         },
+        "debug": {
+            "recipe",
+            "output_id",
+            "variant_config_files",
+            "exclusive_config_files",
+            "channel",
+            "override_channels",
+            "output_folder",
+        },
     }
 
     # check for unsupported CLI arguments
@@ -196,6 +206,57 @@ def process_recipe(
         for item in rendered:
             data = item.recipe.to_dict()
             print(yaml.safe_dump(data, indent=2, sort_keys=False))
+        return result
+
+    if command == "debug":
+        if isinstance(recipe, MultiOutputRecipe):
+            output_names = sorted(
+                {
+                    variant.recipe.to_dict().get("package", {}).get("name")
+                    for variant in rendered
+                }
+            )
+            if parsed_args.output_id is None:
+                raise CondaBuildUserError(
+                    f"\nMultiple outputs found in recipe ({len(output_names)}). "
+                    f"Please specify which output to debug "
+                    f"using --output-id. Available outputs: {', '.join(output_names)}"
+                )
+            else:
+                selected_output = next(
+                    variant
+                    for variant in rendered
+                    if variant.recipe.to_dict().get("package", {}).get("name")
+                    == parsed_args.output_id
+                )
+
+        else:
+            selected_output = rendered[0]
+        try:
+            session = DebugSession.create(
+                variant=selected_output,
+                tool_config=tool_config,
+                output_dir=output_dir,
+                channels=channels,
+                progress_callback=CondaProgressCallback(show_logs=True),
+            )
+        except RattlerBuildError as e:
+            result.error = (
+                f"Failed to setup debug scripts for recipe {recipe_path}: {e}"
+            )
+            return result
+
+        build_script = session.paths.build_script
+        work_dir = session.paths.work_dir
+        host_prefix = session.paths.host_prefix
+
+        print(f"Host dependencies available in {host_prefix}")
+        print()
+        print("To run the actual build, use:")
+        print(f"conda build {Path(recipe_path).resolve().parent}")
+        print("Or run the build script directly with:")
+        print(f"cd {work_dir} && ./{build_script.name}")
+
         return result
 
     for i, variant in enumerate(rendered, 1):
@@ -293,7 +354,7 @@ def process_recipe(
 
 def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -> int:
     """Run rattler-build for v1 recipes"""
-    if command not in ("build", "render"):
+    if command not in ("build", "debug", "render"):
         raise ValueError(f"Unrecognized subcommand: {command}")
 
     # Initialize configuration defaults
@@ -416,7 +477,7 @@ def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -
         else:
             package_format = ".tar.bz2"
 
-    if command == "render":
+    if command in ("debug", "render"):
         recipes = [str(Path(parsed_args.recipe) / "recipe.yaml")]
     else:
         recipes = [
@@ -444,27 +505,42 @@ def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -
             )
         )
 
-    if command == "render":
-        failed = [r for r in recipe_results if r.failed]
-        if failed:
-            msg = "\n".join(
-                [
-                    "Recipe render failures:",
-                    *[
-                        f"  - {Path(r.recipe_path).resolve()}: {r.error or 'Unknown error'}"
-                        for r in failed
-                    ],
-                ]
-            )
-            raise CondaBuildUserError(msg)
-        return 0
+        if command == "render":
+            failed = [r for r in recipe_results if r.failed]
+            if failed:
+                msg = "\n".join(
+                    [
+                        "Recipe render failures:",
+                        *[
+                            f"  - {Path(r.recipe_path).resolve()}: {r.error or 'Unknown error'}"
+                            for r in failed
+                        ],
+                    ]
+                )
+                raise CondaBuildUserError(msg)
+            return 0
 
-    recipe_count = len(recipe_results)
-    total_outputs = sum(len(r.outputs) for r in recipe_results)
-    succeeded_outputs = sum(
-        1 for r in recipe_results for output in r.outputs if output.success
-    )
-    failed_outputs = total_outputs - succeeded_outputs
+        if command == "debug":
+            failed = [r for r in recipe_results if r.failed]
+            if failed:
+                msg = "\n".join(
+                    [
+                        "Recipe debug failures:",
+                        *[
+                            f"  - {Path(r.recipe_path).resolve()}: {r.error or 'Unknown error'}"
+                            for r in failed
+                        ],
+                    ]
+                )
+                raise CondaBuildUserError(msg)
+            return 0
+
+        recipe_count = len(recipe_results)
+        total_outputs = sum(len(r.outputs) for r in recipe_results)
+        succeeded_outputs = sum(
+            1 for r in recipe_results for output in r.outputs if output.success
+        )
+        failed_outputs = total_outputs - succeeded_outputs
 
     print("\n=== Build summary ===")
     print(
