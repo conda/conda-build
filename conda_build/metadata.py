@@ -2155,6 +2155,14 @@ class MetaData:
         return "load_file_regex" in meta_text
 
     @property
+    def uses_load_python_build_metadata(self):
+        meta_text = ""
+        if self.meta_path:
+            with open(self.meta_path, "rb") as f:
+                meta_text = UnicodeDammit(f.read()).unicode_markup
+        return "load_python_build_metadata" in meta_text
+
+    @property
     def uses_load_file_data_in_meta(self):
         meta_text = ""
         if self.meta_path:
@@ -2169,6 +2177,7 @@ class MetaData:
             or self.uses_setup_py_in_meta
             or self.uses_regex_in_meta
             or self.uses_load_file_data_in_meta
+            or self.uses_load_python_build_metadata
         )
 
     @property
