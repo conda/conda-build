@@ -152,7 +152,7 @@ def process_recipe(
     parsed_args: argparse.Namespace,
 ) -> RecipeResult:
     """
-    Function to parse, render and optionally build or test a conda packlage recipe using the py-rattler-build API.
+    Function to parse, render and optionally build or test a conda package recipe using the py-rattler-build API.
 
     Workflow:
         - Load and parse the recipe via `Stage0Recipe.from_file()`
