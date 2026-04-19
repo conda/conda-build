@@ -304,7 +304,9 @@ def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -
             )
         channels = list(parsed_args.channel)
     else:
-        channels = list(context.channels)
+        channels = [channel for channel in context.channels if channel != "defaults"]
+        if "defaults" in context.channels:
+            channels.extend(channel.base_url for channel in context.default_channels)
 
     # Local and multichannel not supported yet, xref https://github.com/conda/rattler/issues/1327
     channels = list(dict.fromkeys(c for c in channels if c != "local"))

@@ -562,8 +562,15 @@ def test_build_with_empty_channel_fails(empty_channel: Path) -> None:
 def test_build_v1_recipe() -> None:
     """Test building a v1 recipe"""
     recipe = os.path.join(metadata_dir, "..", "variants", "32_v1_recipe")
+    env_file = os.path.join(
+        metadata_dir, "..", "variants", "32_v1_recipe", "environment.yml"
+    )
 
     args = [recipe, "-c", "conda-forge", "--override-channels"]
+    assert main_build.execute(args) == 0
+
+    # Check if default channels will be handled properly
+    args = [recipe, "-c", "conda-forge", "-m", env_file]
     assert main_build.execute(args) == 0
 
 
