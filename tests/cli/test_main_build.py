@@ -636,3 +636,16 @@ def test_build_v1_recipe_result_report(capsys) -> None:
     assert "pytest: Succeeded" in output
     assert "myproject-lib: Succeeded" in output
     assert "myproject-tools: Succeeded" in output
+
+
+def test_build_v1_no_anaconda_upload(capsys) -> None:
+    """Verify that we respect --no-anaconda-upload flag"""
+    recipe = os.path.join(metadata_dir, "..", "variants", "32_v1_recipe")
+
+    args = [recipe, "-c", "conda-forge", "--override-channels", "--no-anaconda-upload"]
+    assert main_build.execute(args) == 0
+
+    captured = capsys.readouterr()
+    output = captured.out + captured.err
+
+    assert "# Automatic uploading is disabled" in output

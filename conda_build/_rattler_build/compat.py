@@ -17,6 +17,7 @@ from rattler_build.progress import SimpleProgressCallback
 from rattler_build.render import RenderConfig
 from rattler_build.stage0 import Stage0Recipe
 from rattler_build.tool_config import PlatformConfig, ToolConfiguration
+from rattler_build.upload import upload_package_to_anaconda
 from rattler_build.variant_config import VariantConfig
 
 from ..config import CondaPkgFormat
@@ -95,6 +96,10 @@ def check_arguments_rattler(
 
     VALID_ARGS = {
         "build": {
+            "anaconda_upload",
+            "anaconda_token",
+            "build_only",
+            "user",
             "recipe",
             "variant_config_files",
             "exclusive_config_files",
@@ -150,6 +155,7 @@ def process_recipe(
     tool_config: ToolConfiguration,
     render_config: RenderConfig,
     parsed_args: argparse.Namespace,
+    config: Config,
 ) -> RecipeResult:
     """
     Function to parse, render and optionally build or test a conda package recipe using the py-rattler-build API.
@@ -212,15 +218,6 @@ def process_recipe(
         built_packages = list(build_result.packages)
 
         for pkg_path in built_packages:
-            if parsed_args.notest:
-                result.outputs.append(
-                    OutputResult(
-                        name=output_name,
-                        success=True,
-                    )
-                )
-                continue
-
             try:
                 pkg = Package.from_file(pkg_path)
             except RattlerBuildError as e:
@@ -233,36 +230,37 @@ def process_recipe(
                 )
                 continue
 
-            try:
-                # tests are ran in a different directory than build, so we need to add the build
-                # directory manually as a file:// channel
-                test_channels = [Path(output_dir).resolve().as_uri(), *channels]
+            if not parsed_args.notest and parsed_args.build_only:
+                try:
+                    # tests are ran in a different directory than build, so we need to add the build
+                    # directory manually as a file:// channel
+                    test_channels = [Path(output_dir).resolve().as_uri(), *channels]
 
-                test_results = pkg.run_tests(
-                    progress_callback=CondaProgressCallback(show_logs=show_logs),
-                    channel=test_channels,
-                )
-            except RattlerBuildError as e:
-                result.outputs.append(
-                    OutputResult(
-                        name=output_name,
-                        success=False,
-                        error=str(e),
+                    test_results = pkg.run_tests(
+                        progress_callback=CondaProgressCallback(show_logs=show_logs),
+                        channel=test_channels,
                     )
-                )
-                continue
-
-            test_failed = [r for r in test_results if not r.success]
-
-            if test_failed:
-                result.outputs.append(
-                    OutputResult(
-                        name=output_name,
-                        success=False,
-                        error="Package tests failed",
+                except RattlerBuildError as e:
+                    result.outputs.append(
+                        OutputResult(
+                            name=output_name,
+                            success=False,
+                            error=str(e),
+                        )
                     )
-                )
-                continue
+                    continue
+
+                test_failed = [r for r in test_results if not r.success]
+
+                if test_failed:
+                    result.outputs.append(
+                        OutputResult(
+                            name=output_name,
+                            success=False,
+                            error="Package tests failed",
+                        )
+                    )
+                    continue
 
             result.outputs.append(
                 OutputResult(
@@ -270,6 +268,34 @@ def process_recipe(
                     success=True,
                 )
             )
+
+            # Upload package to anaconda.org
+            # if no argument is passed and anaconda_token or user is in .condarc; upload
+            # if `--no-anaconda-upload` or `--build-only is passed; skip upload
+            upload = False
+            if not config.anaconda_upload or parsed_args.build_only:
+                print("# Automatic uploading is disabled")
+            elif config.token and config.user:
+                upload = True
+
+            if upload:
+                try:
+                    upload_package_to_anaconda(
+                        package_files=[str(pkg_path)],
+                        owner=config.user,
+                        api_key=config.token,
+                        force=config.force_upload,
+                    )
+                    print(f"Package upload was successful!: {pkg_path}")
+                except RattlerBuildError:
+                    result.outputs.append(
+                        OutputResult(
+                            name=output_name,
+                            success=False,
+                            error="Package upload failed",
+                        )
+                    )
+                    continue
 
     return result
 
@@ -416,6 +442,7 @@ def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -
                     tool_config=tool_config,
                     render_config=render_config,
                     parsed_args=parsed_args,
+                    config=config,
                 )
             )
 
