@@ -297,19 +297,26 @@ def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -
     )
     variant_config: VariantConfig = VariantConfig()
 
+    # select list of channels to iterate over:
+    #   a) select channels passed through the CLI if --override-channels
+    #   b) use all channels from Conda's context otherwise
     if parsed_args.override_channels:
         if not parsed_args.channel:
             raise CondaBuildUserError(
                 "Channels must be specified using -c/--channel argument when --override-channels is used."
             )
-        channels = list(parsed_args.channel)
+        source_channels = parsed_args.channel
     else:
-        channels = [channel for channel in context.channels if channel != "defaults"]
-        if "defaults" in context.channels:
-            channels.extend(channel.base_url for channel in context.default_channels)
+        source_channels = context.channels
 
-    # Local and multichannel not supported yet, xref https://github.com/conda/rattler/issues/1327
-    channels = list(dict.fromkeys(c for c in channels if c != "local"))
+    for channel in source_channels:
+        # handle multichannels ('defaults', 'local' and user defined multichannels)
+        if channel in context.custom_multichannels:
+            channels.extend(
+                str(subchannel) for subchannel in context.custom_multichannels[channel]
+            )
+        else:
+            channels.append(channel)
 
     if context.channel_priority == "strict":
         channel_priority = "strict"
