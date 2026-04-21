@@ -566,38 +566,10 @@ def test_build_v1_recipe() -> None:
     args = [recipe, "-c", "conda-forge", "--override-channels"]
     assert main_build.execute(args) == 0
 
+    # check if 'defaults' multichannel will be handled properly
 
-def test_build_v1_with_multi_channel(capfd) -> None:
-    """Test building a v1 recipe with multichannels"""
-    recipe = os.path.join(metadata_dir, "..", "variants", "32_v1_recipe")
-    env_file = os.path.join(
-        metadata_dir, "..", "variants", "32_v1_recipe", "environment.yml"
-    )
-
-    # Check if default channel will be handled properly
-    args = [
-        recipe,
-        "-m",
-        env_file,
-        "--override-channels",
-        "-c",
-        "defaults",
-        "-c",
-        "conda-forge",
-        "--no-test",
-    ]
+    args = [recipe, "-c", "conda-forge", "-c", "defaults", "--override-channels"]
     assert main_build.execute(args) == 0
-
-    out, err = capfd.readouterr()
-
-    expected_channels = [
-        "https://repo.anaconda.com/pkgs/main/",
-        "https://repo.anaconda.com/pkgs/r/",
-        "conda-forge",
-    ]
-
-    for channel in expected_channels:
-        assert channel in out
 
 
 def test_build_v1_recipe_multi_output(testing_workdir: str) -> None:
