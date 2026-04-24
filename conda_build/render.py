@@ -1,5 +1,31 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+"""Recipe on disk → finalized :class:`~conda_build.metadata.MetaData`.
+
+**Pipeline**
+
+- Merge ``conda_build_config.yaml`` / variant specs (:mod:`conda_build.variants`) and expand the
+  matrix.
+- :func:`render_recipe` constructs :class:`~conda_build.metadata.MetaData`: Jinja
+  (:meth:`~conda_build.metadata.MetaData._get_contents`), then YAML
+  (:func:`~conda_build.metadata.parse`). :func:`~conda_build.metadata.get_selectors` runs on CBC
+  text and again on rendered ``meta.yaml`` (selectors + Jinja globals).
+- :func:`distribute_variants` and :func:`render_metadata_tuples` cover multiple variants and
+  subpackages.
+
+**CLI** (the only user-facing commands that enter this module’s orchestration)
+
+- **conda build** — :mod:`conda_build.cli.main_build` → :func:`conda_build.api.build` →
+  :func:`conda_build.build.build_tree` → :func:`render_recipe`, then compile/test in
+  :mod:`conda_build.build`. Some helper paths call :func:`conda_build.api.render` directly.
+- **conda render** — :mod:`conda_build.cli.main_render` builds :class:`~conda_build.config.Config`
+  from argparse (channels, variants, ``--no-source``, …) → :func:`conda_build.api.render`, then
+  prints or writes the rendered recipe (see that module for flags such as ``--file``).
+
+**Programmatic:** :func:`conda_build.api.render`, :func:`conda_build.api.build`. **Paths:**
+:func:`bldpkg_path` and helpers below.
+"""
+
 from __future__ import annotations
 
 import functools
