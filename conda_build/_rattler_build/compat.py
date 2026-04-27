@@ -311,6 +311,7 @@ def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -
 
     for channel in source_channels:
         # handle multichannels ('defaults', 'local' and user defined multichannels)
+        # TODO: fix multichannel priority
         if channel in context.custom_multichannels:
             channels.extend(
                 str(subchannel) for subchannel in context.custom_multichannels[channel]
