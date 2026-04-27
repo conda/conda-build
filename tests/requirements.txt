@@ -1,7 +1,6 @@
 beautifulsoup4
 chardet
 conda >=25.11.0
-conda-forge::rattler-build
 conda-index >=0.4.0
 conda-libmamba-solver >=25.11.0  # includes fix for CondaSolver deprecation warnings
 conda-package-handling >=2.2.0
@@ -22,6 +21,7 @@ pytest-rerunfailures  # for handling flaky tests
 python >=3.10
 python-libarchive-c
 pyyaml
+rattler-build
 requests
 ripgrep  # for faster grep
 setuptools

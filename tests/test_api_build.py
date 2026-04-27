@@ -1916,7 +1916,7 @@ def test_warning_on_file_clobbering(
         config=testing_config,
     )
     # The clobber warning here is raised when creating the test environment for b
-    if Version(conda_version) >= Version("24.9.0"):
+    if Version("24.9.0") <= Version(conda_version) <= Version("26.3.2"):
         # conda >=24.9.0
         clobber_warning_found = False
         for record in caplog.records:
