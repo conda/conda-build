@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
+from conda.base.context import context
 from conda.exceptions import PackagesNotFoundError
 
 from conda_build import api
@@ -42,6 +43,10 @@ def test_build_empty_sections(conda_build_test_recipe_envvar: str):
 
 
 @pytest.mark.serial
+@pytest.mark.skipif(
+    context.subdir == "osx-arm64",
+    reason="conda_build_test channel does not support osx-arm64",
+)
 def test_build_add_channel():
     """This recipe requires the conda_build_test_requirement package, which is
     only on the conda_build_test channel. This verifies that the -c argument
@@ -322,11 +327,11 @@ def test_no_force_upload(
 
 @pytest.mark.slow
 def test_conda_py_no_period(testing_workdir, testing_metadata, monkeypatch):
-    monkeypatch.setenv("CONDA_PY", "36")
+    monkeypatch.setenv("CONDA_PY", "313")
     testing_metadata.meta["requirements"] = {"host": ["python"], "run": ["python"]}
     api.output_yaml(testing_metadata, "meta.yaml")
     outputs = api.build(testing_workdir, notest=True)
-    assert any("py36" in output for output in outputs)
+    assert any("py313" in output for output in outputs)
 
 
 def test_build_skip_existing(
@@ -459,6 +464,10 @@ def test_relative_path_test_artifact(
     main_build.execute(args)
 
 
+@pytest.mark.skipif(
+    context.subdir == "osx-arm64",
+    reason="imagesize<1.0 package not available on osx-arm64",
+)
 def test_test_extra_dep(testing_metadata):
     testing_metadata.meta["test"]["imports"] = ["imagesize"]
     api.output_yaml(testing_metadata, "meta.yaml")
@@ -548,3 +557,11 @@ def test_build_with_empty_channel_fails(empty_channel: Path) -> None:
                 os.path.join(metadata_dir, "_recipe_requiring_external_channel"),
             ]
         )
+
+
+def test_build_with_v1_recipe() -> None:
+    """Test building a v1 recipe"""
+    recipe = os.path.join(metadata_dir, "..", "variants", "32_v1_recipe")
+
+    args = [recipe]
+    assert main_build.execute(args) == 0

@@ -17,6 +17,7 @@ from conda.base.context import context
 from conda.common.io import dashlist
 
 from .. import api, build, source, utils
+from .._rattler_build.compat import check_arguments_rattler, run_rattler
 from ..config import (
     CondaPkgFormat,
     conda_pkg_format_default,
@@ -24,7 +25,7 @@ from ..config import (
     get_or_merge_config,
     zstd_compression_level_default,
 )
-from ..utils import LoggingContext
+from ..utils import LoggingContext, is_v1_recipe
 from .actions import KeyValueAction, PackageTypeNormalize
 from .main_render import get_render_parser
 
@@ -574,6 +575,22 @@ def execute(args: Sequence[str] | None = None) -> int:
 
     config.verbose = not parsed.quiet or parsed.debug
 
+    n_v1_recipes = sum(1 for recipe in parsed.recipe if is_v1_recipe(recipe))
+    if n_v1_recipes == len(parsed.recipe):  # all are v1, proceed with rattler-build
+        # check cli arguments
+        parser, parsed_only_recipe = parse_args(parsed.recipe)
+        command = parser.prog.split()[-1]
+        check_arguments_rattler(command, parsed, parsed_only_recipe)
+        # run rattler command
+        return run_rattler(command, parsed, config)
+
+    if n_v1_recipes > 0:  # mixed recipe formats, error out
+        print(
+            "Cannot process several recipe versions at the same time!", file=sys.stderr
+        )
+        return 1
+
+    # No v1 recipes, then everything is meta.yaml, continue with conda-build
     if "purge" in parsed.recipe:
         build.clean_build(config)
         return 0

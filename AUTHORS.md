@@ -37,6 +37,7 @@ Authors are sorted alphabetically.
 * Carsten Haubold
 * Casey Clements
 * Catherine
+* Charles Bousseau
 * Cheng H. Lee
 * Chris Hogan
 * Chris Osborn
@@ -52,6 +53,7 @@ Authors are sorted alphabetically.
 * Crystal Soja
 * Dan Blanchard
 * Dan Lovell
+* Dan Yeaw
 * Daniel Bast
 * Daniel Ching
 * Daniel Damiani
@@ -174,6 +176,7 @@ Authors are sorted alphabetically.
 * Nicola Soranzo
 * Oleg Alexandrov
 * Oleksandr Pavlyk
+* Orion Poplawski
 * Patrick Snape
 * Patrick Sodré
 * Paul Madden
@@ -230,6 +233,7 @@ Authors are sorted alphabetically.
 * Thomas Holder
 * Thomas Kluyver
 * Thomas Lam
+* Tianxiang Bian
 * Tim Paine
 * Tim Snyder
 * Tobias Fischer

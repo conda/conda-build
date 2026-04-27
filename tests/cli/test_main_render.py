@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 import yaml
+from conda.base.context import context
 from conda.exceptions import PackagesNotFoundError
 
 from conda_build import api
@@ -22,6 +23,10 @@ if TYPE_CHECKING:
     from conda_build.metadata import MetaData
 
 
+@pytest.mark.skipif(
+    context.subdir == "osx-arm64",
+    reason="conda_build_test channel does not support osx-arm64",
+)
 def test_render_add_channel(tmp_path: Path) -> None:
     """This recipe requires the conda_build_test_requirement package, which is
     only on the conda_build_test channel. This verifies that the -c argument
@@ -163,3 +168,11 @@ def test_render_with_python_arg_CLI_reduces_subspace(capfd):
     main_render.execute(args)
     out, err = capfd.readouterr()
     assert len(out.splitlines()) == 1
+
+
+def test_render_with_v1_recipe() -> None:
+    """Test rendering a v1 recipe (recipe.yaml)"""
+    recipe = os.path.join(metadata_dir, "..", "variants", "32_v1_recipe")
+
+    args = [recipe]
+    assert main_render.execute(args) == 0

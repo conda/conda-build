@@ -33,7 +33,13 @@ from conda.core.prefix_data import PrefixData
 from conda.exceptions import CondaError, NoPackagesFoundError, UnsatisfiableError
 from conda.gateways.disk.create import TemporaryDirectory
 from conda.models.channel import Channel
-from conda.models.enums import FileMode, PathType
+from conda.models.enums import FileMode
+
+try:
+    from conda.models.enums import PathEnum as PathType
+except ImportError:
+    # FUTURE: remove for `conda>=26.9`
+    from conda.models.enums import PathType
 from conda.models.match_spec import MatchSpec
 from conda.utils import url_path
 

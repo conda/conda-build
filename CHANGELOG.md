@@ -1,11 +1,105 @@
 [//]: # (current developments)
 
+## 26.3.0 (2026-03-31)
+
+### Enhancements
+
+* Add support for building v1 recipes via `rattler-build` CLI (#5880).
+
+### Bug fixes
+
+* Update tarfile extraction to use explicit filter parameter for Python 3.14 compatibility. The default filter changes from `fully_trusted` to `data` in Python 3.14, so we now explicitly specify `fully_trusted` to maintain backward compatibility. Removed the deprecation warning suppression from pyproject.toml (#5912).
+* Inline `CONDA_PACKAGE_EXTENSIONS` to avoid import issues. (#5917)
+
+### Other
+
+* Drop unused `pytz` requirement. (#5859)
+* Update recipe to require `conda >=25.11.0` and `conda-libmamba-solver >=25.11.0`. (#5916)
+* Standardize BSD 3-Clause License text. (#5920)
+* Replace Python 3.6 with 3.13 in test matrix. (#5939)
+* Add Python 3.13 to test matrix. (#5941)
+
+### Contributors
+
+* @conda-bot
+* @danyeaw made their first contribution in #5920
+* @jsmolic
+* @jezdez
+* @kenodegard
+* @opoplawski made their first contribution in #5859
+* @ryanskeith
+* @dependabot[bot]
+* @pre-commit-ci[bot]
+
+
+
+## 26.1.0 (2026-01-29)
+
+### Enhancements
+
+* Enable `echo on` for Windows build scripts. (#5803)
+* Add support for [CEP 28](https://github.com/conda/ceps/blob/main/cep-0028.md) (customizable system DLL linkage checks for Windows). (#5806)
+* Add riscv64 architecture support to the `cdt()` Jinja function. (#5846)
+
+### Bug fixes
+
+* Handle unknown dynamic tags in liefldd. (#5665 via #5778)
+* Delete rpath before adding rpath on macOS to avoid errors with not having enough space to add rpath. (#5855 via #5856)
+* Don't fail on empty source archive. Ignore and continue instead. (#5854 via #5861)
+* Fix `PendingDeprecationWarning` for `conda.models.enums.PathType` by using the new `PathEnum` name with backward compatibility. (#5901)
+
+### Deprecations
+
+* Stop warning about failed `conda-verify` imports. Errors will be logged as debug statements. (#5841 via #5844)
+* Bump minimum `conda` version to 25.11.0 and `conda-libmamba-solver` to 25.11.0. Remove obsolete `CondaSolver` deprecation warning filters. (#5905)
+* Remove obsolete `restore_free_channel` deprecation warning filter. This property was removed in conda 25.9.0. (#5905)
+
+### Docs
+
+* Document `conda_build_config.yaml` variable type differences in selectors vs Jinja2 expressions (#5852 via #5887)
+
+### Other
+
+* Use `conda-forge` channel for macOS Intel (osx-64) CI tests since conda 25.11+ is not available in `defaults` channel for that platform. (#5905)
+
+### Contributors
+
+* @cbouss
+* @conda-bot
+* @isuruf
+* @jaimergp
+* @jsmolic
+* @jezdez
+* @kathatherine
+* @kenodegard
+* @bitsk
+* @dependabot[bot]
+* @pre-commit-ci[bot]
+
+
+
+## 25.11.1 (2025-12-04)
+
+### Bug fixes
+
+* Prevent empty channel lists from being passed to host environment creation. (#5857)
+
+### Deprecations
+
+* Remove fallback imports for `conda.core.index.Index`. (#5857)
+
+### Contributors
+
+* @jezdez
+
+
+
 ## 25.11.0 (2025-11-20)
 
 ### Enhancements
 
 * Allow the PyYAML loader to be specified when calling `conda_build.variants.parse_config_file`. (#5800)
-* Raise `menuinst` JSON validation errors, which used to be warnings. (#5807)
+* Raise `menuinst` JSON validation errors, which used to be warnings. (#5828)
 
 ### Bug fixes
 

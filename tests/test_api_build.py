@@ -143,6 +143,17 @@ def test_recipe_builds(
         pytest.xfail("Numpy build doesn't run on Python 3.13 yet.")
     elif recipe.name == "dll_linking_fail":
         pytest.xfail("Recipe being built needs to fail linking tests.")
+    elif (
+        recipe.name
+        in (
+            "r_test_import",
+            "transitive_subpackage",
+            "always_include_files_glob",
+            "osx_rpath",
+        )
+        and context.subdir == "osx-arm64"
+    ):
+        pytest.skip("Recipe uses packages that are not available on osx-arm64")
 
     # These variables are defined solely for testing purposes,
     # so they can be checked within build scripts
@@ -1478,12 +1489,18 @@ def test_failed_recipe_leaves_folders(testing_config):
 
 
 @pytest.mark.sanity
+@pytest.mark.skipif(
+    context.subdir == "osx-arm64", reason="r-base package not available on osx-arm64"
+)
 def test_only_r_env_vars_defined(testing_config):
     recipe = os.path.join(metadata_dir, "_r_env_defined")
     api.build(recipe, config=testing_config)
 
 
 @pytest.mark.sanity
+@pytest.mark.skipif(
+    context.subdir == "osx-arm64", reason="perl package not available on osx-arm64"
+)
 def test_only_perl_env_vars_defined(testing_config):
     recipe = os.path.join(metadata_dir, "_perl_env_defined")
     api.build(recipe, config=testing_config)
@@ -2164,27 +2181,20 @@ def test_api_build_grpc_issue5645(monkeypatch, tmp_path, testing_config):
 
 
 @pytest.mark.skipif(
-    not on_mac, reason="needs to cross-compile from osx-64 to osx-arm64"
+    not on_mac,
+    reason="needs to cross-compile from osx-64 to osx-arm64",
 )
 def test_api_build_pytorch_cpu_issue5644(monkeypatch, tmp_path, testing_config):
     # this test has to cross-compile from osx-64 to osx-arm64
-    try:
-        if "CONDA_SUBDIR" in os.environ:
-            old_subdir = os.environ["CONDA_SUBDIR"]
-            has_old_subdir = True
-        else:
-            has_old_subdir = False
-            old_subdir = None
-        os.environ["CONDA_SUBDIR"] = "osx-64"
-
-        testing_config.channel_urls = ["conda-forge"]
-        monkeypatch.chdir(tmp_path)
-        api.build(str(metadata_path / "_pytorch_cpu"), config=testing_config)
-    finally:
-        if has_old_subdir:
-            os.environ["CONDA_SUBDIR"] = old_subdir
-        else:
-            del os.environ["CONDA_SUBDIR"]
+    # monkeypatch.setenv("CONDA_SUBDIR", "osx-64")
+    monkeypatch.chdir(tmp_path)
+    api.build(
+        str(metadata_path / "_pytorch_cpu"),
+        config=testing_config,
+        channel_urls=["conda-forge"],
+        platform="osx",
+        arch="64",
+    )
 
 
 @pytest.mark.skipif(on_win, reason="file permissions not relevant on Windows")

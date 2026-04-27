@@ -1,6 +1,7 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
 import pytest
+from conda.base.context import context
 
 from conda_build.api import build
 
@@ -9,6 +10,9 @@ from .utils import go_dir
 
 @pytest.mark.sanity
 @pytest.mark.serial
+@pytest.mark.skipif(
+    context.subdir == "osx-arm64", reason="go package not compiled for osx-arm64"
+)
 def test_recipe_build(testing_config, monkeypatch):
     # These variables are defined solely for testing purposes,
     # so they can be checked within build scripts

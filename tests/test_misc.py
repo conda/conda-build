@@ -4,15 +4,20 @@ import json
 from pathlib import Path
 
 import pytest
-from conda.models.enums import PathType
-
-from conda_build._link import pyc_f
 
 try:
     from conda.common.serialize.json import CondaJSONEncoder
 except ImportError:
     # FUTURE: remove for `conda>=25.9`
     from conda.auxlib.entity import EntityEncoder as CondaJSONEncoder
+
+try:
+    from conda.models.enums import PathEnum as PathType
+except ImportError:
+    # FUTURE: remove for `conda>=26.9`
+    from conda.models.enums import PathType
+
+from conda_build._link import pyc_f
 
 
 @pytest.mark.parametrize(
