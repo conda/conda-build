@@ -4,26 +4,34 @@
 
 **Pipeline**
 
-- Merge ``conda_build_config.yaml`` / variant specs (:mod:`conda_build.variants`) and expand the
-  matrix.
-- :func:`render_recipe` constructs :class:`~conda_build.metadata.MetaData`: Jinja
-  (:meth:`~conda_build.metadata.MetaData._get_contents`), then YAML
-  (:func:`~conda_build.metadata.parse`). :func:`~conda_build.metadata.get_selectors` runs on CBC
-  text and again on rendered ``meta.yaml`` (selectors + Jinja globals).
-- :func:`distribute_variants` and :func:`render_metadata_tuples` cover multiple variants and
-  subpackages.
+- **Variant discovery**
+  - Merge or stack ``conda_build_config.yaml`` and other variant inputs, then expand the build
+    matrix (see :mod:`conda_build.variants`).
+  - Line-filter CBC text before each file loads (``cbc_line_selectors`` in ``parse_config_file``,
+    then combined spec / ``get_package_variants``), before ``meta.yaml`` is rendered for a cell.
 
-**CLI** (the only user-facing commands that enter this module’s orchestration)
+- **Recipe render**
+  - ``render_recipe`` builds :class:`~conda_build.metadata.MetaData`.
+  - Jinja expands ``{{ ... }}`` in ``meta.yaml`` and includes (``MetaData._get_contents``). The
+    recipe selector map from ``get_selectors`` / ``recipe_selectors`` is available as Jinja
+    globals (and for line-filtering loaded snippets).
+  - ``parse`` runs after that: it applies YAML line selectors (``# [...]`` comments) to the
+    rendered text, then loads YAML, still using the same selector map (this is not another Jinja
+    step).
 
-- **conda build** — :mod:`conda_build.cli.main_build` → :func:`conda_build.api.build` →
-  :func:`conda_build.build.build_tree` → :func:`render_recipe`, then compile/test in
-  :mod:`conda_build.build`. Some helper paths call :func:`conda_build.api.render` directly.
-- **conda render** — :mod:`conda_build.cli.main_render` builds :class:`~conda_build.config.Config`
-  from argparse (channels, variants, ``--no-source``, …) → :func:`conda_build.api.render`, then
-  prints or writes the rendered recipe (see that module for flags such as ``--file``).
+- **Multi-variant / outputs:** ``distribute_variants`` and ``render_metadata_tuples`` for extra
+  variant columns and subpackages.
 
-**Programmatic:** :func:`conda_build.api.render`, :func:`conda_build.api.build`. **Paths:**
-:func:`bldpkg_path` and helpers below.
+**CLI** (user-facing entry points that use this module)
+
+- **conda build** — ``conda_build.cli.main_build`` → ``conda_build.api.build`` →
+  ``conda_build.build.build_tree`` → ``render_recipe``, then compile/test. Some paths call
+  ``conda_build.api.render`` only.
+- **conda render** — ``conda_build.cli.main_render`` builds ``Config``, then
+  ``conda_build.api.render`` (see that module for ``--file`` and other flags).
+
+**Programmatic:** ``conda_build.api.render``, ``conda_build.api.build``. **Paths:** ``bldpkg_path``
+and helpers in this file.
 """
 
 from __future__ import annotations
