@@ -1,6 +1,7 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -20,6 +21,18 @@ def test_skeleton_pypi():
 
     # 8.1.7 is the last version with 'setup.py', which is required
     check_call_env([conda_path, "skeleton", "pypi", "click", "--version", "8.1.7"])
+
+    # add setuptools to host dependencies
+    path = Path("click/meta.yaml")
+    path.write_text(
+        re.sub(
+            r"(  host:\n(?:    - .*\n)*?)(  run:\n)",
+            r"\1    - setuptools\n\2",
+            path.read_text(),
+            count=1,
+        )
+    )
+
     check_call_env([conda_path, "build", "click"])
 
 
