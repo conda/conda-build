@@ -6,7 +6,6 @@ import os
 import shutil
 import sys
 from pathlib import Path
-from unittest import mock
 
 import pytest
 
@@ -94,7 +93,7 @@ def test_compile_missing_pyc_chunking(tmp_path: Path, monkeypatch):
     args_prefix = [sys.executable, "-Wi", "-m", "py_compile"]
     prefix_len = len(" ".join(args_prefix)) + 1
     for args in call_args_log:
-        file_args = args[len(args_prefix):]  # strip the fixed prefix
+        file_args = args[len(args_prefix) :]  # strip the fixed prefix
         cmd_len = prefix_len + sum(len(f) + 1 for f in file_args)
         assert cmd_len <= small_limit + len(max(file_args, key=len, default="")), (
             f"A single call exceeded the expected size: {cmd_len}"
