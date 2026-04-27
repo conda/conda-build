@@ -6,6 +6,7 @@ import os
 import shutil
 import sys
 from pathlib import Path
+from unittest import mock
 
 import pytest
 
@@ -40,6 +41,64 @@ def test_compile_missing_pyc(testing_workdir):
     for f in good_files:
         assert os.path.isfile(os.path.join(tmp, add_mangling(f)))
     assert not os.path.isfile(os.path.join(tmp, add_mangling(bad_file)))
+
+
+def test_compile_missing_pyc_chunking(tmp_path: Path, monkeypatch):
+    """
+    Regression test for the command-line-too-long bug fixed in PR #5780.
+
+    compile_missing_pyc() uses chunks() to split the file list into groups that
+    respect MAX_CMD_LINE_LENGTH.  This test verifies that:
+      1. All .py files are compiled even when the limit forces multiple batches.
+      2. The limit is actually respected: no single call receives more arguments
+         than the limit allows.
+    """
+    # Create a large number of short .py files so that even a small limit
+    # forces multiple subprocess invocations.
+    n_files = 30
+    py_files = []
+    for i in range(n_files):
+        name = f"mod_{i:03d}.py"
+        (tmp_path / name).write_text("x = 1\n")
+        py_files.append(name)
+
+    # Force a very small MAX_CMD_LINE_LENGTH so chunking is triggered.
+    small_limit = 80
+    monkeypatch.setattr(conda_build.utils, "MAX_CMD_LINE_LENGTH", small_limit)
+    monkeypatch.setattr(post, "MAX_CMD_LINE_LENGTH", small_limit)
+
+    # Intercept the actual subprocess calls so we can inspect argument lengths.
+    call_args_log = []
+    original_call = post.call
+
+    def recording_call(args, **kwargs):
+        call_args_log.append(list(args))
+        return original_call(args, **kwargs)
+
+    monkeypatch.setattr(post, "call", recording_call)
+
+    post.compile_missing_pyc(py_files, cwd=str(tmp_path), python_exe=sys.executable)
+
+    # Every .py file should now have a compiled .pyc counterpart.
+    for name in py_files:
+        pyc_path = tmp_path / add_mangling(name)
+        assert pyc_path.is_file(), f"missing compiled file for {name}"
+
+    # The patched call() must have been invoked more than once (chunking happened).
+    assert len(call_args_log) > 1, (
+        "Expected multiple subprocess calls due to chunking, got only one. "
+        "The chunking logic may not be working."
+    )
+
+    # Each call's argument string must not exceed our small limit.
+    args_prefix = [sys.executable, "-Wi", "-m", "py_compile"]
+    prefix_len = len(" ".join(args_prefix)) + 1
+    for args in call_args_log:
+        file_args = args[len(args_prefix):]  # strip the fixed prefix
+        cmd_len = prefix_len + sum(len(f) + 1 for f in file_args)
+        assert cmd_len <= small_limit + len(max(file_args, key=len, default="")), (
+            f"A single call exceeded the expected size: {cmd_len}"
+        )
 
 
 def test_hardlinks_to_copies():
