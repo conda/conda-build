@@ -144,7 +144,7 @@ def transform(m, files, prefix):
 
     # copy in windows exe shims if there are any python-scripts
     if d["python-scripts"]:
-        for fn in "cli-32.exe", "cli-64.exe":
+        for fn in "cli-32.exe", "cli-64.exe", "cli-arm64.exe":
             shutil.copyfile(join(this_dir, fn), join(prefix, fn))
 
     # Read the local _link.py
