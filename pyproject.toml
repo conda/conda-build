@@ -95,11 +95,10 @@ local_scheme = "dirty-tag"
 [tool.pytest.ini_options]
 addopts = [
   "--color=yes",
-  # "--cov=conda_build",   # passed in test runner scripts instead (avoid debugger)
-  "--cov-append",
-  "--cov-branch",
-  "--cov-report=term",  # print summary table to screen
-  "--cov-report=xml",  # for codecov/codecov-action upload
+  # Coverage options are passed by CI (.github/workflows/tests.yml) so they
+  # don't interfere with local debugging. See the "Run Tests" steps there for
+  # the exact flags used: --cov=conda_build --cov-append --cov-branch
+  # --cov-report=term --cov-report=xml
   "--durations=16",  # show 16 slowest tests
   "--junitxml=junit.xml",
   # "--splitting-algorithm=least_duration",  # not available yet
