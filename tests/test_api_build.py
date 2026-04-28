@@ -2069,6 +2069,10 @@ def test_add_pip_as_python_dependency_from_condarc_file(
     mocker.patch("conda.base.context.Context.pkgs_dirs", pkgs_dirs := (str(tmp_path),))
     assert context.pkgs_dirs == pkgs_dirs
 
+    # Disable template environment cloning for this test since the template
+    # includes pip, which would defeat the purpose of testing pip's absence
+    testing_metadata.config.test_env_template = None
+
     testing_metadata.meta["build"]["script"] = ['python -c "import pip"']
     testing_metadata.meta["requirements"]["host"] = ["python"]
     del testing_metadata.meta["test"]

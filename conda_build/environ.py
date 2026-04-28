@@ -8,6 +8,7 @@ import multiprocessing
 import os
 import platform
 import re
+import shutil
 import subprocess
 import sys
 import warnings
@@ -16,6 +17,7 @@ from functools import cache
 from glob import glob
 from logging import getLogger
 from os.path import join, normpath
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from conda.base.constants import (
@@ -58,7 +60,6 @@ from .variants import get_default_variant
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
-    from pathlib import Path
     from typing import Any, TypedDict
 
     from conda.core.index import Index
@@ -979,6 +980,84 @@ get_package_records = get_install_actions
 del get_install_actions
 
 
+def _clone_template_env(
+    template_path: str | os.PathLike | Path,
+    target_prefix: str | os.PathLike | Path,
+    specs: tuple[str, ...],
+) -> bool:
+    """Clone a template environment to the target prefix if it satisfies the specs.
+
+    Uses `conda create --clone` to properly clone the environment, which handles
+    prefix replacement in scripts and metadata files. This is faster than creating
+    an environment from scratch (~10s) because it avoids the conda solver.
+
+    The template is only used when every spec can be satisfied by a record
+    already installed in the template, taking version and build constraints into
+    account. If any spec has a constraint the template can't satisfy (e.g., a
+    pinned variant demanding a specific version of a package the template has
+    at a different version), cloning is skipped and the caller falls back to a
+    full solve.
+
+    Args:
+        template_path: Path to the template environment to clone
+        target_prefix: Path where the cloned environment should be created
+        specs: Tuple of package specs that the environment needs
+
+    Returns:
+        True if cloning succeeded and satisfies specs, False otherwise
+    """
+    try:
+        template_prefix_data = PrefixData(str(template_path))
+        installed = list(template_prefix_data.iter_records())
+
+        for spec in specs:
+            if not isinstance(spec, str):
+                continue
+            match_spec = MatchSpec(spec)
+            if not any(match_spec.match(record) for record in installed):
+                utils.get_logger(__name__).debug(
+                    "Template env does not satisfy spec %r, skipping clone",
+                    spec,
+                )
+                return False
+    except Exception:
+        # If we can't check the template, fall back to normal creation
+        return False
+
+    # Template satisfies our needs, clone it using conda's clone functionality
+    # This properly handles prefix replacement in scripts and metadata files
+    log = utils.get_logger(__name__)
+    try:
+        # Use conda create --clone for proper prefix replacement
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "conda",
+                "create",
+                "--clone",
+                str(template_path),
+                "-p",
+                str(target_prefix),
+                "-y",
+                "-q",
+            ],
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode == 0:
+            return True
+        log.debug("conda clone failed: %s", result.stderr)
+        return False
+    except (OSError, subprocess.SubprocessError) as e:
+        # If clone fails, clean up and fall back to normal creation
+        log.debug("Template clone failed: %s", e)
+        target_prefix = Path(target_prefix)
+        if target_prefix.exists():
+            shutil.rmtree(target_prefix, ignore_errors=True)
+        return False
+
+
 def create_env(
     prefix: str | os.PathLike | Path,
     specs_or_precs: Iterable[str | MatchSpec] | Iterable[PackageRecord],
@@ -993,6 +1072,10 @@ def create_env(
 ) -> None:
     """
     Create a conda envrionment for the given prefix and specs.
+
+    If config.test_env_template is set to a valid environment path, this function
+    will first try to clone from that template environment for faster creation,
+    then install any additional packages not in the template.
     """
     if config.debug:
         external_logger_context = utils.LoggingContext(logging.DEBUG)
@@ -1002,6 +1085,30 @@ def create_env(
     if os.path.exists(prefix):
         for entry in glob(os.path.join(prefix, "*")):
             utils.rm_rf(entry)
+
+    # Convert specs to tuple of strings for template checking
+    # Handle both string specs and PackageRecord objects
+    specs_or_precs_tuple = tuple(ensure_list(specs_or_precs))
+    specs_as_strings: tuple[str, ...] = tuple(
+        rec.name if isinstance(rec, PackageRecord) else str(rec)
+        for rec in specs_or_precs_tuple
+    )
+
+    # Try to clone from template environment if configured
+    template_env = getattr(config, "test_env_template", None)
+    if template_env and os.path.isdir(template_env) and specs_as_strings:
+        log = utils.get_logger(__name__)
+        log.debug(
+            "Attempting to clone from template environment: %s",
+            template_env,
+        )
+        if _clone_template_env(template_env, prefix, specs_as_strings):
+            log.debug(
+                "Successfully cloned template environment to %s",
+                prefix,
+            )
+            # Template satisfied all our specs - we're done!
+            return
 
     with external_logger_context:
         log = utils.get_logger(__name__)
