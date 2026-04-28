@@ -178,25 +178,40 @@ def testing_metadata(request: FixtureRequest, testing_config: Config) -> MetaDat
     return MetaData.fromdict(d, config=testing_config)
 
 
-@pytest.fixture(scope="function")
-def testing_env(testing_workdir, request, monkeypatch):
-    env_path = os.path.join(testing_workdir, "env")
+@pytest.fixture(scope="session")
+def _session_testing_env_prefix(tmp_path_factory: pytest.TempPathFactory) -> str:
+    """Session-scoped conda environment for use by :func:`testing_env`.
 
+    Creating the env is the expensive part (~8-15s each), so we create it once
+    per pytest session and reuse it across tests. Consumers still get their own
+    per-test PATH monkeypatch via the ``testing_env`` fixture below, so they
+    don't leak environment state between tests.
+    """
+    env_path = tmp_path_factory.mktemp("testing_env", numbered=False) / "env"
     check_call_env(
         [
             "conda",
             "create",
             "-yq",
             "-p",
-            env_path,
+            str(env_path),
             "python={}".format(".".join(sys.version.split(".")[:2])),
         ]
     )
+    return str(env_path)
+
+
+@pytest.fixture(scope="function")
+def testing_env(
+    _session_testing_env_prefix: str,
+    monkeypatch: MonkeyPatch,
+) -> str:
+    """A conda environment (session-scoped) with its bin directory on PATH."""
+    env_path = _session_testing_env_prefix
     monkeypatch.setenv(
         "PATH",
         prepend_bin_path(os.environ.copy(), env_path, prepend_prefix=True)["PATH"],
     )
-    # cleanup is done by just cleaning up the testing_workdir
     return env_path
 
 
