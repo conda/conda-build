@@ -147,6 +147,7 @@ filterwarnings = [
 markers = [
   "serial: execute test serially (to avoid race conditions)",
   "slow: execute the slow tests if active",
+  "heavy: long-running integration tests (>2 min) that build packages from conda-forge; run in the serial leg to keep the parallel leg fast",
   "sanity: execute the sanity tests",
   "no_default_testing_config: used internally to disable monkeypatching for testing_config",
   "benchmark: execute the benchmark tests",

@@ -101,7 +101,7 @@ jobs:
     env:
       CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev::' || '' }}
       CONDA_VERSION: ${{ contains('canary|release', matrix.conda-version) && 'conda' || format('conda={0}', matrix.conda-version) }}
-      PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial' || 'not serial' }}
+      PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial or heavy' || 'not serial and not heavy' }}
 
     steps:
       # See https://github.com/conda/conda-build/pull/5866 — added to prevent the
@@ -300,7 +300,7 @@ jobs:
     env:
       ErrorActionPreference: Stop  # powershell exit on first error
       CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'defaults' }}
-      PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial' || 'not serial and not slow' }}
+      PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial or heavy' || 'not serial and not heavy and not slow' }}
 
     steps:
       - name: Checkout Source
@@ -422,7 +422,7 @@ jobs:
     env:
       # Use conda-forge for release tests since conda 25.11+ is not in defaults for osx-64
       CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'conda-forge' }}
-      PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial' || 'not serial' }}
+      PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial or heavy' || 'not serial and not heavy' }}
 
     steps:
       - name: Checkout Source
