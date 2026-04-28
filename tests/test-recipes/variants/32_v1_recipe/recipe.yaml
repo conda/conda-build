@@ -1,47 +1,52 @@
+schema_version: 1
+
 context:
-  version: 9.0.2
+  version: 9.0.3
+  python_min: '3.10'
 
 package:
   name: pytest
   version: ${{ version }}
 
 source:
-- url: https://pypi.org/packages/source/p/pytest/pytest-${{ version }}.tar.gz
-  sha256: 75186651a92bd89611d1d9fc20f0b4345fd827c41ccd5c299a868a05d70edf11
+  url: https://pypi.org/packages/source/p/pytest/pytest-${{ version }}.tar.gz
+  sha256: b86ada508af81d19edeb213c681b1d48246c1a91d304c6c81a427674c17eb91c
 
 build:
-  script: ${{ PYTHON }} -m pip install .
+  number: 1
+  noarch: python
+  script: ${{ PYTHON }} -m pip install . -vv
   python:
     entry_points:
-    - py.test = pytest:console_main
-    - pytest = pytest:console_main
-  noarch: python
+      - pytest = pytest:console_main
+      - py.test = pytest:console_main
 
 requirements:
   host:
-  - python >=3.10
-  - setuptools>=77
-  - setuptools-scm>=6.2.3
-  - pip
+    - pip
+    - python ${{ python_min }}.*
+    - setuptools >=77
+    - setuptools_scm >=6.2.3
   run:
-  - python >=3.10
-  - colorama >=0.4 # sys_platform == "win32"
-  - exceptiongroup >=1 # python_version < "3.11"
-  - iniconfig >=1.0.1
-  - packaging >=22
-  - pluggy <2,>=1.5
-  - pygments >=2.7.2
-  - tomli >=1
-  - argcomplete  # extra == "dev"
-  - attrs >=19.2 # extra == "dev"
-  - hypothesis >=3.56 # extra == "dev"
-  - mock  # extra == "dev"
-  - requests  # extra == "dev"
-  - setuptools  # extra == "dev"
-  - xmlschema  # extra == "dev"
+    - colorama >=0.4
+    - pygments >=2.7.2
+    - python >=${{ python_min }}
+    - iniconfig >=1.0.1
+    - packaging >=22
+    - pluggy >=1.5,<2
+    - tomli >=1
+    - exceptiongroup >=1
+  run_constraints:
+    - pytest-faulthandler >=2
 
 tests:
-- python:
-    imports:
-    - pytest
-    pip_check: true
+  - python:
+      imports:
+        - pytest
+      python_version:
+        - ${{ python_min }}.*
+  - requirements:
+      run:
+        - python ${{ python_min }}.*
+    script:
+      - pytest -h
