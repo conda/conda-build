@@ -481,7 +481,27 @@ else:
     compilers = [".".join([str(sys.version_info.major), str(sys.version_info.minor)])]
 
 
+def _has_vs_version_installed(version: str) -> bool:
+    """Return True if the given VS version's vcvarsall.bat is on disk."""
+    if not on_win:
+        return False
+    # Imported lazily so non-Windows envs don't pull in Windows-only deps.
+    from conda_build.windows import build_vcvarsall_vs_path
+
+    return os.path.isfile(build_vcvarsall_vs_path(version))
+
+
 @pytest.mark.skipif(not on_win, reason="MSVC only on windows")
+@pytest.mark.skipif(
+    on_win and not _has_vs_version_installed("15.0"),
+    reason=(
+        "Visual Studio 2017 Build Tools not installed; the `msvc_compiler` "
+        "meta.yaml key this exercises has been deprecated since 2018 "
+        "(see https://github.com/conda/conda-build/pull/2868) and is only "
+        "used today by two frozen legacy conda-forge feedstocks "
+        "(vs2008_runtime, vs2015_runtime)."
+    ),
+)
 @pytest.mark.parametrize("msvc_ver", msvc_vers)
 def test_build_msvc_compiler(msvc_ver: str, monkeypatch: MonkeyPatch) -> None:
     # verify that the correct compiler is available
