@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from __future__ import annotations
 
-import logging
 import os
 import subprocess
 import sys
@@ -26,12 +25,10 @@ from conda_build.metadata import (
     MetaData,
     OSModuleSubset,
     _hash_dependencies,
-    cbc_line_selectors,
     check_bad_chrs,
     eval_selector,
     get_output_dicts_from_metadata,
     get_selectors,
-    recipe_selectors,
     sanitize,
     select_lines,
     yamlize,
@@ -645,40 +642,6 @@ def test_get_selectors(
         # override with True values
         **{key: True for key in expected},
     }
-
-
-def test_cbc_line_selectors_matches_recipe_selectors(caplog) -> None:
-    config = Config(
-        host_subdir="linux-64",
-        variant={"numpy": "1.22", "python": "3.11.*"},
-    )
-    with caplog.at_level(logging.WARNING, logger="conda_build.metadata"):
-        cbc = cbc_line_selectors(config)
-        rcp = recipe_selectors(config)
-    assert cbc == rcp
-    assert "No numpy version specified" not in caplog.text
-
-
-def test_cbc_line_selectors_no_numpy_warning_verbose(caplog) -> None:
-    config = Config(host_subdir="linux-64", variant={})
-    config.verbose = True
-    with caplog.at_level(logging.WARNING, logger="conda_build.metadata"):
-        cbc_line_selectors(config)
-    assert "No numpy version specified" not in caplog.text
-
-
-def test_recipe_selectors_numpy_warning_verbose(caplog) -> None:
-    config = Config(host_subdir="linux-64", variant={})
-    config.verbose = True
-    utils.dedupe_filter.msgs.clear()
-    with caplog.at_level(logging.WARNING, logger="conda_build.metadata"):
-        recipe_selectors(config)
-    assert "No numpy version specified" in caplog.text
-
-
-def test_get_selectors_is_recipe_selectors() -> None:
-    config = Config(host_subdir="linux-64")
-    assert get_selectors(config) == recipe_selectors(config)
 
 
 def test_fromstring():

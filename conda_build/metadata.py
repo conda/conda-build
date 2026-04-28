@@ -55,7 +55,6 @@ from .variants import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Mapping
     from typing import Any, Literal, Self
 
     OutputDict = dict[str, Any]
@@ -143,30 +142,20 @@ class OSModuleSubset:
     sep = os.sep
 
 
-def build_selector_map(
-    *,
-    host_subdir: str,
-    build_subdir: str,
-    variant: Mapping[str, Any],
-    defaults: Mapping[str, Any],
-    feature_list: Iterable[tuple[str, bool]],
-    environ: Mapping[str, Any],
-) -> dict[str, Any]:
+def get_selectors(config: Config) -> dict[str, Any]:
     """Build the mapping used for YAML line selectors and Jinja.
 
+    Gather selectors from the config, variant, environment variables, and feature list for
+    use in YAML line selectors and Jinja.
+
     Args:
-        host_subdir: The host subdirectory (e.g. ``config.host_subdir``).
-        build_subdir: The build subdirectory (e.g. ``config.build_subdir``).
-        variant: The active variant slice (e.g. ``config.variant``).
-        defaults: The default variant values (e.g. from ``get_default_variant``).
-        feature_list: The feature list (e.g. from ``FEATURE_*`` environment toggles).
-        environ: The environment variables (e.g. from ``os.environ``).
+        config (Config): The build config object
 
     Returns:
         A mixed-type dict (booleans, ints, strings, …) for YAML ``# [...]`` line selectors
         and Jinja, not only boolean flags.
     """
-    plat = host_subdir
+    plat = config.host_subdir
 
     d: dict[str, Any] = dict(
         linux32=bool(plat == "linux-32"),
@@ -176,7 +165,8 @@ def build_selector_map(
         win32=bool(plat == "win-32"),
         win64=bool(plat == "win-64"),
         os=OSModuleSubset,
-        nomkl=bool(int(environ.get("FEATURE_NOMKL", False))),
+        environ=OSModuleSubset.environ,
+        nomkl=bool(int(os.environ.get("FEATURE_NOMKL", False))),
     )
 
     # Add the current platform to the list of subdirs to enable conda-build
@@ -198,7 +188,9 @@ def build_selector_map(
         if arch == "32":
             d["x86"] = plat.endswith(("-32", "-64"))
 
-    py = variant.get("python", defaults["python"])
+    defaults = get_default_variant(config)
+
+    py = config.variant.get("python", defaults["python"])
     # there are times when python comes in as a tuple
     if not hasattr(py, "split"):
         py = py[0]
@@ -207,7 +199,7 @@ def build_selector_map(
     py_major, py_minor, *_ = py.split(" ")[0].split(".")
     py_ver_int = int(f"{py_major}{py_minor}")
 
-    d["build_platform"] = build_subdir
+    d["build_platform"] = config.build_subdir
 
     d.update(
         dict(
@@ -223,28 +215,27 @@ def build_selector_map(
         )
     )
 
-    np = variant.get("numpy")
+    np = config.variant.get("numpy")
     if not np:
         np = defaults["numpy"]
     d["np"] = int("".join(np.split(".")[:2]))
 
-    pl = variant.get("perl", defaults["perl"])
+    pl = config.variant.get("perl", defaults["perl"])
     d["pl"] = pl
 
-    lua = variant.get("lua", defaults["lua"])
+    lua = config.variant.get("lua", defaults["lua"])
     d["lua"] = lua
     d["luajit"] = bool(lua[0] == "2")
 
     for feature, value in feature_list:
         d[feature] = value
 
-    d.update(environ)
-    d["environ"] = environ
+    d.update(OSModuleSubset.environ)
 
     # here we try to do some type conversion for more intuitive usage.  Otherwise,
     #    values like 35 are strings by default, making relational operations confusing.
     # We also convert "True" and things like that to booleans.
-    for k, v in variant.items():
+    for k, v in config.variant.items():
         if k not in d:
             try:
                 d[k] = int(v)
@@ -253,70 +244,6 @@ def build_selector_map(
                     v = v.lower() == "true"
                 d[k] = v
     return d
-
-
-def cbc_line_selectors(config: Config) -> dict[str, Any]:
-    """Namespace for preprocessing variant config files (e.g. ``conda_build_config.yaml``).
-
-    Special case for building the selector map for CBC files.  At this point in the change,
-    the variants have not been applied (unless the caller uses something like --numpy in the CLI).
-    Thus, the same selector checks that apply to recipes are not valid for the CBC case.
-
-    Args:
-        config: The build config (e.g. ``config.host_subdir``, ``config.build_subdir``, ``config.variant``).
-
-    Returns:
-        A dict of selector names and their values for the CBC file.
-    """
-    defaults = get_default_variant(config)
-    return build_selector_map(
-        host_subdir=config.host_subdir,
-        build_subdir=config.build_subdir,
-        variant=config.variant,
-        defaults=defaults,
-        feature_list=feature_list,
-        environ=os.environ,
-    )
-
-
-def recipe_selectors(config: Config) -> dict[str, Any]:
-    """Namespace for recipe rendering: Jinja globals, :func:`select_lines` on rendered YAML, etc.
-
-    Map selectors for recipe rendering.  In this case, the variants have been applied so it is
-    an appropriate time to check for missing pins and emit warnings if necessary.
-
-    Args:
-        config: The build config (e.g. ``config.host_subdir``, ``config.build_subdir``, ``config.variant``).
-
-    Returns:
-        A dict of selector names and their values for the recipe rendering.
-    """
-    defaults = get_default_variant(config)
-    # NOTE: Numpy is the only special case but perhaps it should expand important
-    # missing pins as a warning as well.  Also, it could be expanded to check if numpy
-    # is even necessary for the build in the future.
-    if not config.variant.get("numpy") and config.verbose:
-        utils.get_logger(__name__).warning(
-            "No numpy version specified in conda_build_config.yaml.  "
-            "Falling back to default numpy value of {}".format(defaults["numpy"])
-        )
-    return build_selector_map(
-        host_subdir=config.host_subdir,
-        build_subdir=config.build_subdir,
-        variant=config.variant,
-        defaults=defaults,
-        feature_list=feature_list,
-        environ=os.environ,
-    )
-
-
-def get_selectors(config: Config) -> dict[str, Any]:
-    """Aggregates selectors for recipe templating and YAML line selection on ``meta.yaml``.
-
-    Equivalent to :func:`recipe_selectors` (historical name). Prefer the named entry points
-    when documenting CBC vs recipe behavior.
-    """
-    return recipe_selectors(config)
 
 
 # Selectors must be either:
