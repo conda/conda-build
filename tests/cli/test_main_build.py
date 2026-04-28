@@ -325,6 +325,7 @@ def test_no_force_upload(
     call.assert_called_once_with([anaconda, "upload", "--force", *pkg])
 
 
+@pytest.mark.heavy
 @pytest.mark.slow
 def test_conda_py_no_period(testing_workdir, testing_metadata, monkeypatch):
     monkeypatch.setenv("CONDA_PY", "313")
