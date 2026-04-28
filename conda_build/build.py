@@ -82,7 +82,7 @@ from .render import (
 )
 from .utils import (
     CONDA_PACKAGE_EXTENSIONS,
-    MAX_CMD_LINE_LENGTH,
+    MAX_CHUNK_SIZE,
     chunks,
     create_file_with_permissions,
     env_var,
@@ -237,7 +237,7 @@ def regex_files_rg(
     ]
     args_len = len(b" ".join(args_base))
     # chunk them to avoid too long comand lines:
-    file_lists = chunks(prefix_files, MAX_CMD_LINE_LENGTH - args_len)
+    file_lists = chunks(prefix_files, MAX_CHUNK_SIZE - args_len)
     for file_list in file_lists:
         args = args_base[:] + file_list
         # This will not work now our args are binary strings:

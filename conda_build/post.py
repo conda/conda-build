@@ -68,7 +68,7 @@ from .os_utils.pyldd import (
 )
 from .utils import (
     FALLBACK_MENUINST_SCHEMA,
-    MAX_CMD_LINE_LENGTH,
+    MAX_CHUNK_SIZE,
     VALID_SCHEMA_LOCATIONS,
     chunks,
     merge_dicts_of_lists,
@@ -322,7 +322,7 @@ def compile_missing_pyc(files, cwd, python_exe, skip_compile_pyc=()):
             args = [python_exe, "-Wi", "-m", "py_compile"]
             args_len = len(" ".join(args)) + 1
             # chunk them to avoid too long comand lines:
-            groups = chunks(compile_files, MAX_CMD_LINE_LENGTH - args_len)
+            groups = chunks(compile_files, MAX_CHUNK_SIZE - args_len)
             for group in groups:
                 call(args + group, cwd=cwd)
 

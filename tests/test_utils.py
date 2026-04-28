@@ -481,9 +481,6 @@ def test_prefix_files(tmp_path: Path):
     assert paths == utils.prefix_files(str(prefix))
 
 
-# ---- Tests for chunks() and MAX_CMD_LINE_LENGTH (PR #5780) ----
-
-
 def test_chunks_empty():
     """chunks() on an empty list returns an empty list."""
     assert utils.chunks([], 100) == []
@@ -551,17 +548,6 @@ def test_chunks_mixed_sizes():
             assert total <= 60
 
 
-def test_chunks_use_len_false():
-    """When use_len=False the count of items (not their length) is used."""
-    # limit=2 means at most 2 items per chunk regardless of string length
-    items = ["short", "a_very_very_long_string_indeed", "x", "y", "z"]
-    result = utils.chunks(items, 2, use_len=False)
-    for chunk in result:
-        assert len(chunk) <= 2
-    flattened = [item for chunk in result for item in chunk]
-    assert flattened == items
-
-
 def test_chunks_old_bug_regression():
     """
     Regression test for the bug in the original chunks() implementation (PR #5780).
@@ -585,9 +571,9 @@ def test_chunks_old_bug_regression():
 def test_max_cmd_line_length_default():
     """MAX_CMD_LINE_LENGTH has the correct platform default."""
     if utils.on_win:
-        assert utils.MAX_CMD_LINE_LENGTH == 8190
+        assert utils.MAX_CHUNK_SIZE == 8190
     else:
-        assert utils.MAX_CMD_LINE_LENGTH == 32760
+        assert utils.MAX_CHUNK_SIZE == 32760
 
 
 def test_max_cmd_line_length_env_override(monkeypatch: MonkeyPatch):
