@@ -222,99 +222,76 @@ def test_rpath_symlink(mocker, testing_config):
     assert mk_relative.call_count == 2
 
 
-# -------------------------------------------------------------------------
-# Deprecation tests for the legacy `whitelist` spellings (see PR #5902 and
-# conda_build.deprecations for the deprecation policy).
-# -------------------------------------------------------------------------
-
-
-class TestWhitelistDeprecations:
-    """Verify legacy ``*_whitelist`` names still work and emit warnings.
-
-    The new ``*_allowlist`` names are the preferred spelling; the legacy
-    names are scheduled for removal in 27.3 (deprecated in 26.9).
-    """
-
-    def test_default_mac_whitelist_constant_is_deprecated(self):
-        """``post.DEFAULT_MAC_WHITELIST`` aliases ``DEFAULT_MAC_ALLOWLIST``."""
-        with pytest.warns(
-            (PendingDeprecationWarning, DeprecationWarning),
-            match="DEFAULT_MAC_WHITELIST",
-        ):
-            assert post.DEFAULT_MAC_WHITELIST is post.DEFAULT_MAC_ALLOWLIST
-
-    def test_default_win_whitelist_constant_is_deprecated(self):
-        """``post.DEFAULT_WIN_WHITELIST`` aliases ``DEFAULT_WIN_ALLOWLIST``."""
-        with pytest.warns(
-            (PendingDeprecationWarning, DeprecationWarning),
-            match="DEFAULT_WIN_WHITELIST",
-        ):
-            assert post.DEFAULT_WIN_WHITELIST is post.DEFAULT_WIN_ALLOWLIST
-
-    def test_missing_dso_whitelist_kwarg_is_deprecated(self):
-        """``missing_dso_whitelist=`` is renamed to ``missing_dso_allowlist=``.
-
-        Call ``check_overlinking_impl`` with only the deprecated kwarg: the
-        ``@deprecated.argument`` decorator emits the warning before the wrapped
-        function runs, then the wrapped function raises ``TypeError`` because
-        its other required positional arguments are missing. We assert both.
-        """
-        with pytest.warns(
-            (PendingDeprecationWarning, DeprecationWarning),
-            match="missing_dso_whitelist",
-        ):
-            with pytest.raises(TypeError):
-                post.check_overlinking_impl(missing_dso_whitelist=["libfoo.so"])
-
-    def test_runpath_whitelist_kwarg_is_deprecated(self):
-        """``runpath_whitelist=`` is renamed to ``runpath_allowlist=``."""
-        with pytest.warns(
-            (PendingDeprecationWarning, DeprecationWarning),
-            match="runpath_whitelist",
-        ):
-            with pytest.raises(TypeError):
-                post.check_overlinking_impl(runpath_whitelist=["/opt/foo"])
-
-    @pytest.mark.parametrize(
-        "key",
-        ["build/missing_dso_whitelist", "build/runpath_whitelist"],
-    )
-    def test_recipe_key_whitelist_is_deprecated(self, key, mocker):
-        """Using the legacy ``build/*_whitelist`` recipe keys emits a warning."""
-        # Build the minimum MetaData-shaped mock that check_overlinking reads.
-        stored = {
-            "build/overlinking_ignore_patterns": [],
-            key: ["libfoo.so"] if "missing_dso" in key else ["/opt/foo"],
-        }
-        m = mocker.Mock()
-        m.get_value.side_effect = lambda k, default=None: stored.get(k, default)
-        # Bypass the real check_overlinking_impl entirely for this test.
-        mocker.patch.object(post, "check_overlinking_impl", return_value=None)
-
-        with pytest.warns((PendingDeprecationWarning, DeprecationWarning), match=key):
-            post.check_overlinking(m, files=[])
-
-    @pytest.mark.parametrize(
-        "legacy,preferred",
-        [
-            ("build/missing_dso_whitelist", "build/missing_dso_allowlist"),
-            ("build/runpath_whitelist", "build/runpath_allowlist"),
-        ],
-    )
-    def test_allowlist_takes_precedence_over_whitelist(
-        self, legacy, preferred, mocker, recwarn
+@pytest.mark.parametrize(
+    "legacy_constant, allowlist_constant",
+    [
+        ("DEFAULT_MAC_WHITELIST", "DEFAULT_MAC_ALLOWLIST"),
+        ("DEFAULT_WIN_WHITELIST", "DEFAULT_WIN_ALLOWLIST"),
+    ],
+)
+def test_default_whitelist_constant_is_deprecated(legacy_constant, allowlist_constant):
+    with pytest.warns(
+        (PendingDeprecationWarning, DeprecationWarning), match=legacy_constant
     ):
-        """When both keys are set the new key wins and no warning fires."""
-        stored = {
-            "build/overlinking_ignore_patterns": [],
-            legacy: ["legacy"],
-            preferred: ["preferred"],
-        }
-        m = mocker.Mock()
-        m.get_value.side_effect = lambda k, default=None: stored.get(k, default)
-        mocker.patch.object(post, "check_overlinking_impl", return_value=None)
+        assert getattr(post, legacy_constant) is getattr(post, allowlist_constant)
 
-        post.check_overlinking(m, files=[])
 
-        # No whitelist-specific deprecation warning when the new key is set.
-        assert not [w for w in recwarn.list if legacy.split("/")[-1] in str(w.message)]
+@pytest.mark.parametrize(
+    "kwarg, value",
+    [
+        ("missing_dso_whitelist", ["libfoo.so"]),
+        ("runpath_whitelist", ["/opt/foo"]),
+    ],
+)
+def test_check_overlinking_impl_whitelist_kwarg_is_deprecated(kwarg, value):
+    with pytest.warns((PendingDeprecationWarning, DeprecationWarning), match=kwarg):
+        with pytest.raises(TypeError):
+            post.check_overlinking_impl(**{kwarg: value})
+
+
+@pytest.fixture
+def bypass_check_overlinking_impl(monkeypatch):
+    monkeypatch.setattr(post, "check_overlinking_impl", lambda **kwargs: None)
+
+
+@pytest.mark.parametrize(
+    "legacy_key, value",
+    [
+        ("missing_dso_whitelist", ["libfoo.so"]),
+        ("runpath_whitelist", ["/opt/foo"]),
+    ],
+)
+def test_check_overlinking_whitelist_recipe_key_is_deprecated(
+    testing_metadata, bypass_check_overlinking_impl, legacy_key, value
+):
+    testing_metadata.meta.setdefault("build", {})[legacy_key] = value
+    with pytest.warns(
+        (PendingDeprecationWarning, DeprecationWarning),
+        match=f"build/{legacy_key}",
+    ):
+        post.check_overlinking(testing_metadata, files=[])
+
+
+@pytest.mark.parametrize(
+    "legacy_key, preferred_key, legacy_value, preferred_value",
+    [
+        ("missing_dso_whitelist", "missing_dso_allowlist", ["legacy"], ["preferred"]),
+        ("runpath_whitelist", "runpath_allowlist", ["/legacy"], ["/preferred"]),
+    ],
+)
+def test_check_overlinking_allowlist_takes_precedence(
+    testing_metadata,
+    bypass_check_overlinking_impl,
+    recwarn,
+    legacy_key,
+    preferred_key,
+    legacy_value,
+    preferred_value,
+):
+    build = testing_metadata.meta.setdefault("build", {})
+    build[legacy_key] = legacy_value
+    build[preferred_key] = preferred_value
+
+    post.check_overlinking(testing_metadata, files=[])
+
+    assert not [w for w in recwarn.list if legacy_key in str(w.message)]
