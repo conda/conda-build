@@ -8,6 +8,7 @@ import multiprocessing
 import os
 import platform
 import re
+import string
 import subprocess
 import sys
 import warnings
@@ -377,10 +378,23 @@ def get_dict(
     # features
     d.update({feat.upper(): str(int(value)) for feat, value in feature_list})
 
+    # Make sure env vars generated from variants have valid names
+    def sanitize(varname):
+        sanitized = ''
+        if varname[0] not in string.ascii_letters + '_':
+            sanitized += '_'
+        allowed = string.ascii_letters + string.digits + '_'
+        for char in varname:
+            if char in allowed:
+                sanitized += char
+            else:
+                sanitized += '_'
+        return sanitized
+
     variant = variant or m.config.variant
     for k, v in variant.items():
         if not for_env or (k.upper() not in d and k.upper() not in LANGUAGES):
-            d[k] = v
+            d[sanitize(k)] = v
     return d
 
 
