@@ -8,10 +8,12 @@
 
 ### Deprecations
 
-* Deprecate ``build/missing_dso_whitelist`` recipe key in favor of ``build/missing_dso_allowlist``. (#5902)
-* Deprecate ``build/runpath_whitelist`` recipe key in favor of ``build/runpath_allowlist``. (#5902)
-* Deprecate ``DEFAULT_MAC_WHITELIST`` constant in favor of ``DEFAULT_MAC_ALLOWLIST``. (#5902)
-* Deprecate ``DEFAULT_WIN_WHITELIST`` constant in favor of ``DEFAULT_WIN_ALLOWLIST``. (#5902)
+* Deprecate ``build/missing_dso_whitelist`` recipe key in favor of ``build/missing_dso_allowlist`` (pending in 26.9, removal in 27.3). (#5902)
+* Deprecate ``build/runpath_whitelist`` recipe key in favor of ``build/runpath_allowlist`` (pending in 26.9, removal in 27.3). (#5902)
+* Deprecate ``conda_build.post.check_overlinking_impl``'s ``missing_dso_whitelist`` keyword argument in favor of ``missing_dso_allowlist`` (pending in 26.9, removal in 27.3). (#5902)
+* Deprecate ``conda_build.post.check_overlinking_impl``'s ``runpath_whitelist`` keyword argument in favor of ``runpath_allowlist`` (pending in 26.9, removal in 27.3). (#5902)
+* Deprecate ``conda_build.post.DEFAULT_MAC_WHITELIST`` constant in favor of ``DEFAULT_MAC_ALLOWLIST`` (pending in 26.9, removal in 27.3). (#5902)
+* Deprecate ``conda_build.post.DEFAULT_WIN_WHITELIST`` constant in favor of ``DEFAULT_WIN_ALLOWLIST`` (pending in 26.9, removal in 27.3). (#5902)
 
 ### Docs
 
