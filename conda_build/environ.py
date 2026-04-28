@@ -991,8 +991,12 @@ def _clone_template_env(
     prefix replacement in scripts and metadata files. This is faster than creating
     an environment from scratch (~10s) because it avoids the conda solver.
 
-    This function only clones if the template environment contains all the
-    packages required by the specs (checked by package name only, not version).
+    The template is only used when every spec can be satisfied by a record
+    already installed in the template, taking version and build constraints into
+    account. If any spec has a constraint the template can't satisfy (e.g., a
+    pinned variant demanding a specific version of a package the template has
+    at a different version), cloning is skipped and the caller falls back to a
+    full solve.
 
     Args:
         template_path: Path to the template environment to clone
@@ -1002,28 +1006,20 @@ def _clone_template_env(
     Returns:
         True if cloning succeeded and satisfies specs, False otherwise
     """
-    # Check if template has the packages we need (by name)
     try:
         template_prefix_data = PrefixData(str(template_path))
-        installed_names = {rec.name for rec in template_prefix_data.iter_records()}
+        installed = list(template_prefix_data.iter_records())
 
-        # Extract package names from specs using MatchSpec for proper parsing
-        # This handles all spec formats including version constraints like ~=, >=, etc.
-        # and specs with brackets like numpy[version='>1.0']
-        required_names = {
-            MatchSpec(spec).name for spec in specs if isinstance(spec, str)
-        }
-
-        # Only clone if template has all required packages
-        missing = required_names - installed_names
-        if missing:
-            log = utils.get_logger(__name__)
-            log.debug(
-                "Template env missing packages %s, skipping clone",
-                missing,
-            )
-            return False
-
+        for spec in specs:
+            if not isinstance(spec, str):
+                continue
+            match_spec = MatchSpec(spec)
+            if not any(match_spec.match(record) for record in installed):
+                utils.get_logger(__name__).debug(
+                    "Template env does not satisfy spec %r, skipping clone",
+                    spec,
+                )
+                return False
     except Exception:
         # If we can't check the template, fall back to normal creation
         return False
