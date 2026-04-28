@@ -995,10 +995,10 @@ Use this sparingly, as the overlinking checks generally do prevent you from maki
      - "bin/*"
 
 
-Whitelisting shared libraries
+Allowlisting shared libraries
 -----------------------------
 
-The ``missing_dso_whitelist`` build key is a list of globs for
+The ``missing_dso_allowlist`` build key is a list of globs for
 dynamic shared object (DSO) files that should be ignored when
 examining linkage information.
 
@@ -1011,12 +1011,12 @@ or error ``--error-overlinking`` will result.
 .. code-block:: yaml
 
  build:
-   missing_dso_whitelist:
+   missing_dso_allowlist:
 
 
 These keys allow additions to the list of allowed libraries.
 
-The ``runpath_whitelist`` build key is a list of globs for paths
+The ``runpath_allowlist`` build key is a list of globs for paths
 which are allowed to appear as runpaths in the package's shared
 libraries. All other runpaths will cause a warning message to be
 printed during the build.
@@ -1024,7 +1024,12 @@ printed during the build.
 .. code-block:: yaml
 
  build:
-   runpath_whitelist:
+   runpath_allowlist:
+
+.. note::
+
+   The previous key names ``missing_dso_whitelist`` and ``runpath_whitelist``
+   are still supported for backward compatibility.
 
 
 .. _requirements:

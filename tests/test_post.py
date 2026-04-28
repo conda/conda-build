@@ -220,3 +220,78 @@ def test_rpath_symlink(mocker, testing_config):
     )
     # Should only be called on the actual binary, not its symlinks. (once per variant)
     assert mk_relative.call_count == 2
+
+
+@pytest.mark.parametrize(
+    "legacy_constant, allowlist_constant",
+    [
+        ("DEFAULT_MAC_WHITELIST", "DEFAULT_MAC_ALLOWLIST"),
+        ("DEFAULT_WIN_WHITELIST", "DEFAULT_WIN_ALLOWLIST"),
+    ],
+)
+def test_default_whitelist_constant_is_deprecated(legacy_constant, allowlist_constant):
+    with pytest.warns(
+        (PendingDeprecationWarning, DeprecationWarning), match=legacy_constant
+    ):
+        assert getattr(post, legacy_constant) is getattr(post, allowlist_constant)
+
+
+@pytest.mark.parametrize(
+    "kwarg, value",
+    [
+        ("missing_dso_whitelist", ["libfoo.so"]),
+        ("runpath_whitelist", ["/opt/foo"]),
+    ],
+)
+def test_check_overlinking_impl_whitelist_kwarg_is_deprecated(kwarg, value):
+    with pytest.warns((PendingDeprecationWarning, DeprecationWarning), match=kwarg):
+        with pytest.raises(TypeError):
+            post.check_overlinking_impl(**{kwarg: value})
+
+
+@pytest.fixture
+def bypass_check_overlinking_impl(monkeypatch):
+    monkeypatch.setattr(post, "check_overlinking_impl", lambda **kwargs: None)
+
+
+@pytest.mark.parametrize(
+    "legacy_key, value",
+    [
+        ("missing_dso_whitelist", ["libfoo.so"]),
+        ("runpath_whitelist", ["/opt/foo"]),
+    ],
+)
+def test_check_overlinking_whitelist_recipe_key_is_deprecated(
+    testing_metadata, bypass_check_overlinking_impl, legacy_key, value
+):
+    testing_metadata.meta.setdefault("build", {})[legacy_key] = value
+    with pytest.warns(
+        (PendingDeprecationWarning, DeprecationWarning),
+        match=f"build/{legacy_key}",
+    ):
+        post.check_overlinking(testing_metadata, files=[])
+
+
+@pytest.mark.parametrize(
+    "legacy_key, preferred_key, legacy_value, preferred_value",
+    [
+        ("missing_dso_whitelist", "missing_dso_allowlist", ["legacy"], ["preferred"]),
+        ("runpath_whitelist", "runpath_allowlist", ["/legacy"], ["/preferred"]),
+    ],
+)
+def test_check_overlinking_allowlist_takes_precedence(
+    testing_metadata,
+    bypass_check_overlinking_impl,
+    recwarn,
+    legacy_key,
+    preferred_key,
+    legacy_value,
+    preferred_value,
+):
+    build = testing_metadata.meta.setdefault("build", {})
+    build[legacy_key] = legacy_value
+    build[preferred_key] = preferred_value
+
+    post.check_overlinking(testing_metadata, files=[])
+
+    assert not [w for w in recwarn.list if legacy_key in str(w.message)]
