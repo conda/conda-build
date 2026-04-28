@@ -17,7 +17,7 @@ from conda import __version__ as conda_version
 from conda.base.context import context
 from packaging.version import Version
 
-from conda_build import api
+from conda_build import api, utils
 from conda_build.config import Config
 from conda_build.exceptions import CondaBuildUserError
 from conda_build.metadata import (
@@ -670,6 +670,7 @@ def test_cbc_line_selectors_no_numpy_warning_verbose(caplog) -> None:
 def test_recipe_selectors_numpy_warning_verbose(caplog) -> None:
     config = Config(host_subdir="linux-64", variant={})
     config.verbose = True
+    utils.dedupe_filter.msgs.clear()
     with caplog.at_level(logging.WARNING, logger="conda_build.metadata"):
         recipe_selectors(config)
     assert "No numpy version specified" in caplog.text
