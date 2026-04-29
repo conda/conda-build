@@ -16,7 +16,7 @@ from conda import __version__ as conda_version
 from conda.base.context import context
 from packaging.version import Version
 
-from conda_build import api, utils
+from conda_build import api
 from conda_build.config import Config
 from conda_build.exceptions import CondaBuildUserError
 from conda_build.metadata import (
