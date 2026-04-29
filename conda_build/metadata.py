@@ -9,11 +9,10 @@ import os
 import re
 import sys
 import time
-import warnings
 from collections import OrderedDict
 from functools import cache, lru_cache
 from os.path import isdir, isfile, join
-from typing import TYPE_CHECKING, NamedTuple, overload
+from typing import TYPE_CHECKING, Any, NamedTuple, overload
 
 import jinja2
 import yaml
@@ -143,22 +142,22 @@ class OSModuleSubset:
     sep = os.sep
 
 
-def get_selectors(config: Config) -> dict[str, bool]:
-    """Aggregates selectors for use in recipe templating.
+def get_selectors(config: Config) -> dict[str, Any]:
+    """Build the mapping used for YAML line selectors and Jinja.
 
-    Derives selectors from the config and variants to be injected
-    into the Jinja environment prior to templating.
+    Gather selectors from the config, variant, environment variables, and feature list for
+    use in YAML line selectors and Jinja.
 
     Args:
-        config (Config): The config object
+        config (Config): The build config object
 
     Returns:
-        dict[str, bool]: Dictionary of on/off selectors for Jinja
+        A mixed-type dict (booleans, ints, strings, …) for YAML ``# [...]`` line selectors
+        and Jinja, not only boolean flags.
     """
-    # Remember to update the docs of any of this changes
     plat = config.host_subdir
 
-    d = dict(
+    d: dict[str, Any] = dict(
         linux32=bool(plat == "linux-32"),
         linux64=bool(plat == "linux-64"),
         arm=plat.startswith("linux-arm"),
@@ -190,6 +189,7 @@ def get_selectors(config: Config) -> dict[str, bool]:
             d["x86"] = plat.endswith(("-32", "-64"))
 
     defaults = get_default_variant(config)
+
     py = config.variant.get("python", defaults["python"])
     # there are times when python comes in as a tuple
     if not hasattr(py, "split"):
@@ -197,32 +197,27 @@ def get_selectors(config: Config) -> dict[str, bool]:
     # go from "3.6 *_cython" -> "36"
     # or from "3.6.9" -> "36"
     py_major, py_minor, *_ = py.split(" ")[0].split(".")
-    py = int(f"{py_major}{py_minor}")
+    py_ver_int = int(f"{py_major}{py_minor}")
 
     d["build_platform"] = config.build_subdir
 
     d.update(
         dict(
-            py=py,
+            py=py_ver_int,
             py3k=bool(py_major == "3"),
             py2k=bool(py_major == "2"),
-            py26=bool(py == 26),
-            py27=bool(py == 27),
-            py33=bool(py == 33),
-            py34=bool(py == 34),
-            py35=bool(py == 35),
-            py36=bool(py == 36),
+            py26=bool(py_ver_int == 26),
+            py27=bool(py_ver_int == 27),
+            py33=bool(py_ver_int == 33),
+            py34=bool(py_ver_int == 34),
+            py35=bool(py_ver_int == 35),
+            py36=bool(py_ver_int == 36),
         )
     )
 
     np = config.variant.get("numpy")
     if not np:
         np = defaults["numpy"]
-        if config.verbose:
-            utils.get_logger(__name__).warning(
-                "No numpy version specified in conda_build_config.yaml.  "
-                "Falling back to default numpy value of {}".format(defaults["numpy"])
-            )
     d["np"] = int("".join(np.split(".")[:2]))
 
     pl = config.variant.get("perl", defaults["perl"])
@@ -234,7 +229,8 @@ def get_selectors(config: Config) -> dict[str, bool]:
 
     for feature, value in feature_list:
         d[feature] = value
-    d.update(os.environ)
+
+    d.update(OSModuleSubset.environ)
 
     # here we try to do some type conversion for more intuitive usage.  Otherwise,
     #    values like 35 are strings by default, making relational operations confusing.
@@ -248,15 +244,6 @@ def get_selectors(config: Config) -> dict[str, bool]:
                     v = v.lower() == "true"
                 d[k] = v
     return d
-
-
-def ns_cfg(config: Config) -> dict[str, bool]:
-    warnings.warn(
-        "`conda_build.metadata.ns_cfg` is pending deprecation and will be removed in a "
-        "future release. Please use `conda_build.metadata.get_selectors` instead.",
-        PendingDeprecationWarning,
-    )
-    return get_selectors(config)
 
 
 # Selectors must be either:

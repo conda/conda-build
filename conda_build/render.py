@@ -1,5 +1,38 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+"""Recipe on disk → finalized :class:`~conda_build.metadata.MetaData`.
+
+**Pipeline**
+
+- **Variant discovery**
+  - Merge or stack ``conda_build_config.yaml`` and other variant inputs, then expand the build
+    matrix (see :mod:`conda_build.variants`).
+  - Line-filter CBC text before each file loads before ``meta.yaml`` is rendered for a cell.
+
+- **Recipe render**
+  - ``render_recipe`` builds :class:`~conda_build.metadata.MetaData`.
+  - Jinja expands ``{{ ... }}`` in ``meta.yaml`` and includes (``MetaData._get_contents``). The
+    recipe selector map from ``get_selectors`` is available as Jinja globals (and for
+    line-filtering loaded snippets).
+  - ``parse`` runs after that: it applies YAML line selectors (``# [...]`` comments) to the
+    rendered text, then loads YAML, still using the same selector map (this is not another Jinja
+    step).
+
+- **Multi-variant / outputs:** ``distribute_variants`` and ``render_metadata_tuples`` for extra
+  variant columns and subpackages.
+
+**CLI** (user-facing entry points that use this module)
+
+- **conda build** — ``conda_build.cli.main_build`` → ``conda_build.api.build`` →
+  ``conda_build.build.build_tree`` → ``render_recipe``, then compile/test. Some paths call
+  ``conda_build.api.render`` only.
+- **conda render** — ``conda_build.cli.main_render`` builds ``Config``, then
+  ``conda_build.api.render`` (see that module for ``--file`` and other flags).
+
+**Programmatic:** ``conda_build.api.render``, ``conda_build.api.build``. **Paths:** ``bldpkg_path``
+and helpers in this file.
+"""
+
 from __future__ import annotations
 
 import functools
@@ -898,13 +931,14 @@ def distribute_variants(
     #     used mostly, and can be reduced
     metadata.config.input_variants = variants
 
+    metadata.config.variant = variants[0]
+
     recipe_requirements = metadata.extract_requirements_text()
     recipe_package_and_build_text = metadata.extract_package_and_build_text()
     recipe_text = recipe_package_and_build_text + recipe_requirements
     if hasattr(recipe_text, "decode"):
         recipe_text = recipe_text.decode()
 
-    metadata.config.variant = variants[0]
     used_variables = metadata.get_used_loop_vars(force_global=False)
     top_loop = metadata.get_reduced_variant_set(used_variables)
 

@@ -52,7 +52,10 @@ def render(
     """Given path to a recipe, return the MetaData object(s) representing that recipe, with jinja2
        templates evaluated.
 
-    Returns a list of (metadata, need_download, need_reparse in env) tuples"""
+    Returns a list of (metadata, need_download, need_reparse in env) tuples.
+
+    See :mod:`conda_build.render`.
+    """
     from .render import render_metadata_tuples, render_recipe
 
     config = get_or_merge_config(config, **kwargs)

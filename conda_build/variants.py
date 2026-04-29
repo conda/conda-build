@@ -1,7 +1,8 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
-"""This file handles the parsing of feature specifications from files,
-ending up with a configuration matrix"""
+"""Parse variant configuration files (e.g. ``conda_build_config.yaml``) into a build matrix.
+
+Each file is preprocessed with YAML line selectors in ``parse_config_file`` before load."""
 
 from __future__ import annotations
 
