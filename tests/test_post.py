@@ -47,7 +47,7 @@ def test_compile_missing_pyc_chunking(tmp_path: Path, monkeypatch):
     Regression test for the command-line-too-long bug fixed in PR #5780.
 
     compile_missing_pyc() uses chunks() to split the file list into groups that
-    respect MAX_CMD_LINE_LENGTH.  This test verifies that:
+    respect MAX_CHUNK_SIZE.  This test verifies that:
       1. All .py files are compiled even when the limit forces multiple batches.
       2. The limit is actually respected: no single call receives more arguments
          than the limit allows.
@@ -61,10 +61,19 @@ def test_compile_missing_pyc_chunking(tmp_path: Path, monkeypatch):
         (tmp_path / name).write_text("x = 1\n")
         py_files.append(name)
 
-    # Force a very small MAX_CMD_LINE_LENGTH so chunking is triggered.
-    small_limit = 80
-    monkeypatch.setattr(conda_build.utils, "MAX_CMD_LINE_LENGTH", small_limit)
-    monkeypatch.setattr(post, "MAX_CMD_LINE_LENGTH", small_limit)
+    # Compute the fixed prefix length so that small_limit is always larger than
+    # it, regardless of how long sys.executable is on this machine.
+    args_prefix = [sys.executable, "-Wi", "-m", "py_compile"]
+    prefix_len = len(" ".join(args_prefix)) + 1
+
+    # Allow only ~3 short filenames per chunk beyond the prefix (each
+    # "mod_NNN.py" is 10 chars + 1 space = 11 bytes).  Using 35 bytes of
+    # headroom means 3 files per chunk for these filenames, which forces
+    # 10 subprocess calls for 30 files.
+    file_budget = 35
+    small_limit = prefix_len + file_budget
+    monkeypatch.setattr(conda_build.utils, "MAX_CHUNK_SIZE", small_limit)
+    monkeypatch.setattr(post, "MAX_CHUNK_SIZE", small_limit)
 
     # Intercept the actual subprocess calls so we can inspect argument lengths.
     call_args_log = []
@@ -89,13 +98,13 @@ def test_compile_missing_pyc_chunking(tmp_path: Path, monkeypatch):
         "The chunking logic may not be working."
     )
 
-    # Each call's argument string must not exceed our small limit.
-    args_prefix = [sys.executable, "-Wi", "-m", "py_compile"]
-    prefix_len = len(" ".join(args_prefix)) + 1
+    # Each call's total command length must not exceed the limit by more than
+    # one extra filename (chunks() cannot split a single argument).
     for args in call_args_log:
         file_args = args[len(args_prefix) :]  # strip the fixed prefix
         cmd_len = prefix_len + sum(len(f) + 1 for f in file_args)
-        assert cmd_len <= small_limit + len(max(file_args, key=len, default="")), (
+        max_file_len = len(max(file_args, key=len, default=""))
+        assert cmd_len <= small_limit + max_file_len, (
             f"A single call exceeded the expected size: {cmd_len}"
         )
 
