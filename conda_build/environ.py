@@ -1009,7 +1009,6 @@ def _clone_template_env(
 
     try:
         template = PrefixData(str(template_path))
-        # Trigger eager load so we surface errors in this try/except.
         installed_names = {prec.name for prec in template.iter_records()}
     except Exception:
         return False
@@ -1024,8 +1023,6 @@ def _clone_template_env(
     requested_names: set[str] = set()
     for item in specs_or_precs:
         if isinstance(item, PackageRecord):
-            # Use the canonical exact spec (name=version=build) so we don't
-            # accidentally over-constrain on channel/subdir.
             match_spec = MatchSpec(item.spec)
             name = item.name
         elif isinstance(item, MatchSpec):
@@ -1073,7 +1070,6 @@ def _clone_template_env(
         log.debug("conda clone failed: %s", result.stderr)
         return False
     except (OSError, subprocess.SubprocessError) as e:
-        # If clone fails, clean up and fall back to normal creation
         log.debug("Template clone failed: %s", e)
         target_prefix = Path(target_prefix)
         if target_prefix.exists():

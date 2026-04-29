@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
+import warnings
 from collections import defaultdict
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -13,6 +15,7 @@ from typing import TYPE_CHECKING
 import pytest
 from conda.common.compat import on_mac, on_win
 from conda_index.api import update_index
+from filelock import FileLock, Timeout
 
 import conda_build
 import conda_build.config
@@ -271,15 +274,11 @@ def warm_package_cache(tmp_path_factory: pytest.TempPathFactory) -> Path | None:
     Returns:
         Path to the template environment, or None if creation failed.
     """
-    from filelock import FileLock, Timeout
-
     shared_base = tmp_path_factory.getbasetemp().parent
     shared_base.mkdir(parents=True, exist_ok=True)
     template_env = shared_base / "warm_template_env"
     lock_path = shared_base / "warm_template_env.lock"
     ready_marker = template_env / ".conda-build-template-ready"
-
-    conda_cmd = [sys.executable, "-m", "conda"]
 
     def _have_ready_template() -> bool:
         return template_env.is_dir() and ready_marker.is_file()
@@ -290,15 +289,14 @@ def warm_package_cache(tmp_path_factory: pytest.TempPathFactory) -> Path | None:
                 return template_env
 
             if template_env.exists():
-                # Stale leftover from a previous interrupted run.
-                import shutil
-
                 shutil.rmtree(template_env, ignore_errors=True)
 
             try:
                 subprocess.run(
                     [
-                        *conda_cmd,
+                        sys.executable,
+                        "-m",
+                        "conda",
                         "create",
                         "-p",
                         str(template_env),
@@ -315,20 +313,14 @@ def warm_package_cache(tmp_path_factory: pytest.TempPathFactory) -> Path | None:
                     text=True,
                 )
             except subprocess.CalledProcessError as e:
-                import warnings
-
                 warnings.warn(f"Failed to create template environment: {e.stderr}")
                 return None
 
             ready_marker.touch()
             return template_env
     except Timeout:
-        # Another worker is taking too long; if it managed to publish a
-        # ready template, use it, otherwise fall back to no template.
         if _have_ready_template():
             return template_env
-        import warnings
-
         warnings.warn(
             "Timed out waiting for warm_package_cache template; "
             "tests will create envs from scratch.",
