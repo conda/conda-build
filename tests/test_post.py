@@ -42,7 +42,7 @@ def test_compile_missing_pyc(testing_workdir):
     assert not os.path.isfile(os.path.join(tmp, add_mangling(bad_file)))
 
 
-def test_compile_missing_pyc_chunking(tmp_path: Path, monkeypatch):
+def test_compile_missing_pyc_chunking(tmp_path: Path, monkeypatch, mocker):
     """
     Regression test for the command-line-too-long bug fixed in PR #5780.
 
@@ -75,15 +75,7 @@ def test_compile_missing_pyc_chunking(tmp_path: Path, monkeypatch):
     monkeypatch.setattr(conda_build.utils, "MAX_CHUNK_SIZE", small_limit)
     monkeypatch.setattr(post, "MAX_CHUNK_SIZE", small_limit)
 
-    # Intercept the actual subprocess calls so we can inspect argument lengths.
-    call_args_log = []
-    original_call = post.call
-
-    def recording_call(args, **kwargs):
-        call_args_log.append(list(args))
-        return original_call(args, **kwargs)
-
-    monkeypatch.setattr(post, "call", recording_call)
+    spy_call = mocker.spy(post, "call")
 
     post.compile_missing_pyc(py_files, cwd=str(tmp_path), python_exe=sys.executable)
 
@@ -92,15 +84,14 @@ def test_compile_missing_pyc_chunking(tmp_path: Path, monkeypatch):
         pyc_path = tmp_path / add_mangling(name)
         assert pyc_path.is_file(), f"missing compiled file for {name}"
 
-    # The patched call() must have been invoked more than once (chunking happened).
-    assert len(call_args_log) > 1, (
+    assert spy_call.call_count > 1, (
         "Expected multiple subprocess calls due to chunking, got only one. "
         "The chunking logic may not be working."
     )
 
     # Each call's total command length must not exceed the limit by more than
     # one extra filename (chunks() cannot split a single argument).
-    for args in call_args_log:
+    for args in spy_call.call_args_list:
         file_args = args[len(args_prefix) :]  # strip the fixed prefix
         cmd_len = prefix_len + sum(len(f) + 1 for f in file_args)
         max_file_len = len(max(file_args, key=len, default=""))
