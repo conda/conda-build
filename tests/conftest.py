@@ -256,61 +256,83 @@ def variants_conda_build_sysroot(monkeypatch, request):
 def warm_package_cache(tmp_path_factory: pytest.TempPathFactory) -> Path | None:
     """Pre-warm the conda package cache and create a template environment.
 
-    This creates a persistent template environment with commonly-used packages
-    (Python, pip, setuptools) which:
-    1. Forces conda to download and extract packages into the cache
-    2. Provides a template that can be cloned via `conda create --clone` for
-       faster test env creation with proper prefix replacement
+    Creates a persistent template environment with commonly-used packages
+    (Python, pip, setuptools, expat) that ``create_env`` can clone from via
+    ``conda create --clone`` instead of running a full solve.
 
-    The template environment is kept for the duration of the test session.
+    Under pytest-xdist, every worker enters this session-scoped fixture; the
+    template is therefore created under the *shared* xdist base directory
+    (``tmp_path_factory.getbasetemp().parent``) and guarded by a file lock so
+    only the first worker actually invokes ``conda create``. The remaining
+    workers wait on the lock and reuse the leader's template, avoiding
+    ``LockError``/``InvalidArchiveError`` races against the shared
+    ``~/conda_pkgs_dir``.
 
     Returns:
         Path to the template environment, or None if creation failed.
     """
-    from conda.base.context import context
+    from filelock import FileLock, Timeout
 
-    # Skip warmup if cache already has Python extracted (common in CI with cached pkgs_dir)
-    pkgs_dir = context.pkgs_dirs[0] if context.pkgs_dirs else None
-    if pkgs_dir:
-        cached_pythons = list(Path(pkgs_dir).glob("python-3.1*"))
-        if cached_pythons:
-            # Cache is warm, but still create template env for potential cloning
-            pass
+    shared_base = tmp_path_factory.getbasetemp().parent
+    shared_base.mkdir(parents=True, exist_ok=True)
+    template_env = shared_base / "warm_template_env"
+    lock_path = shared_base / "warm_template_env.lock"
+    ready_marker = template_env / ".conda-build-template-ready"
 
-    # Create a template environment that persists for the session
-    # Include common packages that most test builds need
-    template_env = tmp_path_factory.mktemp("template_env", numbered=False)
-
-    # Find conda executable - use sys.executable for cross-platform reliability
     conda_cmd = [sys.executable, "-m", "conda"]
 
+    def _have_ready_template() -> bool:
+        return template_env.is_dir() and ready_marker.is_file()
+
     try:
-        subprocess.run(
-            [
-                *conda_cmd,
-                "create",
-                "-p",
-                str(template_env),
-                # Core Python
-                "python",
-                "pip",
-                "setuptools",
-                # Common build dependencies (often pulled in by solver)
-                "expat",
-                "-y",
-                "-q",
-                "--no-shortcuts",
-            ],
-            check=True,
-            capture_output=True,
-            text=True,
-        )
-        return template_env
-    except subprocess.CalledProcessError as e:
-        # Don't fail tests if template creation fails
+        with FileLock(str(lock_path), timeout=600):
+            if _have_ready_template():
+                return template_env
+
+            if template_env.exists():
+                # Stale leftover from a previous interrupted run.
+                import shutil
+
+                shutil.rmtree(template_env, ignore_errors=True)
+
+            try:
+                subprocess.run(
+                    [
+                        *conda_cmd,
+                        "create",
+                        "-p",
+                        str(template_env),
+                        "python",
+                        "pip",
+                        "setuptools",
+                        "expat",
+                        "-y",
+                        "-q",
+                        "--no-shortcuts",
+                    ],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                )
+            except subprocess.CalledProcessError as e:
+                import warnings
+
+                warnings.warn(f"Failed to create template environment: {e.stderr}")
+                return None
+
+            ready_marker.touch()
+            return template_env
+    except Timeout:
+        # Another worker is taking too long; if it managed to publish a
+        # ready template, use it, otherwise fall back to no template.
+        if _have_ready_template():
+            return template_env
         import warnings
 
-        warnings.warn(f"Failed to create template environment: {e.stderr}")
+        warnings.warn(
+            "Timed out waiting for warm_package_cache template; "
+            "tests will create envs from scratch.",
+        )
         return None
 
 

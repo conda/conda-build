@@ -1,6 +1,7 @@
 ### Enhancements
 
-* Add `test_env_template` config option to speed up environment creation by cloning from a template environment instead of creating from scratch. Uses `conda create --clone` to properly handle prefix replacement in scripts and metadata files. (#5904)
+* Add `test_env_template` config option to speed up environment creation by cloning from a template environment instead of creating from scratch. Uses `conda create --clone` to properly handle prefix replacement in scripts and metadata files. The template is only used when its installed records exactly match the requested name/version/build of every spec, the template contains no extra packages the caller did not ask for, and (when `disable_pip` is set) the template does not contain pip/setuptools/wheel. (#5904)
+* Serialize the session-scoped `warm_package_cache` test fixture across pytest-xdist workers via a file lock so only one worker creates the shared template environment, avoiding `LockError`/`InvalidArchiveError` races on `~/conda_pkgs_dir`. (#5904)
 
 ### Bug fixes
 

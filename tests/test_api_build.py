@@ -858,6 +858,8 @@ def test_noarch(testing_workdir):
 
 def test_disable_pip(testing_metadata):
     testing_metadata.config.disable_pip = True
+    # Make sure no template env (which would contain pip/setuptools) leaks in.
+    testing_metadata.config.test_env_template = None
     testing_metadata.meta["requirements"] = {"host": ["python"], "run": ["python"]}
     testing_metadata.meta["build"]["script"] = (
         'python -c "import pip; print(pip.__version__)"'
