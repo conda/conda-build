@@ -980,11 +980,6 @@ get_package_records = get_install_actions
 del get_install_actions
 
 
-def _record_to_exact_spec(record: PackageRecord) -> MatchSpec:
-    """Build a MatchSpec that matches only the exact name/version/build of a record."""
-    return MatchSpec(name=record.name, version=record.version, build=record.build)
-
-
 def _clone_template_env(
     template_path: str | os.PathLike | Path,
     target_prefix: str | os.PathLike | Path,
@@ -993,48 +988,34 @@ def _clone_template_env(
 ) -> bool:
     """Clone a template environment to the target prefix if it matches the specs.
 
-    Uses `conda create --clone` to properly clone the environment, which handles
-    prefix replacement in scripts and metadata files. This is faster than creating
-    an environment from scratch because it avoids the conda solver.
+    Uses `conda create --clone` to clone the environment, which properly handles
+    prefix replacement in scripts and metadata files. This is faster than
+    creating an environment from scratch because it avoids the solver.
 
     The clone is only used when:
 
-    1. The template's installed records match the requested specs *exactly* (by
-       name, version, and build for ``PackageRecord`` inputs, or via
-       ``MatchSpec.match`` for string/spec inputs).
+    1. The template's installed records match the requested specs (by exact
+       name+version+build for ``PackageRecord`` inputs, or via
+       ``MatchSpec.match`` for string/``MatchSpec`` inputs).
     2. The template does not contain extra packages that the caller did not ask
-       for. In particular, if ``disable_pip`` is set the template must not
-       contain pip/setuptools/wheel — otherwise the clone would silently
-       reintroduce them and break tests/builds that rely on their absence.
+       for. ``conda create --clone`` is all-or-nothing, so extras would leak
+       into the target env. In particular, if ``disable_pip`` is set the
+       template must not contain pip/setuptools/wheel.
 
     If any of these conditions fail, cloning is skipped and the caller falls
     back to a normal solve.
-
-    Args:
-        template_path: Path to the template environment to clone.
-        target_prefix: Path where the cloned environment should be created.
-        specs_or_precs: Tuple of specs (str/MatchSpec) or PackageRecords that
-            the environment needs. PackageRecords are matched against the
-            template by exact name/version/build.
-        disable_pip: When True, refuse to clone if the template contains
-            pip/setuptools/wheel.
-
-    Returns:
-        True if cloning succeeded and satisfies specs, False otherwise.
     """
+    log = utils.get_logger(__name__)
+
     try:
-        template_prefix_data = PrefixData(str(template_path))
-        installed = list(template_prefix_data.iter_records())
-        installed_by_name: dict[str, PackageRecord] = {
-            record.name: record for record in installed
-        }
+        template = PrefixData(str(template_path))
+        # Trigger eager load so we surface errors in this try/except.
+        installed_names = {prec.name for prec in template.iter_records()}
     except Exception:
         return False
 
-    if disable_pip and any(
-        pkg in installed_by_name for pkg in ("pip", "setuptools", "wheel")
-    ):
-        utils.get_logger(__name__).debug(
+    if disable_pip and installed_names & {"pip", "setuptools", "wheel"}:
+        log.debug(
             "Template env contains pip/setuptools/wheel but disable_pip is set, "
             "skipping clone",
         )
@@ -1043,7 +1024,9 @@ def _clone_template_env(
     requested_names: set[str] = set()
     for item in specs_or_precs:
         if isinstance(item, PackageRecord):
-            match_spec = _record_to_exact_spec(item)
+            # Use the canonical exact spec (name=version=build) so we don't
+            # accidentally over-constrain on channel/subdir.
+            match_spec = MatchSpec(item.spec)
             name = item.name
         elif isinstance(item, MatchSpec):
             match_spec = item
@@ -1054,31 +1037,21 @@ def _clone_template_env(
         else:
             return False
 
-        record = installed_by_name.get(name)
+        record = template.get(name, None)
         if record is None or not match_spec.match(record):
-            utils.get_logger(__name__).debug(
-                "Template env does not satisfy %r, skipping clone",
-                item,
-            )
+            log.debug("Template env does not satisfy %r, skipping clone", item)
             return False
         requested_names.add(name)
 
-    # Refuse to clone if the template has packages the caller did not ask for:
-    # cloning is all-or-nothing, so extra records would leak into the target
-    # env and could violate negative constraints (e.g. disable_pip).
-    extra = set(installed_by_name) - requested_names
+    extra = installed_names - requested_names
     if extra:
-        utils.get_logger(__name__).debug(
+        log.debug(
             "Template env has extra packages not requested (%s), skipping clone",
             sorted(extra),
         )
         return False
 
-    # Template satisfies our needs, clone it using conda's clone functionality
-    # This properly handles prefix replacement in scripts and metadata files
-    log = utils.get_logger(__name__)
     try:
-        # Use conda create --clone for proper prefix replacement
         result = subprocess.run(
             [
                 sys.executable,
