@@ -93,9 +93,38 @@ from .utils import (
 )
 from .variants import (
     dict_of_lists_to_list_of_dicts,
+    get_default_variant,
     get_package_variants,
     set_language_env_vars,
 )
+
+
+def _warn_implicit_numpy_variant(m: MetaData) -> None:
+    """Log when build/host need numpy but the matrix numpy pin still matches conda-build's default.
+
+    If ``variant['numpy']`` differs from :func:`~conda_build.variants.get_default_variant`,
+    assume an intentional pin and stay quiet.
+
+    Matching the default can still mean it was set but this should be rare.
+    """
+
+    default_np = get_default_variant(m.config)["numpy"]
+    pinned = m.config.variant.get("numpy")
+    if pinned is not None and pinned != default_np:
+        return
+    if not any(
+        ms.name == "numpy"
+        for section in ("build", "host")
+        for ms in m.ms_depends(section)
+    ):
+        return
+    utils.get_logger(__name__).warning(
+        "numpy is required by this recipe under requirements build/host but the numpy "
+        "variant is still conda-build's default (%s). Prefer setting numpy in "
+        "conda_build_config.yaml (or equivalent) when you depend on numpy at build time.",
+        default_np,
+    )
+
 
 if on_win:
     from . import windows
@@ -2453,6 +2482,8 @@ def build(
                         r"|".join(rf"(?:^{exc}(?:\s|$|\Z))" for exc in excludes)
                     )
             add_upstream_pins(m, False, exclude_pattern, [])
+
+        _warn_implicit_numpy_variant(top_level_pkg)
 
         create_build_envs(top_level_pkg, notest)
 
