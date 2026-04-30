@@ -8,8 +8,10 @@ and is more unit-test oriented.
 from __future__ import annotations
 
 import json
+import logging
 import os
 import sys
+from collections import defaultdict
 from contextlib import nullcontext
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -19,17 +21,15 @@ from conda.common.compat import on_win
 
 from conda_build import api, build
 from conda_build.exceptions import CondaBuildUserError
+from conda_build.metadata import MetaData
+from conda_build.variants import get_default_variant
 
 from .utils import get_noarch_python_meta, metadata_dir
-
-if TYPE_CHECKING:
-    from conda_build.config import Config
 
 if TYPE_CHECKING:
     from pytest_mock import MockerFixture
 
     from conda_build.config import Config
-    from conda_build.metadata import MetaData
 
 
 def test_build_preserves_PATH(testing_config):
@@ -389,3 +389,48 @@ def test_tests_failed(testing_metadata: MetaData, tmp_path: Path):
             broken_dir=tmp_path,
             config=testing_metadata.config,
         )
+
+
+@pytest.mark.parametrize(
+    "numpy_version, requires_numpy, expected_warning",
+    [
+        ("default", True, True),
+        ("2.1.0", True, False),
+        ("2.1.0", False, False),
+    ],
+    ids=[
+        "default_pin_with_numpy_dep",
+        "explicit_pin_with_numpy_dep",
+        "numpy_dep_absent",
+    ],
+)
+def test_warn_implicit_numpy_variant(
+    testing_config: Config,
+    caplog: pytest.LogCaptureFixture,
+    numpy_version: str,
+    requires_numpy: bool,
+    expected_warning: bool,
+) -> None:
+
+    def _minimal_meta_with_reqs(requirements: dict) -> defaultdict:
+        d = defaultdict(dict)
+        d["package"]["name"] = "implicit_numpy_warn_test_pkg"
+        d["package"]["version"] = "1.0"
+        d["build"]["number"] = "0"
+        d["requirements"] = dict(requirements)
+        return d
+
+    variant = dict(get_default_variant(testing_config))
+    if numpy_version != "default":
+        variant["numpy"] = numpy_version
+
+    testing_config.variant = variant
+    testing_config.variants = [variant]
+    m = MetaData.fromdict(
+        _minimal_meta_with_reqs({"host": ["numpy"] if requires_numpy else []}),
+        config=testing_config,
+    )
+    caplog.set_level(logging.WARNING)
+    build._warn_implicit_numpy_variant(m)
+    n_warn = sum(1 for r in caplog.records if r.levelno == logging.WARNING)
+    assert n_warn == (1 if expected_warning else 0)
