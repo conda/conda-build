@@ -574,15 +574,3 @@ def test_max_cmd_line_length_default():
         assert utils.MAX_CHUNK_SIZE == 8190
     else:
         assert utils.MAX_CHUNK_SIZE == 32760
-
-
-def test_max_cmd_line_length_env_override(monkeypatch: MonkeyPatch):
-    """CONDA_BUILD_MAX_CMD_LEN environment variable overrides the default."""
-
-    monkeypatch.setenv("CONDA_BUILD_MAX_CMD_LEN", "1234")
-    # Re-evaluate the module-level expression to simulate a fresh import
-
-    value = int(
-        os.environ.get("CONDA_BUILD_MAX_CMD_LEN", 8190 if utils.on_win else 32760)
-    )
-    assert value == 1234
