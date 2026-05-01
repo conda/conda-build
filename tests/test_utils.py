@@ -479,3 +479,98 @@ def test_prefix_files(tmp_path: Path):
 
     paths = {str(path.relative_to(prefix)) for path in (file1, file2, file3, link1)}
     assert paths == utils.prefix_files(str(prefix))
+
+
+def test_chunks_empty():
+    """chunks() on an empty list returns an empty list."""
+    assert utils.chunks([], 100) == []
+
+
+def test_chunks_all_fit_in_one():
+    """When all items fit within the limit, a single chunk is returned."""
+    items = ["ab", "cd", "ef"]  # each 2 chars + 3 padding = 5 per item, total 15
+    result = utils.chunks(items, 100)
+    assert result == [["ab", "cd", "ef"]]
+
+
+def test_chunks_exact_limit():
+    """Items that exactly fill the limit end up in one chunk."""
+    # 1 char + 3 padding = 4 per item; 3 items = 12; limit = 12
+    items = ["a", "b", "c"]
+    result = utils.chunks(items, 12)
+    assert result == [["a", "b", "c"]]
+
+
+def test_chunks_splits_correctly():
+    """Items are split into multiple chunks when the limit is exceeded."""
+    # each item is 4 chars + 3 padding = 7; limit 14 fits exactly 2 per chunk
+    items = ["aaaa", "bbbb", "cccc", "dddd"]
+    result = utils.chunks(items, 14)
+    assert result == [["aaaa", "bbbb"], ["cccc", "dddd"]]
+
+
+def test_chunks_no_chunk_exceeds_limit():
+    """Every chunk produced must have a total padded length <= n."""
+    items = [f"file_{i:04d}.py" for i in range(200)]
+    limit = 100
+    result = utils.chunks(items, limit)
+    for chunk in result:
+        total = sum(len(f) + 3 for f in chunk)
+        assert total <= limit, f"chunk exceeded limit: {total} > {limit}"
+
+
+def test_chunks_all_items_present():
+    """The union of all chunks must equal the original list (order preserved)."""
+    items = [f"path/to/file_{i}.pyc" for i in range(50)]
+    result = utils.chunks(items, 80)
+    flattened = [item for chunk in result for item in chunk]
+    assert flattened == items
+
+
+def test_chunks_single_item_larger_than_limit():
+    """A single item that exceeds the limit goes into its own chunk."""
+    long_item = "x" * 200
+    result = utils.chunks([long_item], 50)
+    assert result == [[long_item]]
+
+
+def test_chunks_mixed_sizes():
+    """Items of varying sizes are chunked correctly."""
+    items = ["a", "b" * 50, "c", "d" * 50, "e"]
+    result = utils.chunks(items, 60)
+    flattened = [item for chunk in result for item in chunk]
+    assert flattened == items
+    for chunk in result:
+        # Each chunk that has more than one large item must be within limit
+        # (single oversized items are allowed in their own chunk)
+        if len(chunk) > 1:
+            total = sum(len(f) + 3 for f in chunk)
+            assert total <= 60
+
+
+def test_chunks_old_bug_regression():
+    """
+    Regression test for the bug in the original chunks() implementation (PR #5780).
+
+    The old algorithm had a fencepost error: when a chunk reached the limit it
+    would yield line[start : i+1], then set start = i (not i+1), causing the
+    item at index i to appear in BOTH the yielded chunk and the next one.
+
+    Verify that no item appears more than once across all chunks.
+    """
+    items = [f"file_{i}.py" for i in range(30)]
+    limit = 50
+    result = utils.chunks(items, limit)
+    flattened = [item for chunk in result for item in chunk]
+    # No duplicates
+    assert len(flattened) == len(set(flattened))
+    # All original items present
+    assert sorted(flattened) == sorted(items)
+
+
+def test_max_cmd_line_length_default():
+    """MAX_CMD_LINE_LENGTH has the correct platform default."""
+    if utils.on_win:
+        assert utils.MAX_CHUNK_SIZE == 8190
+    else:
+        assert utils.MAX_CHUNK_SIZE == 32760

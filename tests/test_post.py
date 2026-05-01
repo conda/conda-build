@@ -42,6 +42,64 @@ def test_compile_missing_pyc(testing_workdir):
     assert not os.path.isfile(os.path.join(tmp, add_mangling(bad_file)))
 
 
+def test_compile_missing_pyc_chunking(tmp_path: Path, monkeypatch, mocker):
+    """
+    Regression test for the command-line-too-long bug fixed in PR #5780.
+
+    compile_missing_pyc() uses chunks() to split the file list into groups that
+    respect MAX_CHUNK_SIZE.  This test verifies that:
+      1. All .py files are compiled even when the limit forces multiple batches.
+      2. The limit is actually respected: no single call receives more arguments
+         than the limit allows.
+    """
+    # Create a large number of short .py files so that even a small limit
+    # forces multiple subprocess invocations.
+    n_files = 30
+    py_files = []
+    for i in range(n_files):
+        name = f"mod_{i:03d}.py"
+        (tmp_path / name).write_text("x = 1\n")
+        py_files.append(name)
+
+    # Compute the fixed prefix length so that small_limit is always larger than
+    # it, regardless of how long sys.executable is on this machine.
+    args_prefix = [sys.executable, "-Wi", "-m", "py_compile"]
+    prefix_len = len(" ".join(args_prefix)) + 1
+
+    # Allow only ~3 short filenames per chunk beyond the prefix (each
+    # "mod_NNN.py" is 10 chars + 1 space = 11 bytes).  Using 35 bytes of
+    # headroom means 3 files per chunk for these filenames, which forces
+    # 10 subprocess calls for 30 files.
+    file_budget = 35
+    small_limit = prefix_len + file_budget
+    monkeypatch.setattr(conda_build.utils, "MAX_CHUNK_SIZE", small_limit)
+    monkeypatch.setattr(post, "MAX_CHUNK_SIZE", small_limit)
+
+    spy_call = mocker.spy(post, "call")
+
+    post.compile_missing_pyc(py_files, cwd=str(tmp_path), python_exe=sys.executable)
+
+    # Every .py file should now have a compiled .pyc counterpart.
+    for name in py_files:
+        pyc_path = tmp_path / add_mangling(name)
+        assert pyc_path.is_file(), f"missing compiled file for {name}"
+
+    assert spy_call.call_count > 1, (
+        "Expected multiple subprocess calls due to chunking, got only one. "
+        "The chunking logic may not be working."
+    )
+
+    # Each call's total command length must not exceed the limit by more than
+    # one extra filename (chunks() cannot split a single argument).
+    for args in spy_call.call_args_list:
+        file_args = args[len(args_prefix) :]  # strip the fixed prefix
+        cmd_len = prefix_len + sum(len(f) + 1 for f in file_args)
+        max_file_len = len(max(file_args, key=len, default=""))
+        assert cmd_len <= small_limit + max_file_len, (
+            f"A single call exceeded the expected size: {cmd_len}"
+        )
+
+
 def test_hardlinks_to_copies():
     with open("test1", "w") as f:
         f.write("\n")
