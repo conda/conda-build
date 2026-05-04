@@ -104,6 +104,10 @@ jobs:
       PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial' || 'not serial' }}
 
     steps:
+      # See https://github.com/conda/conda-build/pull/5866 — added to prevent the
+      # Post Cache step from running out of disk space. Trimmed to the entries
+      # that recover meaningful space; browser/editor/language-toolchain folders
+      # were removed as they contribute little to post-test disk pressure.
       - name: Free Disk Space
         uses: endersonmenezes/free-disk-space@7901478139cff6e9d44df5972fd8ab8fcade4db1  # v3.2.2
         with:
@@ -115,25 +119,13 @@ jobs:
           remove_packages: >-
             azure-cli
             google-cloud-cli
-            microsoft-edge-stable
-            google-chrome-stable
-            firefox
             postgresql*
             temurin-*
             *llvm*
-            mysql*
             dotnet-sdk-*
           remove_packages_one_command: true
           remove_folders: >-
-            /usr/share/swift
-            /usr/share/az*
             /usr/local/lib/node_modules
-            /usr/local/share/chromium
-            /usr/local/share/powershell
-            /usr/local/julia
-            /usr/local/aws-cli
-            /usr/local/aws-sam-cli
-            /usr/share/gradle
           rm_cmd: rmz
           rmz_version: 3.1.1
           testing: false
@@ -141,7 +133,10 @@ jobs:
       - name: Checkout Source
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          fetch-depth: 0
+          # shallow clone + tags is enough for tests (hatch-vcs version + git describe);
+          # the `build` job below still uses fetch-depth: 0.
+          fetch-depth: 1
+          fetch-tags: true
 
       - name: Hash + Timestamp
         run: echo "HASH=${{ runner.os }}-${{ runner.arch }}-Py${{ matrix.python-version }}-${{ matrix.conda-version }}-${{ matrix.test-type }}-$(date -u "+%Y%m")" >> $GITHUB_ENV
@@ -183,8 +178,11 @@ jobs:
         run: >
           pytest
           --cov=conda_build
-          --reruns 3
-          --reruns-delay 1
+          --cov-append
+          --cov-branch
+          --cov-report=term
+          --cov-report=xml
+          --dist=worksteal
           -n auto
           -m "${{ env.PYTEST_MARKER }}"
 
@@ -223,7 +221,10 @@ jobs:
       - name: Checkout Source
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          fetch-depth: 0
+          # shallow clone + tags is enough for benchmarks;
+          # the `build` job below still uses fetch-depth: 0.
+          fetch-depth: 1
+          fetch-tags: true
 
       - name: Hash + Timestamp
         run: echo "HASH=${{ runner.os }}-${{ runner.arch }}-Py${{ matrix.python-version }}-benchmark-$(date -u "+%Y%m")" >> $GITHUB_ENV
@@ -305,7 +306,10 @@ jobs:
       - name: Checkout Source
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          fetch-depth: 0
+          # shallow clone + tags is enough for tests;
+          # the `build` job below still uses fetch-depth: 0.
+          fetch-depth: 1
+          fetch-tags: true
 
       - name: Hash + Timestamp
         shell: bash  # use bash to run date command
@@ -358,7 +362,12 @@ jobs:
         run: >
           pytest
           --cov=conda_build
+          --cov-append
+          --cov-branch
+          --cov-report=term
+          --cov-report=xml
           --basetemp=${{ runner.temp }}
+          --dist=worksteal
           -n auto
           -m "${{ env.PYTEST_MARKER }}"
 
@@ -419,7 +428,10 @@ jobs:
       - name: Checkout Source
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          fetch-depth: 0
+          # shallow clone + tags is enough for tests (hatch-vcs version + git describe);
+          # the `build` job below still uses fetch-depth: 0.
+          fetch-depth: 1
+          fetch-tags: true
 
       - name: Hash + Timestamp
         run: echo "HASH=${{ runner.os }}-${{ runner.arch }}-Py${{ matrix.python-version }}-${{ matrix.conda-version }}-${{ matrix.test-type }}-$(date -u "+%Y%m")" >> $GITHUB_ENV
@@ -485,6 +497,11 @@ jobs:
         run: >
           pytest
           --cov=conda_build
+          --cov-append
+          --cov-branch
+          --cov-report=term
+          --cov-report=xml
+          --dist=worksteal
           -n auto
           -m "${{ env.PYTEST_MARKER }}"
         env:
