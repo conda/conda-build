@@ -231,6 +231,7 @@ def execute(args: Sequence[str] | None = None) -> int:
         config=config,
         no_download_source=parsed.no_source,
         variants=parsed.variants,
+        finalize=False,  # Skip dependency resolution for faster rendering
     )
 
     if parsed.file and len(metadata_tuples) > 1:
