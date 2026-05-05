@@ -78,7 +78,6 @@ CRAN_META = """\
 {version_binary2}
 
 {{% set posix = 'm2-' if win else '' %}}
-{{% set native = 'm2w64-' if win else '' %}}
 
 package:
   name: {packagename}
@@ -90,7 +89,6 @@ source:
 {binary2}
 
 build:
-  merge_build_host: True{sel_src_and_win}
   # If this is a new build for the same version, increment the build number.
   number: {build_number}
   {skip_os}
@@ -125,7 +123,6 @@ about:
   {home_comment}home:{homeurl}
   license: {license}
   {summary_comment}summary:{summary}
-  license_family: {license_family}
   {license_file}
 
 {extra_recipe_maintainers}
@@ -1530,9 +1527,9 @@ def skeletonize(
                     deps.append(
                         f"{INDENT}{{{{ posix }}}}automake-wrapper{sel_src_and_win}"
                     )
-                    deps.append(f"{INDENT}{{{{ posix }}}}pkg-config")
+                    deps.append(f"{INDENT}pkg-config")
                 if need_make:
-                    deps.append(f"{INDENT}{{{{ posix }}}}make            {sel_src}")
+                    deps.append(f"{INDENT}make            {sel_src}")
                     if not need_autotools:
                         deps.append(
                             f"{INDENT}{{{{ posix }}}}sed             {sel_src_and_win}"
@@ -1543,11 +1540,6 @@ def skeletonize(
                 deps.append(f"{INDENT}{{{{ posix }}}}zip             {sel_src_and_win}")
                 if add_cross_r_base:
                     deps.append(f"{INDENT}cross-r-base {{{{ r_base }}}}  {sel_cross}")
-            elif dep_type == "run":
-                if need_c or need_cxx or need_f:
-                    deps.append(
-                        f"{INDENT}{{{{native}}}}gcc-libs       {sel_src_and_win}"
-                    )
 
             if dep_type == "host" or dep_type == "run":
                 for name in sorted(dep_dict):
