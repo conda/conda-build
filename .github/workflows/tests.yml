@@ -79,8 +79,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # test all lower versions (w/ stable conda) and upper version (w/ canary conda)
-        python-version: ['3.10', '3.11', '3.12', '3.13']
+        # For PRs: test only boundary versions (3.10, 3.13)
+        # For main/schedule: test all versions (3.10, 3.12, 3.13)
+        # Note: 3.11 skipped as 3.10 and 3.12 provide sufficient coverage
+        python-version: ${{ github.event_name == 'pull_request' && fromJSON('["3.10", "3.13"]') || fromJSON('["3.10", "3.12", "3.13"]') }}
         conda-version: [release]
         test-type: [serial, parallel]
         include:
@@ -101,7 +103,8 @@ jobs:
     env:
       CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev::' || '' }}
       CONDA_VERSION: ${{ contains('canary|release', matrix.conda-version) && 'conda' || format('conda={0}', matrix.conda-version) }}
-      PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial' || 'not serial' }}
+      # Exclude benchmark tests from regular CI runs (they run separately in linux-benchmarks)
+      PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial and not benchmark' || 'not serial and not benchmark' }}
 
     steps:
       - name: Free Disk Space
@@ -151,6 +154,10 @@ jobs:
         with:
           path: ~/conda_pkgs_dir
           key: cache-${{ env.HASH }}
+          # Fallback to any cache for same OS/arch/Python, then any OS/arch cache
+          restore-keys: |
+            cache-${{ runner.os }}-${{ runner.arch }}-Py${{ matrix.python-version }}-
+            cache-${{ runner.os }}-${{ runner.arch }}-
 
       - name: Setup Miniconda
         uses: conda-incubator/setup-miniconda@8ee1f361103df19b6f8c8655fd3967a8ecb162d5 # v4.0.1
@@ -183,7 +190,7 @@ jobs:
         run: >
           pytest
           --cov=conda_build
-          --reruns 3
+          --reruns 1
           --reruns-delay 1
           -n auto
           -m "${{ env.PYTEST_MARKER }}"
@@ -233,6 +240,10 @@ jobs:
         with:
           path: ~/conda_pkgs_dir
           key: cache-${{ env.HASH }}
+          # Fallback to any cache for same OS/arch/Python, then any OS/arch cache
+          restore-keys: |
+            cache-${{ runner.os }}-${{ runner.arch }}-Py${{ matrix.python-version }}-
+            cache-${{ runner.os }}-${{ runner.arch }}-
 
       - name: Setup Miniconda
         uses: conda-incubator/setup-miniconda@8ee1f361103df19b6f8c8655fd3967a8ecb162d5 # v4.0.1
@@ -299,7 +310,8 @@ jobs:
     env:
       ErrorActionPreference: Stop  # powershell exit on first error
       CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'defaults' }}
-      PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial' || 'not serial and not slow' }}
+      # Exclude benchmark and slow tests from Windows parallel runs
+      PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial and not benchmark' || 'not serial and not slow and not benchmark' }}
 
     steps:
       - name: Checkout Source
@@ -318,6 +330,10 @@ jobs:
           enableCrossOsArchive: true
           path: D:\conda_pkgs_dir
           key: cache-${{ env.HASH }}
+          # Fallback to any cache for same OS/arch/Python, then any OS/arch cache
+          restore-keys: |
+            cache-${{ runner.os }}-${{ runner.arch }}-Py${{ matrix.python-version }}-
+            cache-${{ runner.os }}-${{ runner.arch }}-
 
       - name: Setup Miniconda
         uses: conda-incubator/setup-miniconda@8ee1f361103df19b6f8c8655fd3967a8ecb162d5 # v4.0.1
@@ -413,7 +429,8 @@ jobs:
     env:
       # Use conda-forge for release tests since conda 25.11+ is not in defaults for osx-64
       CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'conda-forge' }}
-      PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial' || 'not serial' }}
+      # Exclude benchmark tests from regular CI runs
+      PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial and not benchmark' || 'not serial and not benchmark' }}
 
     steps:
       - name: Checkout Source
@@ -431,6 +448,10 @@ jobs:
             ~/conda_pkgs_dir
             ~/macosx_sdks
           key: cache-${{ env.HASH }}
+          # Fallback to any cache for same OS/arch/Python, then any OS/arch cache
+          restore-keys: |
+            cache-${{ runner.os }}-${{ runner.arch }}-Py${{ matrix.python-version }}-
+            cache-${{ runner.os }}-${{ runner.arch }}-
 
       - name: Setup Miniconda
         uses: conda-incubator/setup-miniconda@8ee1f361103df19b6f8c8655fd3967a8ecb162d5 # v4.0.1
@@ -439,6 +460,8 @@ jobs:
           run-post: false  # skip post cleanup
 
       - name: SDK Download
+        # SDK needed for cross-compilation tests
+        # ARM64 runners: use 11.3 SDK, Intel runners: use 10.15 SDK
         run: |
           if [ "${{ matrix.runs-on }}" = "macos-latest" ]; then
             MACOSX_SDK_ROOT="$(xcrun --sdk macosx --show-sdk-path)"

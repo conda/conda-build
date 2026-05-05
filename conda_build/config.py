@@ -165,6 +165,15 @@ def _get_default_settings():
             if (cache_dir := context.conda_build.get("cache_dir"))
             else _src_cache_root_default,
         ),
+        # Template environment for faster test environment creation.
+        # When set to a valid conda environment path, create_env will clone
+        # from this template instead of creating from scratch, then install
+        # any additional required packages. This can significantly speed up
+        # test runs by avoiding repeated package extraction.
+        Setting(
+            "test_env_template",
+            os.environ.get("CONDA_BUILD_TEST_ENV_TEMPLATE"),
+        ),
         Setting("copy_test_source_files", True),
         # should rendering cut out any skipped metadata?
         Setting("trim_skip", True),
