@@ -82,15 +82,15 @@ source:
 
 build:
   noarch: python
-  script: python -m pip install . -vv
+  script: python -m pip install . --no-deps -vv
 
 requirements:
   host:
-    - python 3.12.1.*
-    - pip 23.3.2.*
-    - setuptools 68.*
+    - python 3.10.*
+    - pip
+    - setuptools
   run:
-    - python >=3.11
+    - python >=3.10
 
 about:
   homepage: https://github.com/uiri/toml
@@ -116,10 +116,10 @@ extra:
     package = Package.from_file(build_result.packages[0])
 
     assert "site-packages/toml-0.10.2.dist-info/INSTALLER" in package.files
-    assert "site-packages/toml-0.10.2.dist-info/LICENSE" in package.files
+    assert "site-packages/toml-0.10.2.dist-info/licenses/LICENSE" in package.files
 
     assert "python" in package.depends
-    assert "python >=3.11" in package.depends
+    assert "python >=3.10" in package.depends
 
 
 def test_noarch_variant():
