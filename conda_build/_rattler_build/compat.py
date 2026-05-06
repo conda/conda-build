@@ -23,7 +23,7 @@ from rattler_build.variant_config import VariantConfig
 from ..build import handle_anaconda_upload
 from ..config import CondaPkgFormat
 from ..exceptions import CondaBuildUserError
-from ..utils import get_logger
+from ..utils import get_logger, on_win
 
 if TYPE_CHECKING:
     import argparse
@@ -49,6 +49,7 @@ class RecipeResult:
     recipe_path: str
     outputs: list[OutputResult] = field(default_factory=list)
     error: str | None = None
+    activation_string: str | None = None
 
     @property
     def failed(self) -> bool:
@@ -134,6 +135,7 @@ def check_arguments_rattler(
             "channel",
             "override_channels",
             "output_folder",
+            "activate_string_only",
         },
     }
 
@@ -200,25 +202,31 @@ def process_recipe(
 
     if command == "debug":
         if isinstance(recipe, MultiOutputRecipe):
-            output_names = sorted(
-                {
-                    variant.recipe.to_dict().get("package", {}).get("name")
-                    for variant in rendered
-                }
-            )
             if parsed_args.output_id is None:
+                output_names = sorted(
+                    {
+                        variant.recipe.to_dict().get("package", {}).get("name")
+                        for variant in rendered
+                    }
+                )
                 raise CondaBuildUserError(
                     f"\nMultiple outputs found in recipe ({len(output_names)}). "
                     f"Please specify which output to debug "
                     f"using --output-id. Available outputs: {', '.join(output_names)}"
                 )
             else:
-                selected_output = next(
-                    variant
-                    for variant in rendered
-                    if variant.recipe.to_dict().get("package", {}).get("name")
-                    == parsed_args.output_id
-                )
+                selected_output = None
+                for variant in rendered:
+                    name = variant.recipe.to_dict().get("package", {}).get("name")
+                    if name == parsed_args.output_id:
+                        if name == parsed_args.output_id:
+                            selected_output = variant
+                            break
+
+                if selected_output is None:
+                    raise CondaBuildUserError(
+                        f"Output '{parsed_args.output_id}' not found. "
+                    )
 
         else:
             selected_output = rendered[0]
@@ -231,21 +239,16 @@ def process_recipe(
                 progress_callback=CondaProgressCallback(show_logs=True),
             )
         except RattlerBuildError as e:
-            result.error = (
-                f"Failed to setup debug scripts for recipe {recipe_path}: {e}"
-            )
+            result.error = f"Failed to setup debug scripts for output {selected_output} from recipe {recipe_path}: {e}"
             return result
 
-        build_script = session.paths.build_script
-        work_dir = session.paths.work_dir
-        host_prefix = session.paths.host_prefix
-
-        print(f"Host dependencies available in {host_prefix}")
-        print()
-        print("To run the actual build, use:")
-        print(f"conda build {Path(recipe_path).resolve().parent}")
-        print("Or run the build script directly with:")
-        print(f"cd {work_dir} && ./{build_script.name}")
+        result.activation_string = (
+            "cd {work_dir} && {source} {activation_file}\n".format(
+                work_dir=session.paths.work_dir,
+                source="call" if on_win else "source",
+                activation_file=session.paths.build_env_script,
+            )
+        )
 
         return result
 
@@ -342,7 +345,9 @@ def process_recipe(
     return result
 
 
-def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -> int:
+def run_rattler(
+    command: str, parsed_args: argparse.Namespace, config: Config
+) -> str | int:
     """Run rattler-build for v1 recipes"""
     if command not in ("build", "debug", "render"):
         raise ValueError(f"Unrecognized subcommand: {command}")
@@ -505,19 +510,18 @@ def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -
             return 0
 
         if command == "debug":
-            failed = [r for r in recipe_results if r.failed]
-            if failed:
-                msg = "\n".join(
-                    [
-                        "Recipe debug failures:",
-                        *[
-                            f"  - {Path(r.recipe_path).resolve()}: {r.error or 'Unknown error'}"
-                            for r in failed
-                        ],
-                    ]
+            # we are expecting a single recipe result
+            result = recipe_results[0]
+            if result.failed:
+                raise CondaBuildUserError(
+                    "\n".join(
+                        [
+                            "Recipe debug failures:",
+                            f"  - {Path(result.recipe_path).resolve()}: {result.error or 'Unknown error'}",
+                        ]
+                    )
                 )
-                raise CondaBuildUserError(msg)
-            return 0
+            return result.activation_string
 
         recipe_count = len(recipe_results)
         total_outputs = sum(len(r.outputs) for r in recipe_results)
