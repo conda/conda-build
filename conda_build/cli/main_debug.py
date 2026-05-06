@@ -100,20 +100,20 @@ def execute(args: Sequence[str] | None = None) -> int:
     parsed = parser.parse_args(args)
     context.__init__(argparse_args=parsed)
 
-    if is_v1_recipe(parsed.recipe_or_package_file_path):
-        config = get_or_merge_config(None, **parsed.__dict__)
-        parsed_only_recipe = parser.parse_args([parsed.recipe_or_package_file_path])
-        check_arguments_rattler(parser.prog.split()[-1], parsed, parsed_only_recipe)
-        parsed.recipe = parsed.recipe_or_package_file_path
-        command = parser.prog.split()[-1]
-        return run_rattler(command, parsed, config)
-
     try:
-        activation_string = api.debug(
-            parsed.recipe_or_package_file_path,
-            verbose=(not parsed.activate_string_only),
-            **parsed.__dict__,
-        )
+        if is_v1_recipe(parsed.recipe_or_package_file_path):
+            config = get_or_merge_config(None, **parsed.__dict__)
+            parsed_only_recipe = parser.parse_args([parsed.recipe_or_package_file_path])
+            check_arguments_rattler(parser.prog.split()[-1], parsed, parsed_only_recipe)
+            parsed.recipe = parsed.recipe_or_package_file_path
+            command = parser.prog.split()[-1]
+            activation_string = run_rattler(command, parsed, config)
+        else:
+            activation_string = api.debug(
+                parsed.recipe_or_package_file_path,
+                verbose=(not parsed.activate_string_only),
+                **parsed.__dict__,
+            )
 
         if not parsed.activate_string_only:
             print("#" * 80)
@@ -123,7 +123,12 @@ def execute(args: Sequence[str] | None = None) -> int:
 
         print(activation_string)
         if not parsed.activate_string_only:
-            test_file = "conda_test_runner.bat" if on_win else "conda_test_runner.sh"
+            if is_v1_recipe(parsed.recipe_or_package_file_path):
+                test_file = "conda_build.bat" if on_win else "conda_build.sh"
+            else:
+                test_file = (
+                    "conda_test_runner.bat" if on_win else "conda_test_runner.sh"
+                )
             print(
                 f"To run your tests, you might want to start with running the {test_file} file."
             )
