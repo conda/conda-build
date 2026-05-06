@@ -110,6 +110,7 @@ def check_arguments_rattler(
             "zstd_compression_level",
             "channel",
             "override_channels",
+            "build_only",
         },
         "render": {
             "recipe",
@@ -212,15 +213,6 @@ def process_recipe(
         built_packages = list(build_result.packages)
 
         for pkg_path in built_packages:
-            if parsed_args.notest:
-                result.outputs.append(
-                    OutputResult(
-                        name=output_name,
-                        success=True,
-                    )
-                )
-                continue
-
             try:
                 pkg = Package.from_file(pkg_path)
             except RattlerBuildError as e:
@@ -233,36 +225,37 @@ def process_recipe(
                 )
                 continue
 
-            try:
-                # tests are ran in a different directory than build, so we need to add the build
-                # directory manually as a file:// channel
-                test_channels = [Path(output_dir).resolve().as_uri(), *channels]
+            if not (parsed_args.notest or parsed_args.build_only):
+                try:
+                    # tests are run in a different directory than build, so we need to add the build
+                    # directory manually as a file:// channel
+                    test_channels = [Path(output_dir).resolve().as_uri(), *channels]
 
-                test_results = pkg.run_tests(
-                    progress_callback=CondaProgressCallback(show_logs=show_logs),
-                    channel=test_channels,
-                )
-            except RattlerBuildError as e:
-                result.outputs.append(
-                    OutputResult(
-                        name=output_name,
-                        success=False,
-                        error=str(e),
+                    test_results = pkg.run_tests(
+                        progress_callback=CondaProgressCallback(show_logs=show_logs),
+                        channel=test_channels,
                     )
-                )
-                continue
-
-            test_failed = [r for r in test_results if not r.success]
-
-            if test_failed:
-                result.outputs.append(
-                    OutputResult(
-                        name=output_name,
-                        success=False,
-                        error="Package tests failed",
+                except RattlerBuildError as e:
+                    result.outputs.append(
+                        OutputResult(
+                            name=output_name,
+                            success=False,
+                            error=str(e),
+                        )
                     )
-                )
-                continue
+                    continue
+
+                test_failed = [r for r in test_results if not r.success]
+
+                if test_failed:
+                    result.outputs.append(
+                        OutputResult(
+                            name=output_name,
+                            success=False,
+                            error="Package tests failed",
+                        )
+                    )
+                    continue
 
             result.outputs.append(
                 OutputResult(
