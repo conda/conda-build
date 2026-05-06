@@ -116,6 +116,7 @@ def check_arguments_rattler(
             "channel",
             "override_channels",
             "build_only",
+            "post",
         },
         "render": {
             "recipe",
@@ -273,8 +274,8 @@ def process_recipe(
             # Upload package to anaconda.org
             # use the existing conda-build logic:
             #   - if no argument is passed and anaconda_token or user is in .condarc; upload
-            #   - if `--no-anaconda-upload` or `--build-only is passed; skip upload
-            if not config.build_only:
+            #   - if `--no-anaconda-upload`, `--build-only` or `--post` is passed; skip upload
+            if not (config.build_only or config.post):
                 handle_anaconda_upload(paths=str(pkg_path), config=config)
 
     return result
