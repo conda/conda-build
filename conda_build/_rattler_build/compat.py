@@ -19,6 +19,7 @@ from rattler_build.stage0 import Stage0Recipe
 from rattler_build.tool_config import PlatformConfig, ToolConfiguration
 from rattler_build.variant_config import VariantConfig
 
+from ..build import handle_anaconda_upload
 from ..config import CondaPkgFormat
 from ..exceptions import CondaBuildUserError
 from ..utils import get_logger
@@ -95,6 +96,10 @@ def check_arguments_rattler(
 
     VALID_ARGS = {
         "build": {
+            "anaconda_upload",
+            "anaconda_token",
+            "build_only",
+            "user",
             "recipe",
             "variant_config_files",
             "exclusive_config_files",
@@ -151,6 +156,7 @@ def process_recipe(
     tool_config: ToolConfiguration,
     render_config: RenderConfig,
     parsed_args: argparse.Namespace,
+    config: Config,
 ) -> RecipeResult:
     """
     Function to parse, render and optionally build or test a conda package recipe using the py-rattler-build API.
@@ -263,6 +269,13 @@ def process_recipe(
                     success=True,
                 )
             )
+
+            # Upload package to anaconda.org
+            # use the existing conda-build logic:
+            #   - if no argument is passed and anaconda_token or user is in .condarc; upload
+            #   - if `--no-anaconda-upload` or `--build-only is passed; skip upload
+            if not config.build_only:
+                handle_anaconda_upload(paths=str(pkg_path), config=config)
 
     return result
 
@@ -410,6 +423,7 @@ def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -
                     tool_config=tool_config,
                     render_config=render_config,
                     parsed_args=parsed_args,
+                    config=config,
                 )
             )
 
