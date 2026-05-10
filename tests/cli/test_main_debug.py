@@ -11,6 +11,7 @@ from pytest import CaptureFixture, MonkeyPatch
 from conda_build.cli import main_build as build
 from conda_build.cli import main_debug as debug
 from conda_build.cli import validators as valid
+from conda_build.utils import on_win
 
 from ..utils import metadata_dir
 
@@ -79,8 +80,13 @@ def test_debug_v1_recipe(capsys: CaptureFixture):
     captured = capsys.readouterr()
     output = captured.out
     assert "Test environment created for debugging." in output
-    assert "rattler-build_myproject-lib/work && source" in output
-    assert "To run your tests, you might want to start with running the conda_build.sh file."
+    assert "rattler-build_myproject-lib" in output
+    expected = (
+        "To run your tests, you might want to start with running the conda_build.bat file."
+        if on_win
+        else "To run your tests, you might want to start with running the conda_build.sh file."
+    )
+    assert expected in output
 
     # Setup scripts for the second output
     # Build the recipe because second output depends on the first one
@@ -93,5 +99,5 @@ def test_debug_v1_recipe(capsys: CaptureFixture):
     captured = capsys.readouterr()
     output = captured.out
     assert "Test environment created for debugging." in output
-    assert "rattler-build_myproject-tools/work && source" in output
-    assert "To run your tests, you might want to start with running the conda_build.sh file."
+    assert "rattler-build_myproject-tools" in output
+    assert expected in output
