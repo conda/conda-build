@@ -177,7 +177,7 @@ jobs:
 
       # TODO: how can we remove this step?
       - name: Install Self
-        run: pip install -e .
+        run: pip install -e . --no-deps --no-build-isolation --break-system-packages
 
       - name: Conda Info
         # view test env info (not base)
@@ -359,7 +359,7 @@ jobs:
 
       # TODO: how can we remove this step?
       - name: Install Self
-        run: pip install -e . --no-deps --no-build-isolation
+        run: pip install -e . --no-deps --no-build-isolation --break-system-packages
 
       - name: Conda Info
         # view test env info (not base)
@@ -495,7 +495,7 @@ jobs:
 
       # TODO: how can we remove this step?
       - name: Install Self
-        run: pip install -e .
+        run: pip install -e . --no-deps --no-build-isolation --break-system-packages
 
       - name: Conda Info
         # view test env info (not base)
