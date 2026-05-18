@@ -123,12 +123,11 @@ def execute(args: Sequence[str] | None = None) -> int:
 
         print(activation_string)
         if not parsed.activate_string_only:
-            if is_v1_recipe(parsed.recipe_or_package_file_path):
-                test_file = "conda_build.bat" if on_win else "conda_build.sh"
-            else:
-                test_file = (
-                    "conda_test_runner.bat" if on_win else "conda_test_runner.sh"
-                )
+            test_file = (
+                f"conda_{'build' if is_v1_recipe(parsed.recipe_or_package_file_path) else 'test_runner'}."
+                f"{'bat' if on_win else 'sh'}"
+            )
+
             print(
                 f"To run your tests, you might want to start with running the {test_file} file."
             )
