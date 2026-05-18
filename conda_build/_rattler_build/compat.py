@@ -210,8 +210,7 @@ def process_recipe(
                     }
                 )
                 raise CondaBuildUserError(
-                    f"\nMultiple outputs found in recipe ({len(output_names)}). "
-                    f"Please specify which output to debug "
+                    f"\nFound {len(output_names)} outputs in recipe. Please specify one "
                     f"using --output-id. Available outputs: {', '.join(output_names)}"
                 )
             else:
@@ -238,7 +237,9 @@ def process_recipe(
                 progress_callback=CondaProgressCallback(show_logs=True),
             )
         except RattlerBuildError as e:
-            result.error = f"Failed to setup debug scripts for output {selected_output} from recipe {recipe_path}: {e}"
+            result.error = (
+                f"Failed to setup debug scripts for output {selected_output}: {e}"
+            )
             return result
 
         result.activation_string = (
@@ -396,33 +397,30 @@ def run_rattler(
     else:
         channel_priority = "disabled"
 
-    if command in ("build", "debug", "render"):
-        from ..variants import find_config_files
+    from ..variants import find_config_files
 
-        if len(parsed_args.recipe) > 1:
-            # multi-recipe case: check if any has cbc or variants.yaml
-            # if yes -> unsupported case, error out
-            # if no  -> find config files
-            recipes_with_cfg = [
-                recipe
-                for recipe in parsed_args.recipe
-                if any(Path(recipe, cfg).is_file() for cfg in CONFIG_FILES)
-            ]
-            if recipes_with_cfg:
-                raise ValueError(
-                    f"Recipe configuration files detected but multiple recipes were passed: {recipes_with_cfg}"
-                )
-            else:
-                # single-recipe case: include recipe config files if any exist
-                config_files = find_config_files(
-                    None, config, recipe_config_filenames=None
-                )
-        else:
-            config_files = find_config_files(
-                Path(parsed_args.recipe[0]),
-                config,
-                recipe_config_filenames=CONFIG_FILES,
+    if len(parsed_args.recipe) > 1:
+        # multi-recipe case: check if any has cbc or variants.yaml
+        # if yes -> unsupported case, error out
+        # if no  -> find config files
+        recipes_with_cfg = [
+            recipe
+            for recipe in parsed_args.recipe
+            if any(Path(recipe, cfg).is_file() for cfg in CONFIG_FILES)
+        ]
+        if recipes_with_cfg:
+            raise ValueError(
+                f"Recipe configuration files detected but multiple recipes were passed: {recipes_with_cfg}"
             )
+        else:
+            # single-recipe case: include recipe config files if any exist
+            config_files = find_config_files(None, config, recipe_config_filenames=None)
+    else:
+        config_files = find_config_files(
+            Path(parsed_args.recipe[0]),
+            config,
+            recipe_config_filenames=CONFIG_FILES,
+        )
 
     if command == "build":
         if parsed_args.extra_meta:
