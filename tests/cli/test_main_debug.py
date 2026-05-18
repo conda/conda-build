@@ -11,6 +11,7 @@ from pytest import CaptureFixture, MonkeyPatch
 from conda_build.cli import main_build as build
 from conda_build.cli import main_debug as debug
 from conda_build.cli import validators as valid
+from conda_build.exceptions import CondaBuildUserError
 from conda_build.utils import on_win
 
 from ..utils import metadata_dir
@@ -69,7 +70,8 @@ def test_debug_v1_recipe(capsys: CaptureFixture):
     # Make sure that it fails with the expected message if output is not specified
     args = [recipe_dir]
     with pytest.raises(
-        Exception, match=r"Multiple outputs found in recipe \(2\).*--output-id"
+        CondaBuildUserError,
+        match=r"Multiple outputs found in recipe \(2\).*--output-id",
     ):
         debug.execute(args)
 

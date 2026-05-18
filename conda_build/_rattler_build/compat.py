@@ -219,9 +219,8 @@ def process_recipe(
                 for variant in rendered:
                     name = variant.recipe.to_dict().get("package", {}).get("name")
                     if name == parsed_args.output_id:
-                        if name == parsed_args.output_id:
-                            selected_output = variant
-                            break
+                        selected_output = variant
+                        break
 
                 if selected_output is None:
                     raise CondaBuildUserError(
