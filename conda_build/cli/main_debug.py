@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import sys
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from conda.base.context import context
@@ -99,6 +100,15 @@ def execute(args: Sequence[str] | None = None) -> int:
     parser = get_parser()
     parsed = parser.parse_args(args)
     context.__init__(argparse_args=parsed)
+
+    # mixed recipe formats found, error out
+    if (Path(parsed.recipe_or_package_file_path) / "recipe.yaml").is_file() and (
+        Path(parsed.recipe_or_package_file_path) / "meta.yaml"
+    ).is_file():
+        print(
+            "Cannot process several recipe versions at the same time!", file=sys.stderr
+        )
+        return 1
 
     try:
         if is_v1_recipe(parsed.recipe_or_package_file_path):
