@@ -71,7 +71,7 @@ def test_debug_v1_recipe(capsys: CaptureFixture):
     args = [recipe_dir]
     with pytest.raises(
         CondaBuildUserError,
-        match=r"Multiple outputs found in recipe \(2\).*--output-id",
+        match=r"Found 2 outputs in recipe. Please specify one using --output-id.",
     ):
         debug.execute(args)
 
