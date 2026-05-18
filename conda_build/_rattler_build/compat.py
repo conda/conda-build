@@ -220,8 +220,7 @@ def process_recipe(
                     }
                 )
                 raise CondaBuildUserError(
-                    f"\nMultiple outputs found in recipe ({len(output_names)}). "
-                    f"Please specify which output to debug "
+                    f"\nFound {len(output_names)} outputs in recipe. Please specify one "
                     f"using --output-id. Available outputs: {', '.join(output_names)}"
                 )
             else:
@@ -248,7 +247,9 @@ def process_recipe(
                 progress_callback=CondaProgressCallback(show_logs=True),
             )
         except RattlerBuildError as e:
-            result.error = f"Failed to setup debug scripts for output {selected_output} from recipe {recipe_path}: {e}"
+            result.error = (
+                f"Failed to setup debug scripts for output {selected_output}: {e}"
+            )
             return result
 
         result.activation_string = (
