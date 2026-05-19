@@ -52,6 +52,7 @@ requirements:
     - py-lief
     - py-rattler-build >=0.61.4
     - python
+    - python-build
     - python-libarchive-c
     - pyyaml
     - rattler-build
