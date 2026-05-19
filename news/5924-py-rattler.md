@@ -1,6 +1,6 @@
 ### Enhancements
 
-* Port v1 recipe support to py-rattler-build (#5924).
+* Port v1 (`recipe.yaml`) recipe builds from the `rattler-build` CLI (#5880) to the `py-rattler-build` Python API. (#5924)
 
 ### Bug fixes
 

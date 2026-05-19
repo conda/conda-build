@@ -4,7 +4,7 @@
 
 ### Bug fixes
 
-* Update v1 recipe test logic and fix a flaky v1 test recipe (#5973)
+* <news item>
 
 ### Deprecations
 
@@ -16,4 +16,4 @@
 
 ### Other
 
-* <news item>
+* Update v1 recipe test logic and fix a flaky v1 test recipe (#5973)
