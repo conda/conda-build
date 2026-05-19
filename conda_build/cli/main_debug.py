@@ -63,6 +63,11 @@ Set up environments and activation scripts to debug your build or test phase.
         help="Output only the string to the used generated activation script.  Use this for creating envs in scripted "
         "environments.",
     )
+    p.add_argument(
+        "--debug",
+        action="store_true",
+        help="Show debug output from source checkouts and conda",
+    )
 
     # cut out some args from render that don't make sense here
     #    https://stackoverflow.com/a/32809642/1170370
