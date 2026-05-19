@@ -16,7 +16,7 @@ from ..utils import metadata_dir
 
 
 def test_inspect_installable(testing_workdir):
-    args = ["channels", "--test-installable", "conda-team"]
+    args = ["channels", "conda-team"]
     main_inspect.execute(args)
 
 

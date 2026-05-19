@@ -20,8 +20,7 @@ conda inspect channels
 
    </PRE>
    <H2>DESCRIPTION</H2><PRE>
-          usage:  conda-inspect  channels  [-h]  [--verbose] [--test-installable]
-          [channel]
+          usage:  conda-inspect  channels  [-h]  [--verbose] [channel]
 
           Tools for investigating conda channels.
 
@@ -39,10 +38,6 @@ conda inspect channels
           <B>--verbose</B>
                  Show verbose output. Note  that  error  output  to  stderr  will
                  always be shown regardless of this flag.
-
-          <B>--test-installable</B>, <B>-t</B>
-                 Test every package in the channel to see if it is installable by
-                 conda.
 
 
 

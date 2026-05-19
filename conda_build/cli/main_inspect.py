@@ -144,15 +144,6 @@ Tools for investigating conda channels.
         always be shown regardless of this flag. """,
     )
     channels.add_argument(
-        "--test-installable",
-        "-t",
-        action="store_true",
-        help=(
-            "DEPRECATED. This is the default (and only) behavior. "
-            "Test every package in the channel to see if it is installable by conda."
-        ),
-    )
-    channels.add_argument(
         "channel",
         nargs="?",
         default="defaults",
