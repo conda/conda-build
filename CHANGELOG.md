@@ -39,7 +39,7 @@
 ### Contributors
 
 * @conda-bot
-* @dlaehnemann
+* @dlaehnemann made their first contribution in #5767
 * @jsmolic
 * @jezdez
 * @ryanskeith
