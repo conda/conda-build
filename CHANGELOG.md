@@ -1,5 +1,54 @@
 [//]: # (current developments)
 
+## 26.5.0 (2026-05-20)
+
+### Enhancements
+
+* Add `missing_dso_allowlist` and `runpath_allowlist` as preferred recipe keys. (#5902)
+* Port v1 (`recipe.yaml`) recipe builds from the `rattler-build` CLI (#5880) to the `py-rattler-build` Python API. (#5924)
+* Add `test_env_template` config option to speed up environment creation by cloning from a template environment instead of creating from scratch. It uses `conda create --clone` to properly handle prefix replacement in scripts and metadata files. The template is only used when its installed records exactly match the requested name/version/build of every spec, the template contains no extra packages the caller did not ask for, and (when `disable_pip` is set) the template does not contain pip/setuptools/wheel. (#5904)
+* Serialize the session-scoped `warm_package_cache` test fixture across pytest-xdist workers via a file lock so only one worker creates the shared template environment, avoiding `LockError`/`InvalidArchiveError` races on `~/conda_pkgs_dir`. (#5904)
+
+### Bug fixes
+
+* Fix `FileNotFoundError: [WinError 206] The filename or extension is too long` by correcting the `chunks()` algorithm used to split long command line calls and consolidating the Windows/non-Windows length limits into a single constant. (#5122 via #5960)
+* Stop the verbose "No numpy version specified in conda_build_config.yaml" warning when that warning does not apply to config files: parsing of `conda_build_config.yaml` uses a dedicated selector path (`cbc_line_selectors`) that does not look up `numpy` from the (not-yet-merged) variant. The previous behavior on recipe and full metadata rendering is unchanged. (#5962)
+
+### Deprecations
+
+* Mark `build/missing_dso_whitelist` recipe key as pending deprecation to be removed in 27.3. Use `build/missing_dso_allowlist` recipe key instead. (#5902)
+* Mark `build/runpath_whitelist` recipe key as pending deprecation to be removed in 27.3. Use `build/runpath_allowlist` instead. (#5902)
+* Mark `conda_build.post.check_overlinking_impl(missing_dso_whitelist)` as pending deprecation to be removed in 27.3. Use `missing_dso_allowlist` instead. (#5902)
+* Mark `conda_build.post.check_overlinking_impl(runpath_whitelist)` as pending deprecation to be removed in 27.3. Use `runpath_allowlist` instead. (#5902)
+* Mark `conda_build.post.DEFAULT_MAC_WHITELIST` as pending deprecation to be removed in 27.3. Use `conda_build.post.DEFAULT_MAC_ALLOWLIST` instead. (#5902)
+* Mark `conda_build.post.DEFAULT_WIN_WHITELIST` as pending deprecation to be removed in 27.3. Use `conda_build.post.DEFAULT_WIN_ALLOWLIST` instead. (#5902)
+* Remove `conda_build.metadata.ns_cfg`. Use `conda_build.metadata.get_selectors` instead. (#5962)
+
+### Docs
+
+* Document that multi-output recipes should not use a subpackage with the same name as the top-level `package/name`, to avoid confusing build behavior. (#5767)
+* Update documentation to use inclusive language (allowlist instead of whitelist). (#5902)
+
+### Other
+
+* Replace internal uses of `whitelist` with `allowlist` for more inclusive language. (#5902)
+* Add support for uploading v1 (`.conda`) packages to anaconda.org when `anaconda_upload` is enabled (via `.condarc` or CLI), matching existing v2 upload behavior. Use `--no-anaconda-upload` to disable automatic upload for v1 builds. (#5955)
+* Update v1 recipe test logic and fix a flaky v1 test recipe (#5973)
+* Improve CI test speed by reducing test matrix (skip Python 3.11, reduced matrix for PRs), excluding benchmark tests from regular runs, adding cache restore-keys for better cache hits, reducing flaky test reruns from 3 to 1, switching macOS to faster ARM runners, and adding a session-scoped fixture to pre-warm the package cache and create a template environment for faster test builds. (#5904)
+
+### Contributors
+
+* @conda-bot
+* @dlaehnemann made their first contribution in #5767
+* @jsmolic
+* @jezdez
+* @ryanskeith
+* @travishathaway
+* @dependabot[bot]
+* @pre-commit-ci[bot]
+
+
+
 ## 26.3.0 (2026-03-31)
 
 ### Enhancements
