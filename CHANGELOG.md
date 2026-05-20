@@ -16,12 +16,12 @@
 
 ### Deprecations
 
-* Deprecate `build/missing_dso_whitelist` recipe key in favor of `build/missing_dso_allowlist` (pending in 26.9, removal in 27.3). (#5902)
-* Deprecate `build/runpath_whitelist` recipe key in favor of `build/runpath_allowlist` (pending in 26.9, removal in 27.3). (#5902)
-* Deprecate `conda_build.post.check_overlinking_impl`'s `missing_dso_whitelist` keyword argument in favor of `missing_dso_allowlist` (pending in 26.9, removal in 27.3). (#5902)
-* Deprecate `conda_build.post.check_overlinking_impl`'s `runpath_whitelist` keyword argument in favor of `runpath_allowlist` (pending in 26.9, removal in 27.3). (#5902)
-* Deprecate `conda_build.post.DEFAULT_MAC_WHITELIST` constant in favor of `DEFAULT_MAC_ALLOWLIST` (pending in 26.9, removal in 27.3). (#5902)
-* Deprecate `conda_build.post.DEFAULT_WIN_WHITELIST` constant in favor of `DEFAULT_WIN_ALLOWLIST` (pending in 26.9, removal in 27.3). (#5902)
+* Mark `build/missing_dso_whitelist` recipe key as pending deprecation to be removed in 27.3. Use `build/missing_dso_allowlist` recipe key instead. (#5902)
+* Mark `build/runpath_whitelist` recipe key as pending deprecation to be removed in 27.3. Use `build/runpath_allowlist` instead. (#5902)
+* Mark `conda_build.post.check_overlinking_impl(missing_dso_whitelist)` as pending deprecation to be removed in 27.3. Use `missing_dso_allowlist` instead. (#5902)
+* Mark `conda_build.post.check_overlinking_impl(runpath_whitelist)` as pending deprecation to be removed in 27.3. Use `runpath_allowlist` instead. (#5902)
+* Mark `conda_build.post.DEFAULT_MAC_WHITELIST` as pending deprecation to be removed in 27.3. Use `conda_build.post.DEFAULT_MAC_ALLOWLIST` instead. (#5902)
+* Mark `conda_build.post.DEFAULT_WIN_WHITELIST` as pending deprecation to be removed in 27.3. Use `conda_build.post.DEFAULT_WIN_ALLOWLIST` instead. (#5902)
 * Remove `conda_build.metadata.ns_cfg`. Use `conda_build.metadata.get_selectors` instead. (#5962)
 
 ### Docs
