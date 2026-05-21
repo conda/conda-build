@@ -22,7 +22,6 @@ pytest-rerunfailures  # for handling flaky tests
 python >=3.10
 python-libarchive-c
 pyyaml
-rattler-build
 requests
 ripgrep  # for faster grep
 setuptools
