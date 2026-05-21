@@ -2008,6 +2008,37 @@ def test_script_env_warnings(testing_config, recwarn):
         os.environ.pop(token)
 
 
+@pytest.mark.sanity
+def test_test_script_env_warnings(testing_config, recwarn):
+    recipe = os.path.join(metadata_dir, "_test_script_env")
+    token = "TEST_VAR"
+
+    def assert_undefined_warning_present():
+        messages = [str(w.message) for w in recwarn.list]
+        assert any(
+            token in m and "test/script_env" in m and "undefined" in m
+            for m in messages
+        )
+
+    def assert_undefined_warning_absent():
+        messages = [str(w.message) for w in recwarn.list]
+        assert not any(
+            token in m and "test/script_env" in m and "undefined" in m
+            for m in messages
+        )
+
+    api.build(recipe, config=testing_config)
+    assert_undefined_warning_present()
+    recwarn.clear()
+
+    os.environ[token] = "value"
+    try:
+        api.build(recipe, config=testing_config)
+        assert_undefined_warning_absent()
+    finally:
+        os.environ.pop(token)
+
+
 @pytest.mark.slow
 def test_activated_prefixes_in_actual_path(testing_metadata):
     """
