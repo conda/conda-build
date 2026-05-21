@@ -1,0 +1,7 @@
+package:
+  name: install-broken-libopenblas
+  version: "1.0.0"
+
+build:
+  number: 0
+  skip: true  # [not osx]

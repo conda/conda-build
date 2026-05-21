@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 
 import pytest
+from conda.base.context import context
 
 import conda_build.utils
 from conda_build import api, post
@@ -278,6 +279,22 @@ def test_rpath_symlink(mocker, testing_config):
     )
     # Should only be called on the actual binary, not its symlinks. (once per variant)
     assert mk_relative.call_count == 2
+
+
+@pytest.mark.skipif(not on_mac, reason="macOS-only test")
+def test_duplicate_rpath_macos(testing_config, caplog):
+    api.build(
+        os.path.join(metadata_dir, "_rpath_macos"),
+        config=testing_config,
+    )
+
+    captured_text = caplog.text
+    # On osx-64 the library has only one duplicate rpath,
+    # while on arm64 it has two
+    if context.subdir == "osx-64":
+        assert captured_text.count("Removing duplicate rpath") == 1
+    else:
+        assert captured_text.count("Removing duplicate rpath") == 2
 
 
 @pytest.mark.parametrize(
