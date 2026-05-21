@@ -2009,8 +2009,26 @@ def test_script_env_warnings(testing_config, recwarn):
 
 
 @pytest.mark.sanity
-def test_test_script_env_warnings(testing_config, recwarn):
-    recipe = os.path.join(metadata_dir, "_test_script_env")
+def test_test_script_env_warnings(testing_config, testing_workdir, recwarn):
+    os.makedirs("recipe")
+    with open("recipe/meta.yaml", "w") as f:
+        f.write("""
+package:
+  name: test-script-env-test
+  version: "1.0"
+
+build:
+  number: 0
+
+test:
+  script_env:
+    - TEST_VAR
+  commands:
+    - echo "test"
+""")
+    for empty in ("build.sh", "bld.bat"):
+        open(f"recipe/{empty}", "w").close()
+
     token = "TEST_VAR"
 
     def assert_undefined_warning_present():
@@ -2025,13 +2043,13 @@ def test_test_script_env_warnings(testing_config, recwarn):
             token in m and "test/script_env" in m and "undefined" in m for m in messages
         )
 
-    api.build(recipe, config=testing_config)
+    api.build("recipe", config=testing_config)
     assert_undefined_warning_present()
     recwarn.clear()
 
     os.environ[token] = "value"
     try:
-        api.build(recipe, config=testing_config)
+        api.build("recipe", config=testing_config)
         assert_undefined_warning_absent()
     finally:
         os.environ.pop(token)
