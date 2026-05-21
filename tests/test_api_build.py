@@ -2016,15 +2016,13 @@ def test_test_script_env_warnings(testing_config, recwarn):
     def assert_undefined_warning_present():
         messages = [str(w.message) for w in recwarn.list]
         assert any(
-            token in m and "test/script_env" in m and "undefined" in m
-            for m in messages
+            token in m and "test/script_env" in m and "undefined" in m for m in messages
         )
 
     def assert_undefined_warning_absent():
         messages = [str(w.message) for w in recwarn.list]
         assert not any(
-            token in m and "test/script_env" in m and "undefined" in m
-            for m in messages
+            token in m and "test/script_env" in m and "undefined" in m for m in messages
         )
 
     api.build(recipe, config=testing_config)
