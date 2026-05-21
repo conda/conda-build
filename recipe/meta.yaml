@@ -54,7 +54,6 @@ requirements:
     - python
     - python-libarchive-c
     - pyyaml
-    - rattler-build
     - requests
     - tomli                        # [py<311]
     - tqdm
