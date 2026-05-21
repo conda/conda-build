@@ -2,6 +2,8 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from __future__ import annotations
 
+import os
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -232,7 +234,7 @@ def process_recipe(
             session = DebugSession.create(
                 variant=selected_output,
                 tool_config=tool_config,
-                output_dir=output_dir,
+                output_dir=os.path.join(output_dir, f"debug_{int(time.time() * 1000)}"),
                 channels=channels,
                 progress_callback=CondaProgressCallback(show_logs=True),
             )
