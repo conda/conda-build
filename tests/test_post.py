@@ -8,7 +8,6 @@ import sys
 from pathlib import Path
 
 import pytest
-from conda.base.context import context
 
 import conda_build.utils
 from conda_build import api, post
@@ -289,12 +288,8 @@ def test_duplicate_rpath_macos(testing_config, caplog):
     )
 
     captured_text = caplog.text
-    # On osx-64 the library has only one duplicate rpath,
-    # while on arm64 it has two
-    if context.subdir == "osx-64":
-        assert captured_text.count("Removing duplicate rpath") == 1
-    else:
-        assert captured_text.count("Removing duplicate rpath") == 2
+    # The library has only one duplicate rpath
+    assert captured_text.count("Removing duplicate rpath") == 1
 
 
 @pytest.mark.parametrize(

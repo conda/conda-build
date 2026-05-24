@@ -10,7 +10,7 @@ if [[ "${target_platform:-}" == "osx-arm64" ]]; then
 else
   subdir="osx-64"
   pkg="libopenblas-0.3.33-pthreads_h705a207_0.conda"
-
+fi
 curl -L --fail \
   -o "$workdir/$pkg" \
   "https://conda.anaconda.org/conda-forge/${subdir}/${pkg}"
