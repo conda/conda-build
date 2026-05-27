@@ -15,6 +15,27 @@ from conda_build.exceptions import BuildLockError
 
 
 @pytest.mark.skipif(
+    utils.on_win, reason="unix-specific path logic"
+)
+def test_get_stdlib_dir_exact_match(testing_workdir):
+    lib_dir = os.path.join(testing_workdir, "lib")
+    for name in ("python3.13t", "python3.13"):
+        (Path(lib_dir) / name).mkdir(parents=True)
+    result = utils.get_stdlib_dir(testing_workdir, "3.13t")
+    assert result == os.path.join(lib_dir, "python3.13t")
+
+
+@pytest.mark.skipif(
+    utils.on_win, reason="unix-specific path logic"
+)
+def test_get_stdlib_dir_fallback(testing_workdir):
+    lib_dir = os.path.join(testing_workdir, "lib")
+    os.makedirs(lib_dir)
+    result = utils.get_stdlib_dir(testing_workdir, "3.13t")
+    assert result == os.path.join(lib_dir, "python3.13t")
+
+
+@pytest.mark.skipif(
     utils.on_win, reason="only unix has python version in site-packages path"
 )
 def test_get_site_packages():
