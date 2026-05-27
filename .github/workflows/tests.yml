@@ -182,6 +182,7 @@ jobs:
       - name: Use rattler solver
         run: |
           conda install --yes conda-rattler-solver
+          pip install git+https://github.com/jsmolic/conda-rattler-solver.git@conda-build-compat --break-system-packages
           conda config --set solver rattler
 
       - name: Conda Info
@@ -369,6 +370,7 @@ jobs:
       - name: Use rattler solver
         run: |
           conda install --yes conda-rattler-solver
+          pip install git+https://github.com/jsmolic/conda-rattler-solver.git@conda-build-compat --break-system-packages
           conda config --set solver rattler
 
       - name: Conda Info
@@ -510,6 +512,7 @@ jobs:
       - name: Use rattler solver
         run: |
           conda install --yes conda-rattler-solver
+          pip install git+https://github.com/jsmolic/conda-rattler-solver.git@conda-build-compat --break-system-packages
           conda config --set solver rattler
 
       - name: Conda Info
