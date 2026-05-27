@@ -96,7 +96,10 @@ def get_py_ver(config):
     py = config.variant.get("python", get_default_variant(config)["python"])
     if not hasattr(py, "split"):
         py = py[0]
-    return ".".join(py.split(".")[:2])
+    ver = ".".join(py.split(".")[:2])
+    if config.variant.get("is_freethreading", False) and not ver.endswith("t"):
+        ver += "t"
+    return ver
 
 
 def get_r_ver(config):
