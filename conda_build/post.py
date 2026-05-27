@@ -514,7 +514,7 @@ def mk_relative_osx(path, host_prefix, m, files, rpaths=("lib",)):
             if normalized in seen_rpaths:
                 macho.delete_rpath(path, rpath, build_prefix=prefix, verbose=True)
                 log = utils.get_logger(__name__)
-                log.info(f"Removing duplicate rpath from {path}: {rpath}")
+                log.info("Removing duplicate rpath from %s: %s", path, rpath)
             else:
                 seen_rpaths.add(normalized)
     if s:
