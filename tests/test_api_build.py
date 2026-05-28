@@ -135,8 +135,13 @@ def test_recipe_builds(
     #   ``source_setup_py_data_subdir`` reproduces the problem.
     if recipe.name == "source_setup_py_data_subdir":
         pytest.xfail("Issue related to #3754 on conda-build.")
-    elif recipe.name == "unicode_all_over" and context.solver == "libmamba":
-        pytest.xfail("Unicode package names not supported in libmamba.")
+    elif recipe.name == "unicode_all_over" and context.solver in (
+        "libmamba",
+        "rattler",
+    ):
+        pytest.xfail(
+            "Unicode package names not supported in libmamba or rattler solvers."
+        )
     elif recipe.name == "numpy_build_run" and sys.version_info >= (3, 13):
         pytest.xfail("Numpy build doesn't run on Python 3.13 yet.")
     elif recipe.name == "numpy_build" and sys.version_info >= (3, 13):
