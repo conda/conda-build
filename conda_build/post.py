@@ -506,6 +506,17 @@ def mk_relative_osx(path, host_prefix, m, files, rpaths=("lib",)):
                 "@loader_path", relpath(join(host_prefix, rpath), dirname(path)), ""
             ).replace("/./", "/")
             macho.add_rpath(path, rpath_new, build_prefix=prefix, verbose=True)
+
+        # Check if there are duplicate rpaths and remove if any
+        seen_rpaths = set()
+        for rpath in macho.get_rpaths(path, build_prefix=prefix):
+            normalized = normpath(rpath)
+            if normalized in seen_rpaths:
+                macho.delete_rpath(path, rpath, build_prefix=prefix, verbose=True)
+                log = utils.get_logger(__name__)
+                log.info("Removing duplicate rpath from %s: %s", path, rpath)
+            else:
+                seen_rpaths.add(normalized)
     if s:
         # Skip for stub files, which have to use binary_has_prefix_files to be
         # made relocatable.

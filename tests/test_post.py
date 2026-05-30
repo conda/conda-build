@@ -280,6 +280,18 @@ def test_rpath_symlink(mocker, testing_config):
     assert mk_relative.call_count == 2
 
 
+@pytest.mark.skipif(not on_mac, reason="macOS-only test")
+def test_duplicate_rpath_macos(testing_config, caplog):
+    api.build(
+        os.path.join(metadata_dir, "_rpath_macos"),
+        config=testing_config,
+    )
+
+    captured_text = caplog.text
+    # The library has only one duplicate rpath
+    assert captured_text.count("Removing duplicate rpath") == 1
+
+
 @pytest.mark.parametrize(
     "legacy_constant, allowlist_constant",
     [
