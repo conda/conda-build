@@ -1603,11 +1603,16 @@ class MetaData:
             return 0
 
         try:
-            return int(number)
+            n = int(number)
         except (ValueError, TypeError):
             raise ValueError(
                 f"Build number was invalid value '{number}'. Must be an integer."
             )
+        if n < 0:
+            raise ValueError(
+                f"Build number must be a non-negative integer, got '{number}'."
+            )
+        return n
 
     def get_depends_top_and_out(self, typ):
         meta_requirements = ensure_list(self.get_value("requirements/" + typ, []))[:]

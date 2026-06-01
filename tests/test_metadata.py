@@ -276,6 +276,12 @@ def test_disallow_leading_period_in_version(testing_metadata):
         testing_metadata.version()
 
 
+def test_disallow_negative_build_number(testing_metadata):
+    testing_metadata.meta["build"]["number"] = -1
+    with pytest.raises(ValueError, match="non-negative"):
+        testing_metadata.build_number()
+
+
 def test_disallow_dash_in_features(testing_metadata):
     testing_metadata.meta["build"]["features"] = ["abc"]
     testing_metadata.parse_again()
