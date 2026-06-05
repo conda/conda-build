@@ -620,6 +620,11 @@ FIELDS = {
         "content_sha256": None,
         "content_sha384": None,
         "content_sha512": None,
+        # Legacy v1 keys (CEP-19 algorithm, no length-prefixing). Use these when you have
+        # existing stored hashes computed with the original CEP-19 algorithm.
+        "content_sha256_v1": None,
+        "content_sha384_v1": None,
+        "content_sha512_v1": None,
         "content_hash_skip": list,
         "path": str,
         "path_via_symlink": None,

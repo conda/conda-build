@@ -49,6 +49,9 @@ git_submod_re = re.compile(r"(?:.+)\.(.+)\.(?:.+)\s(.+)")
 ext_re = re.compile(r"(.*?)(\.(?:tar\.)?[^.]+)$")
 ACCEPTED_HASH_TYPES = ("md5", "sha1", "sha224", "sha256", "sha384", "sha512")
 CONTENT_HASH_KEYS = ("content_sha256", "content_sha384", "content_sha512")
+# Legacy v1 keys use the original CEP-19 algorithm (no length-prefixing).
+# Recipes that stored hashes computed with the old algorithm should use these keys.
+CONTENT_HASH_KEYS_V1 = ("content_sha256_v1", "content_sha384_v1", "content_sha512_v1")
 
 
 def append_hash_to_fn(fn, hash_value):
@@ -1116,25 +1119,36 @@ def provide(metadata):
                 if not isdir(src_dir):
                     os.makedirs(src_dir)
 
-            for hash_type in CONTENT_HASH_KEYS:
-                if hash_type in source_dict:
-                    expected_content_hash = source_dict[hash_type]
-                    if expected_content_hash in (None, ""):
-                        raise ValueError(
-                            f"Empty {hash_type} hash provided for source item #{idx}"
+            skip = ensure_list(source_dict.get("content_hash_skip") or ())
+            def _check_content_hashes(content_hash_keys, legacy=False):
+                for hash_type in content_hash_keys:
+                    if hash_type in source_dict:
+                        expected_content_hash = source_dict[hash_type]
+                        if expected_content_hash in (None, ""):
+                            raise ValueError(
+                                f"Empty {hash_type} hash provided for source item #{idx}"
+                            )
+                        if legacy:
+                            algorithm = hash_type[len("content_") : -len("_v1")]
+                        else:
+                            algorithm = hash_type[len("content_") :]
+                        obtained_content_hash = compute_content_hash(
+                            src_dir,
+                            algorithm,
+                            skip=skip,
+                            legacy=legacy,
                         )
-                    algorithm = hash_type[len("content_") :]
-                    obtained_content_hash = compute_content_hash(
-                        src_dir,
-                        algorithm,
-                        skip=ensure_list(source_dict.get("content_hash_skip") or ()),
-                    )
-                    if expected_content_hash != obtained_content_hash:
-                        raise RuntimeError(
-                            f"{hash_type} mismatch in source item #{idx}: "
-                            f"obtained '{obtained_content_hash}' != "
-                            f"expected '{expected_content_hash}'"
-                        )
+                        if expected_content_hash != obtained_content_hash:
+                            raise RuntimeError(
+                                f"{hash_type} mismatch in source item #{idx}: "
+                                f"obtained '{obtained_content_hash}' != "
+                                f"expected '{expected_content_hash}'"
+                            )
+
+            _check_content_hashes(CONTENT_HASH_KEYS)
+            # Legacy v1 keys use the CEP-19 algorithm (no length-prefixing) for backwards
+            # compatibility with hashes that were computed before the algorithm was fixed.
+            _check_content_hashes(CONTENT_HASH_KEYS_V1, remove_version_suffix=True)
             patches = ensure_list(source_dict.get("patches", []))
             patch_attributes_output = []
             for patch in patches:

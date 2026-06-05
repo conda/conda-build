@@ -2026,13 +2026,22 @@ def sha256_checksum(filename, buffersize=65536):
 
 
 def compute_content_hash(
-    directory: str | Path, algorithm="sha256", skip: Iterable[str] = ()
+    directory: str | Path,
+    algorithm="sha256",
+    skip: Iterable[str] = (),
+    legacy: bool = False,
 ) -> str:
     """
     Given a directory, recursively scan all its contents (without following symlinks) and sort them
     by their full path. For each entry in the contents table, compute the hash for the concatenated
     bytes of:
 
+    - The number of bytes required to encode the path in UTF-8, written as a decimal ASCII
+      string, followed by a UTF-8 encoded `:` separator. The colon acts as a delimiter between
+      the decimal length number and the path bytes that follow, preventing ambiguity when the
+      path starts with a digit (e.g. length ``12`` concatenated directly with path ``3abc``
+      would be indistinguishable from length ``123`` followed by ``abc``).
+      **Not present when** ``legacy=True`` **(CEP-19 behaviour).**
     - UTF-8 encoded path, relative to the input directory. Backslashes are normalized
       to forward slashes before encoding.
     - Then, depending on the type:
@@ -2041,11 +2050,19 @@ def compute_content_hash(
           - The raw bytes of the file contents, if binary.
           - If it can't be read, error out.
         - For a directory, the UTF-8 bytes of a `D` separator, and nothing else.
-        - For a symlink, the UTF-8 bytes of an `L` separator, followed by the UTF-8 encoded bytes
-          for the path it points to. Backslashes MUST be normalized to forward slashes before
-          encoding.
+        - For a symlink, the UTF-8 bytes of an `L` separator, followed by:
+          - The number of bytes required to encode the target path in UTF-8, written as a
+            decimal ASCII string, followed by a UTF-8 encoded `:` separator (same
+            length-prefix-with-delimiter scheme as above).
+            **Not present when** ``legacy=True`` **(CEP-19 behaviour).**
+          - The UTF-8 encoded bytes for the path it points to. Backslashes MUST be normalized
+            to forward slashes before encoding.
         - For any other types, error out.
     - UTF-8 encoded bytes of the string `-`, as separator.
+
+    The length prefixes prevent path/type/content boundary ambiguity: without them a filename
+    like ``testFhello-world`` would hash identically to a file ``test`` with content ``hello``
+    followed by a file ``world``.
 
     Parameters
     ----------
@@ -2054,6 +2071,9 @@ def compute_content_hash(
     skip: iterable of paths that should not be checked. If a path ends with a slash, it's
           interpreted as a directory that won't be traversed. It matches the relative paths
           already slashed-normalized (i.e. backwards slashes replaced with forward slashes).
+    legacy: When True, use the original CEP-19 algorithm that does **not** length-prefix paths or
+            symlink targets. This is provided for backwards compatibility with hashes stored under
+            the ``content_sha*_v1`` recipe keys. Defaults to False (v2 / this CEP algorithm).
 
     Returns
     -------
@@ -2077,10 +2097,20 @@ def compute_content_hash(
         ):
             continue
         # encode the relative path to directory, for files, dirs and others
-        hasher.update(relpathstr.encode("utf-8"))
+        # Length-prefix the path to avoid ambiguity between path/type/content boundaries.
+        # Without the length prefix, a filename like "testFhello-world" is indistinguishable
+        # from a file "test" with content "hello" followed by a file "world".
+        # legacy=True skips the prefix to reproduce the original CEP-19 algorithm.
+        path_bytes = relpathstr.encode("utf-8")
+        if not legacy:
+            hasher.update(f"{len(path_bytes)}:".encode())
+        hasher.update(path_bytes)
         if path.is_symlink():
             hasher.update(b"L")
-            hasher.update(str(path.readlink()).replace("\\", "/").encode("utf-8"))
+            target_bytes = str(path.readlink()).replace("\\", "/").encode("utf-8")
+            if not legacy:
+                hasher.update(f"{len(target_bytes)}:".encode())
+            hasher.update(target_bytes)
         elif path.is_dir():
             hasher.update(b"D")
         elif path.is_file():
