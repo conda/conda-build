@@ -13,40 +13,40 @@ handle the build through ``py-rattler-build``.
 ``conda render`` commands.
 
 Build configuration is done in the same way as for v0 recipes. Many configuration settings are translated into rattler-build equivalents and
-passed to ``py-rattler-build``. The following command-line arguments (and their corresponding settings in ``~/.condarc`` file) are
+passed to ``py-rattler-build``. The following ``conda-build`` command-line arguments (and their corresponding settings in ``~/.condarc`` file) are
 supported:
 
 ``conda build``
 ===============
 
-- ``--recipe``
+- ``--anaconda-token``
+- ``--anaconda-upload``
 - ``--build-only``
-- ``--variant-config-files``
+- ``--channel``
+- ``--debug``
 - ``--exclusive-config-file``
 - ``--extra-meta``
-- ``--output-folder``
 - ``--no-build-id``
-- ``--debug``
-- ``--notest``
-- ``--quiet``
-- ``--skip-existing``
 - ``--no-include-recipe``
-- ``--package-format``
-- ``--zstd-compression-level``
-- ``--channel``
+- ``--notest``
+- ``--output-folder``
 - ``--override-channels``
+- ``--package-format``
 - ``--post``
-- ``--anaconda-upload``
-- ``--anaconda-token``
+- ``--quiet``
+- ``--recipe``
+- ``--skip-existing``
 - ``--user``
+- ``--variant-config-files``
+- ``--zstd-compression-level``
 
 ``conda render``
 ================
 
-- ``--recipe``
-- ``--variant-config-files``
 - ``--exclusive-config-file``
 - ``--override-channels``
+- ``--recipe``
+- ``--variant-config-files``
 
 Package upload
 ==============
