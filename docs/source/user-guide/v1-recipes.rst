@@ -3,7 +3,7 @@ Building v1 recipes with conda-build
 ****************************************
 
 ``conda-build`` now supports building v1 recipes using the
-`Python bindings for rattler-build <https://rattler-build.prefix.dev/latest/py-rattler-build/reference/>`_.
+`Python bindings for rattler-build <https://rattler-build.prefix.dev/latest/py-rattler-build/reference/>`__.
 
 To get started with building v1 recipes, simply invoke ``conda-build`` and pass
 the recipe's directory. ``conda-build`` will recognize the recipe format and
@@ -56,6 +56,39 @@ from v0 recipes. ``conda-build`` will automatically upload packages to the
 specified anaconda.org channel if this option is enabled in ``.condarc`` or
 through the ``conda-build`` CLI.
 
+Authentication with private channels
+=====================================
+
+For v1 recipes, ``conda-build`` uses rattler mechanism for private channel authentication.
+
+
+`rattler-build documentation <https://rattler-build.prefix.dev/dev/authentication_and_upload/>`__
+describes authentication with the following services:
+
+- prefix.dev
+- anaconda.org
+- quetz
+- artifactory
+- s3
+
+
+Authentication can be configured in one of two ways:
+
+- Use the ``rattler-build auth login`` command.
+- Set the ``RATTLER_AUTH_FILE`` environment variable to pointing to a JSON file
+  containing credentials.
+
+For example, to authenticate with a private channel hosted on ``prefix.dev``:
+
+.. code-block:: bash
+
+   echo '{"prefix.dev": {"BearerToken": "pfx-xxxxxxxx"}}' > ./credentials.json
+   export RATTLER_AUTH_FILE=./credentials.json
+
+After this setup, ``conda-build`` will be able to access packages hosted on the
+private channel.
+
+
 Limitations
 ===========
 
@@ -66,7 +99,7 @@ Limitations of the current v1 recipe implementation include:
 - Support for multichannels is not complete. If set, ``conda-build`` currently
   expands the subchannels from a multichannel and passes them to
   ``py-rattler-build`` which may not respect the channel priority. This will be updated once ``rattler-build`` gains proper `support
-  for multichannels <https://github.com/conda/rattler/issues/1327>`_.
+  for multichannels <https://github.com/conda/rattler/issues/1327>`__.
 
 Migrating recipes
 =================
