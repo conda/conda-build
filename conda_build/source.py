@@ -1120,6 +1120,7 @@ def provide(metadata):
                     os.makedirs(src_dir)
 
             skip = ensure_list(source_dict.get("content_hash_skip") or ())
+
             def _check_content_hashes(content_hash_keys, legacy=False):
                 for hash_type in content_hash_keys:
                     if hash_type in source_dict:
