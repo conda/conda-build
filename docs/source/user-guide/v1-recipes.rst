@@ -61,10 +61,8 @@ Limitations
 
 Limitations of the current v1 recipe implementation include:
 
-- UI improvements: currently, ``conda-build`` uses a modified version of
-  rattler-build's ``SimpleProgressCallback`` to pass levels and messages to
-  ``conda-build``'s logging system. This can be updated in the future to improve the look
-  and be more consistent with rattler-build itself.
+- ``conda-build`` logs ``py-rattler-build`` reports in a simplified way.
+  Decorative elements seen in ``rattler-build`` are not currently available.
 - Support for multichannels is not complete. If set, ``conda-build`` currently
   expands the subchannels from a multichannel and passes them to
   ``py-rattler-build`` which may not respect the channel priority. This will be updated once ``rattler-build`` gains proper `support
@@ -73,9 +71,11 @@ Limitations of the current v1 recipe implementation include:
 Migrating recipes
 =================
 
-Migrating recipes to v1 format is recommended because it provides faster rendering and buiding, standardized schema with autocomplete support and pure YAML syntax, which guarantees easier updates in future.
+Migrating recipes to v1 format can be beneficial because it provides faster
+rendering and buiding, standardized schema with autocomplete support,
+and pure YAML syntax, which guarantees easier updates in the future.
 
-To migrate a recipe from v0 to v1 format, use the `conda-recipe-manager <https://github.com/conda/conda-recipe-manager>`_ tool.
+To migrate a recipe from v0 to v1 format, use the `conda-recipe-manager <https://github.com/conda/conda-recipe-manager>`__ tool.
 
 Running::
 
@@ -86,9 +86,9 @@ will convert and write the recipe to the ``recipe.yaml`` file.
 There are some differences between the v0 and v1 recipe formats, so extra care is
 required when converting. Some of these differences are explained in
 the
-`rattler-build documentation <https://rattler-build.prefix.dev/dev/converting_from_conda_build/>`_.
+`rattler-build documentation <https://rattler-build.prefix.dev/dev/converting_from_conda_build/>`__.
 
 More details about the v1 recipe format can be found in the two CEPs:
 
-- `CEP-0013 <https://github.com/conda/ceps/blob/main/cep-0013.md>`_
-- `CEP-0014 <https://github.com/conda/ceps/blob/main/cep-0014.md>`_
+- `CEP-0013 <https://github.com/conda/ceps/blob/main/cep-0013.md>`__
+- `CEP-0014 <https://github.com/conda/ceps/blob/main/cep-0014.md>`__
