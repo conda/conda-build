@@ -1149,7 +1149,7 @@ def provide(metadata):
             _check_content_hashes(CONTENT_HASH_KEYS)
             # Legacy v1 keys use the CEP-19 algorithm (no length-prefixing) for backwards
             # compatibility with hashes that were computed before the algorithm was fixed.
-            _check_content_hashes(CONTENT_HASH_KEYS_V1, remove_version_suffix=True)
+            _check_content_hashes(CONTENT_HASH_KEYS_V1, legacy=True)
             patches = ensure_list(source_dict.get("patches", []))
             patch_attributes_output = []
             for patch in patches:
