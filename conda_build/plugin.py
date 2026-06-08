@@ -30,7 +30,7 @@ def debug(args: Sequence[str]) -> int:
 
     return execute(args)
 
-@deprecated("26.9", "27.3")
+
 def develop(args: Sequence[str]) -> int:
     from .cli.main_develop import execute
 
