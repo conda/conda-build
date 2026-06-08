@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING
 import conda.plugins
 from conda.plugins.types import CondaSubcommand
 
-
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
