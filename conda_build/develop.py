@@ -135,6 +135,7 @@ def _uninstall(sp_dir, pkg_path):
     shutil.move(n_c_pth, o_c_pth)
 
 
+@deprecated("26.9", "27.3")
 def execute(
     recipe_dirs: list[str],
     prefix: str = sys.prefix,
