@@ -12,10 +12,12 @@ from .exceptions import CondaBuildUserError
 from .os_utils.external import find_executable
 from .post import mk_relative_osx
 from .utils import check_call_env, get_site_packages, on_mac, rec_glob
+from .deprecations import deprecated
 
 if TYPE_CHECKING:
     from pathlib import Path
 
+deprecated.module("26.9", "27.3")
 
 def relink_sharedobjects(pkg_path, build_prefix):
     """

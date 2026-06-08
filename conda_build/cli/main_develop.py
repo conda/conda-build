@@ -6,8 +6,11 @@ import logging
 from typing import TYPE_CHECKING
 
 from conda.base.context import context
+from conda_build.deprecations import deprecated
 
 from .. import api
+
+deprecated.module("26.9", "27.3")
 
 try:
     from conda.cli.helpers import add_parser_prefix
