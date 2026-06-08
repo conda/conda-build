@@ -9,14 +9,15 @@ from pathlib import Path
 
 import pytest
 
+from conda_build.deprecations import deprecated
 from conda_build.develop import _uninstall, execute, get_setup_py, write_to_conda_pth
 from conda_build.exceptions import CondaBuildUserError
 from conda_build.utils import rm_rf
 
 from .utils import thisdir
-from conda_build.deprecations import deprecated
 
 deprecated.module("26.9", "27.3")
+
 
 @pytest.fixture(scope="session")
 def site_packages() -> Generator[Path, None, None]:

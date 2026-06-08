@@ -6,6 +6,7 @@ import logging
 from typing import TYPE_CHECKING
 
 from conda.base.context import context
+
 from conda_build.deprecations import deprecated
 
 from .. import api
@@ -23,6 +24,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
 logging.basicConfig(level=logging.INFO)
+
 
 @deprecated("26.9", "27.3")
 def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
@@ -87,6 +89,7 @@ This works by creating a conda.pth file in site-packages.""",
     parser.set_defaults(func=execute)
 
     return parser, parser.parse_args(args)
+
 
 @deprecated("26.9", "27.3")
 def execute(args: Sequence[str] | None = None) -> int:
