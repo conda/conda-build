@@ -82,7 +82,6 @@ def load_setup_py_data(
     # Patch setuptools, distutils
     setuptools_setup = setuptools.setup
     distutils_setup = distutils.core.setup
-    numpy_setup = None
 
     versioneer = None
     if "versioneer" in sys.modules:
