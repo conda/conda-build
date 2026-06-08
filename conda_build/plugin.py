@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 import conda.plugins
 from conda.plugins.types import CondaSubcommand
+
 from conda_build.deprecations import deprecated
 
 if TYPE_CHECKING:
@@ -29,6 +30,7 @@ def debug(args: Sequence[str]) -> int:
     from .cli.main_debug import execute
 
     return execute(args)
+
 
 @deprecated("26.9", "27.3")
 def develop(args: Sequence[str]) -> int:
