@@ -26,7 +26,6 @@ if TYPE_CHECKING:
 logging.basicConfig(level=logging.INFO)
 
 
-@deprecated("26.9", "27.3")
 def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
     from conda.cli.conda_argparse import ArgumentParser
 
@@ -91,7 +90,6 @@ This works by creating a conda.pth file in site-packages.""",
     return parser, parser.parse_args(args)
 
 
-@deprecated("26.9", "27.3")
 def execute(args: Sequence[str] | None = None) -> int:
     _, parsed = parse_args(args)
     context.__init__(argparse_args=parsed)
