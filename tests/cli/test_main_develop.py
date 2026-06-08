@@ -2,8 +2,8 @@
 # SPDX-License-Identifier: BSD-3-Clause
 import os
 import sys
-import pytest
 
+import pytest
 from conda.gateways.connection.download import download
 
 from conda_build.cli import main_develop
