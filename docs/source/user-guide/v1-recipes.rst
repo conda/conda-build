@@ -53,7 +53,7 @@ Package upload
 
 Packages built from v1 recipes can be uploaded in the same way as those built
 from v0 recipes. ``conda-build`` will automatically upload packages to the
-specified anaconda.org channel if this option is enabled in ``.condarc`` or
+specified anaconda.org channel if ``anaconda_upload`` is enabled in ``.condarc`` or
 through the ``conda-build`` CLI.
 
 Authentication with private channels
@@ -75,7 +75,7 @@ describes authentication with the following services:
 Authentication can be configured in one of two ways:
 
 - Use the ``rattler-build auth login`` command.
-- Set the ``RATTLER_AUTH_FILE`` environment variable to pointing to a JSON file
+- Set the ``RATTLER_AUTH_FILE`` environment variable to point to a JSON file
   containing credentials.
 
 For example, to authenticate with a private channel hosted on ``prefix.dev``:
@@ -121,7 +121,10 @@ required when converting. Some of these differences are explained in
 the
 `rattler-build documentation <https://rattler-build.prefix.dev/dev/converting_from_conda_build/>`__.
 
-More details about the v1 recipe format can be found in the two CEPs:
+More details about the v1 recipe format can be found in these five CEPs:
 
 - `CEP-0013 <https://github.com/conda/ceps/blob/main/cep-0013.md>`__
 - `CEP-0014 <https://github.com/conda/ceps/blob/main/cep-0014.md>`__
+- `CEP-0039 <https://github.com/conda/ceps/blob/main/cep-0039.md>`__
+- `CEP-0040 <https://github.com/conda/ceps/blob/main/cep-0040.md>`__
+- `CEP-0041 <https://github.com/conda/ceps/blob/main/cep-0041.md>`__
