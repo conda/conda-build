@@ -89,16 +89,6 @@ def load_setup_py_data(
         versioneer = sys.modules["versioneer"]
         del sys.modules["versioneer"]
 
-    try:
-        # numpy.distutils deprecated in Python 3.12+
-        # see https://numpy.org/doc/stable/reference/distutils_status_migration.html
-        import numpy.distutils.core
-
-        numpy_setup = numpy.distutils.core.setup
-        numpy.distutils.core.setup = setup
-    except ImportError:
-        log.debug("Failed to import numpy for setup patch.  Is numpy installed?")
-
     setuptools.setup = distutils.core.setup = setup
     ns = {
         "__name__": "__main__",
@@ -117,8 +107,6 @@ def load_setup_py_data(
 
     distutils.core.setup = distutils_setup
     setuptools.setup = setuptools_setup
-    if numpy_setup:
-        numpy.distutils.core.setup = numpy_setup
 
     if cd_to_work:
         os.chdir(cwd)
