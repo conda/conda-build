@@ -33,6 +33,7 @@ def test_develop(testing_env):
     ) as f_pth:
         assert cwd not in f_pth.read()
 
+
 def test_develop_module_deprecation_warning():
     """Verify that importing main_develop shows module-level deprecation warning."""
     import importlib

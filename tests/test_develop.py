@@ -117,3 +117,19 @@ def test_execute_error_nonexistent_prefix():
         CondaBuildUserError, match="Error: environment does not exist: "
     ):
         execute("/path/to/non-existent/prefix", "python", "setup.py", "install")
+
+
+def test_develop_module_deprecation_warning():
+    import importlib
+    import sys
+
+    # delete cached module
+    module_name = "conda_build.develop"
+    if module_name in sys.modules:
+        del sys.modules[module_name]
+
+    with pytest.warns(
+        PendingDeprecationWarning,
+        match="conda_build.develop is pending deprecation and will be removed in 27.3",
+    ):
+        importlib.import_module(module_name)
