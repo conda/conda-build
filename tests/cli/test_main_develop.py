@@ -9,7 +9,6 @@ from pytest import MonkeyPatch
 
 from conda_build.cli import main_develop
 from conda_build.utils import get_site_packages, tar_xf
-from conda.testing.fixtures import conda_cli
 
 
 def test_develop(testing_env):
@@ -52,7 +51,7 @@ def test_develop_module_deprecation_warning(monkeypatch: MonkeyPatch):
         import conda_build.cli.main_develop  # noqa F401
 
 
-def test_conda_develop_produces_warning(conda_cli: conda_cli):
+def test_conda_develop_produces_warning(conda_cli):
     """Verify that running `conda develop` produces a deprecation warning."""
     with pytest.deprecated_call():
         conda_cli("develop", "--help", raises=SystemExit)
