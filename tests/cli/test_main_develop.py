@@ -32,3 +32,19 @@ def test_develop(testing_env):
         os.path.join(get_site_packages(testing_env, py_ver), "conda.pth")
     ) as f_pth:
         assert cwd not in f_pth.read()
+
+def test_develop_module_deprecation_warning():
+    """Verify that importing main_develop shows module-level deprecation warning."""
+    import importlib
+    import sys
+
+    # delete cached module
+    module_name = "conda_build.cli.main_develop"
+    if module_name in sys.modules:
+        del sys.modules[module_name]
+
+    with pytest.warns(
+        PendingDeprecationWarning,
+        match="conda_build.cli.main_develop is pending deprecation and will be removed in 27.3",
+    ):
+        importlib.import_module(module_name)
