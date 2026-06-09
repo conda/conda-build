@@ -4,6 +4,7 @@
 Simple tests for testing functions in develop module - lower level than going through API.
 """
 
+import sys
 from collections.abc import Generator
 from pathlib import Path
 
@@ -121,8 +122,7 @@ def test_execute_error_nonexistent_prefix():
 
 
 def test_develop_module_deprecation_warning(monkeypatch: MonkeyPatch):
-    import sys
-
+    """Verify that importing develop shows module-level deprecation warning."""
     # delete cached module
     monkeypatch.delitem(sys.modules, "conda_build.develop", raising=False)
 
@@ -130,4 +130,4 @@ def test_develop_module_deprecation_warning(monkeypatch: MonkeyPatch):
         PendingDeprecationWarning,
         match="conda_build.develop is pending deprecation and will be removed in 27.3",
     ):
-        pass
+        import conda_build.develop  # noqa F401

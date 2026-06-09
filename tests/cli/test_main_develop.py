@@ -37,7 +37,6 @@ def test_develop(testing_env):
 
 def test_develop_module_deprecation_warning(monkeypatch: MonkeyPatch):
     """Verify that importing main_develop shows module-level deprecation warning."""
-
     # delete cached module
     monkeypatch.delitem(
         sys.modules,
@@ -49,4 +48,4 @@ def test_develop_module_deprecation_warning(monkeypatch: MonkeyPatch):
         PendingDeprecationWarning,
         match="conda_build.cli.main_develop is pending deprecation and will be removed in 27.3",
     ):
-        pass
+        import conda_build.cli.main_develop  # noqa F401
