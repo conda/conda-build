@@ -126,8 +126,7 @@ def test_develop_module_deprecation_warning(monkeypatch: MonkeyPatch):
     # delete cached module
     monkeypatch.delitem(sys.modules, "conda_build.develop", raising=False)
 
-    with pytest.warns(
-        PendingDeprecationWarning,
-        match="conda_build.develop is pending deprecation and will be removed in 27.3",
+    with pytest.deprecated_call(
+        match="conda_build.develop is (pending deprecation|deprecated) and will be removed in 27.3",
     ):
         import conda_build.develop  # noqa F401
