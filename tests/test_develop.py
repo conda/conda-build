@@ -9,7 +9,6 @@ from pathlib import Path
 
 import pytest
 
-from conda_build.deprecations import deprecated
 from conda_build.develop import _uninstall, execute, get_setup_py, write_to_conda_pth
 from conda_build.exceptions import CondaBuildUserError
 from conda_build.utils import rm_rf
