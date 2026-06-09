@@ -18,7 +18,6 @@ def test_develop(testing_env):
     extract_folder = "conda_version_test-0.1.0-1"
     cwd = os.getcwd()
     args = ["-p", testing_env, extract_folder]
-    # Expect PendingDeprecationWarning since main_develop is deprecated
     with pytest.deprecated_call():
         main_develop.execute(args)
     py_ver = ".".join((str(sys.version_info.major), str(sys.version_info.minor)))
