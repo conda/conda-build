@@ -17,7 +17,14 @@ from .utils import check_call_env, get_site_packages, on_mac, rec_glob
 if TYPE_CHECKING:
     from pathlib import Path
 
-deprecated.module("26.9", "27.3")
+deprecated.module(
+    "26.9",
+    "27.3",
+    addendum=(
+        "This module will be removed in 27.3. Migrate to the `conda-pypi` editable install workflow. "
+        "See https://github.com/conda/conda-pypi/blob/f0dd4b782a2006ceb6cf75bb94d6df631fe82563/conda_pypi/cli/install.py#L103"
+    ),
+)
 
 
 def relink_sharedobjects(pkg_path, build_prefix):
