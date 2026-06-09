@@ -4,6 +4,7 @@ import os
 import sys
 
 import pytest
+from pytest import MonkeyPatch
 from conda.gateways.connection.download import download
 
 from conda_build.cli import main_develop
@@ -34,18 +35,18 @@ def test_develop(testing_env):
         assert cwd not in f_pth.read()
 
 
-def test_develop_module_deprecation_warning():
+def test_develop_module_deprecation_warning(monkeypatch: MonkeyPatch):
     """Verify that importing main_develop shows module-level deprecation warning."""
-    import importlib
-    import sys
 
     # delete cached module
-    module_name = "conda_build.cli.main_develop"
-    if module_name in sys.modules:
-        del sys.modules[module_name]
+    monkeypatch.delitem(
+        sys.modules,
+        "conda_build.cli.main_develop",
+        raising=False,
+    )
 
     with pytest.warns(
         PendingDeprecationWarning,
         match="conda_build.cli.main_develop is pending deprecation and will be removed in 27.3",
     ):
-        importlib.import_module(module_name)
+        import conda_build.cli.main_develop

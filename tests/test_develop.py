@@ -8,6 +8,7 @@ from collections.abc import Generator
 from pathlib import Path
 
 import pytest
+from pytest import MonkeyPatch
 
 from conda_build.develop import _uninstall, execute, get_setup_py, write_to_conda_pth
 from conda_build.exceptions import CondaBuildUserError
@@ -119,17 +120,14 @@ def test_execute_error_nonexistent_prefix():
         execute("/path/to/non-existent/prefix", "python", "setup.py", "install")
 
 
-def test_develop_module_deprecation_warning():
-    import importlib
+def test_develop_module_deprecation_warning(monkeypatch:MonkeyPatch):
     import sys
 
     # delete cached module
-    module_name = "conda_build.develop"
-    if module_name in sys.modules:
-        del sys.modules[module_name]
+    monkeypatch.delitem(sys.modules, "conda_build.develop", raising=False)
 
     with pytest.warns(
         PendingDeprecationWarning,
         match="conda_build.develop is pending deprecation and will be removed in 27.3",
     ):
-        importlib.import_module(module_name)
+        import conda_build.develop
