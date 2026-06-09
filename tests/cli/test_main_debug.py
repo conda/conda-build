@@ -103,3 +103,34 @@ def test_debug_v1_recipe(capsys: CaptureFixture):
     assert "Test environment created for debugging." in output
     assert "rattler-build_myproject-tools" in output
     assert expected in output
+
+
+def test_error_if_package_contains_recipe_yaml(tmp_path: Path, capsys: CaptureFixture):
+    recipe_dir = Path(metadata_dir, "..", "variants", "32_v1_recipe")
+    out = tmp_path / "out"
+
+    args = [
+        str(recipe_dir),
+        "-c",
+        "conda-forge",
+        "--no-test",
+        "--output-folder",
+        str(out),
+    ]
+    build.execute(args)
+
+    pkg_files = list((out / "noarch").glob("pytest*.conda"))
+    assert len(pkg_files) == 1, pkg_files
+    pkg_file = pkg_files[0]
+
+    with pytest.raises(SystemExit) as exc:
+        debug.execute([str(pkg_file)])
+
+    assert exc.value.code == 1
+
+    captured = capsys.readouterr()
+    output = captured.out + captured.err
+    assert (
+        "contains v1 'recipe.yaml' file, which is not supported by conda debug."
+        in output
+    )
