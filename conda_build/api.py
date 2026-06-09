@@ -41,23 +41,30 @@ if TYPE_CHECKING:
 
 
 def _error_if_package_contains_recipe_yaml(pkg_path: str) -> None:
-    from pathlib import Path
-    from tempfile import TemporaryDirectory
+    from contextlib import redirect_stdout
+    from io import StringIO
 
     import conda_package_handling.api
 
-    with TemporaryDirectory(prefix="conda-debug-inspect-") as tmp_dir:
-        conda_package_handling.api.extract(pkg_path, dest_dir=tmp_dir)
+    buffer = StringIO()
+    with redirect_stdout(buffer):
+        conda_package_handling.api.list_contents(
+            pkg_path,
+            components=["info"],
+        )
 
-        recipe_dir = Path(tmp_dir) / "info" / "recipe"
-        recipe_yaml = recipe_dir / "recipe.yaml"
-        if not recipe_yaml.is_file():
-            recipe_yaml = recipe_dir / "rendered_recipe.yaml"
+    pkg_contents = [
+        line.strip() for line in buffer.getvalue().splitlines() if line.strip()
+    ]
 
-        if recipe_yaml.is_file():
+    for recipe_yaml_file in (
+        "info/recipe/recipe.yaml",
+        "info/recipe/rendered_recipe.yaml",
+    ):
+        if recipe_yaml_file in pkg_contents:
             raise ValueError(
-                f"Package '{pkg_path}' contains v1 '{recipe_yaml.name}' file, "
-                "which is not supported by conda debug."
+                f"Package '{pkg_path}' contains v1 '{recipe_yaml_file.rsplit('/', 1)[-1]}' file, "
+                "which is currently not supported by conda debug."
             )
 
 
