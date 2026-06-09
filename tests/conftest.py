@@ -43,6 +43,7 @@ if TYPE_CHECKING:
 
 pytest_plugins = ["conda.testing.fixtures"]
 
+
 @pytest.hookimpl
 def pytest_report_header(config: pytest.Config):
     # ensuring the expected development conda is being run
