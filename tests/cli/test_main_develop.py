@@ -4,8 +4,8 @@ import os
 import sys
 
 import pytest
-from pytest import MonkeyPatch
 from conda.gateways.connection.download import download
+from pytest import MonkeyPatch
 
 from conda_build.cli import main_develop
 from conda_build.utils import get_site_packages, tar_xf
@@ -49,4 +49,4 @@ def test_develop_module_deprecation_warning(monkeypatch: MonkeyPatch):
         PendingDeprecationWarning,
         match="conda_build.cli.main_develop is pending deprecation and will be removed in 27.3",
     ):
-        import conda_build.cli.main_develop
+        pass

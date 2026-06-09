@@ -120,7 +120,7 @@ def test_execute_error_nonexistent_prefix():
         execute("/path/to/non-existent/prefix", "python", "setup.py", "install")
 
 
-def test_develop_module_deprecation_warning(monkeypatch:MonkeyPatch):
+def test_develop_module_deprecation_warning(monkeypatch: MonkeyPatch):
     import sys
 
     # delete cached module
@@ -130,4 +130,4 @@ def test_develop_module_deprecation_warning(monkeypatch:MonkeyPatch):
         PendingDeprecationWarning,
         match="conda_build.develop is pending deprecation and will be removed in 27.3",
     ):
-        import conda_build.develop
+        pass

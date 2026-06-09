@@ -89,7 +89,13 @@ This works by creating a conda.pth file in site-packages.""",
 
     return parser, parser.parse_args(args)
 
-@deprecated("26.9", "27.3", deprecation_type=FutureWarning, addendum="Please install `conda-pypi` and use `conda pypi install --editable` instead.")
+
+@deprecated(
+    "26.9",
+    "27.3",
+    deprecation_type=FutureWarning,
+    addendum="Please install `conda-pypi` and use `conda pypi install --editable` instead.",
+)
 def execute(args: Sequence[str] | None = None) -> int:
     _, parsed = parse_args(args)
     context.__init__(argparse_args=parsed)
