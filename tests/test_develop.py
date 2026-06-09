@@ -16,8 +16,6 @@ from conda_build.utils import rm_rf
 
 from .utils import thisdir
 
-deprecated.module("26.9", "27.3")
-
 
 @pytest.fixture(scope="session")
 def site_packages() -> Generator[Path, None, None]:
