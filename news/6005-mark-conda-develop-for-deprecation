@@ -8,7 +8,7 @@
 
 ### Deprecations
 
-* Mark `conda-develop` for deprecation.
+* Mark `conda-develop` for deprecation. The [conda-pypi](https://conda.github.io/conda-pypi/) plugin provides a modern alternative via the [`conda pypi install --editable <path>`](https://conda.github.io/conda-pypi/quickstart/#development-and-editable-installations) command.
 
 ### Docs
 
