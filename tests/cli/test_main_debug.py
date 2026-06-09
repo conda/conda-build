@@ -131,6 +131,6 @@ def test_error_if_package_contains_recipe_yaml(tmp_path: Path, capsys: CaptureFi
     captured = capsys.readouterr()
     output = captured.out + captured.err
     assert (
-        "contains v1 'recipe.yaml' file, which is not supported by conda debug."
+        "contains v1 'recipe.yaml' file, which is currently not supported by conda debug."
         in output
     )
