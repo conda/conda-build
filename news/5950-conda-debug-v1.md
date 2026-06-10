@@ -1,6 +1,6 @@
 ### Enhancements
 
-* Add support to `conda-debug` for v1 recipes (#5950).
+* Add support for v1 recipes to `conda-debug` (#5950).
 
 ### Bug fixes
 
