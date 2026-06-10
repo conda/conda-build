@@ -59,7 +59,7 @@ def test_main_debug_happy_path(
         assert len(mock_debug.mock_calls) == 2
 
 
-def test_debug_v1_recipe(capsys: CaptureFixture):
+def test_debug_v1_recipe(testing_workdir, capsys: CaptureFixture):
     """
     Test conda-debug functionality for v1 recipe. The test uses a multi-output recipe.
     """
@@ -92,10 +92,10 @@ def test_debug_v1_recipe(capsys: CaptureFixture):
 
     # Setup scripts for the second output
     # Build the recipe because second output depends on the first one
-    args = [recipe_dir]
+    args = [recipe_dir, "--output-folder", testing_workdir]
     build.execute(args)
 
-    args = [recipe_dir, "--output-id", "myproject-tools"]
+    args = [recipe_dir, "--output-id", "myproject-tools", "-c", testing_workdir]
     assert debug.execute(args) == 0
 
     captured = capsys.readouterr()
