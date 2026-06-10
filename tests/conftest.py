@@ -41,7 +41,7 @@ if TYPE_CHECKING:
 
     from pytest import FixtureRequest, MonkeyPatch
 
-pytest_plugins = ["conda.testing.fixtures"]
+# pytest_plugins = ["conda.testing.fixtures"]
 
 
 @pytest.hookimpl
