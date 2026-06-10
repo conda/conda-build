@@ -9,8 +9,8 @@ To get started with building v1 recipes, simply invoke ``conda-build`` and pass
 the recipe's directory. ``conda-build`` will recognize the recipe format and
 handle the build through ``py-rattler-build``.
 
-``conda-build`` currently supports v1 recipes in the ``conda build`` and
-``conda render`` commands.
+``conda-build`` currently supports v1 recipes in the ``conda build``,
+``conda render`` and ``conda-debug`` commands.
 
 Build configuration is done in the same way as for v0 recipes. Many configuration settings are translated into rattler-build equivalents and
 passed to ``py-rattler-build``. The following ``conda-build`` command-line arguments (and their corresponding settings in ``~/.condarc`` file) are
@@ -44,6 +44,17 @@ supported:
 ================
 
 - ``--exclusive-config-file``
+- ``--override-channels``
+- ``--recipe``
+- ``--variant-config-files``
+
+``conda debug``
+================
+
+- ``--activate-string-only``
+- ``--channel``
+- ``--exclusive-config-file``
+- ``--output-id``
 - ``--override-channels``
 - ``--recipe``
 - ``--variant-config-files``
@@ -87,7 +98,6 @@ For example, to authenticate with a private channel hosted on ``prefix.dev``:
 
 After this setup, ``conda-build`` will be able to access packages hosted on the
 private channel.
-
 
 Limitations
 ===========
