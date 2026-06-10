@@ -136,7 +136,6 @@ def check_arguments_rattler(
             "exclusive_config_files",
             "channel",
             "override_channels",
-            "output_folder",
             "activate_string_only",
         },
     }
