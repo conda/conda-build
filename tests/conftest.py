@@ -41,8 +41,6 @@ if TYPE_CHECKING:
 
     from pytest import FixtureRequest, MonkeyPatch
 
-# pytest_plugins = ["conda.testing.fixtures"]
-
 
 @pytest.hookimpl
 def pytest_report_header(config: pytest.Config):
