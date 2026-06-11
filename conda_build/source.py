@@ -49,9 +49,7 @@ git_submod_re = re.compile(r"(?:.+)\.(.+)\.(?:.+)\s(.+)")
 ext_re = re.compile(r"(.*?)(\.(?:tar\.)?[^.]+)$")
 ACCEPTED_HASH_TYPES = ("md5", "sha1", "sha224", "sha256", "sha384", "sha512")
 CONTENT_HASH_KEYS = ("content_sha256", "content_sha384", "content_sha512")
-# Legacy v1 keys use the original CEP-19 algorithm (no length-prefixing).
-# Recipes that stored hashes computed with the old algorithm should use these keys.
-CONTENT_HASH_KEYS_V1 = ("content_sha256_v1", "content_sha384_v1", "content_sha512_v1")
+CONTENT_HASH_KEYS_V2 = ("content_sha256_v2", "content_sha384_v2", "content_sha512_v2")
 
 
 def append_hash_to_fn(fn, hash_value):
@@ -1130,9 +1128,9 @@ def provide(metadata):
                                 f"Empty {hash_type} hash provided for source item #{idx}"
                             )
                         if legacy:
-                            algorithm = hash_type[len("content_") : -len("_v1")]
-                        else:
                             algorithm = hash_type[len("content_") :]
+                        else:
+                            algorithm = hash_type[len("content_") : -len("_v2")]
                         obtained_content_hash = compute_content_hash(
                             src_dir,
                             algorithm,
@@ -1146,10 +1144,9 @@ def provide(metadata):
                                 f"expected '{expected_content_hash}'"
                             )
 
-            _check_content_hashes(CONTENT_HASH_KEYS)
-            # Legacy v1 keys use the CEP-19 algorithm (no length-prefixing) for backwards
-            # compatibility with hashes that were computed before the algorithm was fixed.
-            _check_content_hashes(CONTENT_HASH_KEYS_V1, legacy=True)
+            # Un-versioned keys use the original CEP-19 algorithm (deprecated).
+            _check_content_hashes(CONTENT_HASH_KEYS, legacy=True)
+            _check_content_hashes(CONTENT_HASH_KEYS_V2)
             patches = ensure_list(source_dict.get("patches", []))
             patch_attributes_output = []
             for patch in patches:

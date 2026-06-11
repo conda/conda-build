@@ -21,6 +21,7 @@ import tempfile
 import time
 import urllib.parse as urlparse
 import urllib.request as urllib
+import warnings
 from collections import OrderedDict, defaultdict
 from collections.abc import Iterable
 from functools import cache, partial
@@ -2073,13 +2074,23 @@ def compute_content_hash(
           already slashed-normalized (i.e. backwards slashes replaced with forward slashes).
     legacy: When True, use the original CEP-19 algorithm that does **not** length-prefix paths or
             symlink targets. This is provided for backwards compatibility with hashes stored under
-            the ``content_sha*_v1`` recipe keys. Defaults to False (v2 / this CEP algorithm).
+            the un-versioned ``content_sha*`` recipe keys, which are deprecated. Prefer the
+            ``content_sha*_v2`` recipe keys (legacy=False) for new recipes.
+            Defaults to False (v2 / this CEP algorithm).
 
     Returns
     -------
     str
         The hexdigest of the computed hash, as described above.
     """
+    if legacy:
+        warnings.warn(
+            "The un-versioned content_sha* recipe keys use the original CEP-19 hashing "
+            "algorithm which is susceptible to hash collisions. Migrate to content_sha*_v2 "
+            "keys to use the fixed algorithm.",
+            PendingDeprecationWarning,
+            stacklevel=2,
+        )
     hasher = hashlib.new(algorithm)
     for path in sorted(Path(directory).rglob("*"), key=str):
         relpath = path.relative_to(directory)

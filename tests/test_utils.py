@@ -554,6 +554,15 @@ def test_compute_content_hash_legacy_identical_plain_tree(tmp_path: Path):
     assert utils.compute_content_hash(a) == utils.compute_content_hash(b)
 
 
+def test_compute_content_hash_legacy_deprecation_warning(tmp_path: Path):
+    """compute_content_hash emits a PendingDeprecationWarning when legacy=True."""
+    (root := tmp_path / "root").mkdir()
+    (root / "file.txt").write_text("hello")
+
+    with pytest.warns(PendingDeprecationWarning, match="content_sha\\*_v2"):
+        utils.compute_content_hash(root, legacy=True)
+
+
 @pytest.mark.parametrize("stem", ["meta", "conda"])
 def test_find_recipe_multipe_bad(tmp_path: Path, stem: str):
     (dirA := tmp_path / "dirA").mkdir()
