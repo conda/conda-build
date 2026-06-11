@@ -26,6 +26,7 @@ from conda_build.metadata import (
     OSModuleSubset,
     _hash_dependencies,
     check_bad_chrs,
+    check_package_name,
     eval_selector,
     get_output_dicts_from_metadata,
     get_selectors,
@@ -729,6 +730,41 @@ def test_check_bad_chrs(value: str, field: str, invalid: str) -> None:
         else nullcontext()
     ):
         check_bad_chrs(value, field)
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "numpy",
+        "my-package",
+        "my_package",
+        "my.package",
+        "r-base",
+        "python-dateutil",
+        "_openmp_mutex",
+        "_pkg",
+        "__glibc",
+        "__unix",
+    ],
+)
+def test_check_package_name_valid(name: str) -> None:
+    check_package_name(name)
+
+
+@pytest.mark.parametrize(
+    "name,match",
+    [
+        ("pack@ge", "invalid characters"),
+        ("pkg..name", "CEP-26"),
+        ("pkg--name", "CEP-26"),
+        (".pkg", "CEP-26"),
+        ("-pkg", "CEP-26"),
+        ("UPPER", "invalid characters"),
+    ],
+)
+def test_check_package_name_invalid(name: str, match: str) -> None:
+    with pytest.raises(CondaBuildUserError, match=match):
+        check_package_name(name)
 
 
 def test_parse_until_resolved(testing_metadata: MetaData, tmp_path: Path) -> None:
