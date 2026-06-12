@@ -7,7 +7,18 @@ from typing import TYPE_CHECKING
 
 from conda.base.context import context
 
+from conda_build.deprecations import deprecated
+
 from .. import api
+
+deprecated.module(
+    "26.9",
+    "27.3",
+    addendum=(
+        "Migrate to the `conda-pypi` editable install workflow. "
+        "See https://conda.github.io/conda-pypi/features/#editable-package-support"
+    ),
+)
 
 try:
     from conda.cli.helpers import add_parser_prefix
@@ -86,6 +97,12 @@ This works by creating a conda.pth file in site-packages.""",
     return parser, parser.parse_args(args)
 
 
+@deprecated(
+    "26.9",
+    "27.3",
+    deprecation_type=FutureWarning,
+    addendum="Please install `conda-pypi` and use `conda pypi install --editable` instead.",
+)
 def execute(args: Sequence[str] | None = None) -> int:
     _, parsed = parse_args(args)
     context.__init__(argparse_args=parsed)
