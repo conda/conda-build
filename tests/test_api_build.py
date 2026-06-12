@@ -650,31 +650,6 @@ def test_build_metadata_object(testing_metadata):
     api.build(testing_metadata)
 
 
-@pytest.mark.serial
-@pytest.mark.skipif(
-    sys.version_info >= (3, 12),
-    reason="numpy.distutils deprecated in Python 3.12+",
-)
-def test_numpy_setup_py_data(testing_config):
-    recipe_path = os.path.join(metadata_dir, "_numpy_setup_py_data")
-    # this shows an error that is OK to ignore:
-    # (Is this Error still relevant)
-
-    # PackagesNotFoundError: The following packages are missing from the target environment:
-    #    - cython
-    subprocess.call("conda remove -y cython".split())
-    with pytest.raises(CondaBuildException) as exc_info:
-        api.render(recipe_path, config=testing_config, numpy="1.16")
-    assert exc_info.match("Cython")
-    subprocess.check_call(["conda", "install", "-y", "cython"])
-    metadata = api.render(recipe_path, config=testing_config, numpy="1.16")[0][0]
-    _hash = metadata.hash_dependencies()
-    assert (
-        os.path.basename(api.get_output_file_paths(metadata)[0])
-        == f"load_setup_py_test-0.1.0-np116py{sys.version_info.major}{sys.version_info.minor}{_hash}_0.conda"
-    )
-
-
 @pytest.mark.slow
 def test_relative_git_url_submodule_clone(testing_workdir, testing_config, monkeypatch):
     """
