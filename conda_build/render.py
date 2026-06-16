@@ -93,7 +93,13 @@ def odict_representer(dumper, data):
     return dumper.represent_dict(data.items())
 
 
-yaml.add_representer(set, yaml.representer.SafeRepresenter.represent_list)
+def sorted_set_representer(dumper, data):
+    # not dependencies, tends to be items like {'ignore_version',
+    # 'ignore_build_only_deps', 'pin_run_as_build', 'extend_keys'}
+    return dumper.represent_list(sorted(data))
+
+
+yaml.add_representer(set, sorted_set_representer)
 yaml.add_representer(tuple, yaml.representer.SafeRepresenter.represent_list)
 yaml.add_representer(OrderedDict, odict_representer)
 
@@ -555,7 +561,7 @@ def add_upstream_pins(
                 + extra_run_specs_from_build.get("strong_constrains", [])
             )
     else:
-        host_deps = []
+        host_deps = set(utils.ensure_list(requirements.get("host")))
         host_unsat = []
         if m.noarch or m.noarch_python:
             if m.build_is_host:
@@ -596,7 +602,7 @@ def add_upstream_pins(
         ("run_constrained", run_constrained_deps),
     ):
         if deps:
-            requirements[section] = list(deps)
+            requirements[section] = sorted(deps)
 
     m.meta["requirements"] = requirements
     return build_unsat, host_unsat
@@ -797,8 +803,8 @@ def finalize_metadata(
         versioned_run_deps = [
             utils.ensure_valid_spec(spec, warn=True) for spec in versioned_run_deps
         ]
-        requirements[pinning_env] = full_build_deps
-        requirements["run"] = versioned_run_deps
+        requirements[pinning_env] = sorted(full_build_deps)
+        requirements["run"] = sorted(versioned_run_deps)
 
         m.meta["requirements"] = requirements
 
