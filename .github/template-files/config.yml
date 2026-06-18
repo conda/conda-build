@@ -6,6 +6,10 @@ conda/conda:
   # issue template details for templates/issues/bug.yml template
   - .github/template-files/templates/issue_template_details.yml
 
+  # canary build workflow
+  - .github/workflows/build.yml
+  - .github/WORKFLOW_FAILURE_REPORT_TEMPLATE.md
+
 conda/infrastructure:
   # [required] general workflows
   - .github/workflows/cla.yml

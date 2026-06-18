@@ -321,11 +321,11 @@ Build number and string
 -----------------------
 
 The build number should be incremented for new builds of the same
-version. The number defaults to ``0``. The build string cannot
-contain "-". The string defaults to the default conda-build
-string plus the build number. When redefining the default string,
-we strongly recommend following the convention of adding the build
-number at the end of the string, with a preceding underscore.
+version. The number must be a non-negative integer and defaults to ``0``.
+The build string cannot contain "-". The string defaults to the default
+conda-build string plus the build number. When redefining the default
+string, we strongly recommend following the convention of adding the
+build number at the end of the string, with a preceding underscore.
 
 .. code-block:: yaml
 
@@ -995,10 +995,10 @@ Use this sparingly, as the overlinking checks generally do prevent you from maki
      - "bin/*"
 
 
-Whitelisting shared libraries
+Allowlisting shared libraries
 -----------------------------
 
-The ``missing_dso_whitelist`` build key is a list of globs for
+The ``missing_dso_allowlist`` build key is a list of globs for
 dynamic shared object (DSO) files that should be ignored when
 examining linkage information.
 
@@ -1011,12 +1011,12 @@ or error ``--error-overlinking`` will result.
 .. code-block:: yaml
 
  build:
-   missing_dso_whitelist:
+   missing_dso_allowlist:
 
 
 These keys allow additions to the list of allowed libraries.
 
-The ``runpath_whitelist`` build key is a list of globs for paths
+The ``runpath_allowlist`` build key is a list of globs for paths
 which are allowed to appear as runpaths in the package's shared
 libraries. All other runpaths will cause a warning message to be
 printed during the build.
@@ -1024,7 +1024,12 @@ printed during the build.
 .. code-block:: yaml
 
  build:
-   runpath_whitelist:
+   runpath_allowlist:
+
+.. note::
+
+   The previous key names ``missing_dso_whitelist`` and ``runpath_whitelist``
+   are still supported for backward compatibility.
 
 
 .. _requirements:
@@ -1377,7 +1382,9 @@ in conda-build 2.1.0.
    default packaging behavior of conda-build is bypassed. In other
    words, if any subpackage is specified, then you do not get the
    normal top-level build for this recipe without explicitly
-   defining a subpackage for it. This is an alternative to the
+   defining a subpackage for it. But having a subpackage with the same
+   name as the top-level should be avoided, as this leads to a number
+   of unintended and hard to understand bugs. This is an alternative to the
    existing behavior, not an addition to it. For more information,
    see :ref:`implicit_metapackages`. Each output may have its own version and
    requirements. Additionally, subpackages may impose downstream pinning similarly
@@ -1538,11 +1545,13 @@ Implicit metapackages
 
 When viewing the top-level package as a collection of smaller
 subpackages, it may be convenient to define the top-level
-package as a composition of several subpackages. If you do this
-and you do not define a subpackage name that matches the
-top-level package/name, conda-build creates a metapackage for
-you. This metapackage has runtime requirements drawn from its
-dependency subpackages, for the sake of accurate build strings.
+package as a composition of several subpackages. If you do this,
+do not define a subpackage name that matches the top-level
+package/name, as this will lead to a number of unintended and
+hard to understand bugs. Also, if you avoid such a name clash,
+conda-build creates a metapackage for you. This metapackage
+has runtime requirements drawn from its dependency subpackages,
+for the sake of accurate build strings.
 
 EXAMPLE: In this example, a metapackage for ``subpackage-example``
 will be created. It will have runtime dependencies on

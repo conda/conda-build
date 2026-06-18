@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 from typing import TYPE_CHECKING
@@ -148,3 +149,42 @@ def test_render_recipe(testing_config: Config) -> None:
         assert len(recipes) == 48
     else:
         assert len(recipes) == 16
+
+
+def test_distribute_variants_numpy_from_cbc_seen_by_selectors(
+    tmp_path: Path, testing_config: Config, caplog: pytest.LogCaptureFixture
+) -> None:
+    """config.variant must be set before extract_* helpers; they call get_selectors."""
+    recipe = tmp_path / "recipe"
+    recipe.mkdir()
+    (recipe / "meta.yaml").write_text(
+        """
+package:
+  name: test_cbc_numpy_warn
+  version: "1.0"
+
+build:
+  number: 0
+
+requirements:
+  run:
+    - python
+""".lstrip(),
+        encoding="utf-8",
+    )
+    (recipe / "conda_build_config.yaml").write_text(
+        """
+numpy:
+  - "1.26"
+python:
+  - "3.12"
+""".lstrip(),
+        encoding="utf-8",
+    )
+    testing_config.verbose = True
+    testing_config.croot = tmp_path
+    caplog.set_level(logging.WARNING)
+
+    render_recipe(recipe, config=testing_config)
+
+    assert "No numpy version specified" not in caplog.text

@@ -50,10 +50,10 @@ requirements:
     - pkginfo
     - psutil
     - py-lief
+    - py-rattler-build >=0.61.4
     - python
     - python-libarchive-c
     - pyyaml
-    - rattler-build
     - requests
     - tomli                        # [py<311]
     - tqdm

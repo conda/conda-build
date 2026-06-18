@@ -1,0 +1,51 @@
+schema_version: 1
+
+context:
+  name: myproject
+  version: "2.0.0"
+
+recipe:
+  version: ${{ version }}
+
+outputs:
+  # First output: The library
+  - package:
+      name: ${{ name }}-lib
+    build:
+      script:
+        interpreter: python
+        content: |
+          import os
+          from pathlib import Path
+
+          prefix = Path(os.environ["PREFIX"])
+          lib_dir = prefix / "lib" / "python"
+          lib_dir.mkdir(parents=True, exist_ok=True)
+
+          (lib_dir / "myproject_lib.py").write_text('VERSION = "2.0.0"')
+          print(f"Created library at {lib_dir}")
+    requirements:
+      build:
+        - python
+
+  # Second output: Uses the library as a host dependency
+  - package:
+      name: ${{ name }}-tools
+    build:
+      script:
+        interpreter: python
+        content: |
+          import os
+          from pathlib import Path
+
+          prefix = Path(os.environ["PREFIX"])
+
+          # Read and print the lib file (installed as host dependency)
+          lib_file = prefix / "lib" / "python" / "myproject_lib.py"
+          print(f"Reading library from: {lib_file}")
+          print(lib_file.read_text())
+    requirements:
+      build:
+        - python
+      host:
+        - ${{ name }}-lib

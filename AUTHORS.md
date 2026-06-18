@@ -64,6 +64,7 @@ Authors are sorted alphabetically.
 * Dave Hirschfeld
 * Dave Karetnyk
 * David Froger
+* David Laehnemann
 * David Li
 * Derek Ludwig
 * Devon Ryan

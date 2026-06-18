@@ -89,6 +89,8 @@ mmap_MAP_PRIVATE = 0 if on_win else mmap.MAP_PRIVATE
 mmap_PROT_READ = 0 if on_win else mmap.PROT_READ
 mmap_PROT_WRITE = 0 if on_win else mmap.PROT_WRITE
 
+MAX_CHUNK_SIZE = 8190 if on_win else 32760
+
 DEFAULT_SUBDIRS = set(KNOWN_SUBDIRS)
 
 RUN_EXPORTS_TYPES = {
@@ -2311,3 +2313,35 @@ def create_file_with_permissions(path: str, permissions: int):
             yield fh
 
         shutil.move(tmp_path, path)
+
+
+def chunks(line: list[str], n: int, len_padding: int = 3) -> list[list[str]]:
+    """
+    Chunk the list of strings into smaller subsets with a maximum size.
+
+    Args:
+        line (list of strings): a list of strings (e.g., a command line argument list)
+        n (int): max chunk size
+        len_padding (int): add this to each of the string lengths when computing chunk size.
+            (default is 3 in case a shell is used: 1 space and 2 quotes.)
+
+    Returns:
+        A list of string lists.
+    """
+    result = []  # the list that will be returned
+    element = []  # an element (list) in the returned list
+    size = 0  # size accumulator for each element
+    for word in line:
+        word_size = len(word) + len_padding
+        tmp_size = size + word_size  # size if we added current word to element
+        if tmp_size > n:  # the chunk would be too big if we add this one
+            if element:  # done with this chunk, add what we have so far
+                result.append(element)
+            size = word_size  # first one in the next chunk
+            element = [word]
+        else:  # add another one to this chunk
+            size = tmp_size
+            element.append(word)
+    if element:  # last one if necessary
+        result.append(element)
+    return result

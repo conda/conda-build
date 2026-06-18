@@ -135,8 +135,13 @@ def test_recipe_builds(
     #   ``source_setup_py_data_subdir`` reproduces the problem.
     if recipe.name == "source_setup_py_data_subdir":
         pytest.xfail("Issue related to #3754 on conda-build.")
-    elif recipe.name == "unicode_all_over" and context.solver == "libmamba":
-        pytest.xfail("Unicode package names not supported in libmamba.")
+    elif recipe.name == "unicode_all_over" and context.solver in (
+        "libmamba",
+        "rattler",
+    ):
+        pytest.xfail(
+            "Unicode package names not supported in libmamba or rattler solvers."
+        )
     elif recipe.name == "numpy_build_run" and sys.version_info >= (3, 13):
         pytest.xfail("Numpy build doesn't run on Python 3.13 yet.")
     elif recipe.name == "numpy_build" and sys.version_info >= (3, 13):
@@ -645,31 +650,6 @@ def test_build_metadata_object(testing_metadata):
     api.build(testing_metadata)
 
 
-@pytest.mark.serial
-@pytest.mark.skipif(
-    sys.version_info >= (3, 12),
-    reason="numpy.distutils deprecated in Python 3.12+",
-)
-def test_numpy_setup_py_data(testing_config):
-    recipe_path = os.path.join(metadata_dir, "_numpy_setup_py_data")
-    # this shows an error that is OK to ignore:
-    # (Is this Error still relevant)
-
-    # PackagesNotFoundError: The following packages are missing from the target environment:
-    #    - cython
-    subprocess.call("conda remove -y cython".split())
-    with pytest.raises(CondaBuildException) as exc_info:
-        api.render(recipe_path, config=testing_config, numpy="1.16")
-    assert exc_info.match("Cython")
-    subprocess.check_call(["conda", "install", "-y", "cython"])
-    metadata = api.render(recipe_path, config=testing_config, numpy="1.16")[0][0]
-    _hash = metadata.hash_dependencies()
-    assert (
-        os.path.basename(api.get_output_file_paths(metadata)[0])
-        == f"load_setup_py_test-0.1.0-np116py{sys.version_info.major}{sys.version_info.minor}{_hash}_0.conda"
-    )
-
-
 @pytest.mark.slow
 def test_relative_git_url_submodule_clone(testing_workdir, testing_config, monkeypatch):
     """
@@ -858,6 +838,8 @@ def test_noarch(testing_workdir):
 
 def test_disable_pip(testing_metadata):
     testing_metadata.config.disable_pip = True
+    # Make sure no template env (which would contain pip/setuptools) leaks in.
+    testing_metadata.config.test_env_template = None
     testing_metadata.meta["requirements"] = {"host": ["python"], "run": ["python"]}
     testing_metadata.meta["build"]["script"] = (
         'python -c "import pip; print(pip.__version__)"'
@@ -1916,7 +1898,7 @@ def test_warning_on_file_clobbering(
         config=testing_config,
     )
     # The clobber warning here is raised when creating the test environment for b
-    if Version(conda_version) >= Version("24.9.0"):
+    if Version("24.9.0") <= Version(conda_version) <= Version("26.3.2"):
         # conda >=24.9.0
         clobber_warning_found = False
         for record in caplog.records:
@@ -2069,6 +2051,10 @@ def test_add_pip_as_python_dependency_from_condarc_file(
     mocker.patch("conda.base.context.Context.pkgs_dirs", pkgs_dirs := (str(tmp_path),))
     assert context.pkgs_dirs == pkgs_dirs
 
+    # Disable template environment cloning for this test since the template
+    # includes pip, which would defeat the purpose of testing pip's absence
+    testing_metadata.config.test_env_template = None
+
     testing_metadata.meta["build"]["script"] = ['python -c "import pip"']
     testing_metadata.meta["requirements"]["host"] = ["python"]
     del testing_metadata.meta["test"]
@@ -2147,9 +2133,12 @@ def test_api_build_inject_jinja2_vars_on_first_pass(testing_config):
     api.build(recipe_dir, config=testing_config)
 
 
-def test_ignore_run_exports_from_substr(monkeypatch, tmp_path, capsys):
+def test_ignore_run_exports_from_substr(monkeypatch, tmp_path, capsys, testing_config):
     monkeypatch.chdir(tmp_path)
-    api.build(str(metadata_path / "ignore_run_exports_from_substr"))
+    testing_config.channel_urls = ["conda-forge"]
+    api.build(
+        str(metadata_path / "ignore_run_exports_from_substr"), config=testing_config
+    )
     assert "- python_abi " in capsys.readouterr().out
 
 

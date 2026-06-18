@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
+import warnings
 from collections import defaultdict
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -13,6 +15,7 @@ from typing import TYPE_CHECKING
 import pytest
 from conda.common.compat import on_mac, on_win
 from conda_index.api import update_index
+from filelock import FileLock, Timeout
 
 import conda_build
 import conda_build.config
@@ -88,7 +91,7 @@ def testing_homedir() -> Iterator[Path]:
 
 
 @pytest.fixture(scope="function")
-def testing_config(testing_workdir):
+def testing_config(testing_workdir, warm_package_cache):
     def boolify(v):
         return v == "true"
 
@@ -110,6 +113,8 @@ def testing_config(testing_workdir):
         ignore_verify_codes=ignore_verify_codes_default,
         exit_on_verify_error=exit_on_verify_error_default,
         conda_pkg_format=conda_pkg_format_default,
+        # Use template environment for faster test env creation when available
+        test_env_template=str(warm_package_cache) if warm_package_cache else None,
     )
 
     if on_mac and "CONDA_BUILD_SYSROOT" in os.environ:
@@ -248,6 +253,79 @@ def variants_conda_build_sysroot(monkeypatch, request):
     monkeypatch.setenv("MACOSX_DEPLOYMENT_TARGET", mdt)
 
     return request.param
+
+
+@pytest.fixture(scope="session", autouse=True)
+def warm_package_cache(tmp_path_factory: pytest.TempPathFactory) -> Path | None:
+    """Pre-warm the conda package cache and create a template environment.
+
+    Creates a persistent template environment with commonly-used packages
+    (Python, pip, setuptools, expat) that ``create_env`` can clone from via
+    ``conda create --clone`` instead of running a full solve.
+
+    Under pytest-xdist, every worker enters this session-scoped fixture; the
+    template is therefore created under the *shared* xdist base directory
+    (``tmp_path_factory.getbasetemp().parent``) and guarded by a file lock so
+    only the first worker actually invokes ``conda create``. The remaining
+    workers wait on the lock and reuse the leader's template, avoiding
+    ``LockError``/``InvalidArchiveError`` races against the shared
+    ``~/conda_pkgs_dir``.
+
+    Returns:
+        Path to the template environment, or None if creation failed.
+    """
+    shared_base = tmp_path_factory.getbasetemp().parent
+    shared_base.mkdir(parents=True, exist_ok=True)
+    template_env = shared_base / "warm_template_env"
+    lock_path = shared_base / "warm_template_env.lock"
+    ready_marker = template_env / ".conda-build-template-ready"
+
+    def _have_ready_template() -> bool:
+        return template_env.is_dir() and ready_marker.is_file()
+
+    try:
+        with FileLock(str(lock_path), timeout=600):
+            if _have_ready_template():
+                return template_env
+
+            if template_env.exists():
+                shutil.rmtree(template_env, ignore_errors=True)
+
+            try:
+                subprocess.run(
+                    [
+                        sys.executable,
+                        "-m",
+                        "conda",
+                        "create",
+                        "-p",
+                        str(template_env),
+                        "python",
+                        "pip",
+                        "setuptools",
+                        "expat",
+                        "-y",
+                        "-q",
+                        "--no-shortcuts",
+                    ],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                )
+            except subprocess.CalledProcessError as e:
+                warnings.warn(f"Failed to create template environment: {e.stderr}")
+                return None
+
+            ready_marker.touch()
+            return template_env
+    except Timeout:
+        if _have_ready_template():
+            return template_env
+        warnings.warn(
+            "Timed out waiting for warm_package_cache template; "
+            "tests will create envs from scratch.",
+        )
+        return None
 
 
 @pytest.fixture(scope="session")
