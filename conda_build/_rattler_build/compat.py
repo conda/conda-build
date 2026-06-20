@@ -512,29 +512,36 @@ def run_rattler(
         )
 
         if command == "render":
-            failed = [r for r in recipe_results if r.failed]
-            if failed:
-                msg = "\n".join(
-                    [
-                        "Recipe render failures:",
-                        *[
-                            f"  - {Path(r.recipe_path).resolve()}: {r.error or 'Unknown error'}"
-                            for r in failed
-                        ],
-                    ]
+            # we are expecting a single recipe result
+            result = recipe_results[0]
+            if result.failed:
+                recipe_path = Path(result.recipe_path).resolve()
+
+                raise CondaBuildUserError(
+                    "\n".join(
+                        [
+                            "Error:   × Failed to render recipe",
+                            f"  ╰─▶ {recipe_path}",
+                            "",
+                            f"      {result.error}",
+                        ]
+                    )
                 )
-                raise CondaBuildUserError(msg)
             return 0
 
         if command == "debug":
             # we are expecting a single recipe result
             result = recipe_results[0]
             if result.failed:
+                recipe_path = Path(result.recipe_path).resolve()
+
                 raise CondaBuildUserError(
                     "\n".join(
                         [
-                            "Recipe debug failures:",
-                            f"  - {Path(result.recipe_path).resolve()}: {result.error or 'Unknown error'}",
+                            "Error:   Failed to debug recipe",
+                            f"  ╰─▶ {recipe_path}",
+                            "",
+                            f"      {result.error}",
                         ]
                     )
                 )
