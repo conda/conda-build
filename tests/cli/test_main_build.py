@@ -7,7 +7,9 @@ import re
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import conda_package_handling
 import pytest
+import yaml
 from conda.base.context import context
 from conda.exceptions import PackagesNotFoundError
 
@@ -591,6 +593,56 @@ def test_build_v1_recipe_multi_output(testing_workdir: str) -> None:
 
     conda_packages = list(out.rglob("*.conda"))
     assert len(conda_packages) == 2
+
+
+@pytest.mark.parametrize(
+    "target_platform, variant_name",
+    [
+        ("linux-aarch64", "cbc_aarch64.yml"),
+        ("osx-arm64", "cbc_osx_arm64.yml"),
+    ],
+    ids=["linux-aarch64", "osx-arm64"],
+)
+def test_v1_recipe_platform_config(
+    testing_workdir: str, target_platform: str, variant_name: str
+) -> None:
+    """Verify platform configuration settings in v1 recipes"""
+    recipe = os.path.join(metadata_dir, "..", "variants", "33_v1_recipe_multi_output")
+
+    out = Path(testing_workdir, "out")
+    out.mkdir(parents=True)
+
+    variant = os.path.join(recipe, "variants", variant_name)
+    args = [
+        recipe,
+        "-m",
+        variant,
+        "--output-folder",
+        str(out),
+    ]
+    main_build.execute(args)
+
+    conda_packages = sorted(out.rglob("*.conda"))
+
+    for pkg in conda_packages:
+        extract_dir = Path(testing_workdir, "extracted", pkg.stem)
+        extract_dir.mkdir(parents=True, exist_ok=True)
+
+        conda_package_handling.api.extract(str(pkg), dest_dir=str(extract_dir))
+
+        rendered_recipe = extract_dir / "info" / "recipe" / "rendered_recipe.yaml"
+
+        with rendered_recipe.open() as f:
+            recipe_data = yaml.safe_load(f)
+
+        # target_platform is in build_configuration.target_platform
+        build_config = recipe_data.get("build_configuration", {})
+        assert build_config, f"missing build_configuration in {pkg}"
+
+        assert build_config.get("target_platform") == target_platform, (
+            f"expected target_platform={target_platform} in build_configuration, "
+            f"got {build_config.get('target_platform')}"
+        )
 
 
 def test_build_v1_recipe_result_report(capsys) -> None:
