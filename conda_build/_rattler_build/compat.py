@@ -355,7 +355,8 @@ def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -
             ]
             if recipes_with_cfg:
                 raise ValueError(
-                    f"Recipe configuration files detected but multiple recipes were passed: {recipes_with_cfg}"
+                    f"Recipe configuration files detected but multiple recipes were passed: {recipes_with_cfg}\n"
+                    "Try building recipes separately."
                 )
             else:
                 # single-recipe case: include recipe config files if any exist
