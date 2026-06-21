@@ -179,7 +179,17 @@ def process_recipe(
     try:
         rendered = recipe.render(variant_config, render_config)
     except RattlerBuildError as e:
-        result.error = f"Failed to render recipe {recipe_path}: {e}"
+        result.error = f"Failed to render {recipe_path}: {e}"
+
+        if "undefined value" in str(e):
+            result.error = (
+                f"{result.error}\n\n"
+                "A Jinja variable in this recipe is undefined.\n"
+                "This often indicates missing or incorrect variant file configuration.\n"
+                "Please ensure you passed the correct conda_build_config.yaml\n"
+                "or any other required variant configuration file."
+            )
+
         return result
 
     if command == "render":
