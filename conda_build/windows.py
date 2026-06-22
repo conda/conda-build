@@ -41,6 +41,18 @@ VS_VERSION_STRING = {
     "17.0": "Visual Studio 17 2022",
 }
 
+# Map from conda compiler package name to VS version string key
+VS_COMPILER_VERSION = {
+    "vs2008": "9.0",
+    "vs2010": "10.0",
+    "vs2012": "11.0",
+    "vs2013": "12.0",
+    "vs2015": "14.0",
+    "vs2017": "15.0",
+    "vs2019": "16.0",
+    "vs2022": "17.0",
+}
+
 
 def fix_staged_scripts(scripts_dir, config):
     """
@@ -307,32 +319,32 @@ def write_build_scripts(m, env, bld_bat):
                     override=m.get_value("build/msvc_compiler", None),
                 )
             )
-        else:
-            # Set CMAKE_GENERATOR for new-style compiler activation
-            version = m.get_value("build/msvc_compiler", None)
-            if not version:
-                from .variants import get_default_variant
-
-                py_ver = m.config.variant.get(
-                    "python", get_default_variant(m.config)["python"]
-                )
-                py_ver = tuple([int(x) for x in py_ver.split(".")[:2]])
-                if py_ver >= (3, 6):
-                    version = "17.0"
-                elif py_ver == (3, 5):
-                    version = "15.0"
-                elif py_ver >= (3, 0):
-                    version = "10.0"
-                else:  # 2.x
-                    version = "9.0"
-            if version:
-                fo.write(f'set "CMAKE_GENERATOR={VS_VERSION_STRING[version]}"\n')
         # Reset echo on, because MSVC scripts might have turned it off
         fo.write("@echo on\n")
         fo.write('set "INCLUDE={};%INCLUDE%"\n'.format(env["LIBRARY_INC"]))
         fo.write('set "LIB={};%LIB%"\n'.format(env["LIBRARY_LIB"]))
         if m.config.activate and m.name() != "conda":
             write_bat_activation_text(fo, m)
+        if m.uses_new_style_compiler_activation:
+            # Set CMAKE_GENERATOR after conda activation so it takes precedence over
+            # any CMAKE_GENERATOR set by the activated compiler package's activation
+            # scripts (e.g., vs2017 may set "Visual Studio 15 2017 Win64" which is no
+            # longer valid in CMake 4.0+, which removed the platform suffix).
+            # Use the same compiler that the recipe will use (from variant or default).
+            msvc_override = m.get_value("build/msvc_compiler", None)
+            if msvc_override and msvc_override in VS_VERSION_STRING:
+                # Legacy msvc_compiler key: already a version string like "15.0"
+                fo.write(f'set "CMAKE_GENERATOR={VS_VERSION_STRING[msvc_override]}"\n')
+            else:
+                from .jinja_context import native_compiler
+
+                compiler_name = m.config.variant.get(
+                    "c_compiler",
+                    native_compiler("c", m.config),
+                )
+                version = VS_COMPILER_VERSION.get(compiler_name)
+                if version:
+                    fo.write(f'set "CMAKE_GENERATOR={VS_VERSION_STRING[version]}"\n')
     # bld_bat may have been generated elsewhere with contents of build/script
     work_script = join(m.config.work_dir, "conda_build.bat")
     if os.path.isfile(bld_bat):
