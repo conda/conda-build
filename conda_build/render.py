@@ -561,7 +561,7 @@ def add_upstream_pins(
                 + extra_run_specs_from_build.get("strong_constrains", [])
             )
     else:
-        host_deps = set(utils.ensure_list(requirements.get("host")))
+        host_deps = []
         host_unsat = []
         if m.noarch or m.noarch_python:
             if m.build_is_host:
