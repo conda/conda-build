@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import sys
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -203,6 +204,10 @@ def process_recipe(
 
     if command == "debug":
         if isinstance(recipe, MultiOutputRecipe):
+            if not list(rendered):
+                sys.exit(
+                    f"No rendered outputs were produced for {Path(recipe_path).resolve()}"
+                )
             if parsed_args.output_id is None:
                 output_names = sorted(
                     {
