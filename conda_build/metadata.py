@@ -2099,9 +2099,27 @@ class MetaData:
         except jinja2.TemplateError as ex:
             if "'None' has not attribute" in str(ex):
                 ex = "Failed to run jinja context function"
+                raise CondaBuildUserError(
+                    f"Failed to render jinja template in {self.meta_path}:\n{str(ex)}"
+                )
+            if not isinstance(ex, jinja2.TemplateSyntaxError):
+                # TODO handle other error types?
+                raise CondaBuildUserError(
+                    f"Failed to render jinja template in {self.meta_path}:\n"
+                    f"{type(ex).__name__}: {str(ex)}\n"
+                )
+            error_line = ex.source.splitlines()[ex.lineno - 1]
+            source_lines = list(enumerate(ex.source.splitlines()))
+            context_size = 3
+            error_context_lines = source_lines[(ex.lineno - 1 - context_size):(ex.lineno + context_size)]
+            lineno_width = len(str(error_context_lines[-1][0] + 1))
+            error_context_str = "\n".join(map(lambda L: f"{str(L[0] + 1).zfill(lineno_width)}: {L[1]}", error_context_lines))
             raise CondaBuildUserError(
-                f"Failed to render jinja template in {self.meta_path}:\n{str(ex)}"
+                f"Failed to render jinja template in {self.meta_path}:\n"
+                f"{type(ex).__name__}: {str(ex)} in line {ex.lineno}\n"
+                + error_context_str
             )
+
         finally:
             if "CONDA_BUILD_STATE" in os.environ:
                 del os.environ["CONDA_BUILD_STATE"]
