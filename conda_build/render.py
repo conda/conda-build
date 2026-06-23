@@ -93,13 +93,7 @@ def odict_representer(dumper, data):
     return dumper.represent_dict(data.items())
 
 
-def sorted_set_representer(dumper, data):
-    # not dependencies, tends to be items like {'ignore_version',
-    # 'ignore_build_only_deps', 'pin_run_as_build', 'extend_keys'}
-    return dumper.represent_list(sorted(data))
-
-
-yaml.add_representer(set, sorted_set_representer)
+yaml.add_representer(set, yaml.representer.SafeRepresenter.represent_list)
 yaml.add_representer(tuple, yaml.representer.SafeRepresenter.represent_list)
 yaml.add_representer(OrderedDict, odict_representer)
 
@@ -1242,6 +1236,16 @@ class CustomDumper(yaml.Dumper):
         Xref: https://github.com/yaml/pyyaml/issues/535
         """
         return True
+
+
+def sorted_set_representer(dumper, data):
+    # not dependencies, tends to be items like {'ignore_version',
+    # 'ignore_build_only_deps', 'pin_run_as_build', 'extend_keys'}
+    return dumper.represent_list(sorted(data))
+
+
+# Add to CustomDumper instead of global yaml.add_representer(...)
+CustomDumper.add_representer(set, sorted_set_representer)
 
 
 def output_yaml(
