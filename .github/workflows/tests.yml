@@ -565,7 +565,39 @@ jobs:
     steps:
       - name: Determine Success
         uses: re-actors/alls-green@05ac9388f0aebcb5727afa17fcccfecd6f8ec5fe # v1.2.2
+        id: alls-green
         with:
           # permit jobs to be skipped if there are no code changes (see changes job)
           allowed-skips: ${{ toJSON(needs) }}
           jobs: ${{ toJSON(needs) }}
+
+      - name: Report failures
+        if: >-
+          always()
+          && github.event_name == 'schedule'
+          && steps.alls-green.outputs.result == 'failure'
+        env:
+          GH_TOKEN: ${{ secrets.AUTO_REPORT_TEST_FAILURE }}
+        run: |
+          DAY=$(date -u '+%Y-%m-%d')
+          TITLE="${{ github.workflow }} failed (${DAY})"
+          BODY="The ${{ github.workflow }} workflow failed at $(date -u '+%Y-%m-%d %H:%M') UTC
+
+          Full run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          existing=$(gh issue list \
+            --repo "${{ github.repository }}" \
+            --state open \
+            --search "\"${TITLE}\" in:title label:source::auto" \
+            --json number \
+            --jq '.[0].number')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" \
+              --repo "${{ github.repository }}" \
+              --body "$BODY"
+          else
+            gh issue create \
+              --repo "${{ github.repository }}" \
+              --title "$TITLE" \
+              --body "$BODY" \
+              --label "¡blocking!,type::bug,type::testing,source::auto"
+          fi
