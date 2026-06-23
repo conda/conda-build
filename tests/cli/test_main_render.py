@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
@@ -16,8 +17,6 @@ from conda_build.cli import main_render
 from ..utils import metadata_dir
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from pytest import CaptureFixture
 
     from conda_build.metadata import MetaData
@@ -176,3 +175,32 @@ def test_render_with_v1_recipe() -> None:
 
     args = [recipe]
     assert main_render.execute(args) == 0
+
+
+def test_render_sorted_dependencies(tmp_path: Path) -> None:
+    """Test that dependencies are sorted in the rendered output."""
+    rendered = tmp_path / "out.yaml"
+    recipe = Path(metadata_dir, "sort_rendered_deps")
+    args = [str(recipe), "--file", str(rendered)]
+    main_render.execute(args)
+
+    with (recipe / "meta.yaml").open() as recipe_file:
+        recipe_meta = yaml.safe_load(recipe_file)
+
+    with rendered.open() as rendered_file:
+        rendered_meta = yaml.safe_load(rendered_file)
+
+    unsorted_requirements = recipe_meta.get("requirements", {})
+    requirements = rendered_meta.get("requirements", {})
+    for section in ["build", "host", "run"]:
+        deps_orig = unsorted_requirements.get(section, [])
+        deps = requirements.get(section, [])
+        assert deps_orig == ["f", "e", "d", "c", "b", "a"]
+        assert deps == ["a", "b", "c", "d", "e", "f"]
+        if deps:
+            # Check that dependencies are sorted
+            sorted_deps = sorted(deps)
+            assert deps == sorted_deps, (
+                f"Dependencies in '{section}' section are not sorted. "
+                f"Expected {sorted_deps}, but got {deps}"
+            )

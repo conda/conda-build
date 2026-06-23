@@ -1,0 +1,30 @@
+package:
+  name: test-sort-rendered-deps
+  version: 0.0.1
+
+build:
+  number: 0
+  noarch: python
+
+requirements:
+  build:
+    - f
+    - e
+    - d
+    - c
+    - b
+    - a
+  host:
+    - f
+    - e
+    - d
+    - c
+    - b
+    - a
+  run:
+    - f
+    - e
+    - d
+    - c
+    - b
+    - a
