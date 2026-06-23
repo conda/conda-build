@@ -180,7 +180,7 @@ def test_render_with_v1_recipe() -> None:
 def test_render_sorted_dependencies(tmp_path: Path) -> None:
     """Test that dependencies are sorted in the rendered output."""
     rendered = tmp_path / "out.yaml"
-    recipe = Path(metadata_dir, "sort_rendered_deps")
+    recipe = Path(metadata_dir, "_sort_rendered_deps")
     args = [str(recipe), "--file", str(rendered)]
     main_render.execute(args)
 
