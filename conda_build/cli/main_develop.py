@@ -12,8 +12,8 @@ from conda_build.deprecations import deprecated
 from .. import api
 
 deprecated.module(
-    "26.9",
     "27.3",
+    "27.9",
     addendum=(
         "Migrate to the `conda-pypi` editable install workflow. "
         "See https://conda.github.io/conda-pypi/features/#editable-package-support"
@@ -98,8 +98,8 @@ This works by creating a conda.pth file in site-packages.""",
 
 
 @deprecated(
-    "26.9",
     "27.3",
+    "27.9",
     deprecation_type=FutureWarning,
     addendum="Please install `conda-pypi` and use `conda pypi install --editable` instead.",
 )

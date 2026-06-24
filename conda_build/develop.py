@@ -18,8 +18,8 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 deprecated.module(
-    "26.9",
     "27.3",
+    "27.9",
     addendum=(
         "Migrate to the `conda-pypi` editable install workflow. "
         "See https://conda.github.io/conda-pypi/features/#editable-package-support"
