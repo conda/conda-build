@@ -8,7 +8,7 @@
 
 ### Deprecations
 
-* Mark `conda develop` as pending deprecation to be removed in 27.3. The [conda-pypi](https://conda.github.io/conda-pypi/) plugin provides a modern alternative via the [`conda pypi install --editable <path>`](https://conda.github.io/conda-pypi/quickstart/#development-and-editable-installations) command. (#4251 via #6005)
+* Mark `conda develop` as pending deprecation to be removed in 27.9. The [conda-pypi](https://conda.github.io/conda-pypi/) plugin provides a modern alternative via the [`conda pypi install --editable <path>`](https://conda.github.io/conda-pypi/quickstart/#development-and-editable-installations) command. (#4251 via #6005)
 
 ### Docs
 
