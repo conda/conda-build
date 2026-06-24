@@ -866,7 +866,7 @@ def remove_comments(template):
     return "\n".join(lines_no_comments)
 
 
-@deprecated("26.9", "27.3", addendum="Use `grayskull` instead.")
+@deprecated("27.3", "27.9", addendum="Use `grayskull` instead.")
 def skeletonize(
     in_packages: list[str],
     output_dir: str = ".",

@@ -228,7 +228,7 @@ def ensure_base_deps(deps):
     return deps
 
 
-@deprecated("26.9", "27.3", addendum="Use `grayskull` instead.")
+@deprecated("27.3", "27.9", addendum="Use `grayskull` instead.")
 def skeletonize(
     packages: list[str],
     output_dir: str = ".",

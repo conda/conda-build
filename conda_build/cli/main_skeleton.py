@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 thisdir = os.path.dirname(os.path.abspath(__file__))
 logging.basicConfig(level=logging.INFO)
 
-deprecated.module("26.9", "27.3", addendum="Use the `grayskull` tool instead.")
+deprecated.module("27.3", "27.9", addendum="Use the `grayskull` tool instead.")
 
 
 def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
@@ -56,7 +56,7 @@ options available.
     return parser, parser.parse_args(args)
 
 
-@deprecated("26.9", "27.3", addendum="Use `grayskull` instead.")
+@deprecated("27.3", "27.9", addendum="Use `grayskull` instead.")
 def execute(args: Sequence[str] | None = None) -> int:
     parser, parsed = parse_args(args)
     context.__init__(argparse_args=parsed)

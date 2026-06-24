@@ -385,7 +385,7 @@ def get_core_modules_for_this_perl_version(version, cache_dir):
     )
 
 
-@deprecated("26.9", "27.3", addendum="Use `grayskull` instead.")
+@deprecated("27.3", "27.9", addendum="Use `grayskull` instead.")
 # meta_cpan_url="http://api.metacpan.org",
 def skeletonize(
     packages: list[str],

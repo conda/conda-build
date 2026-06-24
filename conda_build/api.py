@@ -260,7 +260,7 @@ def test(
         )
 
 
-@deprecated("26.9", "27.3", addendum="Use `grayskull` instead.")
+@deprecated("27.3", "27.9", addendum="Use `grayskull` instead.")
 def list_skeletons() -> list[str]:
     """List available skeletons for generating conda recipes from external sources.
 
@@ -276,7 +276,7 @@ def list_skeletons() -> list[str]:
     return files
 
 
-@deprecated("26.9", "27.3", addendum="Use `grayskull` instead.")
+@deprecated("27.3", "27.9", addendum="Use `grayskull` instead.")
 def skeletonize(
     packages: str | Iterable[str],
     repo: Literal["cpan", "cran", "luarocks", "pypi", "rpm"],
