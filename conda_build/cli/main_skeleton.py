@@ -13,6 +13,7 @@ from conda.base.context import context
 
 from .. import api
 from ..config import Config
+from ..deprecations import deprecated
 
 if TYPE_CHECKING:
     from argparse import ArgumentParser, Namespace
@@ -20,6 +21,8 @@ if TYPE_CHECKING:
 
 thisdir = os.path.dirname(os.path.abspath(__file__))
 logging.basicConfig(level=logging.INFO)
+
+deprecated.module("26.9", "27.3", addendum="Use the `grayskull` tool instead.")
 
 
 def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
@@ -30,6 +33,7 @@ def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
         description="""
 Generates a boilerplate/skeleton recipe, which you can then edit to create a
 full recipe. Some simple skeleton recipes may not even need edits.
+Pending deprecation. Please use the `grayskull` tool instead: https://conda.github.io/grayskull
         """,
         epilog="""
 Run --help on the subcommands like 'conda skeleton pypi --help' to see the
@@ -52,6 +56,7 @@ options available.
     return parser, parser.parse_args(args)
 
 
+@deprecated("26.9", "27.3", addendum="Use `grayskull` instead.")
 def execute(args: Sequence[str] | None = None) -> int:
     parser, parsed = parse_args(args)
     context.__init__(argparse_args=parsed)

@@ -34,6 +34,7 @@ from conda.utils import human_bytes
 from requests.packages.urllib3.util.url import parse_url
 
 from ..config import Config
+from ..deprecations import deprecated
 from ..environ import create_env
 from ..license_family import allowed_license_families, guess_license_family
 from ..metadata import MetaData
@@ -258,6 +259,7 @@ def _formating_value(attribute_name, attribute_value):
     return " " + str(attribute_value) + "\n"
 
 
+@deprecated("26.9", "27.3", addendum="Use `grayskull` instead.")
 def skeletonize(
     packages: list[str],
     output_dir: str = ".",

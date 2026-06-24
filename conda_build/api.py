@@ -23,6 +23,7 @@ from typing import TYPE_CHECKING
 # make the Config class available in the api namespace
 from .config import DEFAULT_PREFIX_LENGTH as _prefix_length
 from .config import Config, get_channel_urls, get_or_merge_config
+from .deprecations import deprecated
 from .metadata import MetaData, MetaDataTuple
 from .utils import (
     CONDA_PACKAGE_EXTENSIONS,
@@ -259,6 +260,7 @@ def test(
         )
 
 
+@deprecated("26.9", "27.3", addendum="Use `grayskull` instead.")
 def list_skeletons() -> list[str]:
     """List available skeletons for generating conda recipes from external sources.
 
@@ -274,6 +276,7 @@ def list_skeletons() -> list[str]:
     return files
 
 
+@deprecated("26.9", "27.3", addendum="Use `grayskull` instead.")
 def skeletonize(
     packages: str | Iterable[str],
     repo: Literal["cpan", "cran", "luarocks", "pypi", "rpm"],
