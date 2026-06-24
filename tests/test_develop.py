@@ -4,10 +4,12 @@
 Simple tests for testing functions in develop module - lower level than going through API.
 """
 
+import sys
 from collections.abc import Generator
 from pathlib import Path
 
 import pytest
+from pytest import MonkeyPatch
 
 from conda_build.develop import _uninstall, execute, get_setup_py, write_to_conda_pth
 from conda_build.exceptions import CondaBuildUserError
@@ -117,3 +119,14 @@ def test_execute_error_nonexistent_prefix():
         CondaBuildUserError, match="Error: environment does not exist: "
     ):
         execute("/path/to/non-existent/prefix", "python", "setup.py", "install")
+
+
+def test_develop_module_deprecation_warning(monkeypatch: MonkeyPatch):
+    """Verify that importing develop shows module-level deprecation warning."""
+    # delete cached module
+    monkeypatch.delitem(sys.modules, "conda_build.develop", raising=False)
+
+    with pytest.deprecated_call(
+        match="conda_build.develop is (pending deprecation|deprecated) and will be removed in 27.9",
+    ):
+        import conda_build.develop  # noqa F401
