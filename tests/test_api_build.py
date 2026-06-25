@@ -518,6 +518,11 @@ def test_build_msvc_compiler(msvc_ver: str, monkeypatch: MonkeyPatch) -> None:
 @pytest.mark.flaky(reruns=5, reruns_delay=2)
 @pytest.mark.serial
 def test_cmake_generator(platform, target_compiler, testing_config):
+    """
+    This test is sensitive to installed VS compilers in the host (e.g. CI provider changes
+    its bundled Visual Studio version). When it breaks, it can be because the version
+    is not recognized yet by either conda-build or the compiler activation logic.
+    """
     testing_config.variant["python"] = target_compiler
     testing_config.activate = True
     api.build(os.path.join(metadata_dir, "_cmake_generator"), config=testing_config)
