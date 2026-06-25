@@ -11,11 +11,14 @@ but only use those kwargs in config.  Config must change to support new features
 
 from __future__ import annotations
 
+import inspect
+
 # imports are done locally to keep the api clean and limited strictly
 #    to conda-build's functionality.
 import os
 import sys
 from collections.abc import Iterable
+from importlib import import_module
 from os.path import dirname, expanduser, join
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -23,6 +26,7 @@ from typing import TYPE_CHECKING
 # make the Config class available in the api namespace
 from .config import DEFAULT_PREFIX_LENGTH as _prefix_length
 from .config import Config, get_channel_urls, get_or_merge_config
+from .deprecations import deprecated
 from .metadata import MetaData, MetaDataTuple
 from .utils import (
     CONDA_PACKAGE_EXTENSIONS,
@@ -259,6 +263,7 @@ def test(
         )
 
 
+@deprecated("27.3", "27.9", addendum="Use `grayskull` instead.")
 def list_skeletons() -> list[str]:
     """List available skeletons for generating conda recipes from external sources.
 
@@ -274,6 +279,7 @@ def list_skeletons() -> list[str]:
     return files
 
 
+@deprecated("27.3", "27.9", addendum="Use `grayskull` instead.")
 def skeletonize(
     packages: str | Iterable[str],
     repo: Literal["cpan", "cran", "luarocks", "pypi", "rpm"],
@@ -306,18 +312,13 @@ def skeletonize(
     #    off of the config object, and pass it as a keyword argument.  This is sort of the
     #    inverse of what we do in the CLI code - there we take CLI arguments and dangle them
     #    all on the config object as attributes.
-    module = getattr(
-        __import__(
-            "conda_build.skeletons", globals=globals(), locals=locals(), fromlist=[repo]
-        ),
-        repo,
-    )
-
-    func_args = module.skeletonize.__code__.co_varnames
+    module = import_module(f"conda_build.skeletons.{repo}")
+    argspec = inspect.signature(module.skeletonize)
+    func_args = list(argspec.parameters)
     kwargs = {name: getattr(config, name) for name in dir(config) if name in func_args}
     kwargs.update({name: value for name, value in kwargs.items() if name in func_args})
     # strip out local arguments that we pass directly
-    for arg in skeletonize.__code__.co_varnames:
+    for arg in list(inspect.signature(skeletonize).parameters):
         if arg in kwargs:
             del kwargs[arg]
     with config:

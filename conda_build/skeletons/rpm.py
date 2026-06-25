@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING
 from urllib.request import urlopen
 from xml.etree import ElementTree as ET
 
+from ..deprecations import deprecated
 from ..license_family import guess_license_family
 from ..source import download_to_cache
 from ..utils import ensure_list
@@ -714,6 +715,7 @@ def write_conda_recipe(
         )
 
 
+@deprecated("27.3", "27.9", addendum="Use `grayskull` instead.")
 def skeletonize(
     packages: list[str],
     output_dir: str = ".",
