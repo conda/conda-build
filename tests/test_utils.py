@@ -399,6 +399,170 @@ def test_find_recipe_multipe_base(tmp_path: Path, file: str):
     assert path1.samefile(utils.find_recipe(tmp_path))
 
 
+def test_compute_content_hash_same_tree(tmp_path: Path):
+    """Identical directory trees produce the same hash."""
+    for root in (tmp_path / "a", tmp_path / "b"):
+        root.mkdir()
+        (root / "file.txt").write_text("hello")
+        (root / "sub").mkdir()
+        (root / "sub" / "other.txt").write_text("world")
+
+    assert utils.compute_content_hash(tmp_path / "a") == utils.compute_content_hash(
+        tmp_path / "b"
+    )
+
+
+def test_compute_content_hash_different_content(tmp_path: Path):
+    """Trees with different file contents produce different hashes."""
+    (a := tmp_path / "a").mkdir()
+    (b := tmp_path / "b").mkdir()
+    (a / "file.txt").write_text("hello")
+    (b / "file.txt").write_text("world")
+
+    assert utils.compute_content_hash(a) != utils.compute_content_hash(b)
+
+
+def test_compute_content_hash_different_filenames(tmp_path: Path):
+    """Trees that differ only in file names produce different hashes."""
+    (a := tmp_path / "a").mkdir()
+    (b := tmp_path / "b").mkdir()
+    (a / "foo.txt").write_text("hello")
+    (b / "bar.txt").write_text("hello")
+
+    assert utils.compute_content_hash(a) != utils.compute_content_hash(b)
+
+
+def test_compute_content_hash_no_boundary_collision(tmp_path: Path):
+    """Regression test for https://github.com/conda/ceps/issues/150.
+
+    A single file whose name embeds the type separator must not hash the same
+    as a pair of files whose path + content concatenation looks identical at
+    the byte level.
+
+    Tree 1: one file  ``testFhello-world``  with content ``www``
+    Tree 2: file ``test`` (content ``hello``) + file ``world`` (content ``www``)
+
+    Before the length-prefix fix these two trees produced the same hash.
+    """
+    (t1 := tmp_path / "t1").mkdir()
+    (t2 := tmp_path / "t2").mkdir()
+
+    # Tree 1 - single file whose name contains the "F" type separator
+    (t1 / "testFhello-world").write_bytes(b"www")
+
+    # Tree 2 - two separate files
+    (t2 / "test").write_bytes(b"hello")
+    (t2 / "world").write_bytes(b"www")
+
+    assert utils.compute_content_hash(t1) != utils.compute_content_hash(t2)
+
+
+def test_compute_content_hash_directory_entry(tmp_path: Path):
+    """An empty subdirectory contributes to the hash."""
+    (a := tmp_path / "a").mkdir()
+    (b := tmp_path / "b").mkdir()
+    (a / "sub").mkdir()
+    # b has no subdirectory
+
+    assert utils.compute_content_hash(a) != utils.compute_content_hash(b)
+
+
+@pytest.mark.skipif(utils.on_win, reason="symlinks are unreliable on Windows")
+def test_compute_content_hash_symlink(tmp_path: Path):
+    """Symlink target is included in the hash."""
+    (a := tmp_path / "a").mkdir()
+    (b := tmp_path / "b").mkdir()
+    (a / "link").symlink_to("target_a")
+    (b / "link").symlink_to("target_b")
+
+    assert utils.compute_content_hash(a) != utils.compute_content_hash(b)
+
+
+def test_compute_content_hash_skip(tmp_path: Path):
+    """Skipped paths do not affect the hash."""
+    (a := tmp_path / "a").mkdir()
+    (b := tmp_path / "b").mkdir()
+
+    for root in (a, b):
+        (root / "keep.txt").write_text("same")
+        (root / "skip.txt").write_text("different")
+
+    # Without skip, the hashes differ because skip.txt has different content.
+    (a / "skip.txt").write_text("aaa")
+    (b / "skip.txt").write_text("bbb")
+    assert utils.compute_content_hash(a) != utils.compute_content_hash(b)
+
+    # With skip, skip.txt is ignored and the hashes match.
+    assert utils.compute_content_hash(
+        a, skip=["skip.txt"]
+    ) == utils.compute_content_hash(b, skip=["skip.txt"])
+
+
+def test_compute_content_hash_algorithm(tmp_path: Path):
+    """Different algorithm names produce hashes of the expected length."""
+    (root := tmp_path / "root").mkdir()
+    (root / "file.txt").write_text("data")
+
+    sha256_hash = utils.compute_content_hash(root, algorithm="sha256")
+    sha512_hash = utils.compute_content_hash(root, algorithm="sha512")
+
+    assert len(sha256_hash) == 64  # SHA-256 -> 32 bytes -> 64 hex chars
+    assert len(sha512_hash) == 128  # SHA-512 -> 64 bytes -> 128 hex chars
+
+
+def test_compute_content_hash_legacy_differs_from_v2(tmp_path: Path):
+    """legacy=True (CEP-19) and legacy=False (v2) produce different digests for the same tree."""
+    (root := tmp_path / "root").mkdir()
+    (root / "file.txt").write_text("hello")
+
+    v2_hash = utils.compute_content_hash(root)
+    v1_hash = utils.compute_content_hash(root, legacy=True)
+
+    assert v2_hash != v1_hash
+
+
+def test_compute_content_hash_legacy_reproduces_cep19_collision(tmp_path: Path):
+    """legacy=True reproduces the CEP-19 collision: the two trees hash identically."""
+    (t1 := tmp_path / "t1").mkdir()
+    (t2 := tmp_path / "t2").mkdir()
+
+    (t1 / "testFhello-world").write_bytes(b"www")
+
+    (t2 / "test").write_bytes(b"hello")
+    (t2 / "world").write_bytes(b"www")
+
+    # The old algorithm collides on these trees.
+    assert utils.compute_content_hash(t1, legacy=True) == utils.compute_content_hash(
+        t2, legacy=True
+    )
+    # The new algorithm does not.
+    assert utils.compute_content_hash(t1) != utils.compute_content_hash(t2)
+
+
+def test_compute_content_hash_legacy_identical_plain_tree(tmp_path: Path):
+    """legacy=True and legacy=False agree for trees whose paths contain no separator bytes."""
+    (a := tmp_path / "a").mkdir()
+    (b := tmp_path / "b").mkdir()
+    for root in (a, b):
+        (root / "readme.txt").write_text("same content")
+        (root / "subdir").mkdir()
+
+    # Both algorithms must agree that identical trees hash the same.
+    assert utils.compute_content_hash(a, legacy=True) == utils.compute_content_hash(
+        b, legacy=True
+    )
+    assert utils.compute_content_hash(a) == utils.compute_content_hash(b)
+
+
+def test_compute_content_hash_legacy_deprecation_warning(tmp_path: Path):
+    """compute_content_hash emits a PendingDeprecationWarning when legacy=True."""
+    (root := tmp_path / "root").mkdir()
+    (root / "file.txt").write_text("hello")
+
+    with pytest.warns(PendingDeprecationWarning, match="content_sha\\*_v2"):
+        utils.compute_content_hash(root, legacy=True)
+
+
 @pytest.mark.parametrize("stem", ["meta", "conda"])
 def test_find_recipe_multipe_bad(tmp_path: Path, stem: str):
     (dirA := tmp_path / "dirA").mkdir()
