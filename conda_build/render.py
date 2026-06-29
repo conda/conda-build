@@ -596,7 +596,7 @@ def add_upstream_pins(
         ("run_constrained", run_constrained_deps),
     ):
         if deps:
-            requirements[section] = list(deps)
+            requirements[section] = sorted(deps)
 
     m.meta["requirements"] = requirements
     return build_unsat, host_unsat
@@ -797,8 +797,8 @@ def finalize_metadata(
         versioned_run_deps = [
             utils.ensure_valid_spec(spec, warn=True) for spec in versioned_run_deps
         ]
-        requirements[pinning_env] = full_build_deps
-        requirements["run"] = versioned_run_deps
+        requirements[pinning_env] = sorted(full_build_deps)
+        requirements["run"] = sorted(versioned_run_deps)
 
         m.meta["requirements"] = requirements
 
@@ -1236,6 +1236,16 @@ class CustomDumper(yaml.Dumper):
         Xref: https://github.com/yaml/pyyaml/issues/535
         """
         return True
+
+
+def sorted_set_representer(dumper, data):
+    # not dependencies, tends to be items like {'ignore_version',
+    # 'ignore_build_only_deps', 'pin_run_as_build', 'extend_keys'}
+    return dumper.represent_list(sorted(data))
+
+
+# Add to CustomDumper instead of global yaml.add_representer(...)
+CustomDumper.add_representer(set, sorted_set_representer)
 
 
 def output_yaml(
