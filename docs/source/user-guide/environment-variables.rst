@@ -327,6 +327,16 @@ Additionally, values can be set by including ``=`` followed by the desired value
    this feature with caution or explicitly set values using the ``=``
    syntax.
 
+This feature can also be used in the :ref:`test section <test-script-env>` of
+``meta.yaml`` to pass environment variables to the test phase:
+
+.. code-block:: yaml
+
+   test:
+     script_env:
+      - TMPDIR
+      - MY_VAR=some value
+
 .. note::
    If you split your build and test phases with ``--no-test`` and ``--test``,
    you need to ensure that the environment variables present at build time and test
