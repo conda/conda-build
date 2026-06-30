@@ -40,6 +40,34 @@ if TYPE_CHECKING:
     StatsDict = dict[str, Any]
 
 
+def _error_if_package_contains_recipe_yaml(pkg_path: str) -> None:
+    from contextlib import redirect_stdout
+    from io import StringIO
+
+    import conda_package_handling.api
+
+    buffer = StringIO()
+    with redirect_stdout(buffer):
+        conda_package_handling.api.list_contents(
+            pkg_path,
+            components=["info"],
+        )
+
+    pkg_contents = [
+        line.strip() for line in buffer.getvalue().splitlines() if line.strip()
+    ]
+
+    for recipe_yaml_file in (
+        "info/recipe/recipe.yaml",
+        "info/recipe/rendered_recipe.yaml",
+    ):
+        if recipe_yaml_file in pkg_contents:
+            raise ValueError(
+                f"Package '{pkg_path}' contains v1 '{recipe_yaml_file.rsplit('/', 1)[-1]}' file, "
+                "which is currently not supported by conda debug."
+            )
+
+
 def render(
     recipe_path: str | os.PathLike | Path,
     config: Config | None = None,
@@ -659,6 +687,9 @@ def debug(
             )
         else:
             test_input = recipe_or_package_path_or_metadata_tuples
+
+        _error_if_package_contains_recipe_yaml(test_input)
+
         # use the package to create an env and extract the test files.  Stop short of running the tests.
         # tell people what steps to take next
         with log_context:

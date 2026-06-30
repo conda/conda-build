@@ -67,7 +67,7 @@ from conda.models.version import VersionOrder
 
 from . import environ, exceptions, source, utils
 from .config import CondaPkgFormat
-from .exceptions import CondaBuildUserError, DependencyNeedsBuildingError
+from .exceptions import CondaBuildUserError, DependencyNeedsBuildingError, RecipeError
 from .index import get_build_index
 from .metadata import MetaData, MetaDataTuple, combine_top_level_metadata_with_output
 from .utils import (
@@ -1082,6 +1082,8 @@ def render_recipe(
             m = MetaData(str(recipe), config=config)
         except exceptions.YamlParsingError as e:
             sys.exit(e.error_msg())
+        except OSError as e:
+            raise RecipeError(str(e)) from e
 
         # important: set build id *before* downloading source.  Otherwise source goes into a different
         #    build folder.
