@@ -190,6 +190,7 @@ jobs:
         run: >
           pytest
           --cov=conda_build
+          --durations-path=durations/${{ runner.os }}.json
           --reruns 1
           --reruns-delay 1
           -n auto
@@ -205,8 +206,10 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v4.4.0
         with:
           name: test-results-${{ env.HASH }}
+          include-hidden-files: true
           path: |
             .coverage
+            durations/${{ runner.os }}.json
             test-report.xml
           retention-days: 1  # temporary, combined in aggregate below
 
@@ -375,6 +378,7 @@ jobs:
           pytest
           --cov=conda_build
           --basetemp=${{ runner.temp }}
+          --durations-path=durations\${{ runner.os }}.json
           -n auto
           -m "${{ env.PYTEST_MARKER }}"
 
@@ -388,8 +392,10 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v4.4.0
         with:
           name: test-results-${{ env.HASH }}
+          include-hidden-files: true
           path: |
             .coverage
+            durations\${{ runner.os }}.json
             test-report.xml
           retention-days: 1  # temporary, combined in aggregate below
 
@@ -508,6 +514,7 @@ jobs:
         run: >
           pytest
           --cov=conda_build
+          --durations-path=durations/${{ runner.os }}.json
           -n auto
           -m "${{ env.PYTEST_MARKER }}"
         env:
@@ -523,8 +530,10 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v4.4.0
         with:
           name: test-results-${{ env.HASH }}
+          include-hidden-files: true
           path: |
             .coverage
+            durations/${{ runner.os }}.json
             test-report.xml
           retention-days: 1  # temporary, combined in aggregate below
 
@@ -549,7 +558,9 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v4.4.0
         with:
           name: test-results-${{ github.sha }}-all
+          include-hidden-files: true
           path: test-results-*
+          retention-days: 7  # for combine-durations in update.yml
 
       - name: Test Summary
         uses: test-summary/action@31493c76ec9e7aa675f1585d3ed6f1da69269a86 # v2.4
