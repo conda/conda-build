@@ -12,6 +12,7 @@ pytest-cov
 pytest-forked
 pytest-mock
 pytest-rerunfailures
+pytest-split
 pytest-xdist
 ruamel.yaml
 setuptools <75.1.0  # temporary, see https://github.com/conda/conda-build/issues/5493

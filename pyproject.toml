@@ -102,8 +102,9 @@ addopts = [
   "--cov-report=xml",  # for codecov/codecov-action upload
   "--durations=16",  # show 16 slowest tests
   "--junitxml=junit.xml",
-  # "--splitting-algorithm=least_duration",  # not available yet
-  # "--store-durations",  # not available yet
+  # "--splitting-algorithm=least_duration",  # not used
+  "--store-durations",  # pytest-split, update duration cache
+  "--clean-durations",  # pytest-split, remove duration for tests no longer present
   "--strict-markers",
   "--tb=native",
   "-vv",
