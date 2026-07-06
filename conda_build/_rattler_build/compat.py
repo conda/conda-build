@@ -369,7 +369,14 @@ def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -
 
     def get_config_value(name):
         value = variant_config.get(name, config.subdir)
-        return value[0] if isinstance(value, list) else value
+
+        if isinstance(value, list):
+            if len(value) != 1:
+                raise ValueError(
+                    f"Expected a single value for {name}, got {len(value)} values: {value}"
+                )
+            return value[0]
+        return value
 
     build_platform = get_config_value("build_platform")
     host_platform = get_config_value("host_platform")
