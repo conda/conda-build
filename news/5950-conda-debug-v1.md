@@ -12,7 +12,7 @@
 
 ### Docs
 
-* <news item>
+* Add `conda-debug` command to v1 recipe docs. (#5950)
 
 ### Other
 
