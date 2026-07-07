@@ -306,12 +306,6 @@ def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -
     channels: list[str] = []
     extra_context: dict[str, str] = {}
     show_logs: bool = getattr(parsed_args, "quiet", False) is False
-    target_platform: str = config.variant.get("host_platform", config.subdir)
-    build_platform: str = config.variant.get("build_platform", config.subdir)
-    host_platform: str = config.variant.get("target_platform", config.subdir)
-    noarch_build_platform: str = config.variant.get(
-        "noarch_build_platform", config.subdir
-    )
     variant_config: VariantConfig = VariantConfig()
 
     # select list of channels to iterate over:
@@ -367,18 +361,27 @@ def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -
             recipe_config_filenames=CONFIG_FILES,
         )
 
-    if command == "build":
-        if parsed_args.extra_meta:
-            extra_context.update(parsed_args.extra_meta)
-        if parsed_args.output_folder:
-            output_dir = parsed_args.output_folder
-        no_build_id = not parsed_args.set_build_id
-        skip_existing = parsed_args.skip_existing or "none"
-        no_include_recipe = not parsed_args.include_recipe
-        if parsed_args.conda_pkg_format == CondaPkgFormat.V2:
-            package_format = "conda"
-        else:
-            package_format = ".tar.bz2"
+    # configure variant
+    # merge config files in the order they are stacked
+    if config_files:
+        for variant in config_files:
+            variant_config = variant_config.merge(VariantConfig.from_file(variant))
+
+    def get_config_value(name):
+        value = variant_config.get(name, config.subdir)
+
+        if isinstance(value, list):
+            if len(value) != 1:
+                raise ValueError(
+                    f"Expected a single value for {name}, got {len(value)} values: {value}"
+                )
+            return value[0]
+        return value
+
+    build_platform = get_config_value("build_platform")
+    host_platform = get_config_value("host_platform")
+    target_platform = get_config_value("target_platform")
+    noarch_build_platform = get_config_value("noarch_build_platform")
 
     # common tool / platform / render configuration
     tool_config = ToolConfiguration(
@@ -400,18 +403,25 @@ def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -
         extra_context=extra_context,
     )
 
+    if command == "build":
+        if parsed_args.extra_meta:
+            extra_context.update(parsed_args.extra_meta)
+        if parsed_args.output_folder:
+            output_dir = parsed_args.output_folder
+        no_build_id = not parsed_args.set_build_id
+        skip_existing = parsed_args.skip_existing or "none"
+        no_include_recipe = not parsed_args.include_recipe
+        if parsed_args.conda_pkg_format == CondaPkgFormat.V2:
+            package_format = "conda"
+        else:
+            package_format = ".tar.bz2"
+
     if command == "render":
         recipes = [str(Path(parsed_args.recipe) / "recipe.yaml")]
     else:
         recipes = [
             str(Path(recipe_dir) / "recipe.yaml") for recipe_dir in parsed_args.recipe
         ]
-
-    # configure variant
-    # merge config files in the order they are stacked
-    if config_files:
-        for variant in config_files:
-            variant_config = variant_config.merge(VariantConfig.from_file(variant))
 
     recipe_results: list[RecipeResult] = []
 
