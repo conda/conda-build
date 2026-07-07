@@ -416,16 +416,14 @@ def run_rattler(command: str, parsed_args: argparse.Namespace, config: Config) -
         else:
             package_format = ".tar.bz2"
 
-    if command in ("build", "render"):
-        if command == "render":
-            recipes = [str(Path(parsed_args.recipe) / "recipe.yaml")]
-        else:
-            recipes = [
-                str(Path(recipe_dir) / "recipe.yaml")
-                for recipe_dir in parsed_args.recipe
-            ]
+    if command == "render":
+        recipes = [str(Path(parsed_args.recipe) / "recipe.yaml")]
+    else:
+        recipes = [
+            str(Path(recipe_dir) / "recipe.yaml") for recipe_dir in parsed_args.recipe
+        ]
 
-        recipe_results: list[RecipeResult] = []
+    recipe_results: list[RecipeResult] = []
 
     for recipe_path in recipes:
         recipe_results.append(
