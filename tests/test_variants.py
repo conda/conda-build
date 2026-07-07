@@ -835,6 +835,11 @@ def test_get_vars():
             "{{ python_min }}",
             {"python_min"},
         ),
+        (
+            ("python", "python_min"),
+            "{{python_min}}",
+            {"python_min"},
+        ),
         # filters and other text
         (
             ("python", "python_min"),
@@ -854,6 +859,11 @@ def test_get_vars():
         (
             ("python", "python_min"),
             "{{ python_min|lower }}",
+            {"python_min"},
+        ),
+        (
+            ("python", "python_min"),
+            "{{python_min|lower}}",
             {"python_min"},
         ),
         # pin_* statements
@@ -878,6 +888,11 @@ def test_get_vars():
             {"python_min"},
         ),
         (
+            ("python", "python_min"),
+            "{{pin_compatible('python_min', max_pin='x.x')}}",
+            {"python_min"},
+        ),
+        (
             ("zlib", "ace"),
             "{% set p = zlib.replace('.', '') %}",
             {"zlib"},
@@ -885,6 +900,11 @@ def test_get_vars():
         (
             ("zlib", "xz", "ace"),
             "{% set p = azlib.replace('.', '') ~ xz ~ 'a' %}",
+            {"xz"},
+        ),
+        (
+            ("zlib", "xz", "ace"),
+            "{%set p = azlib.replace('.', '') ~ xz ~ 'a'%}",
             {"xz"},
         ),
     ],
