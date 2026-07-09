@@ -84,6 +84,8 @@ repos:
             docs/click/meta.yaml |
             docs/source/user-guide/tutorials/meta.yaml |
             recipe/meta.yaml |
+            .github/workflows/build.yml |
+            .github/workflows/slow-tests.yml |
             tests/
           )
   - repo: https://github.com/python-jsonschema/check-jsonschema
