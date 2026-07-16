@@ -7,6 +7,7 @@ from os.path import dirname, isdir, isfile, join
 
 # importing setuptools patches distutils so that it knows how to find VC for python 2.7
 import setuptools  # noqa
+from conda.base.context import context
 
 # Leverage the hard work done by setuptools/distutils to find vcvarsall using
 # either the registry or the VS**COMNTOOLS environment variable
@@ -390,7 +391,22 @@ def build(m, bld_bat, stats, provision_only=False):
     work_script, env_script = write_build_scripts(m, env, bld_bat)
 
     if not provision_only and os.path.isfile(work_script):
-        cmd = ["cmd.exe", "/d", "/c", os.path.basename(work_script)]
+        if m.config.build_subdir == "win-arm64" and context._native_subdir == "win-64":
+            # If conda-build is run from a win-64 environment on a win-arm64 machine
+            # users may want to build natively by setting build_platform="win-arm64".
+            # In those cases, we need to ensure that the CMD process is native ARM64
+            # via this `start` wrapper. Otherwise Windows picks the AMD64 slice!
+            wrap = os.path.join(
+                os.path.dirname(work_script), "_win_arm64_native_wrapper.bat"
+            )
+            with open(wrap, "w") as f:
+                f.write(
+                    "@echo off\r\n"
+                    f'start /b /wait /machine arm64 cmd.exe /d /c "{work_script}"\r\n'
+                )
+            cmd = ["cmd.exe", "/d", "/c", os.path.basename(wrap)]
+        else:
+            cmd = ["cmd.exe", "/d", "/c", os.path.basename(work_script)]
         # rewrite long paths in stdout back to their env variables
         if m.config.debug or m.config.no_rewrite_stdout_env:
             rewrite_env = None
