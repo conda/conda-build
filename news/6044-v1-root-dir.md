@@ -12,7 +12,7 @@
 
 ### Docs
 
-* <news item>
+* Document support for `root-dir` and `--croot` options for building v1 recipes (#6044).
 
 ### Other
 
