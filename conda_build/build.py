@@ -40,14 +40,9 @@ try:
 except ImportError:
     # FUTURE: remove for `conda>=26.9`
     from conda.models.enums import PathType
+from conda.common.serialize.json import CondaJSONEncoder
 from conda.models.match_spec import MatchSpec
 from conda.utils import url_path
-
-try:
-    from conda.common.serialize.json import CondaJSONEncoder
-except ImportError:
-    # FUTURE: remove for `conda>=25.9`
-    from conda.auxlib.entity import EntityEncoder as CondaJSONEncoder
 
 from . import __version__ as conda_build_version
 from . import environ, noarch_python, source, tarcheck, utils
