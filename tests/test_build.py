@@ -17,9 +17,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
+from conda.base.context import context
 from conda.common.compat import on_win
 
-from conda_build import api, build
+from conda_build import api, build, windows
 from conda_build.exceptions import CondaBuildUserError
 from conda_build.metadata import MetaData
 from conda_build.variants import get_default_variant
@@ -434,3 +435,48 @@ def test_warn_implicit_numpy_variant(
     build._warn_implicit_numpy_variant(m)
     n_warn = sum(1 for r in caplog.records if r.levelno == logging.WARNING)
     assert n_warn == (1 if expected_warning else 0)
+
+
+@pytest.mark.parametrize(
+    "build_subdir,native_subdir,wrapped",
+    [
+        ("win-arm64", "win-64", True),
+        ("win-64", "win-arm64", True),
+        ("win-arm64", "win-arm64", False),
+        ("win-64", "win-64", False),
+    ],
+)
+def test_build_command_win_arm64_wrapper(
+    testing_metadata: MetaData,
+    monkeypatch,
+    tmp_path,
+    build_subdir,
+    native_subdir,
+    wrapped,
+):
+    testing_metadata.config.arch = build_subdir.split("-")[1]
+    monkeypatch.setattr(context, "_native_subdir", lambda: native_subdir)
+
+    work_script = tmp_path / "conda_build.bat"
+    work_script.write_text("@echo off\r\n")
+    wrapper = tmp_path / "_win_native_wrapper.bat"
+
+    cmd = windows.build_command_arguments(testing_metadata, str(work_script))
+
+    if not wrapped:
+        assert cmd == ["cmd.exe", "/d", "/c", "conda_build.bat"]
+        assert not wrapper.exists()
+        return
+
+    assert cmd == ["cmd.exe", "/d", "/c", "_win_native_wrapper.bat"]
+
+    contents = wrapper.read_text()
+    contents_bytes = wrapper.read_bytes()
+    machine = "amd64" if build_subdir == "win-64" else "arm64"
+    assert f"/machine {machine}" in contents
+    assert "/b" in contents
+    assert "/wait" in contents
+    assert "%ERRORLEVEL%" in contents
+    assert str(work_script) in contents
+    # batch files must be CRLF; a bare LF breaks cmd.exe
+    assert contents_bytes.count(b"\n") == contents_bytes.count(b"\r\n")

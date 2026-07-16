@@ -348,6 +348,26 @@ def write_build_scripts(m, env, bld_bat):
     return work_script, env_script
 
 
+def build_command_arguments(m, script: str) -> list[str]:
+    if m.config.build_subdir != context._native_subdir():
+        # If conda-build is run from e.f. a win-64 environment on a win-arm64 machine
+        # users may want to build natively by setting build_platform="win-arm64".
+        # In those cases, we need to ensure that the CMD process is native ARM64
+        # via this `start` wrapper. Otherwise Windows picks the AMD64 slice!
+        wrapper = os.path.join(os.path.dirname(script), "_win_native_wrapper.bat")
+        machine = m.config.build_subdir.split("-")[1]
+        if machine == "64":
+            machine = "amd64"
+        with open(wrapper, "w") as f:
+            f.write(
+                "@echo off\r\n"
+                f'start /b /wait /machine {machine} cmd.exe /d /c "{script}"\r\n'
+                "exit /b %ERRORLEVEL%\r\n"
+            )
+        return ["cmd.exe", "/d", "/c", os.path.basename(wrapper)]
+    return ["cmd.exe", "/d", "/c", os.path.basename(script)]
+
+
 def build(m, bld_bat, stats, provision_only=False):
     # TODO: Prepending the prefixes here should probably be guarded by
     #         if not m.activate_build_script:
@@ -391,22 +411,7 @@ def build(m, bld_bat, stats, provision_only=False):
     work_script, env_script = write_build_scripts(m, env, bld_bat)
 
     if not provision_only and os.path.isfile(work_script):
-        if m.config.build_subdir == "win-arm64" and context._native_subdir == "win-64":
-            # If conda-build is run from a win-64 environment on a win-arm64 machine
-            # users may want to build natively by setting build_platform="win-arm64".
-            # In those cases, we need to ensure that the CMD process is native ARM64
-            # via this `start` wrapper. Otherwise Windows picks the AMD64 slice!
-            wrap = os.path.join(
-                os.path.dirname(work_script), "_win_arm64_native_wrapper.bat"
-            )
-            with open(wrap, "w") as f:
-                f.write(
-                    "@echo off\r\n"
-                    f'start /b /wait /machine arm64 cmd.exe /d /c "{work_script}"\r\n'
-                )
-            cmd = ["cmd.exe", "/d", "/c", os.path.basename(wrap)]
-        else:
-            cmd = ["cmd.exe", "/d", "/c", os.path.basename(work_script)]
+        cmd = build_command_arguments(m, work_script)
         # rewrite long paths in stdout back to their env variables
         if m.config.debug or m.config.no_rewrite_stdout_env:
             rewrite_env = None
