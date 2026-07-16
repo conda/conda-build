@@ -23,6 +23,7 @@ supported:
 - ``--anaconda-upload``
 - ``--build-only``
 - ``--channel``
+- ``--croot``
 - ``--debug``
 - ``--exclusive-config-file``
 - ``--extra-meta``
@@ -35,6 +36,7 @@ supported:
 - ``--post``
 - ``--quiet``
 - ``--recipe``
+- ``root-dir`` (``.condarc`` only)
 - ``--skip-existing``
 - ``--user``
 - ``--variant-config-files``
