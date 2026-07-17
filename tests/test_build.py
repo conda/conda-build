@@ -515,5 +515,15 @@ def test_win_arm64_build_on_emulated_win_64(
     windows.build(testing_metadata, str(tmp_path / "bld.bat"), {})
     out, err = capsys.readouterr()
     print(out)
+    print("---")
+    print(*os.listdir(testing_metadata.config.work_dir), sep="\n")
+    print("---")
+    print("build_env_setup.bat:")
+    print(Path(testing_metadata.config.work_dir, "build_env_setup.bat").read_text())
+    print("---")
+    print("conda_build.bat:")
+    print(Path(testing_metadata.config.work_dir, "conda_build.bat").read_text())
+    if (wrapper := Path(testing_metadata.config.work_dir, "_win_native_wrapper.bat")).exists():
+        print(wrapper.read_text())
     assert "PROCESSOR_ARCHITECTURE=ARM64" in out
     assert "ProcessArchitecture=ARM64" in out
