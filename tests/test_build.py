@@ -523,7 +523,9 @@ def test_win_arm64_build_on_emulated_win_64(
     print("---")
     print("conda_build.bat:")
     print(Path(testing_metadata.config.work_dir, "conda_build.bat").read_text())
-    if (wrapper := Path(testing_metadata.config.work_dir, "_win_native_wrapper.bat")).exists():
+    if (
+        wrapper := Path(testing_metadata.config.work_dir, "_win_native_wrapper.bat")
+    ).exists():
         print(wrapper.read_text())
     assert "PROCESSOR_ARCHITECTURE=ARM64" in out
     assert "ProcessArchitecture=ARM64" in out
