@@ -356,7 +356,10 @@ jobs:
           run-post: false  # skip post cleanup
           pkgs-dirs: ${{ runner.arch == 'ARM64' && 'C' || 'D'}}:\conda_pkgs_dir
           installation-dir: ${{ runner.arch == 'ARM64' && 'C' || 'D'}}:\conda
-          architecture: x64  # force x64 even on ARM64 to test emulation
+          # force x64 even on ARM64 to test emulation
+          architecture: x64
+        env:
+          CONDA_SUBDIR: win-64
 
       - name: Choco Install
         if: runner.arch != 'ARM64'
