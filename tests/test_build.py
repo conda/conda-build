@@ -496,8 +496,8 @@ def test_win_arm64_build_on_emulated_win_64(
     """
     cmdlet = "[System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture"
     (tmp_path / "bld.bat").write_text(
-        f'echo PROCESSOR_ARCHITECTURE=%PROCESSOR_ARCHITECTURE%\r\n"'
-        f'powershell -Command "echo ProcessArchitecture=({cmdlet})\r\n"'
+        f'echo PROCESSOR_ARCHITECTURE=%PROCESSOR_ARCHITECTURE%\r\n'
+        f'powershell -Command "echo ProcessArchitecture=({cmdlet})"\r\n'
     )
     testing_metadata.config.arch = "arm64"
     windows.build(testing_metadata, str(tmp_path / "bld.bat"), {})
