@@ -512,6 +512,6 @@ def test_win_arm64_build_on_emulated_win_64(
     print(out)
     print("---")
     print("Directory contents:")
-    print(*sorted(os.listdir(testing_metadata.config.work_dir), sep="\n"))
+    print(*sorted(os.listdir(testing_metadata.config.work_dir)), sep="\n")
     assert "PROCESSOR_ARCHITECTURE=ARM64" in out
     assert "ProcessArchitecture=Arm64" in out
