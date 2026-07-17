@@ -438,7 +438,7 @@ def test_warn_implicit_numpy_variant(
 
 
 @pytest.mark.parametrize(
-    "build_subdir,native_subdir,wrapped",
+    "build_subdir,running_subdir,wrapped",
     [
         ("win-arm64", "win-64", True),
         ("win-64", "win-arm64", True),
@@ -451,17 +451,15 @@ def test_build_command_win_arm64_wrapper(
     monkeypatch,
     tmp_path,
     build_subdir,
-    native_subdir,
+    running_subdir,
     wrapped,
 ):
-    testing_metadata.config.arch = build_subdir.split("-")[1]
-    testing_metadata.config.host_subdir = build_subdir
-    testing_metadata.config.target_subdir = build_subdir
-    monkeypatch.setattr(context, "_native_subdir", lambda: native_subdir)
-    patched_native = "AMD64" if native_subdir == "win-64" else "ARM64"
-    monkeypatch.setattr(
-        windows, "get_native_windows_architecture", lambda: patched_native
-    )
+    platform, arch = build_subdir.split("-")
+    testing_metadata.config.platform = platform
+    testing_metadata.config.arch = arch
+    testing_metadata.config.variant["target_platform"] = build_subdir
+    monkeypatch.setattr(windows, "_running_subdir", lambda: running_subdir)
+
     work_script = tmp_path / "conda_build.bat"
     work_script.write_text("@echo off\r\n")
     wrapper = tmp_path / "_win_native_wrapper.bat"
