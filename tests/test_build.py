@@ -461,7 +461,7 @@ def test_build_command_win_arm64_wrapper(
 
     work_script = tmp_path / "conda_build.bat"
     work_script.write_text("@echo off\r\n")
-    wrapper = tmp_path / "_win_native_wrapper.bat"
+    wrapper = tmp_path / "_conda_build_wrapper.bat"
 
     cmd = windows.build_command_arguments(testing_metadata, str(work_script))
 
