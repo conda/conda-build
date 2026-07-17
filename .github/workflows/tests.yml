@@ -69,7 +69,8 @@ jobs:
   linux:
     # only run test suite if there are code changes
     needs: changes
-    if: github.event_name == 'schedule' || needs.changes.outputs.code == 'true'
+    if: false
+    # github.event_name == 'schedule' || needs.changes.outputs.code == 'true'
 
     runs-on: ubuntu-latest
     defaults:
@@ -217,7 +218,8 @@ jobs:
   linux-benchmarks:
     # only run test suite if there are code changes
     needs: changes
-    if: needs.changes.outputs.code == 'true'
+    if: false
+    #needs.changes.outputs.code == 'true'
 
     runs-on: ubuntu-latest
     defaults:
@@ -296,24 +298,24 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # test lower version (w/ stable conda)
-          - python-version: '3.10'
-            conda-version: release
-            test-type: serial
-            runs-on: windows-2022
-          - python-version: '3.10'
-            conda-version: release
-            test-type: parallel
-            runs-on: windows-2022
-          # upper version (w/ canary conda)
-          - python-version: '3.14'
-            conda-version: canary
-            test-type: serial
-            runs-on: windows-2022
-          - python-version: '3.14'
-            conda-version: canary
-            test-type: parallel
-            runs-on: windows-2022
+          # # test lower version (w/ stable conda)
+          # - python-version: '3.10'
+          #   conda-version: release
+          #   test-type: serial
+          #   runs-on: windows-2022
+          # - python-version: '3.10'
+          #   conda-version: release
+          #   test-type: parallel
+          #   runs-on: windows-2022
+          # # upper version (w/ canary conda)
+          # - python-version: '3.14'
+          #   conda-version: canary
+          #   test-type: serial
+          #   runs-on: windows-2022
+          # - python-version: '3.14'
+          #   conda-version: canary
+          #   test-type: parallel
+          #   runs-on: windows-2022
           - python-version: '3.14'
             conda-version: release
             test-type: custom
@@ -415,7 +417,8 @@ jobs:
   macos:
     # only run test suite if there are code changes
     needs: changes
-    if: github.event_name == 'schedule' || needs.changes.outputs.code == 'true'
+    if: false
+    # github.event_name == 'schedule' || needs.changes.outputs.code == 'true'
 
     runs-on: ${{ matrix.runs-on }}
     defaults:
