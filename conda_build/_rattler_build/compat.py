@@ -451,7 +451,7 @@ def run_rattler(
         return value
 
     build_platform = config.build_subdir  # Overridable via CONDA_SUBDIR env var
-    host_platform = config.host_subdir
+    host_platform = get_config_value("target_platform", config.host_subdir)
     target_platform = get_config_value("target_platform", config.target_subdir)
     noarch_build_platform = get_config_value("noarch_build_platform")
 
