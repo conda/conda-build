@@ -508,7 +508,7 @@ def test_win_arm64_build_on_emulated_win_64(
     cmdlet = "[System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture"
     (tmp_path / "bld.bat").write_text(
         f"echo PROCESSOR_ARCHITECTURE=%PROCESSOR_ARCHITECTURE%\r\n"
-        f'powershell -Command "echo ProcessArchitecture=({cmdlet})"\r\n'
+        f'powershell -Command "\'ProcessArchitecture=\' + {cmdlet}"\r\n'
     )
     testing_metadata.config.arch = "arm64"
     testing_metadata.config.variant["target_platform"] = "win-arm64"
@@ -528,4 +528,4 @@ def test_win_arm64_build_on_emulated_win_64(
     ).exists():
         print(wrapper.read_text())
     assert "PROCESSOR_ARCHITECTURE=ARM64" in out
-    assert "ProcessArchitecture=ARM64" in out
+    assert "ProcessArchitecture=Arm64" in out
