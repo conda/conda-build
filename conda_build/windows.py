@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import platform
 import pprint
 import sys
 from functools import cache
@@ -328,9 +329,9 @@ def write_build_scripts(m, env, bld_bat):
         env["PYTHONDONTWRITEBYTECODE"] = True
     import codecs
 
-    if m.config.build_subdir != context._native_subdir():
+    if m.config.build_subdir != _running_subdir():
         # Can't trust the parent environment under these conditions
-        build_arch = _cmd_machine_flag(m)
+        build_arch = _build_arch_from_metadata(m)
         env["PROCESSOR_ARCHITECTURE"] = build_arch
         if build_arch == get_native_windows_architecture():
             env.pop("PROCESSOR_ARCHITEW6432", None)
@@ -389,7 +390,7 @@ def write_build_scripts(m, env, bld_bat):
     return work_script, env_script
 
 
-def _cmd_machine_flag(m) -> Literal["AMD64", "ARM64", "X86"]:
+def _build_arch_from_metadata(m) -> Literal["AMD64", "ARM64", "X86"]:
     """
     If conda-build is run from e.f. a win-64 environment on a win-arm64 machine
     users may want to build natively by setting build_platform="win-arm64".
@@ -401,14 +402,29 @@ def _cmd_machine_flag(m) -> Literal["AMD64", "ARM64", "X86"]:
     return {"64": "AMD64", "32": "X86"}.get(build_arch, build_arch).upper()
 
 
+def _running_subdir():
+    """
+    Python platform.machine() (on which conda.base.context._native_subdir() relies)
+    reports ARM64 even when running from a win-64 installation.
+    This is different from what one can observe on macOS/Rosetta, where it reports x86_64.
+    The most obvious way is to check %PROCESSOR_ARCHITECTURE%, if available, but we need to hope
+    it was not overridden.
+    """
+    if os.name == "nt":
+        arch = os.environ.get("PROCESSOR_ARCHITECTURE", platform.machine()).upper()
+        arch = {"AMD64": "64", "X86": "32"}.get(arch, arch).lower()
+        return f"win-{arch}"
+    return context._native_subdir()
+
+
 def build_command_arguments(m, script: str) -> list[str]:
-    if m.config.build_subdir != context._native_subdir():
+    if m.config.build_subdir != _running_subdir():
         # See docstring of _cmd_machine_flag()
         wrapper = os.path.join(os.path.dirname(script), "_win_native_wrapper.bat")
         with open(wrapper, "w") as f:
             f.write(
                 "@echo off\r\n"
-                f'start /b /wait /machine {_cmd_machine_flag(m)} cmd.exe /d /c "{script}"\r\n'
+                f'start /b /wait /machine {_build_arch_from_metadata(m)} cmd.exe /d /c "{script}"\r\n'
                 "exit /b %ERRORLEVEL%\r\n"
             )
         return ["cmd.exe", "/d", "/c", os.path.basename(wrapper)]
