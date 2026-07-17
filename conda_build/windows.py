@@ -84,7 +84,7 @@ def fix_staged_scripts(scripts_dir, config):
 
 
 @cache
-def get_native_windows_architecture() -> Literal['AMD64', 'ARM64', 'x86'] | None:
+def get_native_windows_architecture() -> Literal["AMD64", "ARM64", "x86"] | None:
     """
     Queries the Windows registry to determine the native machine architecture.
     This works reliably even if the Python process is running under emulation
@@ -98,7 +98,9 @@ def get_native_windows_architecture() -> Literal['AMD64', 'ARM64', 'x86'] | None
     registry_path = r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment"
 
     try:
-        with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, registry_path, 0, winreg.KEY_READ) as key:
+        with winreg.OpenKey(
+            winreg.HKEY_LOCAL_MACHINE, registry_path, 0, winreg.KEY_READ
+        ) as key:
             native_arch, _ = winreg.QueryValueEx(key, "PROCESSOR_ARCHITECTURE")
             return native_arch
     except Exception as e:

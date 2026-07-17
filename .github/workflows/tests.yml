@@ -319,7 +319,7 @@ jobs:
           - python-version: '3.14'
             conda-version: release
             test-type: custom
-            pytest-expression: 'test_build_command_win_arm64_wrapper or test_win_arm64_build_on_emulated_win_64'
+            pytest-expression: test_build_command_win_arm64_wrapper or test_win_arm64_build_on_emulated_win_64
             runs-on: windows-11-arm
     env:
       ErrorActionPreference: Stop  # powershell exit on first error
