@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
-from conda.base.context import context, reset_context
+from conda.base.context import reset_context
 from conda.common.compat import on_win
 
 from conda_build import api, build, windows
@@ -506,7 +506,7 @@ def test_win_arm64_build_on_emulated_win_64(
     cmdlet = "[System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture"
     (tmp_path / "bld.bat").write_text(
         f"echo PROCESSOR_ARCHITECTURE=%PROCESSOR_ARCHITECTURE%\r\n"
-        f'powershell -Command "\'ProcessArchitecture=\' + {cmdlet}"\r\n'
+        f"powershell -Command \"'ProcessArchitecture=' + {cmdlet}\"\r\n"
     )
     testing_metadata.config.arch = "arm64"
     testing_metadata.config.variant["target_platform"] = "win-arm64"
