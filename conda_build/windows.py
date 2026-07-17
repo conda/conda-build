@@ -383,18 +383,22 @@ def write_build_scripts(m, env, bld_bat):
 
 
 def build_command_arguments(m, script: str) -> list[str]:
-    if m.config.build_subdir != context._native_subdir():
+    machine = m.config.build_subdir.split("-")[1]
+    machine = {"64": "AMD64", "32": "x86"}.get(machine, machine).upper()
+    if (
+        machine == get_native_windows_architecture()
+        and m.config.build_subdir != context._native_subdir()
+    ):
         # If conda-build is run from e.f. a win-64 environment on a win-arm64 machine
         # users may want to build natively by setting build_platform="win-arm64".
         # In those cases, we need to ensure that the CMD process is native ARM64
         # via this `start` wrapper. Otherwise Windows picks the AMD64 slice!
         wrapper = os.path.join(os.path.dirname(script), "_win_native_wrapper.bat")
-        machine = m.config.build_subdir.split("-")[1]
-        if machine == "64":
-            machine = "amd64"
         with open(wrapper, "w") as f:
             f.write(
                 "@echo off\r\n"
+                f'set "PROCESSOR_ARCHITECTURE={machine}"\r\n'
+                f'set "PROCESSOR_ARCHITEW6432="\r\n'
                 f'start /b /wait /machine {machine} cmd.exe /d /c "{script}"\r\n'
                 "exit /b %ERRORLEVEL%\r\n"
             )
