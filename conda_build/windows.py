@@ -1,9 +1,17 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
+
 import os
 import pprint
+import sys
+from functools import cache
 from itertools import product
 from os.path import dirname, isdir, isfile, join
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from typing import Literal
 
 # importing setuptools patches distutils so that it knows how to find VC for python 2.7
 import setuptools  # noqa
@@ -73,6 +81,30 @@ def fix_staged_scripts(scripts_dir, config):
 
         # remove the original script
         os.remove(join(scripts_dir, fn))
+
+
+@cache
+def get_native_windows_architecture() -> Literal['AMD64', 'ARM64', 'x86'] | None:
+    """
+    Queries the Windows registry to determine the native machine architecture.
+    This works reliably even if the Python process is running under emulation
+    (e.g. win-64 environment on a Windows ARM laptop).
+    """
+    if sys.platform != "win32":
+        raise OSError("This function is only supported on Windows.")
+
+    import winreg
+
+    registry_path = r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment"
+
+    try:
+        with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, registry_path, 0, winreg.KEY_READ) as key:
+            native_arch, _ = winreg.QueryValueEx(key, "PROCESSOR_ARCHITECTURE")
+            return native_arch
+    except Exception as e:
+        log = get_logger(__name__)
+        log.debug("Could not detect native architecture via Registry", exc_info=e)
+        return None
 
 
 def build_vcvarsall_vs_path(version):

@@ -480,3 +480,25 @@ def test_build_command_win_arm64_wrapper(
     assert str(work_script) in contents
     # batch files must be CRLF; a bare LF breaks cmd.exe
     assert contents_bytes.count(b"\n") == contents_bytes.count(b"\r\n")
+
+
+@pytest.mark.skipif(
+    not (on_win and windows.get_native_windows_architecture() == "ARM64"),
+    reason="Windows ARM only test",
+)
+def test_win_arm64_build_on_emulated_win_64(
+    testing_metadata: MetaData, tmp_path, capsys
+):
+    """
+    This test checks the architecture of the launched CMD on Windows ARM
+    machines that are running emulated x64 processes. Critical for bootstrapping
+    win-arm64 distributions from their win-64 counterparts via emulation.
+    """
+    (tmp_path / "bld.bat").write_text(
+        "echo PROCESSOR_ARCHITECTURE=%PROCESSOR_ARCHITECTURE%"
+    )
+    testing_metadata.config.arch = "arm64"
+    windows.build(testing_metadata, str(tmp_path / "bld.bat"), {})
+    out, err = capsys.readouterr()
+    print(out)
+    assert "PROCESSOR_ARCHITECTURE=ARM64" in out
