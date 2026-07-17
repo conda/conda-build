@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import os
-import platform
 import pprint
 import sys
+import sysconfig
 from functools import cache
 from itertools import product
 from os.path import dirname, isdir, isfile, join
@@ -411,12 +411,11 @@ def _running_subdir():
     More context at https://github.com/python/cpython/issues/98962.
 
     The most obvious way is to check %PROCESSOR_ARCHITECTURE%, if available, but we need to hope
-    it was not overridden.
+    it was not overridden. `sysconfig.get_platform()` seems to be accurate enough.
     """
     if os.name == "nt":
-        arch = os.environ.get("PROCESSOR_ARCHITECTURE", platform.machine()).upper()
-        arch = {"AMD64": "64", "X86": "32"}.get(arch, arch).lower()
-        return f"win-{arch}"
+        arch = sysconfig.get_platform().lower()
+        return {"win-amd64": "win-64", "win32": "win-32"}.get(arch, arch)
     return context._native_subdir()
 
 
