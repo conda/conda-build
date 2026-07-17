@@ -84,7 +84,7 @@ def fix_staged_scripts(scripts_dir, config):
 
 
 @cache
-def get_native_windows_architecture() -> Literal["AMD64", "ARM64", "x86"] | None:
+def get_native_windows_architecture() -> Literal["AMD64", "ARM64", "X86"] | None:
     """
     Queries the Windows registry to determine the native machine architecture.
     This works reliably even if the Python process is running under emulation
@@ -102,7 +102,7 @@ def get_native_windows_architecture() -> Literal["AMD64", "ARM64", "x86"] | None
             winreg.HKEY_LOCAL_MACHINE, registry_path, 0, winreg.KEY_READ
         ) as key:
             native_arch, _ = winreg.QueryValueEx(key, "PROCESSOR_ARCHITECTURE")
-            return native_arch
+            return native_arch.upper()
     except Exception as e:
         log = get_logger(__name__)
         log.debug("Could not detect native architecture via Registry", exc_info=e)
@@ -328,10 +328,12 @@ def write_build_scripts(m, env, bld_bat):
         env["PYTHONDONTWRITEBYTECODE"] = True
     import codecs
 
-    if _is_native_build_platform_on_emulated_interpreter(m):
+    if m.config.build_subdir != context._native_subdir():
         # Can't trust the parent environment under these conditions
-        env["PROCESSOR_ARCHITECTURE"] = get_native_windows_architecture()
-        env.pop("PROCESSOR_ARCHITEW6432", None)
+        build_arch = _cmd_machine_flag(m)
+        env["PROCESSOR_ARCHITECTURE"] = build_arch
+        if build_arch == get_native_windows_architecture():
+            env.pop("PROCESSOR_ARCHITEW6432", None)
 
     with codecs.getwriter("utf-8")(open(env_script, "wb")) as fo:
         # more debuggable with echo on
@@ -387,29 +389,26 @@ def write_build_scripts(m, env, bld_bat):
     return work_script, env_script
 
 
-def _is_native_build_platform_on_emulated_interpreter(m) -> bool:
+def _cmd_machine_flag(m) -> Literal["AMD64", "ARM64", "X86"]:
     """
     If conda-build is run from e.f. a win-64 environment on a win-arm64 machine
     users may want to build natively by setting build_platform="win-arm64".
     In those cases, we need to ensure that the CMD process is native ARM64
     via this `start` wrapper. Otherwise Windows picks the AMD64 slice!
+    This gives you the adequate /machine flag value for `start`.
     """
-    machine = m.config.build_subdir.split("-")[1]
-    machine = {"64": "AMD64", "32": "x86"}.get(machine, machine).upper()
-    return (
-        machine == get_native_windows_architecture()
-        and m.config.build_subdir != context._native_subdir()
-    )
+    build_arch = m.config.build_subdir.split("-")[1]
+    return {"64": "AMD64", "32": "X86"}.get(build_arch, build_arch).upper()
 
 
 def build_command_arguments(m, script: str) -> list[str]:
-    if _is_native_build_platform_on_emulated_interpreter(m):
+    if m.config.build_subdir != context._native_subdir():
+        # See docstring of _cmd_machine_flag()
         wrapper = os.path.join(os.path.dirname(script), "_win_native_wrapper.bat")
-        machine = get_native_windows_architecture()
         with open(wrapper, "w") as f:
             f.write(
                 "@echo off\r\n"
-                f'start /b /wait /machine {machine} cmd.exe /d /c "{script}"\r\n'
+                f'start /b /wait /machine {_cmd_machine_flag(m)} cmd.exe /d /c "{script}"\r\n'
                 "exit /b %ERRORLEVEL%\r\n"
             )
         return ["cmd.exe", "/d", "/c", os.path.basename(wrapper)]
