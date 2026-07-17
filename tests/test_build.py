@@ -503,7 +503,7 @@ def test_win_arm64_build_on_emulated_win_64(
         f"powershell -Command \"'ProcessArchitecture=' + {cmdlet}\"\r\n"
         f"exit /b 42\r\n"
     )
-    testing_metadata.config.arch = "arm64"
+    testing_metadata.config.arch = "arm64"  # this is for build_platform
     testing_metadata.config.variant["target_platform"] = "win-arm64"
     with pytest.raises(subprocess.CalledProcessError) as exc:
         windows.build(testing_metadata, str(tmp_path / "bld.bat"), {})
