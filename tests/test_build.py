@@ -17,7 +17,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
-from conda.base.context import reset_context
 from conda.common.compat import on_win
 
 from conda_build import api, build, windows
@@ -471,7 +470,7 @@ def test_build_command_win_arm64_wrapper(
         assert not wrapper.exists()
         return
 
-    assert cmd == ["cmd.exe", "/d", "/c", "_win_native_wrapper.bat"]
+    assert cmd == ["cmd.exe", "/d", "/c", "_conda_build_wrapper.bat"]
 
     contents = wrapper.read_text()
     contents_bytes = wrapper.read_bytes()
@@ -483,12 +482,6 @@ def test_build_command_win_arm64_wrapper(
     assert str(work_script) in contents
     # batch files must be CRLF; a bare LF breaks cmd.exe
     assert contents_bytes.count(b"\n") == contents_bytes.count(b"\r\n")
-
-
-@pytest.fixture
-def force_win_arm64(monkeypatch):
-    monkeypatch.setenv("CONDA_SUBDIR", "win-arm64")
-    reset_context()
 
 
 @pytest.mark.skipif(
@@ -514,16 +507,7 @@ def test_win_arm64_build_on_emulated_win_64(
     out, err = capsys.readouterr()
     print(out)
     print("---")
-    print(*os.listdir(testing_metadata.config.work_dir), sep="\n")
-    print("---")
-    print("build_env_setup.bat:")
-    print(Path(testing_metadata.config.work_dir, "build_env_setup.bat").read_text())
-    print("---")
-    print("conda_build.bat:")
-    print(Path(testing_metadata.config.work_dir, "conda_build.bat").read_text())
-    if (
-        wrapper := Path(testing_metadata.config.work_dir, "_win_native_wrapper.bat")
-    ).exists():
-        print(wrapper.read_text())
+    print("Directory contents:")
+    print(*sorted(os.listdir(testing_metadata.config.work_dir), sep="\n"))
     assert "PROCESSOR_ARCHITECTURE=ARM64" in out
     assert "ProcessArchitecture=Arm64" in out

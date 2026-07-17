@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import platform
 import pprint
 import sys
 import sysconfig
@@ -85,14 +86,20 @@ def fix_staged_scripts(scripts_dir, config):
 
 
 @cache
-def get_native_windows_architecture() -> Literal["AMD64", "ARM64", "X86"] | None:
+def get_native_windows_architecture() -> Literal["AMD64", "ARM64", "x86"] | str | None:
     """
-    Queries the Windows registry to determine the native machine architecture.
-    This works reliably even if the Python process is running under emulation
-    (e.g. win-64 environment on a Windows ARM laptop).
+    Python 3.12+ `platform.machine()` on Windows reports the actual machine,
+    not the running interpreter. So we can just use that.
+
+    For prior versions, query the registry.
+
+    Returns None if it value cannot be obtained.
     """
     if sys.platform != "win32":
         raise OSError("This function is only supported on Windows.")
+
+    if sys.version_info >= (3, 12):
+        return platform.machine() or None
 
     import winreg
 
@@ -106,7 +113,7 @@ def get_native_windows_architecture() -> Literal["AMD64", "ARM64", "X86"] | None
             return native_arch.upper()
     except Exception as e:
         log = get_logger(__name__)
-        log.debug("Could not detect native architecture via Registry", exc_info=e)
+        log.debug("Could not detect native architecture via registry", exc_info=e)
         return None
 
 
@@ -331,7 +338,7 @@ def write_build_scripts(m, env, bld_bat):
 
     if m.config.build_subdir != _running_subdir():
         # Can't trust the parent environment under these conditions
-        build_arch = _build_arch_from_metadata(m)
+        build_arch = _build_arch(m)
         env["PROCESSOR_ARCHITECTURE"] = build_arch
         if build_arch == get_native_windows_architecture():
             env.pop("PROCESSOR_ARCHITEW6432", None)
@@ -390,23 +397,24 @@ def write_build_scripts(m, env, bld_bat):
     return work_script, env_script
 
 
-def _build_arch_from_metadata(m) -> Literal["AMD64", "ARM64", "X86"]:
+def _build_arch(m) -> Literal["AMD64", "ARM64", "x86"]:
     """
-    If conda-build is run from e.f. a win-64 environment on a win-arm64 machine
+    If conda-build is run from e.g. a win-64 environment on a win-arm64 machine
     users may want to build natively by setting build_platform="win-arm64".
     In those cases, we need to ensure that the CMD process is native ARM64
     via this `start` wrapper. Otherwise Windows picks the AMD64 slice!
     This gives you the adequate /machine flag value for `start`.
     """
-    build_arch = m.config.build_subdir.split("-")[1]
-    return {"64": "AMD64", "32": "X86"}.get(build_arch, build_arch).upper()
+    build_arch = m.config.build_subdir.split("-")[1].upper()
+    return {"64": "AMD64", "32": "x86"}.get(build_arch, build_arch)
 
 
 def _running_subdir():
     """
-    Python platform.machine() (on which conda.base.context._native_subdir() relies)
-    reports ARM64 even when running from a win-64 installation.
-    This is different from what one can observe on macOS/Rosetta, where it reports x86_64.
+    On Python 3.12+, `platform.machine()` (on which conda.base.context._native_subdir() relies)
+    may report ARM64 even when running from a win-64 installation.
+    This is different from what one can observe on macOS/Rosetta, where an emulated osx-64 Python
+    on Apple Silicon reports x86_64.
 
     More context at https://github.com/python/cpython/issues/98962.
 
@@ -414,7 +422,9 @@ def _running_subdir():
     it was not overridden. `sysconfig.get_platform()` seems to be accurate enough.
     """
     if os.name == "nt":
-        arch = sysconfig.get_platform().lower()
+        arch = (
+            sysconfig.get_platform().lower()
+        )  # -> Literal['win-amd64', 'win-arm64', 'win32']
         return {"win-amd64": "win-64", "win32": "win-32"}.get(arch, arch)
     return context._native_subdir()
 
@@ -422,11 +432,11 @@ def _running_subdir():
 def build_command_arguments(m, script: str) -> list[str]:
     if m.config.build_subdir != _running_subdir():
         # See docstring of _cmd_machine_flag()
-        wrapper = os.path.join(os.path.dirname(script), "_win_native_wrapper.bat")
+        wrapper = os.path.join(os.path.dirname(script), "_conda_build_wrapper.bat")
         with open(wrapper, "w") as f:
             f.write(
                 "@echo off\r\n"
-                f'start /b /wait /machine {_build_arch_from_metadata(m)} cmd.exe /d /c "{script}"\r\n'
+                f'start /b /wait /machine {_build_arch(m)} cmd.exe /d /c "{script}"\r\n'
                 "exit /b %ERRORLEVEL%\r\n"
             )
         return ["cmd.exe", "/d", "/c", os.path.basename(wrapper)]
