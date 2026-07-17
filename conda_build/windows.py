@@ -407,6 +407,9 @@ def _running_subdir():
     Python platform.machine() (on which conda.base.context._native_subdir() relies)
     reports ARM64 even when running from a win-64 installation.
     This is different from what one can observe on macOS/Rosetta, where it reports x86_64.
+
+    More context at https://github.com/python/cpython/issues/98962.
+
     The most obvious way is to check %PROCESSOR_ARCHITECTURE%, if available, but we need to hope
     it was not overridden.
     """
