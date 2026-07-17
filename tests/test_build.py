@@ -456,7 +456,8 @@ def test_build_command_win_arm64_wrapper(
 ):
     testing_metadata.config.arch = build_subdir.split("-")[1]
     monkeypatch.setattr(context, "_native_subdir", lambda: native_subdir)
-
+    patched_native = "AMD64" if native_subdir == "win-64" else "ARM64"
+    monkeypatch.setattr(windows.get_native_windows_architecture, lambda: patched_native)
     work_script = tmp_path / "conda_build.bat"
     work_script.write_text("@echo off\r\n")
     wrapper = tmp_path / "_win_native_wrapper.bat"
@@ -472,7 +473,7 @@ def test_build_command_win_arm64_wrapper(
 
     contents = wrapper.read_text()
     contents_bytes = wrapper.read_bytes()
-    machine = "amd64" if build_subdir == "win-64" else "arm64"
+    machine = "AMD64" if build_subdir == "win-64" else "ARM64"
     assert f"/machine {machine}" in contents
     assert "/b" in contents
     assert "/wait" in contents
