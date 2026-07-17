@@ -328,6 +328,11 @@ def write_build_scripts(m, env, bld_bat):
         env["PYTHONDONTWRITEBYTECODE"] = True
     import codecs
 
+    if _is_native_build_platform_on_emulated_interpreter(m):
+        # Can't trust the parent environment under these conditions
+        env["PROCESSOR_ARCHITECTURE"] = get_native_windows_architecture()
+        env.pop("PROCESSOR_ARCHITEW6432", None)
+
     with codecs.getwriter("utf-8")(open(env_script, "wb")) as fo:
         # more debuggable with echo on
         fo.write("@echo on\n")
@@ -382,23 +387,28 @@ def write_build_scripts(m, env, bld_bat):
     return work_script, env_script
 
 
-def build_command_arguments(m, script: str) -> list[str]:
+def _is_native_build_platform_on_emulated_interpreter(m) -> bool:
+    """
+    If conda-build is run from e.f. a win-64 environment on a win-arm64 machine
+    users may want to build natively by setting build_platform="win-arm64".
+    In those cases, we need to ensure that the CMD process is native ARM64
+    via this `start` wrapper. Otherwise Windows picks the AMD64 slice!
+    """
     machine = m.config.build_subdir.split("-")[1]
     machine = {"64": "AMD64", "32": "x86"}.get(machine, machine).upper()
-    if (
+    return (
         machine == get_native_windows_architecture()
         and m.config.build_subdir != context._native_subdir()
-    ):
-        # If conda-build is run from e.f. a win-64 environment on a win-arm64 machine
-        # users may want to build natively by setting build_platform="win-arm64".
-        # In those cases, we need to ensure that the CMD process is native ARM64
-        # via this `start` wrapper. Otherwise Windows picks the AMD64 slice!
+    )
+
+
+def build_command_arguments(m, script: str) -> list[str]:
+    if _is_native_build_platform_on_emulated_interpreter(m):
         wrapper = os.path.join(os.path.dirname(script), "_win_native_wrapper.bat")
+        machine = get_native_windows_architecture()
         with open(wrapper, "w") as f:
             f.write(
                 "@echo off\r\n"
-                f'set "PROCESSOR_ARCHITECTURE={machine}"\r\n'
-                f'set "PROCESSOR_ARCHITEW6432="\r\n'
                 f'start /b /wait /machine {machine} cmd.exe /d /c "{script}"\r\n'
                 "exit /b %ERRORLEVEL%\r\n"
             )

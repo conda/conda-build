@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
-from conda.base.context import context
+from conda.base.context import context, reset_context
 from conda.common.compat import on_win
 
 from conda_build import api, build, windows
@@ -455,9 +455,13 @@ def test_build_command_win_arm64_wrapper(
     wrapped,
 ):
     testing_metadata.config.arch = build_subdir.split("-")[1]
+    testing_metadata.config.host_subdir = build_subdir
+    testing_metadata.config.target_subdir = build_subdir
     monkeypatch.setattr(context, "_native_subdir", lambda: native_subdir)
     patched_native = "AMD64" if native_subdir == "win-64" else "ARM64"
-    monkeypatch.setattr(windows.get_native_windows_architecture, lambda: patched_native)
+    monkeypatch.setattr(
+        windows, "get_native_windows_architecture", lambda: patched_native
+    )
     work_script = tmp_path / "conda_build.bat"
     work_script.write_text("@echo off\r\n")
     wrapper = tmp_path / "_win_native_wrapper.bat"
@@ -483,6 +487,12 @@ def test_build_command_win_arm64_wrapper(
     assert contents_bytes.count(b"\n") == contents_bytes.count(b"\r\n")
 
 
+@pytest.fixture
+def force_win_arm64(monkeypatch):
+    monkeypatch.setenv("CONDA_SUBDIR", "win-arm64")
+    reset_context()
+
+
 @pytest.mark.skipif(
     not (on_win and windows.get_native_windows_architecture() == "ARM64"),
     reason="Windows ARM only test",
@@ -497,10 +507,12 @@ def test_win_arm64_build_on_emulated_win_64(
     """
     cmdlet = "[System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture"
     (tmp_path / "bld.bat").write_text(
-        f'echo PROCESSOR_ARCHITECTURE=%PROCESSOR_ARCHITECTURE%\r\n'
+        f"echo PROCESSOR_ARCHITECTURE=%PROCESSOR_ARCHITECTURE%\r\n"
         f'powershell -Command "echo ProcessArchitecture=({cmdlet})"\r\n'
     )
     testing_metadata.config.arch = "arm64"
+    testing_metadata.config.host_subdir = "win-arm64"
+    testing_metadata.config.target_subdir = "win-arm64"
     windows.build(testing_metadata, str(tmp_path / "bld.bat"), {})
     out, err = capsys.readouterr()
     print(out)
