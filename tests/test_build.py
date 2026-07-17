@@ -511,8 +511,7 @@ def test_win_arm64_build_on_emulated_win_64(
         f'powershell -Command "echo ProcessArchitecture=({cmdlet})"\r\n'
     )
     testing_metadata.config.arch = "arm64"
-    testing_metadata.config.host_subdir = "win-arm64"
-    testing_metadata.config.target_subdir = "win-arm64"
+    testing_metadata.config.variant["target_platform"] = "win-arm64"
     windows.build(testing_metadata, str(tmp_path / "bld.bat"), {})
     out, err = capsys.readouterr()
     print(out)
