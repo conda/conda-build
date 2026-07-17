@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import subprocess
 import sys
 from collections import defaultdict
 from contextlib import nullcontext
@@ -500,10 +501,13 @@ def test_win_arm64_build_on_emulated_win_64(
     (tmp_path / "bld.bat").write_text(
         f"echo PROCESSOR_ARCHITECTURE=%PROCESSOR_ARCHITECTURE%\r\n"
         f"powershell -Command \"'ProcessArchitecture=' + {cmdlet}\"\r\n"
+        f"exit /b 42\r\n"
     )
     testing_metadata.config.arch = "arm64"
     testing_metadata.config.variant["target_platform"] = "win-arm64"
-    windows.build(testing_metadata, str(tmp_path / "bld.bat"), {})
+    with pytest.raises(subprocess.CalledProcessError) as exc:
+        windows.build(testing_metadata, str(tmp_path / "bld.bat"), {})
+    assert exc.returncode == 42
     out, err = capsys.readouterr()
     print(out)
     print("---")
