@@ -12,6 +12,8 @@ updates:
           - '*'
     cooldown:
       default-days: 7
+      exclude:
+        - conda/actions
   - package-ecosystem: pre-commit
     directory: /
     schedule:
@@ -20,6 +22,8 @@ updates:
       pre-commit:
         patterns:
           - '*'
+    cooldown:
+      default-days: 7
   - package-ecosystem: pip
     directory: /docs/
     schedule:
@@ -32,3 +36,5 @@ updates:
       docs:
         patterns:
           - '*'
+    cooldown:
+      default-days: 7
