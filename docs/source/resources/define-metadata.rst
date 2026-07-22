@@ -2106,7 +2106,7 @@ variables are booleans.
      - The NumPy version as an integer such as ``111``. See the
        CONDA_NPY :ref:`environment variable <build-envs>`.
    * - build_platform
-     - The native subdir of the conda executable
+     - The native subdir of the conda executable. Override with ``CONDA_SUBDIR`` env var when calling ``conda-build``.
 
 The use of the Python version selectors, `py27`, `py34`, etc. is discouraged in
 favor of the more general comparison operators.  Additional selectors in this

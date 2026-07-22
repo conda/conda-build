@@ -439,8 +439,8 @@ def run_rattler(
         for variant in config_files:
             variant_config = variant_config.merge(VariantConfig.from_file(variant))
 
-    def get_config_value(name):
-        value = variant_config.get(name, config.subdir)
+    def get_config_value(name, fallback=None):
+        value = variant_config.get(name, fallback)
 
         if isinstance(value, list):
             if len(value) != 1:
@@ -450,9 +450,9 @@ def run_rattler(
             return value[0]
         return value
 
-    build_platform = get_config_value("build_platform")
-    host_platform = get_config_value("host_platform")
-    target_platform = get_config_value("target_platform")
+    build_platform = config.build_subdir  # Overridable via CONDA_SUBDIR env var
+    host_platform = get_config_value("target_platform", config.host_subdir)
+    target_platform = get_config_value("target_platform", config.target_subdir)
     noarch_build_platform = get_config_value("noarch_build_platform")
 
     # common tool / platform / render configuration

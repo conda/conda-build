@@ -1,12 +1,23 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
+
 import os
+import platform
 import pprint
+import sys
+import sysconfig
+from functools import cache
 from itertools import product
 from os.path import dirname, isdir, isfile, join
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from typing import Literal
 
 # importing setuptools patches distutils so that it knows how to find VC for python 2.7
 import setuptools  # noqa
+from conda.base.context import context
 
 # Leverage the hard work done by setuptools/distutils to find vcvarsall using
 # either the registry or the VS**COMNTOOLS environment variable
@@ -72,6 +83,38 @@ def fix_staged_scripts(scripts_dir, config):
 
         # remove the original script
         os.remove(join(scripts_dir, fn))
+
+
+@cache
+def get_native_windows_architecture() -> Literal["AMD64", "ARM64", "x86"] | str | None:
+    """
+    Python 3.12+ `platform.machine()` on Windows reports the actual machine,
+    not the running interpreter. So we can just use that.
+
+    For prior versions, query the registry.
+
+    Returns None if it value cannot be obtained.
+    """
+    if sys.platform != "win32":
+        raise OSError("This function is only supported on Windows.")
+
+    if sys.version_info >= (3, 12):
+        return platform.machine() or None
+
+    import winreg
+
+    registry_path = r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment"
+
+    try:
+        with winreg.OpenKey(
+            winreg.HKEY_LOCAL_MACHINE, registry_path, 0, winreg.KEY_READ
+        ) as key:
+            native_arch, _ = winreg.QueryValueEx(key, "PROCESSOR_ARCHITECTURE")
+            return native_arch.upper()
+    except Exception as e:
+        log = get_logger(__name__)
+        log.debug("Could not detect native architecture via registry", exc_info=e)
+        return None
 
 
 def build_vcvarsall_vs_path(version):
@@ -293,6 +336,13 @@ def write_build_scripts(m, env, bld_bat):
         env["PYTHONDONTWRITEBYTECODE"] = True
     import codecs
 
+    if m.config.build_subdir != _running_subdir():
+        # Can't trust the parent environment under these conditions
+        build_arch = _build_arch(m)
+        env["PROCESSOR_ARCHITECTURE"] = build_arch
+        if build_arch == get_native_windows_architecture():
+            env.pop("PROCESSOR_ARCHITEW6432", None)
+
     with codecs.getwriter("utf-8")(open(env_script, "wb")) as fo:
         # more debuggable with echo on
         fo.write("@echo on\n")
@@ -347,6 +397,52 @@ def write_build_scripts(m, env, bld_bat):
     return work_script, env_script
 
 
+def _build_arch(m) -> Literal["AMD64", "ARM64", "x86"]:
+    """
+    If conda-build is run from e.g. a win-64 environment on a win-arm64 machine
+    users may want to build natively by setting build_platform="win-arm64".
+    In those cases, we need to ensure that the CMD process is native ARM64
+    via this `start` wrapper. Otherwise Windows picks the AMD64 slice!
+    This gives you the adequate /machine flag value for `start`.
+    """
+    build_arch = m.config.build_subdir.split("-")[1].upper()
+    return {"64": "AMD64", "32": "x86"}.get(build_arch, build_arch)
+
+
+def _running_subdir():
+    """
+    On Python 3.12+, `platform.machine()` (on which conda.base.context._native_subdir() relies)
+    may report ARM64 even when running from a win-64 installation.
+    This is different from what one can observe on macOS/Rosetta, where an emulated osx-64 Python
+    on Apple Silicon reports x86_64.
+
+    More context at https://github.com/python/cpython/issues/98962.
+
+    The most obvious way is to check %PROCESSOR_ARCHITECTURE%, if available, but we need to hope
+    it was not overridden. `sysconfig.get_platform()` seems to be accurate enough.
+    """
+    if os.name == "nt":
+        arch = (
+            sysconfig.get_platform().lower()
+        )  # -> Literal['win-amd64', 'win-arm64', 'win32']
+        return {"win-amd64": "win-64", "win32": "win-32"}.get(arch, arch)
+    return context._native_subdir()
+
+
+def build_command_arguments(m, script: str) -> list[str]:
+    if m.config.build_subdir != _running_subdir():
+        # See docstring of _cmd_machine_flag()
+        wrapper = os.path.join(os.path.dirname(script), "_conda_build_wrapper.bat")
+        with open(wrapper, "w") as f:
+            f.write(
+                "@echo off\r\n"
+                f'start /b /wait /machine {_build_arch(m)} cmd.exe /d /c "{script}"\r\n'
+                "exit /b %ERRORLEVEL%\r\n"
+            )
+        return ["cmd.exe", "/d", "/c", os.path.basename(wrapper)]
+    return ["cmd.exe", "/d", "/c", os.path.basename(script)]
+
+
 def build(m, bld_bat, stats, provision_only=False):
     # TODO: Prepending the prefixes here should probably be guarded by
     #         if not m.activate_build_script:
@@ -390,7 +486,7 @@ def build(m, bld_bat, stats, provision_only=False):
     work_script, env_script = write_build_scripts(m, env, bld_bat)
 
     if not provision_only and os.path.isfile(work_script):
-        cmd = ["cmd.exe", "/d", "/c", os.path.basename(work_script)]
+        cmd = build_command_arguments(m, work_script)
         # rewrite long paths in stdout back to their env variables
         if m.config.debug or m.config.no_rewrite_stdout_env:
             rewrite_env = None

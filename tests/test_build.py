@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import subprocess
 import sys
 from collections import defaultdict
 from contextlib import nullcontext
@@ -19,7 +20,7 @@ from typing import TYPE_CHECKING
 import pytest
 from conda.common.compat import on_win
 
-from conda_build import api, build
+from conda_build import api, build, windows
 from conda_build.exceptions import CondaBuildUserError
 from conda_build.metadata import MetaData
 from conda_build.variants import get_default_variant
@@ -434,3 +435,83 @@ def test_warn_implicit_numpy_variant(
     build._warn_implicit_numpy_variant(m)
     n_warn = sum(1 for r in caplog.records if r.levelno == logging.WARNING)
     assert n_warn == (1 if expected_warning else 0)
+
+
+@pytest.mark.parametrize(
+    "build_subdir,running_subdir,wrapped",
+    [
+        ("win-arm64", "win-64", True),
+        ("win-64", "win-arm64", True),
+        ("win-arm64", "win-arm64", False),
+        ("win-64", "win-64", False),
+    ],
+)
+def test_build_command_win_arm64_wrapper(
+    testing_metadata: MetaData,
+    monkeypatch,
+    tmp_path,
+    build_subdir,
+    running_subdir,
+    wrapped,
+):
+    platform, arch = build_subdir.split("-")
+    testing_metadata.config.platform = platform
+    testing_metadata.config.arch = arch
+    testing_metadata.config.variant["target_platform"] = build_subdir
+    monkeypatch.setattr(windows, "_running_subdir", lambda: running_subdir)
+
+    work_script = tmp_path / "conda_build.bat"
+    work_script.write_text("@echo off\r\n")
+    wrapper = tmp_path / "_conda_build_wrapper.bat"
+
+    cmd = windows.build_command_arguments(testing_metadata, str(work_script))
+
+    if not wrapped:
+        assert cmd == ["cmd.exe", "/d", "/c", "conda_build.bat"]
+        assert not wrapper.exists()
+        return
+
+    assert cmd == ["cmd.exe", "/d", "/c", "_conda_build_wrapper.bat"]
+
+    contents = wrapper.read_text()
+    contents_bytes = wrapper.read_bytes()
+    machine = "AMD64" if build_subdir == "win-64" else "ARM64"
+    assert f"/machine {machine}" in contents
+    assert "/b" in contents
+    assert "/wait" in contents
+    assert "%ERRORLEVEL%" in contents
+    assert str(work_script) in contents
+    # batch files must be CRLF; a bare LF breaks cmd.exe
+    assert contents_bytes.count(b"\n") == contents_bytes.count(b"\r\n")
+
+
+@pytest.mark.skipif(
+    not (on_win and windows.get_native_windows_architecture() == "ARM64"),
+    reason="Windows ARM only test",
+)
+def test_win_arm64_build_on_emulated_win_64(
+    testing_metadata: MetaData, tmp_path, capsys
+):
+    """
+    This test checks the architecture of the launched CMD on Windows ARM
+    machines that are running emulated x64 processes. Critical for bootstrapping
+    win-arm64 distributions from their win-64 counterparts via emulation.
+    """
+    cmdlet = "[System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture"
+    (tmp_path / "bld.bat").write_text(
+        f"echo PROCESSOR_ARCHITECTURE=%PROCESSOR_ARCHITECTURE%\r\n"
+        f"powershell -Command \"'ProcessArchitecture=' + {cmdlet}\"\r\n"
+        f"exit /b 42\r\n"
+    )
+    testing_metadata.config.arch = "arm64"  # this is for build_platform
+    testing_metadata.config.variant["target_platform"] = "win-arm64"
+    with pytest.raises(subprocess.CalledProcessError) as exc:
+        windows.build(testing_metadata, str(tmp_path / "bld.bat"), {})
+    assert exc.value.returncode == 42
+    out, err = capsys.readouterr()
+    print(out)
+    print("---")
+    print("Directory contents:")
+    print(*sorted(os.listdir(testing_metadata.config.work_dir)), sep="\n")
+    assert "PROCESSOR_ARCHITECTURE=ARM64" in out
+    assert "ProcessArchitecture=Arm64" in out

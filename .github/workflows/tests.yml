@@ -291,7 +291,7 @@ jobs:
     needs: changes
     if: github.event_name == 'schedule' || needs.changes.outputs.code == 'true'
 
-    runs-on: windows-2022
+    runs-on: ${{ matrix.runs-on && matrix.runs-on || 'windows-2022' }}
     strategy:
       fail-fast: false
       matrix:
@@ -310,11 +310,16 @@ jobs:
           - python-version: '3.14'
             conda-version: canary
             test-type: parallel
+          - python-version: '3.14'
+            conda-version: release
+            test-type: custom
+            pytest-expression: test_build_command_win_arm64_wrapper or test_win_arm64_build_on_emulated_win_64
+            runs-on: windows-11-arm
     env:
       ErrorActionPreference: Stop  # powershell exit on first error
       CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'defaults' }}
       # Exclude benchmark and slow tests from Windows parallel runs
-      PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial and not benchmark' || 'not serial and not slow and not benchmark' }}
+      PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial and not benchmark' || (matrix.test-type == 'parallel' && 'not serial and not slow and not benchmark' || '') }}
 
     steps:
       - name: Checkout Source
@@ -343,10 +348,15 @@ jobs:
         with:
           condarc-file: .github\condarc
           run-post: false  # skip post cleanup
-          pkgs-dirs: D:\conda_pkgs_dir
-          installation-dir: D:\conda
+          pkgs-dirs: ${{ runner.arch == 'ARM64' && 'C' || 'D'}}:\conda_pkgs_dir
+          installation-dir: ${{ runner.arch == 'ARM64' && 'C' || 'D'}}:\conda
+          # force x64 even on ARM64 to test emulation
+          architecture: x64
+        env:
+          CONDA_SUBDIR: win-64
 
       - name: Choco Install
+        if: runner.arch != 'ARM64'
         # We may need the complete tooling so that cmake tests pass on windows
         run: choco install visualstudio2017-workload-vctools
 
@@ -380,7 +390,8 @@ jobs:
           --basetemp=${{ runner.temp }}
           --durations-path=durations\${{ runner.os }}.json
           -n auto
-          -m "${{ env.PYTEST_MARKER }}"
+          ${{ env.PYTEST_MARKER && '-m "' || ''}}${{ env.PYTEST_MARKER }}${{ env.PYTEST_MARKER && '"' || ''}}
+          ${{ matrix.pytest-expression && '-k "' || ''}}${{ matrix.pytest-expression }}${{ matrix.pytest-expression && '"' || ''}}
 
       - name: Upload Coverage
         uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
