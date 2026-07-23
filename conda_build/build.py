@@ -3483,6 +3483,19 @@ def test(
     if metadata.config.remove_work_dir:
         env["SRC_DIR"] = metadata.config.test_dir
 
+    for var in utils.ensure_list(metadata.get_value("test/script_env")):
+        if "=" in var:
+            val = var.split("=", 1)[1]
+            var = var.split("=", 1)[0]
+            env[var] = val
+        elif var not in os.environ:
+            warnings.warn(
+                f"The environment variable '{var}' specified in test/script_env is undefined.",
+                UserWarning,
+            )
+        else:
+            env[var] = os.environ[var]
+
     test_script, _ = write_test_scripts(
         metadata, env, py_files, pl_files, lua_files, r_files, shell_files, trace
     )
