@@ -5,7 +5,8 @@ import platform
 
 import pytest
 
-from conda_build.environ import create_env, os_vars
+from conda_build.config import Config
+from conda_build.environ import create_env, get_py_ver, os_vars
 
 on_linux = platform.system() == "Linux"
 
@@ -50,3 +51,22 @@ def test_build_variable_defaults_to_architecture_based_distro(testing_metadata):
 
     # Verify BUILD uses default cos6 or cos7 (not a custom cdt_name)
     assert "conda_cos6" in env_vars["BUILD"] or "conda_cos7" in env_vars["BUILD"]
+
+
+def test_get_py_ver_normal():
+    config = Config(variant={"python": "3.13"})
+    ver = get_py_ver(config)
+    assert ver == "3.13"
+    assert not ver.endswith("t")
+
+
+def test_get_py_ver_freethreading():
+    config = Config(variant={"python": "3.13", "is_freethreading": True})
+    ver = get_py_ver(config)
+    assert ver == "3.13t"
+
+
+def test_get_py_ver_freethreading_no_double_t():
+    config = Config(variant={"python": "3.13t", "is_freethreading": True})
+    ver = get_py_ver(config)
+    assert ver == "3.13t"
