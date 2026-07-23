@@ -29,6 +29,7 @@ from conda.resolve import Resolve
 
 from .. import environ
 from ..config import Config, get_or_merge_config
+from ..deprecations import deprecated
 from ..utils import check_call_env, on_linux, on_win
 from ..variants import get_default_variant
 from ..version import _parse as parse_version
@@ -384,6 +385,7 @@ def get_core_modules_for_this_perl_version(version, cache_dir):
     )
 
 
+@deprecated("27.3", "27.9", addendum="Use `grayskull` instead.")
 # meta_cpan_url="http://api.metacpan.org",
 def skeletonize(
     packages: list[str],
