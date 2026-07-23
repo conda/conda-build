@@ -256,6 +256,9 @@ source either with git_url or path.
    * - GIT_DESCRIBE_TAG
      - String denoting the most recent tag from the current
        commit, based on the output of ``git describe --tags``.
+   * - GIT_DESCRIBE_TAG_PEP440
+     - PEP 440-compliant version derived from the output of
+       ``git describe --tags --long``.
    * - GIT_FULL_HASH
      - String with the full SHA1 of the current HEAD.
 
