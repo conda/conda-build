@@ -265,7 +265,7 @@ def regex_files_rg(
         os.path.join(pu, f.replace("/", os.sep).encode("utf-8")) for f in files
     ]
     args_len = len(b" ".join(args_base))
-    # chunk them to avoid too long comand lines:
+    # chunk them to avoid too long command lines:
     file_lists = chunks(prefix_files, MAX_CHUNK_SIZE - args_len)
     for file_list in file_lists:
         args = args_base[:] + file_list
@@ -1136,7 +1136,7 @@ def get_files_with_prefix(m, replacements, files_in, prefix):
     print(
         "INFO :: Time taken to mark (prefix){}\n"
         "        {} replacements in {} files was {:.2f} seconds".format(
-            f" and mark+peform ({replacement_tags})" if replacement_tags else "",
+            f" and mark+perform ({replacement_tags})" if replacement_tags else "",
             total_replacements,
             len(all_matches),
             end - start,
@@ -1345,7 +1345,7 @@ def write_about_json(m):
 def write_info_json(m: MetaData):
     info_index = m.info_index()
     if m.pin_depends:
-        # Wtih 'strict' depends, we will have pinned run deps during rendering
+        # With 'strict' depends, we will have pinned run deps during rendering
         if m.pin_depends == "strict":
             runtime_deps = m.get_value("requirements/run", [])
             info_index["depends"] = runtime_deps
@@ -2505,7 +2505,7 @@ def build(
             del m_copy
 
         # get_dir here might be just work, or it might be one level deeper,
-        #    dependening on the source.
+        #    depending on the source.
         src_dir = m.config.work_dir
         if isdir(src_dir):
             if m.config.verbose:

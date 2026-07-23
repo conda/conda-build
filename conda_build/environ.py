@@ -740,7 +740,7 @@ def linux_vars(m, get_default, prefix):
     # unless run through linux32. Issue a warning when we detect this.
     if build_arch == "x86_64" and platform_architecture[0] == "32bit":
         print("Warning: You are running 32-bit Python on a 64-bit linux installation")
-        print("         but have not launched it via linux32. Various qeuries *will*")
+        print("         but have not launched it via linux32. Various queries *will*")
         print("         give unexpected results (uname -m, platform.machine() etc)")
         build_arch = "i686"
     # the GNU triplet is powerpc, not ppc. This matters.
@@ -1090,7 +1090,7 @@ def create_env(
     is_conda: bool = False,
 ) -> None:
     """
-    Create a conda envrionment for the given prefix and specs.
+    Create a conda environment for the given prefix and specs.
 
     If config.test_env_template is set to a valid environment path, this function
     will first try to clone from that template environment for faster creation,
