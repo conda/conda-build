@@ -1576,3 +1576,18 @@
   github: dlaehnemann
   num_commits: 1
   first_commit: 2026-04-29 03:15:48
+- name: pb01ka
+  email: gaganpb08singh@gmail.com
+  github: pb01ka
+  num_commits: 1
+  first_commit: 2026-06-01 13:26:05
+- name: Michał Górny
+  email: mgorny@gentoo.org
+  github: mgorny
+  num_commits: 1
+  first_commit: 2026-07-10 15:48:35
+- name: NIKIL PAUL
+  email: snikilpaul@gmail.com
+  github: Nikil-D-Gr8
+  num_commits: 1
+  first_commit: 2026-06-03 20:35:23
