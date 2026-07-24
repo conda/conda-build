@@ -4,7 +4,7 @@
 
 ### Bug fixes
 
-* Add a check to prevent duplicate rpaths on macos. (#5671) via (#5987)
+* Add a check to prevent duplicate rpaths on macOS. (#5671 via #5987)
 
 ### Deprecations
 

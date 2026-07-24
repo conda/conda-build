@@ -4,7 +4,7 @@
 
 ### Bug fixes
 
-* Remove redundant dependency on rattler-build. (#5986)
+* <news item>
 
 ### Deprecations
 
@@ -12,7 +12,7 @@
 
 ### Docs
 
-* Add v1 recipe user docs. (#5896) via (#6002)
+* Add v1 recipe user docs. (#5896 via #6002)
 
 ### Other
 

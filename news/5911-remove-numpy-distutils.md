@@ -16,4 +16,4 @@
 
 ### Other
 
-* Removes usage of `numpy.distutils` that has not been available in recent versions of numpy since Oct 2025.
+* Remove obsolete support for `numpy.distutils`. (#5911 via #6006)
