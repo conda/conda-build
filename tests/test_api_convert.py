@@ -335,7 +335,7 @@ def test_renaming_executables(base_platform, package):
     When converting the bin/ directory to Scripts/, only scripts
     need to be changed. Sometimes the /bin directory contains other
     files that are not Python scripts such as post-link.sh scripts.
-    This test converts a packaege that contains a post-link.sh script
+    This test converts a package that contains a post-link.sh script
     in the bin/ directory and checks to see that its filename remains
     the same.
     """

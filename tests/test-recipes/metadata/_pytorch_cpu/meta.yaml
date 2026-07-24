@@ -82,7 +82,7 @@ requirements:
     - libuv                     # [win]
     - cmake
     - ninja
-    # Keep libprotobuf here so that a compatibile version
+    # Keep libprotobuf here so that a compatible version
     # of protobuf is installed between build and host
     - libprotobuf
     - protobuf
@@ -195,7 +195,7 @@ outputs:
         - intel-openmp {{ mkl }}  # [win]
         - cmake
         - ninja
-        # Keep libprotobuf here so that a compatibile version
+        # Keep libprotobuf here so that a compatible version
         # of protobuf is installed between build and host
         - libprotobuf
         - protobuf

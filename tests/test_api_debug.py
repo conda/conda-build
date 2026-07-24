@@ -81,7 +81,7 @@ def test_debug(
             output_id=output_id,
         )
 
-    # if we expected an error there wont be anything else to test
+    # if we expected an error there won't be anything else to test
     if has_error:
         return
 

@@ -14,7 +14,7 @@ as the meta.yaml file. The following scripts can be added:
 * ``pre-unlink``---Executed before the package is removed. An error is
   indicated by a nonzero exit and causes the removal to fail.
 
-In addition to being co-located with the meta.yaml file, they must be named simply ``post-link.sh`` or ``post-link.bat``. Conda-build will rename them to .<name>-<action>.sh (or .bat) where ``<name>`` is the package name and ``<action>`` is one of the preceeding actions.
+In addition to being co-located with the meta.yaml file, they must be named simply ``post-link.sh`` or ``post-link.bat``. Conda-build will rename them to .<name>-<action>.sh (or .bat) where ``<name>`` is the package name and ``<action>`` is one of the proceeding actions.
 
 These scripts are executed in a subprocess by
 conda, using ``%COMSPEC% /c <script>`` on Windows and

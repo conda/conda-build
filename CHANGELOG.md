@@ -1023,7 +1023,7 @@
 * Relax `script_env` error in outputs when variable referenced in `script_env` is not defined.
   This unifies current behavior with the top-level build. (#5105)
 * Add support for Python 3.12. (#4997 via #4998)
-* Adopt calender versioning (CalVer) per CEP-8 for consistency with conda. (#4975)
+* Adopt calendar versioning (CalVer) per CEP-8 for consistency with conda. (#4975)
 * Adopt expedited CEP-9 deprecation policy. (#5064)
 
 ### Deprecations
@@ -2630,7 +2630,7 @@ In the upcoming January 2024 release of conda-build, significant changes are und
 
 ### Bug fixes
 
-* omit LIEF depedency on Windows until it is better tested #3288
+* omit LIEF dependency on Windows until it is better tested #3288
 * activate host environment #3288
 * allow calls to nm to fail #3290
 
@@ -3135,7 +3135,7 @@ In the upcoming January 2024 release of conda-build, significant changes are und
 * add creative commons as a license family (used to be classified OTHER)  #2893
 * handle empty packages in checks for duplicated files across subpackages  #2894
 * set PYTHON and other language path vars based on presence in build/host reqs, rather than binary file in either env.  Allows usage of PYTHON and friends in meta.yaml vars.  #2895
-* fix entry points incorrecty pointing at build prefix (instead of host), leading to prefix replacement failing  #2895
+* fix entry points incorrectly pointing at build prefix (instead of host), leading to prefix replacement failing  #2895
 * fix `merge_build_host` functionality.  Adding an empty host section now forces build and host to be split.  #2896
 
 ### Contributors
@@ -4214,7 +4214,7 @@ https://conda.io/docs/user-guide/tasks/build-packages/define-metadata.html#host
 
 ### Enhancements
 
-* store test files specifed by `test/source_files` directly in packages.  This allows testing of packages that do not include recipes.  Recommendation: make subpackages for large data files.  #2232
+* store test files specified by `test/source_files` directly in packages.  This allows testing of packages that do not include recipes.  Recommendation: make subpackages for large data files.  #2232
 * add new syntax to `get_value` for accessing list items, such as multiple sources  #2247
 * add independently configurable source cache path (--cache-dir)  #2249
 * add `PKG_HASH` env var, available in meta.yaml.  Use this to put the package hash where you want it in your custom build/string field in meta.yaml.  #2250
@@ -4321,7 +4321,7 @@ https://conda.io/docs/user-guide/tasks/build-packages/define-metadata.html#host
 * remove logging output showing up with --output option #2174
 * Fix `CONDA_*` variables without .  #2176
 * pass croot to extraction (file path length issue on win)  #2178
-* fix uncorrect unpacking of tuples with --skip-existing  #2179
+* fix incorrect unpacking of tuples with --skip-existing  #2179
 * Fix priority of setup.cfg over setup.py  #2180
 * Remove overly aggressive removal of test prefix at end of test phase  #2182
 * Fix upper bound increment to account for pre-release versions (alpha, beta, rc, etc.)  #2183
@@ -5854,7 +5854,7 @@ This release includes all current (1.21.14) changes made to the 1.21.x series.
 * Warn users on failed git repo info failure, rather than crash #1108
 * Remove killing MSBuild.exe at end of win build.  Remove psutil dependency.  #1109
 * Prepend PATH before creating env, to ensure post-link script success.  #1115, #1118
-* Make Python tests drop out on failure appropiately on win  #1122
+* Make Python tests drop out on failure appropriately on win  #1122
 * Make hyphenation consistent with `include_recipe` in meta.yaml  #1124
 * Use full path of test env when activating #1125
 
@@ -5984,7 +5984,7 @@ Contributors:
 * Fix unix-style paths returned from git on Windows preventing relative paths from providing Jinja2 metadata #995
 * improve logic handling "dirty" downloading.  Always download when not dirty.  #995
 * Fix post-build variables when no build section existed in original meta.yaml #999
-* Activate `_build` and `_test` environments approriately, rather than manipulating PATH directly #1002
+* Activate `_build` and `_test` environments appropriately, rather than manipulating PATH directly #1002
 * Don't clone git submodules until after first checkout #1025
 * Move `check_install` over from conda.install #1027
 
@@ -6106,7 +6106,7 @@ Contributors:
 
 * fix source/path and `GIT_*` issues, #801
 * fix invalid assertion, #855
-* environ.py refactor/clenup, #856
+* environ.py refactor/cleanup, #856
 * Better messaging for yaml parsing errors, #862
 * fix typo, #863
 * make `CONDA_PY` and `CONDA_NPY` available in build.sh, #837

@@ -853,7 +853,7 @@ def build_string_from_metadata(metadata):
         build_pkg_names = [ms.name for ms in metadata.ms_depends(build_or_host)]
         build_deps = metadata.meta.get("requirements", {}).get(build_or_host, [])
         # TODO: this is the bit that puts in strings like py27np111 in the filename.  It would be
-        #    nice to get rid of this, since the hash supercedes that functionally, but not clear
+        #    nice to get rid of this, since the hash supersedes that functionally, but not clear
         #    whether anyone's tools depend on this file naming right now.
         for s, names, places in (
             ("np", "numpy", 2),
@@ -1310,7 +1310,7 @@ class MetaData:
                 time is used.
 
         permit_undefined_jinja: If True, *any* use of undefined jinja variables will
-                                evaluate to an emtpy string, without emitting an error.
+                                evaluate to an empty string, without emitting an error.
         """
         assert not self.final, "modifying metadata after finalization"
 
@@ -2016,7 +2016,7 @@ class MetaData:
         before standard conda macro processors.
 
         permit_undefined_jinja: If True, *any* use of undefined jinja variables will
-                                evaluate to an emtpy string, without emitting an error.
+                                evaluate to an empty string, without emitting an error.
         """
         from .jinja_context import (
             FilteredLoader,
