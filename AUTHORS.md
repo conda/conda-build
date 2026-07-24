@@ -170,9 +170,11 @@ Authors are sorted alphabetically.
 * Michael Cormier
 * Michael Maltese
 * Michael Sarahan
+* Michał Górny
 * Min RK
 * Morten Enemark Lund
 * Morten Lund
+* NIKIL PAUL
 * Nehal J Wani
 * Nicola Soranzo
 * Oleg Alexandrov
@@ -265,6 +267,7 @@ Authors are sorted alphabetically.
 * Yu Feng
 * Zane Dufour
 * dependabot[bot]
+* pb01ka
 * peter1000
 * pre-commit CI
 * pwwang
