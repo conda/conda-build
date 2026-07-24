@@ -45,11 +45,11 @@
 * @jezdez
 * @kenodegard
 * @ForgottenProgramme
-* @mgorny
-* @Nikil-D-Gr8
+* @mgorny made their first contribution in #6036
+* @Nikil-D-Gr8 made their first contribution in #6000
 * @travishathaway
 * @dependabot[bot]
-* @pb01ka
+* @pb01ka made their first contribution in #5997
 * @pre-commit-ci[bot]
 
 
