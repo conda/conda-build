@@ -439,7 +439,9 @@ def _trim_None_strings(meta_dict):
                 meta_dict[key] = keep
         else:
             log.debug(
-                f"found unrecognized data type in dictionary: {value}, type: {type(value)}"
+                "found unrecognized data type in dictionary: %s, type: %s",
+                value,
+                type(value),
             )
     return meta_dict
 
@@ -1034,7 +1036,7 @@ def finalize_outputs_pass(
             # We should reparse the top-level recipe to get all of our dependencies fixed up.
             # we base things on base_metadata because it has the record of the full origin recipe
             if base_metadata.config.verbose:
-                log.info(f"Attempting to finalize metadata for {metadata.name()}")
+                log.info("Attempting to finalize metadata for %s", metadata.name())
             # Using base_metadata is important for keeping the reference to the parent recipe
             om = base_metadata.copy()
             # other_outputs is the context of what's available for
@@ -1082,8 +1084,8 @@ def finalize_outputs_pass(
             else:
                 log = utils.get_logger(__name__)
                 log.warning(
-                    "Could not finalize metadata due to missing dependencies: "
-                    f"{e.packages}"
+                    "Could not finalize metadata due to missing dependencies: %s",
+                    e.packages,
                 )
                 outputs[
                     metadata.name(),
@@ -1526,7 +1528,7 @@ class MetaData:
             if index is None:
                 log = utils.get_logger(__name__)
                 log.warning(
-                    f"No index specified in get_value('{name}'). Assuming index 0."
+                    "No index specified in get_value('%s'). Assuming index 0.", name
                 )
                 index = 0
 
@@ -3042,8 +3044,9 @@ class MetaData:
             else:
                 log = utils.get_logger(__name__)
                 log.warning(
-                    f"Not detecting used variables in output script {script}; conda-build only knows "
-                    "how to search .sh and .bat files right now."
+                    "Not detecting used variables in output script %s; conda-build only knows "
+                    "how to search .sh and .bat files right now.",
+                    script,
                 )
         return used_vars
 

@@ -58,7 +58,7 @@ def append_hash_to_fn(fn, hash_value):
 def download_to_cache(cache_folder, recipe_path, source_dict, verbose=False):
     """Download a source to the local cache."""
     if verbose:
-        log.info(f"Source cache directory is: {cache_folder}")
+        log.info("Source cache directory is: %s", cache_folder)
     if not isdir(cache_folder) and not os.path.islink(cache_folder):
         os.makedirs(cache_folder)
 
@@ -78,17 +78,19 @@ def download_to_cache(cache_folder, recipe_path, source_dict, verbose=False):
         break
     else:
         log.warning(
-            f"No hash {ACCEPTED_HASH_TYPES} provided for {unhashed_fn}. Source download forced. "
-            "Add hash to recipe to use source cache."
+            "No hash %s provided for %s. Source download forced. "
+            "Add hash to recipe to use source cache.",
+            ACCEPTED_HASH_TYPES,
+            unhashed_fn,
         )
 
     path = join(cache_folder, fn)
     if isfile(path):
         if verbose:
-            log.info(f"Found source in cache: {fn}")
+            log.info("Found source in cache: %s", fn)
     else:
         if verbose:
-            log.info(f"Downloading source to cache: {fn}")
+            log.info("Downloading source to cache: %s", fn)
 
         for url in source_urls:
             if "://" not in url:
@@ -102,14 +104,14 @@ def download_to_cache(cache_folder, recipe_path, source_dict, verbose=False):
                     url = "file:///" + expanduser(url[8:]).replace("\\", "/")
             try:
                 if verbose:
-                    log.info(f"Downloading {url}")
+                    log.info("Downloading %s", url)
                 with LoggingContext():
                     download(url, path)
             except CondaHTTPError as e:
-                log.warning(f"Error: {str(e).strip()}")
+                log.warning("Error: %s", str(e).strip())
                 rm_rf(path)
             except RuntimeError as e:
-                log.warning(f"Error: {str(e).strip()}")
+                log.warning("Error: %s", str(e).strip())
                 rm_rf(path)
             else:
                 if verbose:
@@ -117,7 +119,7 @@ def download_to_cache(cache_folder, recipe_path, source_dict, verbose=False):
                 break
         else:  # no break
             rm_rf(path)
-            raise RuntimeError(f"Could not download {url}")
+            raise RuntimeError("Could not download %s", url)
 
     hashed = None
     for hash_type in set(source_dict).intersection(ACCEPTED_HASH_TYPES):
@@ -795,7 +797,7 @@ def _get_patch_attributes(
 
     if not patch_exe:
         log.warning(
-            f"No patch program found, cannot determine patch attributes for {path}"
+            "No patch program found, cannot determine patch attributes for %s", path
         )
         if not git:
             log.error(
@@ -944,7 +946,7 @@ def apply_one_patch(src_dir, recipe_dir, rel_path, config, git=None):
         try:
             try_patch_args = base_patch_args[:]
             try_patch_args.append("--dry-run")
-            log.debug(f"dry-run applying with\n{patch} {try_patch_args}")
+            log.debug("dry-run applying with\n%s %s", patch, try_patch_args)
             check_call_env(
                 [patch] + try_patch_args, cwd=cwd, stdout=stdout, stderr=stderr
             )

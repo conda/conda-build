@@ -202,8 +202,8 @@ def verify_git_repo(
         # metadata git_url or git_rev, then we aren't looking at the right source.
         if not os.path.isdir(remote_url) and remote_url.lower() != git_url.lower():
             log.debug("remote does not match git_url")
-            log.debug("Remote: " + remote_url.lower())
-            log.debug("git_url: " + git_url.lower())
+            log.debug("Remote: %s", remote_url.lower())
+            log.debug("git_url: %s", git_url.lower())
             OK = False
     except subprocess.CalledProcessError as error:
         log.debug("Error obtaining git information in verify_git_repo.  Error was: ")

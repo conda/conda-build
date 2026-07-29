@@ -846,13 +846,14 @@ def finalize_metadata(
             m.final = False
             log = utils.get_logger(__name__)
             log.warning(
-                f"Returning non-final recipe for {m.dist()}; one or more dependencies "
-                "was unsatisfiable:"
+                "Returning non-final recipe for %s; one or more dependencies "
+                "was unsatisfiable:",
+                m.dist(),
             )
             if build_unsat:
-                log.warning(f"Build: {build_unsat}")
+                log.warning("Build: %s", build_unsat)
             if host_unsat:
-                log.warning(f"Host: {host_unsat}")
+                log.warning("Host: %s", host_unsat)
         else:
             m.final = True
     if is_top_level:
