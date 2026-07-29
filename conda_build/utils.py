@@ -1394,7 +1394,7 @@ class LoggingContext:
         "conda_index.index.convert_cache",
     ]
 
-    def __init__(self, level=logging.WARN, handler=None, close=True, loggers=None):
+    def __init__(self, level=logging.WARNING, handler=None, close=True, loggers=None):
         self.level = level
         self.old_levels = {}
         self.handler = handler
@@ -1664,12 +1664,12 @@ warning_error_stderr_filter = GreaterThanFilter(logging.INFO)
 level_formatter = logging.Formatter("%(levelname)s: %(message)s")
 
 # set filelock's logger to only show warnings by default
-logging.getLogger("filelock").setLevel(logging.WARN)
+logging.getLogger("filelock").setLevel(logging.WARNING)
 
 # quiet some of conda's less useful output
-logging.getLogger("conda.core.linked_data").setLevel(logging.WARN)
-logging.getLogger("conda.gateways.disk.delete").setLevel(logging.WARN)
-logging.getLogger("conda.gateways.disk.test").setLevel(logging.WARN)
+logging.getLogger("conda.core.linked_data").setLevel(logging.WARNING)
+logging.getLogger("conda.gateways.disk.delete").setLevel(logging.WARNING)
+logging.getLogger("conda.gateways.disk.test").setLevel(logging.WARNING)
 
 
 def reset_deduplicator():
