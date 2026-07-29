@@ -119,7 +119,7 @@ def download_to_cache(cache_folder, recipe_path, source_dict, verbose=False):
                 break
         else:  # no break
             rm_rf(path)
-            raise RuntimeError("Could not download %s", url)
+            raise RuntimeError(f"Could not download {url}")
 
     hashed = None
     for hash_type in set(source_dict).intersection(ACCEPTED_HASH_TYPES):
