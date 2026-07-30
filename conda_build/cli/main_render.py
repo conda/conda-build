@@ -241,7 +241,9 @@ def execute(args: Sequence[str] | None = None) -> int:
 
     if parsed.output:
         with LoggingContext(logging.CRITICAL + 1):
-            paths = api.get_output_file_paths(metadata_tuples, config=config)
+            paths = api.get_output_file_paths(
+                metadata_tuples, config=config, variants=parsed.variants
+            )
             print("\n".join(sorted(paths)))
         if parsed.file:
             m = metadata_tuples[-1][0]

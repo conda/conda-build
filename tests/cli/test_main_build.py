@@ -23,7 +23,7 @@ from conda_build.exceptions import CondaBuildUserError, DependencyNeedsBuildingE
 from conda_build.os_utils.external import find_executable
 from conda_build.utils import get_build_folders, on_win, package_has_file
 
-from ..utils import metadata_dir
+from ..utils import metadata_dir, variants_dir
 from ..utils import reset_config as _reset_config
 
 if TYPE_CHECKING:
@@ -113,6 +113,47 @@ def test_build_output_build_path(
         testing_config.croot,
         testing_config.host_subdir,
         "test_build_output_build_path-1.0-1.conda",
+    )
+    output, error = capfd.readouterr()
+    assert test_path == output.rstrip(), error
+    assert error == ""
+
+
+def test_build_output_build_path_variants(testing_config, capfd):
+    testing_config.verbose = False
+    testing_config.debug = False
+
+    # Test that without passing --variants, we get all variants
+    args = ["--output", os.path.join(variants_dir, "12_variant_versions")]
+    main_build.execute(args)
+    test_paths = [
+        os.path.join(
+            testing_config.croot,
+            testing_config.host_subdir,
+            "my_package-470.470-h65f20af_0.conda",
+        ),
+        os.path.join(
+            testing_config.croot,
+            testing_config.host_subdir,
+            "my_package-480.480-h1f30878_0.conda",
+        ),
+    ]
+    output, error = capfd.readouterr()
+    assert "\n".join(test_paths) == output.rstrip(), error
+    assert error == ""
+
+    # Test that passing --variants, we get the specified variants
+    args = [
+        "--output",
+        os.path.join(variants_dir, "12_variant_versions"),
+        "--variants",
+        "my_version=470",
+    ]
+    main_build.execute(args)
+    test_path = os.path.join(
+        testing_config.croot,
+        testing_config.host_subdir,
+        "my_package-470.470-h65f20af_0.conda",
     )
     output, error = capfd.readouterr()
     assert test_path == output.rstrip(), error

@@ -39,6 +39,7 @@ if TYPE_CHECKING:
     import os
     from argparse import ArgumentParser, Namespace
     from collections.abc import Sequence
+    from typing import Any
 
     from ..config import Config
 
@@ -526,16 +527,17 @@ def check_recipe(path_list):
             )
 
 
-def output_action(recipe: os.PathLike, config: Config):
+def output_action(recipe: os.PathLike, config: Config, variants: dict[str, Any] | None):
     """Output the conda package filename which would have been created
 
     :param recipe: Path to recipe or recipe folder
     :param config: Config object used for various options
+    :param variants: Variants to use for the output
     """
     with LoggingContext(logging.CRITICAL + 1):
         config.verbose = False
         config.debug = False
-        paths = api.get_output_file_paths(recipe, config=config)
+        paths = api.get_output_file_paths(recipe, config=config, variants=variants)
         print("\n".join(sorted(paths)))
 
 
@@ -605,7 +607,7 @@ def execute(args: Sequence[str] | None = None) -> int:
         config.quiet = True
         config.debug = False
         for recipe in parsed.recipe:
-            output_action(recipe, config)
+            output_action(recipe, config, parsed.variants)
         return 0
 
     if parsed.test:
