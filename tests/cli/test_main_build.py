@@ -124,19 +124,18 @@ def test_build_output_build_path_variants(testing_config, capfd):
     testing_config.debug = False
 
     # Test that without passing --variants, we get all variants
-    args = ["--output", os.path.join(variants_dir, "12_variant_versions")]
+    args = ["--output", os.path.join(variants_dir, "11_variant_output_names")]
     main_build.execute(args)
+
+    names = [
+        "some_output_using_abc_ghi-1.0-hd82c8f6_0.conda",
+        "some_output_using_abc_jkl-1.0-h64b44fd_0.conda",
+        "some_output_using_def_ghi-1.0-h95087dd_0.conda",
+        "some_output_using_def_jkl-1.0-h085f5b8_0.conda",
+    ]
     test_paths = [
-        os.path.join(
-            testing_config.croot,
-            testing_config.host_subdir,
-            "my_package-470.470-h65f20af_0.conda",
-        ),
-        os.path.join(
-            testing_config.croot,
-            testing_config.host_subdir,
-            "my_package-480.480-h1f30878_0.conda",
-        ),
+        os.path.join(testing_config.croot, testing_config.host_subdir, name)
+        for name in names
     ]
     output, error = capfd.readouterr()
     assert "\n".join(test_paths) == output.rstrip(), error
@@ -145,18 +144,22 @@ def test_build_output_build_path_variants(testing_config, capfd):
     # Test that passing --variants, we get the specified variants
     args = [
         "--output",
-        os.path.join(variants_dir, "12_variant_versions"),
+        os.path.join(variants_dir, "11_variant_output_names"),
         "--variants",
-        "my_version=470",
+        "something: abc",
     ]
     main_build.execute(args)
-    test_path = os.path.join(
-        testing_config.croot,
-        testing_config.host_subdir,
-        "my_package-470.470-h65f20af_0.conda",
-    )
+
+    names = [
+        "some_output_using_abc_ghi-1.0-hd82c8f6_0.conda",
+        "some_output_using_abc_jkl-1.0-h64b44fd_0.conda",
+    ]
+    test_paths = [
+        os.path.join(testing_config.croot, testing_config.host_subdir, name)
+        for name in names
+    ]
     output, error = capfd.readouterr()
-    assert test_path == output.rstrip(), error
+    assert "\n".join(test_paths) == output.rstrip(), error
     assert error == ""
 
 
