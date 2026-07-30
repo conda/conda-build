@@ -1655,9 +1655,18 @@ class DuplicateFilter(logging.Filter):
         self.msgs = set()
 
     def filter(self, record):
-        log = record.msg not in self.msgs
-        self.msgs.add(record.msg)
-        return int(log)
+        # Key on (template, args), not record.msg alone. With lazy %-style
+        # logging, msg is the shared template; different args must still
+        # count as distinct. Avoid getMessage() so we do not format twice.
+        args = record.args
+        key = (
+            record.msg,
+            tuple(sorted(args.items())) if isinstance(args, dict) else args,
+        )
+        if key in self.msgs:
+            return 0
+        self.msgs.add(key)
+        return 1
 
 
 dedupe_filter = DuplicateFilter()
