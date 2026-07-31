@@ -4,10 +4,9 @@
 
 ### Enhancements
 
-* Add support for v1 recipes to `conda-debug` (#5950).
+* Add support for v1 recipes to `conda-debug`. (#5950)
 * Add various UX improvements to the v1 recipe support. (#6020)
-* When rendering a recipe with `conda render ...`, sort dependencies instead of
-  following unpredictable `set()` ordering. (#6014)
+* When rendering a recipe with `conda render`, sort dependencies instead of following unpredictable `set()` ordering. (#6014)
 
 ### Bug fixes
 
@@ -22,7 +21,7 @@
 ### Deprecations
 
 * Mark `conda develop` as pending deprecation to be removed in 27.9. The [conda-pypi](https://conda.github.io/conda-pypi/) plugin provides a modern alternative via the [`conda pypi install --editable <path>`](https://conda.github.io/conda-pypi/quickstart/#development-and-editable-installations) command. (#4251 via #6005)
-* Remove usage of deprecated `conda.auxlib.entity.EntityEncoder` (#6029 via #6045). It is replaced by `conda.common.serialize.json.CondaJSONEncoder`.
+* Remove usage of deprecated `conda.auxlib.entity.EntityEncoder`. It is replaced by `conda.common.serialize.json.CondaJSONEncoder`. (#6029 via #6045)
 
 ### Docs
 
