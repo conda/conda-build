@@ -9,7 +9,7 @@ import sys
 import sysconfig
 from functools import cache
 from itertools import product
-from os.path import dirname, isdir, isfile, join
+from os.path import isdir, isfile, join
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -35,6 +35,7 @@ from .utils import (
     check_call_env,
     copy_into,
     get_logger,
+    locate_conda_launcher,
     path_prepended,
     write_bat_activation_text,
 )
@@ -77,7 +78,7 @@ def fix_staged_scripts(scripts_dir, config):
                 fo.write(f.read())
             # now create the .exe file
             copy_into(
-                join(dirname(__file__), f"cli-{config.host_arch}.exe"),
+                locate_conda_launcher(config.host_arch, "64"),
                 join(scripts_dir, fn + ".exe"),
             )
 

@@ -25,8 +25,9 @@ dependencies = [
   "beautifulsoup4",
   "chardet",
   "conda >=25.11.0",
-  # Disabled due to conda-index not being available on PyPI
+  # Disabled: not available on PyPI
   # "conda-index >=0.4.0",
+  # "conda-launchers",
   "conda-package-handling >=2.2.0",
   "filelock",
   "frozendict >=2.4.2",
