@@ -1,5 +1,58 @@
 [//]: # (current developments)
 
+## 26.7.0 (2026-07-24)
+
+### Enhancements
+
+* Add support for v1 recipes to `conda-debug`. (#5950)
+* Add various UX improvements to the v1 recipe support. (#6020)
+* When rendering a recipe with `conda render`, sort dependencies instead of following unpredictable `set()` ordering. (#6014)
+
+### Bug fixes
+
+* Remove redundant dependency on rattler-build. (#5986)
+* Add a check to prevent duplicate rpaths on macOS. (#5671 via #5987)
+* Raise `ValueError` for negative build numbers in `meta.yaml` at metadata validation time, before any build scripts run. (#5332, #5997)
+* Fix platform config settings when building v1 recipes by checking `VariantConfig()` instead of `config.variant`. (#6015)
+* Fix finding used variables that do not feature spaces, e.g. `{{python_min}}`. (#6036)
+* Make CMD subprocesses match `build_platform` architecture when running emulated Python processes. (#6048 via #6047)
+* `recipe.yaml` build/host platform handling now behaves in the same way as `meta.yaml`. Accidentally allowed `{build,host}_platform` settings in `conda_build_config.yaml` are no longer valid. Users can export `CONDA_SUBDIR` and define the `target_platform` setting, respectively. (#6047)
+
+### Deprecations
+
+* Mark `conda develop` as pending deprecation to be removed in 27.9. The [conda-pypi](https://conda.github.io/conda-pypi/) plugin provides a modern alternative via the [`conda pypi install --editable <path>`](https://conda.github.io/conda-pypi/quickstart/#development-and-editable-installations) command. (#4251 via #6005)
+* Remove usage of deprecated `conda.auxlib.entity.EntityEncoder`. It is replaced by `conda.common.serialize.json.CondaJSONEncoder`. (#6029 via #6045)
+
+### Docs
+
+* Add `conda-debug` command to v1 recipe docs. (#5950)
+* Clarify that `build/number` must be a non-negative integer. (#5997)
+* Add v1 recipe user docs. (#5896 via #6002)
+
+### Other
+
+* Remove obsolete support for `numpy.distutils`. (#5911 via #6006)
+* Enable infrastructure-managed Dependabot configuration via conda/infrastructure templates. (#6018)
+
+### Contributors
+
+* @conda-bot
+* @danyeaw
+* @dholth
+* @jaimergp
+* @jsmolic
+* @jezdez
+* @kenodegard
+* @ForgottenProgramme
+* @mgorny made their first contribution in #6036
+* @Nikil-D-Gr8 made their first contribution in #6000
+* @travishathaway
+* @dependabot[bot]
+* @pb01ka made their first contribution in #5997
+* @pre-commit-ci[bot]
+
+
+
 ## 26.5.0 (2026-05-20)
 
 ### Enhancements
