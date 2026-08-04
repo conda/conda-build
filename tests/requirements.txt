@@ -2,7 +2,7 @@ beautifulsoup4
 chardet
 conda >=25.11.0
 conda-index >=0.4.0
-conda-launchers
+conda-forge::conda-launchers
 conda-libmamba-solver >=25.11.0  # includes fix for CondaSolver deprecation warnings
 conda-package-handling >=2.2.0
 editables
