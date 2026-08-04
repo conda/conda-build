@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from __future__ import annotations
 
+import fnmatch
 import os
 import re
 from pathlib import Path
@@ -127,18 +128,22 @@ def test_build_output_build_path_variants(testing_config, capfd):
     args = ["--output", os.path.join(variants_dir, "11_variant_output_names")]
     main_build.execute(args)
 
-    names = [
-        "some_output_using_abc_ghi-1.0-hd82c8f6_0.conda",
-        "some_output_using_abc_jkl-1.0-h64b44fd_0.conda",
-        "some_output_using_def_ghi-1.0-h95087dd_0.conda",
-        "some_output_using_def_jkl-1.0-h085f5b8_0.conda",
-    ]
-    test_paths = [
-        os.path.join(testing_config.croot, testing_config.host_subdir, name)
-        for name in names
+    # Build hash (h...) is not stable between local and CUI builds.
+    # So rely on the build string without the content hash.
+    patterns = [
+        "some_output_using_abc_ghi-1.0-*.conda",
+        "some_output_using_abc_jkl-1.0-*.conda",
+        "some_output_using_def_ghi-1.0-*.conda",
+        "some_output_using_def_jkl-1.0-*.conda",
     ]
     output, error = capfd.readouterr()
-    assert "\n".join(test_paths) == output.rstrip(), error
+    names = [os.path.basename(path) for path in output.rstrip().splitlines()]
+    assert len(names) == len(patterns), (
+        f"Expected {len(patterns)} packages, got {len(names)}"
+    )
+    assert all(
+        fnmatch.fnmatch(name, pattern) for name, pattern in zip(names, patterns)
+    ), error or output
     assert error == ""
 
     # Test that passing --variants, we get the specified variants
@@ -150,16 +155,18 @@ def test_build_output_build_path_variants(testing_config, capfd):
     ]
     main_build.execute(args)
 
-    names = [
-        "some_output_using_abc_ghi-1.0-hd82c8f6_0.conda",
-        "some_output_using_abc_jkl-1.0-h64b44fd_0.conda",
-    ]
-    test_paths = [
-        os.path.join(testing_config.croot, testing_config.host_subdir, name)
-        for name in names
+    patterns = [
+        "some_output_using_abc_ghi-1.0-*.conda",
+        "some_output_using_abc_jkl-1.0-*.conda",
     ]
     output, error = capfd.readouterr()
-    assert "\n".join(test_paths) == output.rstrip(), error
+    names = [os.path.basename(path) for path in output.rstrip().splitlines()]
+    assert len(names) == len(patterns), (
+        f"Expected {len(patterns)} packages, got {len(names)}"
+    )
+    assert all(
+        fnmatch.fnmatch(name, pattern) for name, pattern in zip(names, patterns)
+    ), error or output
     assert error == ""
 
 
