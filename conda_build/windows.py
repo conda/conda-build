@@ -10,6 +10,7 @@ import sysconfig
 from functools import cache
 from itertools import product
 from os.path import dirname, isdir, isfile, join
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -31,6 +32,7 @@ except:
     pass
 
 from . import environ
+from .build import INTERPRETER_BAT
 from .utils import (
     check_call_env,
     copy_into,
@@ -431,16 +433,24 @@ def _running_subdir():
 
 def build_command_arguments(m, script: str) -> list[str]:
     if m.config.build_subdir != _running_subdir():
-        # See docstring of _cmd_machine_flag()
-        wrapper = os.path.join(os.path.dirname(script), "_conda_build_wrapper.bat")
-        with open(wrapper, "w") as f:
-            f.write(
-                "@echo off\r\n"
-                f'start /b /wait /machine {_build_arch(m)} cmd.exe /d /c "{script}"\r\n'
-                "exit /b %ERRORLEVEL%\r\n"
-            )
-        return ["cmd.exe", "/d", "/c", os.path.basename(wrapper)]
-    return ["cmd.exe", "/d", "/c", os.path.basename(script)]
+        wrapper = wrap_script_with_machine(script)
+        return [*INTERPRETER_BAT, os.path.basename(wrapper)]
+    return [*INTERPRETER_BAT, os.path.basename(script)]
+
+
+def wrap_script_with_machine(m, script: str | Path, pre_script: str = "") -> str:
+    # See docstring of _cmd_machine_flag()
+    script = Path(script)
+    wrapper = script.parent / script.stem + ".wrapped" + script.suffix
+    if script.suffix.lower().endswith((".bat", ".cmd")):
+        pre_script = " ".join(INTERPRETER_BAT)
+    with open(wrapper, "w") as f:
+        f.write(
+            "@echo off\r\n"
+            f'start /b /wait /machine {_build_arch(m)} {pre_script} "{script}"\r\n'
+            "exit /b %ERRORLEVEL%\r\n"
+        )
+    return str(wrapper)
 
 
 def build(m, bld_bat, stats, provision_only=False):

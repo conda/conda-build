@@ -1803,10 +1803,22 @@ def bundle_conda(
         if activate_script:
             _write_activation_text(dest_file, metadata)
 
+        args_to_run = [*args, dest_file]
+        if on_win:
+            from .windows import _running_subdir, wrap_script_with_machine
+
+            if metadata.config.build_subdir != _running_subdir():
+                # Support native build platform on emulated Python interpreter
+                # Need to ensure subprocess runs on the adequate architecture
+                # See conda_build.windows._build_arch for more info.
+                args_to_run = [
+                    *INTERPRETER_BAT, wrap_script_with_machine(dest_file, " ".join(args))
+                ]
+
         bundle_stats = {}
         try:
             utils.check_call_env(
-                [*args, dest_file],
+                args_to_run,
                 cwd=metadata.config.work_dir,
                 env=env_output,
                 stats=bundle_stats,
