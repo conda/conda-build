@@ -1,3 +1,3 @@
 patch
-patchelf
+conda-forge/label/patchelf_dev::patchelf>=0.19
 shellcheck
