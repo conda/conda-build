@@ -1812,7 +1812,8 @@ def bundle_conda(
                 # Need to ensure subprocess runs on the adequate architecture
                 # See conda_build.windows._build_arch for more info.
                 args_to_run = [
-                    *INTERPRETER_BAT, wrap_script_with_machine(dest_file, " ".join(args))
+                    *INTERPRETER_BAT,
+                    wrap_script_with_machine(dest_file, " ".join(args)),
                 ]
 
         bundle_stats = {}

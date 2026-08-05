@@ -32,7 +32,6 @@ except:
     pass
 
 from . import environ
-from .build import INTERPRETER_BAT
 from .utils import (
     check_call_env,
     copy_into,
@@ -432,6 +431,8 @@ def _running_subdir():
 
 
 def build_command_arguments(m, script: str) -> list[str]:
+    from .build import INTERPRETER_BAT
+
     if m.config.build_subdir != _running_subdir():
         wrapper = wrap_script_with_machine(script)
         return [*INTERPRETER_BAT, os.path.basename(wrapper)]
@@ -439,6 +440,8 @@ def build_command_arguments(m, script: str) -> list[str]:
 
 
 def wrap_script_with_machine(m, script: str | Path, pre_script: str = "") -> str:
+    from .build import INTERPRETER_BAT
+
     # See docstring of _cmd_machine_flag()
     script = Path(script)
     wrapper = script.parent / script.stem + ".wrapped" + script.suffix
