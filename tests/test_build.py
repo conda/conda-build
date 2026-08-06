@@ -462,7 +462,7 @@ def test_build_command_win_arm64_wrapper(
 
     work_script = tmp_path / "conda_build.bat"
     work_script.write_text("@echo off\r\n")
-    wrapper = tmp_path / "_conda_build_wrapper.bat"
+    wrapper = tmp_path / "conda_build.wrapper.bat"
 
     cmd = windows.build_command_arguments(testing_metadata, str(work_script))
 
@@ -471,7 +471,7 @@ def test_build_command_win_arm64_wrapper(
         assert not wrapper.exists()
         return
 
-    assert cmd == ["cmd.exe", "/d", "/c", "_conda_build_wrapper.bat"]
+    assert cmd == ["cmd.exe", "/d", "/c", "conda_build.wrapper.bat"]
 
     contents = wrapper.read_text()
     contents_bytes = wrapper.read_bytes()

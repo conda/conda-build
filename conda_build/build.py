@@ -1813,7 +1813,7 @@ def bundle_conda(
                 # See conda_build.windows._build_arch for more info.
                 args_to_run = [
                     *INTERPRETER_BAT,
-                    wrap_script_with_machine(dest_file, " ".join(args)),
+                    wrap_script_with_machine(metadata, dest_file, " ".join(args)),
                 ]
 
         bundle_stats = {}

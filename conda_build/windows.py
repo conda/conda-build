@@ -434,7 +434,7 @@ def build_command_arguments(m, script: str) -> list[str]:
     from .build import INTERPRETER_BAT
 
     if m.config.build_subdir != _running_subdir():
-        wrapper = wrap_script_with_machine(script)
+        wrapper = wrap_script_with_machine(m, script)
         return [*INTERPRETER_BAT, os.path.basename(wrapper)]
     return [*INTERPRETER_BAT, os.path.basename(script)]
 
@@ -444,7 +444,7 @@ def wrap_script_with_machine(m, script: str | Path, pre_script: str = "") -> str
 
     # See docstring of _cmd_machine_flag()
     script = Path(script)
-    wrapper = script.parent / script.stem + ".wrapped" + script.suffix
+    wrapper = script.parent / (script.stem + ".wrapper" + script.suffix)
     if script.suffix.lower().endswith((".bat", ".cmd")):
         pre_script = " ".join(INTERPRETER_BAT)
     with open(wrapper, "w") as f:
