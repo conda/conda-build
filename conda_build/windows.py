@@ -76,6 +76,7 @@ def fix_staged_scripts(scripts_dir, config):
             with open(join(scripts_dir, fn + "-script.py"), "wb") as fo:
                 fo.write(f.read())
             # now create the .exe file
+            # FIXME: Update once win-arm64 native launcher is available
             host_arch = "64" if config.host_arch == "arm64" else str(config.host_arch)
             copy_into(
                 join(dirname(__file__), f"cli-{host_arch}.exe"),

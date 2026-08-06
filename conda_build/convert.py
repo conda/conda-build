@@ -562,7 +562,7 @@ def create_exe_file(directory, executable, target_platform):
     if target_platform == "win-32":
         executable_file = os.path.join(exe_directory, "cli-32.exe")
     else:
-        # FIXME: Add branch for win-arm64 when cli-arm64 is available
+        # FIXME: Update once win-arm64 native launcher is available
         executable_file = os.path.join(exe_directory, "cli-64.exe")
 
     renamed_executable_file = os.path.join(directory, f"{executable}.exe")
