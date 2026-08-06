@@ -574,3 +574,13 @@ def test_max_cmd_line_length_default():
         assert utils.MAX_CHUNK_SIZE == 8190
     else:
         assert utils.MAX_CHUNK_SIZE == 32760
+
+
+@pytest.mark.parametrize("arch", ["32", "64", "arm64"])
+def test_create_entry_point(monkeypatch, tmp_path, testing_config, arch):
+    monkeypatch.setattr(utils, "on_win", True)
+    testing_config.arch = arch
+    path = tmp_path / "example"
+    utils.create_entry_point(str(path), "conda_build.cli.main_build", "execute", testing_config)
+    assert (path.parent / "example-script.py").is_file()
+    assert (path.parent / "example.exe").is_file()
