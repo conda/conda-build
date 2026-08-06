@@ -21,6 +21,7 @@ import pytest
 from conda.common.compat import on_win
 
 from conda_build import api, build, windows
+from conda_build.build import INTERPRETER_BAT
 from conda_build.exceptions import CondaBuildUserError
 from conda_build.metadata import MetaData
 from conda_build.variants import get_default_variant
@@ -467,11 +468,11 @@ def test_build_command_win_arm64_wrapper(
     cmd = windows.build_command_arguments(testing_metadata, str(work_script))
 
     if not wrapped:
-        assert cmd == ["cmd.exe", "/d", "/c", "conda_build.bat"]
+        assert cmd == [*INTERPRETER_BAT, "conda_build.bat"]
         assert not wrapper.exists()
         return
 
-    assert cmd == ["cmd.exe", "/d", "/c", "conda_build.wrapper.bat"]
+    assert cmd == [*INTERPRETER_BAT, "conda_build.wrapper.bat"]
 
     contents = wrapper.read_text()
     contents_bytes = wrapper.read_bytes()
