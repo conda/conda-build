@@ -581,6 +581,8 @@ def test_create_entry_point(monkeypatch, tmp_path, testing_config, arch):
     monkeypatch.setattr(utils, "on_win", True)
     testing_config.arch = arch
     path = tmp_path / "example"
-    utils.create_entry_point(str(path), "conda_build.cli.main_build", "execute", testing_config)
+    utils.create_entry_point(
+        str(path), "conda_build.cli.main_build", "execute", testing_config
+    )
     assert (path.parent / "example-script.py").is_file()
     assert (path.parent / "example.exe").is_file()
