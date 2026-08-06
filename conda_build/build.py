@@ -1812,7 +1812,7 @@ def bundle_conda(
                 log.warning(
                     "If the output script (%s) is not .sh, .bat or .ps1, "
                     "its script_interpreter field must be set to a tool installed in BUILD_PREFIX.",
-                    output[script],
+                    output["script"],
                 )
 
         args_to_run = [*args, dest_file]
