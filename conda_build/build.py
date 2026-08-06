@@ -1803,8 +1803,20 @@ def bundle_conda(
         if activate_script:
             _write_activation_text(dest_file, metadata)
 
+        if not dest_file.endswith((".sh", ".bat", ".ps1")):
+            # Check whether the interpreter comes from BUILD_PREFIX or not
+            executable = shutil.which(args[0])
+            if executable is not None and not executable.startswith(
+                metadata.config.build_prefix
+            ):
+                log.warning(
+                    "If the output script (%s) is not .sh, .bat or .ps1, "
+                    "its script_interpreter field must be set to a tool installed in BUILD_PREFIX.",
+                    output[script],
+                )
+
         args_to_run = [*args, dest_file]
-        if on_win:
+        if on_win and dest_file.endswith((".bat", ".ps1")):
             from .windows import _running_subdir, wrap_script_with_machine
 
             if metadata.config.build_subdir != _running_subdir():
