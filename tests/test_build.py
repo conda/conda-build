@@ -515,3 +515,55 @@ def test_win_arm64_build_on_emulated_win_64(
     print(*sorted(os.listdir(testing_metadata.config.work_dir)), sep="\n")
     assert "PROCESSOR_ARCHITECTURE=ARM64" in out
     assert "ProcessArchitecture=Arm64" in out
+
+
+@pytest.mark.parametrize("name", ["conda", "ordinary-pkg"])
+@pytest.mark.parametrize(
+    ("activate", "activate_in_script", "expect_activation"),
+    [
+        (True, None, True),
+        (True, False, False),
+        (False, None, False),
+    ],
+)
+def test_write_build_scripts_activation_follows_activate_build_script(
+    testing_metadata: MetaData,
+    mocker: MockerFixture,
+    name: str,
+    activate: bool,
+    activate_in_script: bool | None,
+    expect_activation: bool,
+):
+    """Windows build scripts activate iff activate_build_script is true.
+
+    Package name must not matter — including when packaging conda itself.
+    """
+    testing_metadata.meta["package"]["name"] = name
+    testing_metadata.meta["requirements"]["host"] = ["python"]
+    testing_metadata.config.activate = activate
+    if activate_in_script is not None:
+        testing_metadata.meta["build"]["activate_in_script"] = activate_in_script
+
+    mocker.patch.object(
+        type(testing_metadata),
+        "uses_new_style_compiler_activation",
+        new_callable=mocker.PropertyMock,
+        return_value=True,
+    )
+
+    env = {
+        "LIBRARY_INC": "inc",
+        "LIBRARY_LIB": "lib",
+    }
+    _, env_script = windows.write_build_scripts(
+        testing_metadata, env, bld_bat="nonexistent.bat"
+    )
+    content = Path(env_script).read_text(encoding="utf-8")
+
+    assert ("conda_hook.bat" in content) is expect_activation
+    assert (
+        f'activate "{testing_metadata.config.host_prefix}"' in content
+    ) is expect_activation
+    assert (
+        f'activate --stack "{testing_metadata.config.build_prefix}"' in content
+    ) is expect_activation
