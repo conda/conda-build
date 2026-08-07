@@ -11,6 +11,7 @@ from functools import cache
 from itertools import product
 from os.path import dirname, isdir, isfile, join
 from pathlib import Path
+from subprocess import list2cmdline
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -461,9 +462,9 @@ def wrap_script_with_machine(
         pre_script = list2cmdline(pre_script)
     with open(wrapper, "w") as f:
         f.write(
-            "@echo off\r\n"
-            f'start /b /wait /machine {_build_arch(m)} {pre_script} "{script}"\r\n'
-            "exit /b %ERRORLEVEL%\r\n"
+            "@echo off\n"
+            f'start "" /b /wait /machine {_build_arch(m)} {pre_script} "{script}"\n'
+            "exit /b %ERRORLEVEL%\n"
         )
     return str(wrapper)
 
