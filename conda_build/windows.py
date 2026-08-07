@@ -439,7 +439,9 @@ def build_command_arguments(m, script: str) -> list[str]:
     return [*INTERPRETER_BAT, os.path.basename(script)]
 
 
-def wrap_script_with_machine(m, script: str | Path, pre_script: str = "") -> str:
+def wrap_script_with_machine(
+    m, script: str | Path, pre_script: tuple[str] | str = ()
+) -> str:
     """
     If conda-build is run from e.g. a win-64 environment on a win-arm64 machine
     users may want to build natively by setting build_platform="win-arm64".
@@ -449,12 +451,14 @@ def wrap_script_with_machine(m, script: str | Path, pre_script: str = "") -> str
 
     Returns full path to wrapped script
     """
-    from .build import INTERPRETER_BAT
+    from .build import guess_interpreter
 
     script = Path(script)
-    wrapper = script.parent / (script.stem + ".wrapper.bat")
-    if not pre_script and script.suffix.lower().endswith((".bat", ".cmd")):
-        pre_script = " ".join(INTERPRETER_BAT)
+    wrapper = script.parent / (script.name + ".wrapper.bat")
+    if not pre_script:
+        pre_script = guess_interpreter(script.name)
+    if not isinstance(pre_script, str):
+        pre_script = list2cmdline(pre_script)
     with open(wrapper, "w") as f:
         f.write(
             "@echo off\r\n"
