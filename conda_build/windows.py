@@ -399,13 +399,7 @@ def write_build_scripts(m, env, bld_bat):
 
 
 def _build_arch(m) -> Literal["AMD64", "ARM64", "x86"]:
-    """
-    If conda-build is run from e.g. a win-64 environment on a win-arm64 machine
-    users may want to build natively by setting build_platform="win-arm64".
-    In those cases, we need to ensure that the CMD process is native ARM64
-    via this `start` wrapper. Otherwise Windows picks the AMD64 slice!
-    This gives you the adequate /machine flag value for `start`.
-    """
+    # See docstring of wrap_script_with_machine()
     build_arch = m.config.build_subdir.split("-")[1].upper()
     return {"64": "AMD64", "32": "x86"}.get(build_arch, build_arch)
 
@@ -440,12 +434,18 @@ def build_command_arguments(m, script: str) -> list[str]:
 
 
 def wrap_script_with_machine(m, script: str | Path, pre_script: str = "") -> str:
+    """
+    If conda-build is run from e.g. a win-64 environment on a win-arm64 machine
+    users may want to build natively by setting build_platform="win-arm64".
+    In those cases, we need to ensure that the CMD process is native ARM64
+    via this `start` wrapper. Otherwise Windows picks the AMD64 slice!
+    This wraps the script with adequate `start /machine xxx` call.
+    """
     from .build import INTERPRETER_BAT
 
-    # See docstring of _cmd_machine_flag()
     script = Path(script)
-    wrapper = script.parent / (script.stem + ".wrapper" + script.suffix)
-    if script.suffix.lower().endswith((".bat", ".cmd")):
+    wrapper = script.parent / (script.stem + ".wrapper.bat")
+    if not pre_script and script.suffix.lower().endswith((".bat", ".cmd")):
         pre_script = " ".join(INTERPRETER_BAT)
     with open(wrapper, "w") as f:
         f.write(
