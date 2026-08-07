@@ -460,7 +460,9 @@ def wrap_script_with_machine(
         pre_script = guess_interpreter(script.name)
     if not isinstance(pre_script, str):
         pre_script = list2cmdline(pre_script)
-    with open(wrapper, "w") as f:
+    # CMD breaks with Unix line endings; force \r\n on those even if not on Windows
+    newline_policy = "\r\n" if script.suffix.lower() in (".bat", ".cmd") else None
+    with open(wrapper, "w", newline=newline_policy) as f:
         f.write(
             "@echo off\n"
             f'start "" /b /wait /machine {_build_arch(m)} {pre_script} "{script}"\n'
