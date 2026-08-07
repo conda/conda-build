@@ -425,6 +425,12 @@ def _running_subdir():
 
 
 def build_command_arguments(m, script: str) -> list[str]:
+    """
+    Return list of arguments of the form: ["cmd", "/d", "/c", script].
+
+    Script may be the original one, or a wrapper to choose specific architectures,
+    depending on the configuration set in `m` (metadata object).
+    """
     from .build import INTERPRETER_BAT
 
     if m.config.build_subdir != _running_subdir():
@@ -440,6 +446,8 @@ def wrap_script_with_machine(m, script: str | Path, pre_script: str = "") -> str
     In those cases, we need to ensure that the CMD process is native ARM64
     via this `start` wrapper. Otherwise Windows picks the AMD64 slice!
     This wraps the script with adequate `start /machine xxx` call.
+
+    Returns full path to wrapped script
     """
     from .build import INTERPRETER_BAT
 
