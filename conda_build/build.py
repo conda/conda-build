@@ -1810,10 +1810,10 @@ def bundle_conda(
             if metadata.config.build_subdir != _running_subdir():
                 # Support native build platform on emulated Python interpreter
                 # Need to ensure subprocess runs on the adequate architecture
-                # See conda_build.windows._build_arch for more info.
+                # See conda_build.windows. wrap_script_with_machine for more info.
                 args_to_run = [
                     *INTERPRETER_BAT,
-                    wrap_script_with_machine(metadata, dest_file, " ".join(args)),
+                    wrap_script_with_machine(metadata, dest_file, tuple(args)),
                 ]
 
         bundle_stats = {}

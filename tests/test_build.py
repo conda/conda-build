@@ -559,12 +559,11 @@ def test_wrap_script_with_machine(
     # the child's exit code must reach conda-build
     assert "exit /b %ERRORLEVEL%" in contents
 
-    if script == "bld.bat":
-        # batch files must be CRLF; a bare LF breaks cmd.exe and a stray CR
-        # (from newline translation) makes `goto`/`exit` targets unparseable
-        raw = wrapper.read_bytes()
-        assert raw.count(b"\n") == raw.count(b"\r\n")
-        assert b"\r\r\n" not in raw
+    # wrapper is always .bat; bare LF breaks cmd.exe and a stray CR
+    # (from newline translation) makes `goto`/`exit` targets unparseable
+    raw = wrapper.read_bytes()
+    assert raw.count(b"\n") == raw.count(b"\r\n")
+    assert b"\r\r\n" not in raw
 
 
 @pytest.mark.parametrize(
@@ -650,6 +649,5 @@ def test_bundle_conda_win_arm64_wrapper(
     assert "exit /b %ERRORLEVEL%" in contents
 
     raw = wrapper.read_bytes()
-    if script == "install.bat":
-        assert raw.count(b"\n") == raw.count(b"\r\n")
-        assert b"\r\r\n" not in raw
+    assert raw.count(b"\n") == raw.count(b"\r\n")
+    assert b"\r\r\n" not in raw

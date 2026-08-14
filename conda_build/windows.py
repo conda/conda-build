@@ -441,7 +441,9 @@ def build_command_arguments(m, script: str) -> list[str]:
 
 
 def wrap_script_with_machine(
-    m, script: str | Path, pre_script: tuple[str] | str = ()
+    m,
+    script: str | Path,
+    pre_script: tuple[str, ...] | str = (),
 ) -> str:
     """
     If conda-build is run from e.g. a win-64 environment on a win-arm64 machine
@@ -460,9 +462,9 @@ def wrap_script_with_machine(
         pre_script = guess_interpreter(script.name)
     if not isinstance(pre_script, str):
         pre_script = list2cmdline(pre_script)
-    # CMD breaks with Unix line endings; force \r\n on those even if not on Windows
-    newline_policy = "\r\n" if script.suffix.lower() in (".bat", ".cmd") else None
-    with open(wrapper, "w", newline=newline_policy) as f:
+    # Wrapper is always a .bat; CMD breaks with Unix line endings, so force CRLF
+    # even when conda-build itself is not running on Windows (e.g. unit tests).
+    with open(wrapper, "w", newline="\r\n") as f:
         f.write(
             "@echo off\n"
             f'start "" /b /wait /machine {_build_arch(m)} {pre_script} "{script}"\n'
