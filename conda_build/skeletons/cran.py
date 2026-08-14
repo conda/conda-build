@@ -687,8 +687,12 @@ def get_cran_archive_versions(cran_url, session, package, verbose=True):
             return []
         raise
     versions = []
+    # Mirrors serve Apache directory listings either as fancy tables
+    # (cran.r-project.org) or as plain pre-formatted text
+    # (cloud.r-project.org), so don't rely on the <td> markup.
     for p, dt in re.findall(
-        r'<td><a href="([^"]+)">\1</a></td>\s*<td[^>]*>([^<]*)</td>', r.text
+        r'<a href="([^"]+)">\1</a>(?:</td>\s*<td[^>]*>)?\s*(\d{4}-\d{2}-\d{2} \d{2}:\d{2})',
+        r.text,
     ):
         if p.endswith(".tar.gz") and "_" in p:
             name, version = p.rsplit(".", 2)[0].split("_", 1)
@@ -702,13 +706,26 @@ def get_cran_index(cran_url, session, verbose=True):
     r = session.get(cran_url + "/src/contrib/")
     r.raise_for_status()
     records = {}
-    for p in re.findall(r'<td><a href="([^"]+)">\1</a></td>', r.text):
+    # Mirrors serve Apache directory listings either as fancy tables
+    # (cran.r-project.org) or as plain pre-formatted text
+    # (cloud.r-project.org), so don't rely on the <td> markup.
+    for p in re.findall(r'<a href="([^"]+)">\1</a>', r.text):
         if p.endswith(".tar.gz") and "_" in p:
             name, version = p.rsplit(".", 2)[0].split("_", 1)
             records[name.lower()] = (name, version)
     r = session.get(cran_url + "/src/contrib/Archive/")
-    r.raise_for_status()
-    for p in re.findall(r'<td><a href="([^"]+)/">\1/</a></td>', r.text):
+    try:
+        r.raise_for_status()
+    except requests.exceptions.HTTPError:
+        # The full Archive listing is huge and CDN mirrors sometimes time
+        # out generating it; without it only archived-only packages are
+        # affected.
+        print(
+            f"Warning: Failed to fetch CRAN archive index ({r.status_code}); "
+            "archived-only packages will not be found"
+        )
+        return records
+    for p in re.findall(r'<a href="([^"]+)/">\1/</a>', r.text):
         if re.match(r"^[A-Za-z]", p):
             records.setdefault(p.lower(), (p, None))
     return records
