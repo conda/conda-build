@@ -3,3 +3,11 @@
 * Switch `cran_mirror` to use https://cloud.r-project.org/, a cloud mirror of
   CRAN that auto-redirects to the optimal server based on where the user is
   located. (#6094)
+
+### Bug fixes
+
+* Teach the CRAN skeleton to parse both Apache directory listing formats
+  served by CRAN mirrors (fancy tables and plain pre-formatted text), and
+  continue with a warning instead of failing when fetching the full CRAN
+  archive listing errors (e.g. a CDN gateway timeout); only archived-only
+  packages are affected in that case. (#6094)
