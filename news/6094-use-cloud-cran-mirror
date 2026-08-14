@@ -1,0 +1,5 @@
+### Enhancements
+
+* Switch `cran_mirror` to use https://cloud.r-project.org/, a cloud mirror of
+  CRAN that auto-redirects to the optimal server based on where the user is
+  located. (#6094)

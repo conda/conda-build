@@ -940,7 +940,7 @@ def test_combine_specs_zip_lengths():
                 {
                     "c_compiler": "gcc",
                     "cpu_optimization_target": "nocona",
-                    "cran_mirror": "https://cran.r-project.org",
+                    "cran_mirror": "https://cloud.r-project.org",
                     "cxx_compiler": "gxx",
                     "extend_keys": [
                         "pin_run_as_build",

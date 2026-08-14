@@ -131,7 +131,7 @@ def test_read_description_contents():
     assert contents["License"] == "GPL-2 | GPL-3"
     assert (
         contents["URL"]
-        == "https://github.com/bethatkinson/rpart, https://cran.r-project.org/package=rpart"
+        == "https://github.com/bethatkinson/rpart, https://cloud.r-project.org/package=rpart"
     )
 
 
