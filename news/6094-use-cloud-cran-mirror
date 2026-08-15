@@ -6,8 +6,7 @@
 
 ### Bug fixes
 
-* Teach the CRAN skeleton to parse both Apache directory listing formats
-  served by CRAN mirrors (fancy tables and plain pre-formatted text), and
-  continue with a warning instead of failing when fetching the full CRAN
-  archive listing errors (e.g. a CDN gateway timeout); only archived-only
-  packages are affected in that case. (#6094)
+* Teach the CRAN skeleton to parse every directory listing format served by
+  CRAN mirrors: Apache fancy tables, Apache plain pre-formatted text and nginx
+  autoindex, whose timestamps are also normalized so archived versions still
+  sort newest first. (#6094)
