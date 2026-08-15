@@ -17,6 +17,7 @@ from conda_build.skeletons.cran import (
     get_license_info,
     read_description_contents,
     remove_comments,
+    sortable_listing_date,
 )
 
 from .utils import cran_dir
@@ -134,7 +135,7 @@ def test_read_description_contents():
     assert contents["License"] == "GPL-2 | GPL-3"
     assert (
         contents["URL"]
-        == "https://github.com/bethatkinson/rpart, https://cloud.r-project.org/package=rpart"
+        == "https://github.com/bethatkinson/rpart, https://cran.r-project.org/package=rpart"
     )
 
 
@@ -158,10 +159,13 @@ def test_remove_comments():
     assert remove_comments(with_comments) == without_comments
 
 
-# CRAN mirrors serve Apache directory listings in two formats: fancy tables
-# (cran.r-project.org) and plain pre-formatted text (cloud.r-project.org).
-# These snippets are modeled on the real listings, including the sort-order
-# and parent-directory links that the parsers must ignore.
+# CRAN mirrors serve directory listings in three formats: Apache fancy tables
+# (cran.r-project.org), Apache plain pre-formatted text (cloud.r-project.org)
+# and nginx autoindex, which also dates entries as "08-Apr-1999 11:06" instead
+# of "1999-04-08 11:06". These snippets are modeled on the real listings,
+# including the sort-order and parent-directory links the parsers must ignore.
+# Matrix appears in both the main and the archive index so that the merge
+# keeping its published version is covered.
 CRAN_URL = "https://cran.example.org"
 
 FANCY_MAIN_INDEX = """\
@@ -181,9 +185,18 @@ PLAIN_MAIN_INDEX = """\
 </pre>
 """
 
+NGINX_MAIN_INDEX = """\
+<pre><a href="../">../</a>
+<a href="Matrix_1.7-1.tar.gz">Matrix_1.7-1.tar.gz</a>        18-Oct-2024 09:00   2621440
+<a href="PACKAGES">PACKAGES</a>                             06-May-2026 05:10   6815744
+<a href="data.table_1.18.4.tar.gz">data.table_1.18.4.tar.gz</a>   06-May-2026 05:10   5976883
+</pre>
+"""
+
 FANCY_ARCHIVE_INDEX = """\
 <tr><td><a href="/src/contrib/">Parent Directory</a></td><td>&nbsp;</td></tr>
 <tr><td><a href="0test/">0test/</a></td><td align="right">2020-01-01 00:00  </td></tr>
+<tr><td><a href="Matrix/">Matrix/</a></td><td align="right">2020-01-01 00:00  </td></tr>
 <tr><td><a href="aaSEA/">aaSEA/</a></td><td align="right">2020-01-01 00:00  </td></tr>
 <tr><td><a href="rpart/">rpart/</a></td><td align="right">2020-01-01 00:00  </td></tr>
 """
@@ -191,8 +204,18 @@ FANCY_ARCHIVE_INDEX = """\
 PLAIN_ARCHIVE_INDEX = """\
 <pre>      <a href="/src/contrib/">Parent Directory</a>                             -
       <a href="0test/">0test/</a>                  2020-01-01 00:00    -
+      <a href="Matrix/">Matrix/</a>                 2020-01-01 00:00    -
       <a href="aaSEA/">aaSEA/</a>                  2020-01-01 00:00    -
       <a href="rpart/">rpart/</a>                  2020-01-01 00:00    -
+</pre>
+"""
+
+NGINX_ARCHIVE_INDEX = """\
+<pre><a href="../">../</a>
+<a href="0test/">0test/</a>       01-Jan-2020 00:00    -
+<a href="Matrix/">Matrix/</a>     01-Jan-2020 00:00    -
+<a href="aaSEA/">aaSEA/</a>       01-Jan-2020 00:00    -
+<a href="rpart/">rpart/</a>       01-Jan-2020 00:00    -
 </pre>
 """
 
@@ -213,25 +236,37 @@ PLAIN_RPART_ARCHIVE = """\
 </pre>
 """
 
+# The nginx dates deliberately do not sort chronologically as plain strings,
+# so this also covers the normalization done before sorting.
+NGINX_RPART_ARCHIVE = """\
+<pre><a href="../">../</a>
+<a href="PACKAGES.rds">PACKAGES.rds</a>           09-Jul-2026 04:53   3131
+<a href="rpart_1.0-6.tar.gz">rpart_1.0-6.tar.gz</a>   08-Apr-1999 11:06   339173
+<a href="rpart_1.1-1.tar.gz">rpart_1.1-1.tar.gz</a>   04-Jan-2000 10:47   338640
+<a href="rpart_3.1-2.tar.gz">rpart_3.1-2.tar.gz</a>   25-Sep-2001 07:44   109763
+</pre>
+"""
 
-class MockResponse:
-    def __init__(self, text="", status_code=200):
-        self.text = text
-        self.status_code = status_code
 
-    def raise_for_status(self):
-        if self.status_code >= 400:
-            raise requests.exceptions.HTTPError(
-                f"{self.status_code} Error", response=self
-            )
+def make_response(text="", status_code=200):
+    """Build a real requests.Response so error semantics match requests."""
+    response = requests.Response()
+    response.status_code = status_code
+    response.reason = "Gateway Time-out" if status_code >= 400 else "OK"
+    response.url = CRAN_URL
+    response._content = text.encode()
+    return response
 
 
 class MockSession:
     def __init__(self, responses):
         self.responses = responses
 
-    def get(self, url):
-        return self.responses[url]
+    def get(self, url, **kwargs):
+        response = self.responses[url]
+        if isinstance(response, Exception):
+            raise response
+        return response
 
 
 @pytest.mark.parametrize(
@@ -239,15 +274,18 @@ class MockSession:
     [
         pytest.param(FANCY_MAIN_INDEX, FANCY_ARCHIVE_INDEX, id="fancy"),
         pytest.param(PLAIN_MAIN_INDEX, PLAIN_ARCHIVE_INDEX, id="plain"),
+        pytest.param(NGINX_MAIN_INDEX, NGINX_ARCHIVE_INDEX, id="nginx"),
     ],
 )
 def test_get_cran_index(main_index, archive_index):
     session = MockSession(
         {
-            f"{CRAN_URL}/src/contrib/": MockResponse(main_index),
-            f"{CRAN_URL}/src/contrib/Archive/": MockResponse(archive_index),
+            f"{CRAN_URL}/src/contrib/": make_response(main_index),
+            f"{CRAN_URL}/src/contrib/Archive/": make_response(archive_index),
         }
     )
+    # Matrix is in both listings; the published version must win over the
+    # archived entry
     assert get_cran_index(CRAN_URL, session) == {
         "data.table": ("data.table", "1.18.4"),
         "matrix": ("Matrix", "1.7-1"),
@@ -257,24 +295,34 @@ def test_get_cran_index(main_index, archive_index):
 
 
 @pytest.mark.parametrize(
+    "archive_failure",
+    [
+        pytest.param(make_response(status_code=504), id="http-error"),
+        pytest.param(requests.exceptions.ReadTimeout("timed out"), id="timeout"),
+        pytest.param(
+            requests.exceptions.ConnectionError("connection reset"), id="connection"
+        ),
+    ],
+)
+@pytest.mark.parametrize(
     "main_index",
     [
         pytest.param(FANCY_MAIN_INDEX, id="fancy"),
         pytest.param(PLAIN_MAIN_INDEX, id="plain"),
     ],
 )
-def test_get_cran_index_archive_unavailable(main_index, capsys):
+def test_get_cran_index_archive_unavailable(main_index, archive_failure, capsys):
     session = MockSession(
         {
-            f"{CRAN_URL}/src/contrib/": MockResponse(main_index),
-            f"{CRAN_URL}/src/contrib/Archive/": MockResponse(status_code=504),
+            f"{CRAN_URL}/src/contrib/": make_response(main_index),
+            f"{CRAN_URL}/src/contrib/Archive/": archive_failure,
         }
     )
     assert get_cran_index(CRAN_URL, session) == {
         "data.table": ("data.table", "1.18.4"),
         "matrix": ("Matrix", "1.7-1"),
     }
-    assert "Failed to fetch CRAN archive index" in capsys.readouterr().out
+    assert "CRAN archive index is unavailable" in capsys.readouterr().out
 
 
 @pytest.mark.parametrize(
@@ -282,11 +330,12 @@ def test_get_cran_index_archive_unavailable(main_index, capsys):
     [
         pytest.param(FANCY_RPART_ARCHIVE, id="fancy"),
         pytest.param(PLAIN_RPART_ARCHIVE, id="plain"),
+        pytest.param(NGINX_RPART_ARCHIVE, id="nginx"),
     ],
 )
 def test_get_cran_archive_versions(archive_listing):
     session = MockSession(
-        {f"{CRAN_URL}/src/contrib/Archive/rpart/": MockResponse(archive_listing)}
+        {f"{CRAN_URL}/src/contrib/Archive/rpart/": make_response(archive_listing)}
     )
     # sorted by archival date, newest first
     assert get_cran_archive_versions(CRAN_URL, session, "rpart") == [
@@ -299,9 +348,21 @@ def test_get_cran_archive_versions(archive_listing):
 def test_get_cran_archive_versions_missing():
     session = MockSession(
         {
-            f"{CRAN_URL}/src/contrib/Archive/no.such.package/": MockResponse(
+            f"{CRAN_URL}/src/contrib/Archive/no.such.package/": make_response(
                 status_code=404
             )
         }
     )
     assert get_cran_archive_versions(CRAN_URL, session, "no.such.package") == []
+
+
+@pytest.mark.parametrize(
+    "date,expected",
+    [
+        pytest.param("1999-04-08 11:06", "1999-04-08 11:06", id="apache"),
+        pytest.param("08-Apr-1999 11:06", "1999-04-08 11:06", id="nginx"),
+        pytest.param("not a date", "not a date", id="unrecognized"),
+    ],
+)
+def test_sortable_listing_date(date, expected):
+    assert sortable_listing_date(date) == expected
