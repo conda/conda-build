@@ -567,3 +567,43 @@ def test_write_build_scripts_activation_follows_activate_build_script(
     assert (
         f'activate --stack "{testing_metadata.config.build_prefix}"' in content
     ) is expect_activation
+
+
+@pytest.mark.parametrize("isolated", [False, True])
+def test_write_build_scripts_isolated_activation(
+    testing_metadata: MetaData,
+    mocker: MockerFixture,
+    monkeypatch: pytest.MonkeyPatch,
+    isolated: bool,
+):
+    """_CONDA_BUILD_ISOLATED_ACTIVATION uses python -I -m conda on Windows."""
+    testing_metadata.meta["package"]["name"] = "conda"
+    testing_metadata.meta["requirements"]["host"] = ["python"]
+    testing_metadata.config.activate = True
+
+    if isolated:
+        monkeypatch.setenv("_CONDA_BUILD_ISOLATED_ACTIVATION", "1")
+    else:
+        monkeypatch.delenv("_CONDA_BUILD_ISOLATED_ACTIVATION", raising=False)
+
+    mocker.patch.object(
+        type(testing_metadata),
+        "uses_new_style_compiler_activation",
+        new_callable=mocker.PropertyMock,
+        return_value=True,
+    )
+
+    _, env_script = windows.write_build_scripts(
+        testing_metadata,
+        {"LIBRARY_INC": "inc", "LIBRARY_LIB": "lib"},
+        bld_bat="nonexistent.bat",
+    )
+    content = Path(env_script).read_text(encoding="utf-8")
+
+    assert "conda_hook.bat" in content
+    assert ('set "_CE_M=-I -m"' in content) is isolated
+    if isolated:
+        assert f'set "CONDA_EXE={sys.executable}"' in content
+        assert 'set "_CE_CONDA=conda"' in content
+    # Dead `_CE_I` must never appear; conda only expands _CE_M / _CE_CONDA.
+    assert "_CE_I" not in content

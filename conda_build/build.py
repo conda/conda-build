@@ -3214,21 +3214,20 @@ def write_test_scripts(
             tf.write(f"set {trace}-e\n")
         if metadata.config.activate and not metadata.name() == "conda":
             if utils.on_win:
+                # conda.bat expands "%CONDA_EXE%" %_CE_M% %_CE_CONDA%; there is no `_CE_I`.
+                ce_m = (
+                    "-I -m"
+                    if os.environ.get("_CONDA_BUILD_ISOLATED_ACTIVATION")
+                    else "-m"
+                )
                 tf.write(
                     'set "CONDA_SHLVL=" '
-                    "&& @CALL {}\\condabin\\conda_hook.bat {}"
-                    "&& set CONDA_EXE={python_exe}"
-                    "&& set CONDA_PYTHON_EXE={python_exe}"
-                    "&& set _CE_I={}"
-                    "&& set _CE_M=-m"
-                    "&& set _CE_CONDA=conda\n".format(
-                        sys.prefix,
-                        "--dev" if metadata.config.debug else "",
-                        "-i"
-                        if os.environ.get("_CONDA_BUILD_ISOLATED_ACTIVATION")
-                        else "",
-                        python_exe=sys.executable,
-                    )
+                    f"&& @CALL {sys.prefix}\\condabin\\conda_hook.bat"
+                    f"{' --dev' if metadata.config.debug else ''}"
+                    f"&& set CONDA_EXE={sys.executable}"
+                    f"&& set CONDA_PYTHON_EXE={sys.executable}"
+                    f"&& set _CE_M={ce_m}"
+                    "&& set _CE_CONDA=conda\n"
                 )
             else:
                 py_flags = (
