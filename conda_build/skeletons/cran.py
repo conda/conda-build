@@ -683,7 +683,7 @@ def get_session(output_dir, verbose=True):
 # "name..>", and some mirrors add extra attributes such as title="...", so
 # parse the href — restricted to bare file or directory names — and ignore
 # the display text.
-LISTING_FILE = re.compile(r'<a href="([^"/:?#]+)"[^>]*>[^<]*</a>')
+_LISTING_FILE = re.compile(r'<a href="([^"/:?#]+)"[^>]*>[^<]*</a>')
 
 
 def sortable_listing_date(date):
@@ -725,7 +725,7 @@ def get_cran_archive_versions(cran_url, session, package, verbose=True):
     versions = []
     # Apache dates read "1999-04-08 11:06", nginx autoindex "08-Apr-1999 11:06".
     listing_file_date = re.compile(
-        LISTING_FILE.pattern + r"\s*(?:</td>\s*<td[^>]*>)?\s*"
+        _LISTING_FILE.pattern + r"\s*(?:</td>\s*<td[^>]*>)?\s*"
         r"(\d{4}-\d{2}-\d{2} \d{2}:\d{2}|\d{2}-[A-Za-z]{3}-\d{4} \d{2}:\d{2})"
     )
     for p, dt in listing_file_date.findall(r.text):
@@ -741,7 +741,7 @@ def get_cran_index(cran_url, session, verbose=True):
     r = session.get(cran_url + "/src/contrib/")
     r.raise_for_status()
     records = {}
-    for p in LISTING_FILE.findall(r.text):
+    for p in _LISTING_FILE.findall(r.text):
         if p.endswith(".tar.gz") and "_" in p:
             name, version = p.rsplit(".", 2)[0].split("_", 1)
             records[name.lower()] = (name, version)
@@ -912,7 +912,7 @@ def get_available_binaries(cran_url, details):
     response = requests.get(url)
     response.raise_for_status()
     ext = details["ext"]
-    for filename in LISTING_FILE.findall(response.text):
+    for filename in _LISTING_FILE.findall(response.text):
         if filename.endswith(ext):
             pkg, _, ver = filename.rpartition("_")
             ver, _, _ = ver.rpartition(ext)
