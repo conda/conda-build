@@ -684,18 +684,6 @@ def get_session(output_dir, verbose=True):
 # parse the href — restricted to bare file or directory names — and ignore
 # the display text.
 LISTING_FILE = re.compile(r'<a href="([^"/:?#]+)"[^>]*>[^<]*</a>')
-LISTING_DIR = re.compile(r'<a href="([^"/:?#]+)/"[^>]*>[^<]*</a>')
-# Apache dates read "1999-04-08 11:06", nginx autoindex "08-Apr-1999 11:06".
-LISTING_FILE_DATE = re.compile(
-    LISTING_FILE.pattern + r"\s*(?:</td>\s*<td[^>]*>)?\s*"
-    r"(\d{4}-\d{2}-\d{2} \d{2}:\d{2}|\d{2}-[A-Za-z]{3}-\d{4} \d{2}:\d{2})"
-)
-LISTING_MONTHS = {
-    name: f"{number:02d}"
-    for number, name in enumerate(
-        "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split(), 1
-    )
-}
 
 
 def sortable_listing_date(date):
@@ -708,7 +696,13 @@ def sortable_listing_date(date):
     if not match:
         return date
     day, month, year, time = match.groups()
-    month_number = LISTING_MONTHS.get(month.title())
+    months = {
+        name: f"{number:02d}"
+        for number, name in enumerate(
+            "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split(), 1
+        )
+    }
+    month_number = months.get(month.title())
     if month_number is None:
         # An unrecognized month (e.g. a localized abbreviation) must not be
         # rewritten into a fake-but-sortable timestamp; leave the date alone
@@ -729,7 +723,12 @@ def get_cran_archive_versions(cran_url, session, package, verbose=True):
             return []
         raise
     versions = []
-    for p, dt in LISTING_FILE_DATE.findall(r.text):
+    # Apache dates read "1999-04-08 11:06", nginx autoindex "08-Apr-1999 11:06".
+    listing_file_date = re.compile(
+        LISTING_FILE.pattern + r"\s*(?:</td>\s*<td[^>]*>)?\s*"
+        r"(\d{4}-\d{2}-\d{2} \d{2}:\d{2}|\d{2}-[A-Za-z]{3}-\d{4} \d{2}:\d{2})"
+    )
+    for p, dt in listing_file_date.findall(r.text):
         if p.endswith(".tar.gz") and "_" in p:
             name, version = p.rsplit(".", 2)[0].split("_", 1)
             versions.append((sortable_listing_date(dt), version))
@@ -763,7 +762,8 @@ def get_cran_index(cran_url, session, verbose=True):
             "index is incomplete and archived packages will appear to be missing"
         )
         return records
-    archive_dirs = LISTING_DIR.findall(r.text)
+    listing_dir = re.compile(r'<a href="([^"/:?#]+)/"[^>]*>[^<]*</a>')
+    archive_dirs = listing_dir.findall(r.text)
     if not archive_dirs:
         print(
             "Warning: no archived packages could be parsed from the CRAN "
