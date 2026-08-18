@@ -162,8 +162,11 @@ def test_remove_comments():
 # CRAN mirrors serve directory listings in three formats: Apache fancy tables
 # (cran.r-project.org), Apache plain pre-formatted text (cloud.r-project.org)
 # and nginx autoindex, which also dates entries as "08-Apr-1999 11:06" instead
-# of "1999-04-08 11:06". These snippets are modeled on the real listings,
-# including the sort-order and parent-directory links the parsers must ignore.
+# of "1999-04-08 11:06". Mirrors with a fixed Apache NameWidth additionally pad
+# the name cell and truncate long display names to "name..>", and some nginx
+# mirrors add a title="..." attribute to the anchors. These snippets are
+# modeled on the real listings, including the sort-order and parent-directory
+# links the parsers must ignore.
 # Matrix appears in both the main and the archive index so that the merge
 # keeping its published version is covered.
 CRAN_URL = "https://cran.example.org"
@@ -191,6 +194,17 @@ NGINX_MAIN_INDEX = """\
 <a href="PACKAGES">PACKAGES</a>                             06-May-2026 05:10   6815744
 <a href="data.table_1.18.4.tar.gz">data.table_1.18.4.tar.gz</a>   06-May-2026 05:10   5976883
 </pre>
+"""
+
+# Apache with the default NameWidth=23 (e.g. mirror.las.iastate.edu): the name
+# cell is padded after </a> and long display names are truncated to "..&gt;",
+# while the href keeps the full name.
+FANCY_TRUNCATED_MAIN_INDEX = """\
+<tr><th><a href="?C=N;O=D">Name</a></th><th><a href="?C=M;O=A">Last modified</a></th></tr>
+<tr><td><a href="/src/">Parent Directory</a></td><td>&nbsp;</td></tr>
+<tr><td><a href="Matrix_1.7-1.tar.gz">Matrix_1.7-1.tar.gz</a>    </td><td align="right">2024-10-18 09:00  </td></tr>
+<tr><td><a href="PACKAGES">PACKAGES</a>               </td><td align="right">2026-05-06 07:10  </td></tr>
+<tr><td><a href="data.table_1.18.4.tar.gz">data.table_1.18..&gt;</a> </td><td align="right">2026-05-06 07:10  </td></tr>
 """
 
 FANCY_ARCHIVE_INDEX = """\
@@ -227,6 +241,16 @@ FANCY_RPART_ARCHIVE = """\
 <tr><td><a href="rpart_3.1-2.tar.gz">rpart_3.1-2.tar.gz</a></td><td align="right">2001-09-25 09:44  </td></tr>
 """
 
+# Apache with a fixed NameWidth (e.g. cran.itam.mx) pads the name cell, so
+# whitespace sits between </a> and </td>.
+FANCY_PADDED_RPART_ARCHIVE = """\
+<tr><td><a href="/src/contrib/Archive/">Parent Directory</a></td><td>&nbsp;</td></tr>
+<tr><td><a href="PACKAGES.rds">PACKAGES.rds</a>       </td><td align="right">2026-07-09 04:53  </td></tr>
+<tr><td><a href="rpart_1.0-6.tar.gz">rpart_1.0-6.tar.gz</a>     </td><td align="right">1999-04-08 13:06  </td></tr>
+<tr><td><a href="rpart_1.1-1.tar.gz">rpart_1.1-1.tar.gz</a>     </td><td align="right">2000-01-04 11:47  </td></tr>
+<tr><td><a href="rpart_3.1-2.tar.gz">rpart_3.1-2.tar.gz</a>     </td><td align="right">2001-09-25 09:44  </td></tr>
+"""
+
 PLAIN_RPART_ARCHIVE = """\
 <pre>      <a href="/src/contrib/Archive/">Parent Directory</a>                             -
       <a href="PACKAGES.rds">PACKAGES.rds</a>            2026-07-09 04:53  3.1K
@@ -247,6 +271,17 @@ NGINX_RPART_ARCHIVE = """\
 </pre>
 """
 
+# Some nginx mirrors (e.g. mirrors.tuna.tsinghua.edu.cn) add a title
+# attribute to every anchor.
+NGINX_TITLED_RPART_ARCHIVE = """\
+<pre><a href="../">../</a>
+<a href="PACKAGES.rds" title="PACKAGES.rds">PACKAGES.rds</a>           09-Jul-2026 04:53   3131
+<a href="rpart_1.0-6.tar.gz" title="rpart_1.0-6.tar.gz">rpart_1.0-6.tar.gz</a>   08-Apr-1999 11:06   339173
+<a href="rpart_1.1-1.tar.gz" title="rpart_1.1-1.tar.gz">rpart_1.1-1.tar.gz</a>   04-Jan-2000 10:47   338640
+<a href="rpart_3.1-2.tar.gz" title="rpart_3.1-2.tar.gz">rpart_3.1-2.tar.gz</a>   25-Sep-2001 07:44   109763
+</pre>
+"""
+
 
 def make_response(text="", status_code=200):
     """Build a real requests.Response so error semantics match requests."""
@@ -254,6 +289,7 @@ def make_response(text="", status_code=200):
     response.status_code = status_code
     response.reason = "Gateway Time-out" if status_code >= 400 else "OK"
     response.url = CRAN_URL
+    response.encoding = "utf-8"  # keep r.text deterministic (no charset sniffing)
     response._content = text.encode()
     return response
 
@@ -273,6 +309,7 @@ class MockSession:
     "main_index,archive_index",
     [
         pytest.param(FANCY_MAIN_INDEX, FANCY_ARCHIVE_INDEX, id="fancy"),
+        pytest.param(FANCY_TRUNCATED_MAIN_INDEX, FANCY_ARCHIVE_INDEX, id="truncated"),
         pytest.param(PLAIN_MAIN_INDEX, PLAIN_ARCHIVE_INDEX, id="plain"),
         pytest.param(NGINX_MAIN_INDEX, NGINX_ARCHIVE_INDEX, id="nginx"),
     ],
@@ -329,8 +366,10 @@ def test_get_cran_index_archive_unavailable(main_index, archive_failure, capsys)
     "archive_listing",
     [
         pytest.param(FANCY_RPART_ARCHIVE, id="fancy"),
+        pytest.param(FANCY_PADDED_RPART_ARCHIVE, id="fancy-padded"),
         pytest.param(PLAIN_RPART_ARCHIVE, id="plain"),
         pytest.param(NGINX_RPART_ARCHIVE, id="nginx"),
+        pytest.param(NGINX_TITLED_RPART_ARCHIVE, id="nginx-title"),
     ],
 )
 def test_get_cran_archive_versions(archive_listing):
@@ -343,6 +382,17 @@ def test_get_cran_archive_versions(archive_listing):
         "1.1-1",
         "1.0-6",
     ]
+
+
+def test_get_cran_index_unparseable():
+    # A mirror serving a listing format the parser does not recognize (e.g. a
+    # custom-templated index) must fail loudly instead of returning an empty
+    # index that downstream misreports as "Package not found".
+    session = MockSession(
+        {f"{CRAN_URL}/src/contrib/": make_response("<html>themed mirror</html>")}
+    )
+    with pytest.raises(SystemExit, match="no package listing could be parsed"):
+        get_cran_index(CRAN_URL, session)
 
 
 def test_get_cran_archive_versions_missing():
@@ -362,6 +412,8 @@ def test_get_cran_archive_versions_missing():
         pytest.param("1999-04-08 11:06", "1999-04-08 11:06", id="apache"),
         pytest.param("08-Apr-1999 11:06", "1999-04-08 11:06", id="nginx"),
         pytest.param("not a date", "not a date", id="unrecognized"),
+        # A localized month must not be rewritten into a fake sort key
+        pytest.param("08-Okt-1999 11:06", "08-Okt-1999 11:06", id="unknown-month"),
     ],
 )
 def test_sortable_listing_date(date, expected):
