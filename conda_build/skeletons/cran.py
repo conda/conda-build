@@ -708,7 +708,13 @@ def sortable_listing_date(date):
     if not match:
         return date
     day, month, year, time = match.groups()
-    return f"{year}-{LISTING_MONTHS.get(month.title(), '00')}-{day} {time}"
+    month_number = LISTING_MONTHS.get(month.title())
+    if month_number is None:
+        # An unrecognized month (e.g. a localized abbreviation) must not be
+        # rewritten into a fake-but-sortable timestamp; leave the date alone
+        # so entries from the same listing at least keep their relative order.
+        return date
+    return f"{year}-{month_number}-{day} {time}"
 
 
 def get_cran_archive_versions(cran_url, session, package, verbose=True):
@@ -740,6 +746,11 @@ def get_cran_index(cran_url, session, verbose=True):
         if p.endswith(".tar.gz") and "_" in p:
             name, version = p.rsplit(".", 2)[0].split("_", 1)
             records[name.lower()] = (name, version)
+    if not records:
+        sys.exit(
+            f"Error: no package listing could be parsed from {cran_url}/src/contrib/; "
+            "the mirror may serve an unsupported directory listing format"
+        )
     try:
         r = session.get(cran_url + "/src/contrib/Archive/")
         r.raise_for_status()
@@ -752,7 +763,14 @@ def get_cran_index(cran_url, session, verbose=True):
             "index is incomplete and archived packages will appear to be missing"
         )
         return records
-    for p in LISTING_DIR.findall(r.text):
+    archive_dirs = LISTING_DIR.findall(r.text)
+    if not archive_dirs:
+        print(
+            "Warning: no archived packages could be parsed from the CRAN "
+            f"archive index at {cran_url}/src/contrib/Archive/; the package "
+            "index is incomplete and archived packages will appear to be missing"
+        )
+    for p in archive_dirs:
         if re.match(r"^[A-Za-z]", p):
             records.setdefault(p.lower(), (p, None))
     return records
