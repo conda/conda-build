@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from .exceptions import CondaBuildUserError
-from .utils import ensure_list, filter_info_files, tar_xf, walk
+from .utils import ensure_list, filter_info_files, locate_conda_launcher, tar_xf, walk
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -555,19 +555,14 @@ def create_exe_file(directory, executable, target_platform):
     Positional arguments:
     directory (str) -- the file path to the 'Scripts' directory
     executable (str) -- the filename of the executable to create an exe file for
-    target_platform -- the platform to target: 'win-64' or 'win-32'
+    target_platform -- the platform to target: 'win-64', 'win-arm64', 'win-32'
     """
-    exe_directory = os.path.dirname(__file__)
-
-    if target_platform.endswith("32"):
-        executable_file = os.path.join(exe_directory, "cli-32.exe")
-
-    else:
-        executable_file = os.path.join(exe_directory, "cli-64.exe")
-
     renamed_executable_file = os.path.join(directory, f"{executable}.exe")
 
-    shutil.copyfile(executable_file, renamed_executable_file)
+    shutil.copyfile(
+        locate_conda_launcher(target_platform.split("-")[-1], "64"),
+        renamed_executable_file,
+    )
 
 
 def update_prefix_file(temp_dir, prefixes):

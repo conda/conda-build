@@ -10,11 +10,10 @@ from subprocess import CalledProcessError, check_output, run
 
 import pytest
 
-from conda_build.utils import on_win
+from conda_build.utils import locate_conda_launcher, on_win
 
 HERE = os.path.abspath(os.path.dirname(__file__))
 REPO_ROOT = (Path(HERE) / "..").resolve().absolute()
-STUB_FOLDER = REPO_ROOT / "conda_build"
 
 
 @cache
@@ -86,12 +85,10 @@ def signtool_unsupported() -> bool:
 
 
 @pytest.mark.skipif(signtool_unsupported(), reason=signtool_unsupported_because())
-@pytest.mark.parametrize(
-    "stub_file_name", ["cli-32.exe", "cli-64.exe", "gui-32.exe", "gui-64.exe"]
-)
-def test_stub_exe_signatures(stub_file_name: str) -> None:
+@pytest.mark.parametrize("arch", ["32", "64", "arm64"])
+def test_stub_exe_signatures(arch: str) -> None:
     """Verify that signtool verifies the signature of the stub exes"""
-    stub_file = STUB_FOLDER / stub_file_name
+    stub_file = locate_conda_launcher(arch)
     signtool_exe = find_signtool()
     completed_process = run([signtool_exe, "verify", "/pa", "/v", stub_file])
     assert completed_process.returncode == 0

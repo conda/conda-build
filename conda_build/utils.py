@@ -70,7 +70,7 @@ from .exceptions import BuildLockError
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
-    from typing import TypeVar
+    from typing import Literal, TypeVar
 
     from .metadata import MetaData
 
@@ -1081,6 +1081,21 @@ def iter_entry_points(items):
         yield m.groups()
 
 
+def locate_conda_launcher(
+    *arch: str, launcher_type: Literal["cli", "gui"] = "cli"
+) -> str:
+    candidates = list(dict.fromkeys(f"{launcher_type}-{suffix}.exe" for suffix in arch))
+    for fn in candidates:
+        launcher_src = join(sys.prefix, "share", "conda-launchers", fn)
+        if isfile(launcher_src):
+            return launcher_src
+    raise ValueError(
+        "Installation error; "
+        "cannot locate suitable conda-launchers executable for any of the given archs: "
+        f"{arch}"
+    )
+
+
 def create_entry_point(path, module, func, config):
     """Creates an entry point for legacy noarch_python builds"""
     import_name = func.split(".")[0]
@@ -1091,7 +1106,7 @@ def create_entry_point(path, module, func, config):
                 fo.write("#!python_d\n")
             fo.write(pyscript)
             copy_into(
-                join(dirname(__file__), f"cli-{str(config.host_arch)}.exe"),
+                locate_conda_launcher(config.host_arch, "64"),
                 path + ".exe",
                 config.timeout,
             )
