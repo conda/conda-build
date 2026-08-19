@@ -1,6 +1,6 @@
 ### Enhancements
 
-* <news item>
+* ``REQUESTS_CA_BUNDLE`` can now also be supplied via the build variant (``conda_build_config.yaml``). (#6063 via #6083)
 
 ### Bug fixes
 
