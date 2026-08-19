@@ -2132,7 +2132,7 @@ def write_bat_activation_text(file_handle, m):
     # Opt-in isolated activation: run via `python -I -m conda` so a recipe named
     # conda (or PYTHONPATH) cannot shadow the outer conda used for activation.
     # Matches Unix `_write_sh_activation_text`. conda.bat expands
-    # "%CONDA_EXE%" %_CE_M% %_CE_CONDA% — there is no `_CE_I`.
+    # "%CONDA_EXE%" %_CE_M% %_CE_CONDA%.
     if os.environ.get("_CONDA_BUILD_ISOLATED_ACTIVATION"):
         file_handle.write(f'set "CONDA_EXE={sys.executable}"\n')
         file_handle.write(f'set "_CONDA_EXE={sys.executable}"\n')

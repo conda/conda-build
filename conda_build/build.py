@@ -3214,7 +3214,7 @@ def write_test_scripts(
             tf.write(f"set {trace}-e\n")
         if metadata.config.activate and not metadata.name() == "conda":
             if utils.on_win:
-                # conda.bat expands "%CONDA_EXE%" %_CE_M% %_CE_CONDA%; there is no `_CE_I`.
+                # conda.bat expands "%CONDA_EXE%" %_CE_M% %_CE_CONDA%.
                 ce_m = (
                     "-I -m"
                     if os.environ.get("_CONDA_BUILD_ISOLATED_ACTIVATION")
