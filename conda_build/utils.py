@@ -2129,6 +2129,15 @@ def write_bat_activation_text(file_handle, m):
     file_handle.write(f'call "{context.root_prefix}\\condabin\\conda_hook.bat"\n')
     for key, value in context.conda_exe_vars_dict.items():
         file_handle.write(f'set "{key}={value or ""}"\n')
+    # Opt-in isolated activation: run via `python -I -m conda` so a recipe named
+    # conda (or PYTHONPATH) cannot shadow the outer conda used for activation.
+    # Matches Unix `_write_sh_activation_text`. conda.bat expands
+    # "%CONDA_EXE%" %_CE_M% %_CE_CONDA%.
+    if os.environ.get("_CONDA_BUILD_ISOLATED_ACTIVATION"):
+        file_handle.write(f'set "CONDA_EXE={sys.executable}"\n')
+        file_handle.write(f'set "_CONDA_EXE={sys.executable}"\n')
+        file_handle.write('set "_CE_M=-I -m"\n')
+        file_handle.write('set "_CE_CONDA=conda"\n')
     if m.is_cross:
         # HACK: we need both build and host envs "active" - i.e. on PATH,
         #     and with their activate.d scripts sourced. Conda only
