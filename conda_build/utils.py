@@ -266,7 +266,7 @@ class PopenWrapper:
             psutil = None
             psutil_exceptions = (OSError, ValueError)
             log = get_logger(__name__)
-            log.warning(f"psutil import failed.  Error was {e}")
+            log.warning("psutil import failed.  Error was %s", e)
             log.warning(
                 "only disk usage and time statistics will be available.  Install psutil to "
                 "get CPU time and memory usage statistics."
@@ -635,7 +635,9 @@ def move_with_fallback(src, dst):
         except PermissionError:
             log = get_logger(__name__)
             log.debug(
-                f"Failed to copy/remove path from {src} to {dst} due to permission error"
+                "Failed to copy/remove path from %s to %s due to permission error",
+                src,
+                dst,
             )
 
 
@@ -1305,7 +1307,7 @@ def expand_globs(
             glob_files = glob(path, recursive=True)
             if not glob_files:
                 log = get_logger(__name__)
-                log.warning(f"Glob {path} did not match in root_dir {root_dir}")
+                log.warning("Glob %s did not match in root_dir %s", path, root_dir)
             # https://docs.python.org/3/library/glob.html#glob.glob states that
             # "whether or not the results are sorted depends on the file system".
             # Avoid this potential ambiguity by sorting. (see #4185)
@@ -1394,7 +1396,7 @@ class LoggingContext:
         "conda_index.index.convert_cache",
     ]
 
-    def __init__(self, level=logging.WARN, handler=None, close=True, loggers=None):
+    def __init__(self, level=logging.WARNING, handler=None, close=True, loggers=None):
         self.level = level
         self.old_levels = {}
         self.handler = handler
@@ -1653,9 +1655,18 @@ class DuplicateFilter(logging.Filter):
         self.msgs = set()
 
     def filter(self, record):
-        log = record.msg not in self.msgs
-        self.msgs.add(record.msg)
-        return int(log)
+        # Key on (template, args), not record.msg alone. With lazy %-style
+        # logging, msg is the shared template; different args must still
+        # count as distinct. Avoid getMessage() so we do not format twice.
+        args = record.args
+        key = (
+            record.msg,
+            tuple(sorted(args.items())) if isinstance(args, dict) else args,
+        )
+        if key in self.msgs:
+            return 0
+        self.msgs.add(key)
+        return 1
 
 
 dedupe_filter = DuplicateFilter()
@@ -1664,12 +1675,12 @@ warning_error_stderr_filter = GreaterThanFilter(logging.INFO)
 level_formatter = logging.Formatter("%(levelname)s: %(message)s")
 
 # set filelock's logger to only show warnings by default
-logging.getLogger("filelock").setLevel(logging.WARN)
+logging.getLogger("filelock").setLevel(logging.WARNING)
 
 # quiet some of conda's less useful output
-logging.getLogger("conda.core.linked_data").setLevel(logging.WARN)
-logging.getLogger("conda.gateways.disk.delete").setLevel(logging.WARN)
-logging.getLogger("conda.gateways.disk.test").setLevel(logging.WARN)
+logging.getLogger("conda.core.linked_data").setLevel(logging.WARNING)
+logging.getLogger("conda.gateways.disk.delete").setLevel(logging.WARNING)
+logging.getLogger("conda.gateways.disk.test").setLevel(logging.WARNING)
 
 
 def reset_deduplicator():
@@ -1763,7 +1774,10 @@ def merge_or_update_dict(
                     and raise_on_clobber
                 ):
                     log.debug(
-                        f"clobbering key {key} (original value {base_value}) with value {value}"
+                        "clobbering key %s (original value %s) with value %s",
+                        key,
+                        base_value,
+                        value,
                     )
                 if value is None and key in base:
                     del base[key]
@@ -1930,12 +1944,13 @@ def ensure_valid_spec(spec: str | MatchSpec, warn: bool = False) -> str | MatchS
                     if match.group(1) not in ("python", "vc") and warn:
                         log = get_logger(__name__)
                         log.warning(
-                            f"Adding .* to spec '{spec}' to ensure satisfiability.  Please "
-                            "consider putting {{{{ var_name }}}}.* or some relational "
+                            "Adding .* to spec '%s' to ensure satisfiability.  Please "
+                            "consider putting {{ var_name }}.* or some relational "
                             "operator (>/</>=/<=) on this spec in meta.yaml, or if req is "
-                            "also a build req, using {{{{ pin_compatible() }}}} jinja2 "
+                            "also a build req, using {{ pin_compatible() }} jinja2 "
                             "function instead.  See "
-                            "https://conda.io/docs/user-guide/tasks/build-packages/variants.html#pinning-at-the-variant-level"
+                            "https://conda.io/docs/user-guide/tasks/build-packages/variants.html#pinning-at-the-variant-level",
+                            spec,
                         )
                     spec = spec_needing_star_re.sub(r"\1 \2.*", spec)
     return spec
@@ -2243,33 +2258,39 @@ def download_channeldata(channel_url):
 
 def shutil_move_more_retrying(src, dest, debug_name):
     log = get_logger(__name__)
-    log.info(f"Renaming {debug_name} directory '{src}' to '{dest}'")
+    log.info("Renaming %s directory '%s' to '%s'", debug_name, src, dest)
     attempts_left = 5
 
     while attempts_left > 0:
         if os.path.exists(dest):
             rm_rf(dest)
         try:
-            log.info(f"shutil.move({debug_name})={src}, dest={dest})")
+            log.info("shutil.move(%s=%s, dest=%s)", debug_name, src, dest)
             shutil.move(src, dest)
             if attempts_left != 5:
                 log.warning(
-                    f"shutil.move({debug_name}={src}, dest={dest}) succeeded on attempt number {6 - attempts_left}"
+                    "shutil.move(%s=%s, dest=%s) succeeded on attempt number %s",
+                    debug_name,
+                    src,
+                    dest,
+                    6 - attempts_left,
                 )
             attempts_left = -1
         except:
             attempts_left = attempts_left - 1
         if attempts_left > 0:
             log.warning(
-                f"Failed to rename {debug_name} directory, check with strace, struss or procmon. "
-                "Will sleep for 3 seconds and try again!"
+                "Failed to rename %s directory, check with strace, struss or procmon. "
+                "Will sleep for 3 seconds and try again!",
+                debug_name,
             )
             import time
 
             time.sleep(3)
         elif attempts_left != -1:
             log.error(
-                f"Failed to rename {debug_name} directory despite sleeping and retrying."
+                "Failed to rename %s directory despite sleeping and retrying.",
+                debug_name,
             )
 
 

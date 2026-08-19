@@ -941,7 +941,9 @@ def copy_test_source_files(m, destination):
                     except OSError as e:
                         log = utils.get_logger(__name__)
                         log.warning(
-                            f"Failed to copy {f} into test files.  Error was: {str(e)}"
+                            "Failed to copy %s into test files.  Error was: %s",
+                            f,
+                            str(e),
                         )
                 for ext in ".pyc", ".pyo":
                     for f in utils.get_ext_files(destination, ext):
@@ -1632,11 +1634,13 @@ def post_process_files(m: MetaData, initial_prefix_files):
     if len(missing):
         log = utils.get_logger(__name__)
         log.warning(
-            f"The install/build script(s) for {package_name} deleted the following "
-            f"files (from dependencies) from the prefix:\n{missing}\n"
+            "The install/build script(s) for %s deleted the following "
+            "files (from dependencies) from the prefix:\n%s\n"
             "This will cause the post-link checks to mis-report. Please "
             "try not to delete and files (DSOs in particular) from the "
-            "prefix"
+            "prefix",
+            package_name,
+            missing,
         )
     get_build_metadata(m)
     create_post_scripts(m)
@@ -1850,9 +1854,7 @@ def bundle_conda(
         }
     elif not output.get("script"):
         if not metadata.always_include_files():
-            log.warning(
-                "No files or script found for output {}".format(output.get("name"))
-            )
+            log.warning("No files or script found for output %s", output.get("name"))
             build_deps = metadata.get_value("requirements/build")
             host_deps = metadata.get_value("requirements/host")
             build_pkgs = [pkg.split()[0] for pkg in build_deps]
@@ -1971,7 +1973,8 @@ def bundle_conda(
                 except KeyError as e:
                     log.warning(
                         "Package doesn't have necessary files.  It might be too old to inspect."
-                        f"Legacy noarch packages are known to fail.  Full message was {e}"
+                        "Legacy noarch packages are known to fail.  Full message was %s",
+                        e,
                     )
             try:
                 crossed_subdir = metadata.config.target_subdir
@@ -2203,8 +2206,9 @@ def _write_activation_text(script_path, m):
         else:
             log = utils.get_logger(__name__)
             log.warning(
-                f"not adding activation to {script_path} - I don't know how to do so for "
-                "this file type"
+                "not adding activation to %s - I don't know how to do so for "
+                "this file type",
+                script_path,
             )
         fh.write(data)
 
@@ -2685,7 +2689,7 @@ def build(
                 )
                 pkg_path = bldpkg_path(m)
                 if pkg_path not in built_packages and pkg_path not in new_pkgs:
-                    log.info(f"Packaging {m.name()}")
+                    log.info("Packaging %s", m.name())
                     # for more than one output, we clear and rebuild the environment before each
                     #    package.  We also do this for single outputs that present their own
                     #    build reqs.
@@ -2802,12 +2806,11 @@ def build(
                                     prev_csum = prev_output_d["checksums"][file]
                                     nature = "Exact" if csum == prev_csum else "Inexact"
                                     log.warning(
-                                        "{} overlap between {} in packages {} and {}".format(
-                                            nature,
-                                            file,
-                                            output_d["name"],
-                                            prev_output_d["name"],
-                                        )
+                                        "%s overlap between %s in packages %s and %s",
+                                        nature,
+                                        file,
+                                        output_d["name"],
+                                        prev_output_d["name"],
                                     )
                     for built_package in newly_built_packages:
                         new_pkgs[built_package] = (output_d, m)
@@ -3560,7 +3563,9 @@ def tests_failed(
         try:
             shutil.move(pkg, dest)
             log.warning(
-                f"Tests failed for {os.path.basename(pkg)} - moving package to {broken_dir}"
+                "Tests failed for %s - moving package to %s",
+                os.path.basename(pkg),
+                broken_dir,
             )
         except OSError:
             pass
@@ -3718,7 +3723,7 @@ def build_tree(
                             else:
                                 downstreams = utils.ensure_list(downstreams)
                             for dep in downstreams:
-                                log.info(f"Testing downstream package: {dep}")
+                                log.info("Testing downstream package: %s", dep)
                                 # resolve downstream packages to a known package
 
                                 r_string = "".join(
@@ -3751,8 +3756,10 @@ def build_tree(
                                     DependencyNeedsBuildingError,
                                 ) as e:
                                     log.warning(
-                                        f"Skipping downstream test for spec {dep}; was "
-                                        f"unsatisfiable.  Error was {e}"
+                                        "Skipping downstream test for spec %s; was "
+                                        "unsatisfiable.  Error was %s",
+                                        dep,
+                                        e,
                                     )
                                     continue
                                 # make sure to download that package to the local cache if not there
