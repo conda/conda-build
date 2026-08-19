@@ -223,7 +223,7 @@ def variants_conda_build_sysroot(monkeypatch, request):
     if not on_mac:
         return {}
 
-    # if we do not speciy a custom sysroot, we get what the
+    # if we do not specify a custom sysroot, we get what the
     # current SDK has
     if "CONDA_BUILD_SYSROOT" not in os.environ:
         monkeypatch.setenv(

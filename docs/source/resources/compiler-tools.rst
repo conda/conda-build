@@ -469,7 +469,7 @@ tarballs, for example). In this case, there is a gotcha.
 
 Even if Anaconda compilers are used from outside of ``conda-build``, the GCC
 specs are customized so that, when linking an executable or a shared library,
-an RPATH pointing to ``lib/`` inside the current enviroment prefix directory
+an RPATH pointing to ``lib/`` inside the current environment prefix directory
 (``$CONDA_PREFIX/lib``) is added. This is done by changing the
 ``link_libgcc:`` section inside GCC ``specs`` file, and this change is done
 so that ``LD_LIBRARY_PATH`` isn't required for basic libraries.

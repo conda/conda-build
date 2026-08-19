@@ -89,7 +89,7 @@ Usage: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctool
     -L print shared libraries used
     -D print shared library id name
     -t print the text section (disassemble with -v)
-    -p <routine name>  start dissassemble from routine name
+    -p <routine name>  start disassemble from routine name
     -s <segname> <sectname> print contents of section
     -d print the data section
     -o print the Objective-C segment
