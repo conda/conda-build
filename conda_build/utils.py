@@ -1090,8 +1090,10 @@ def create_entry_point(path, module, func, config):
             if os.path.isfile(os.path.join(config.host_prefix, "python_d.exe")):
                 fo.write("#!python_d\n")
             fo.write(pyscript)
+            # FIXME: Update once win-arm64 native launcher is available
+            host_arch = "64" if config.host_arch == "arm64" else str(config.host_arch)
             copy_into(
-                join(dirname(__file__), f"cli-{str(config.host_arch)}.exe"),
+                join(dirname(__file__), f"cli-{host_arch}.exe"),
                 path + ".exe",
                 config.timeout,
             )

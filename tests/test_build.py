@@ -21,6 +21,7 @@ import pytest
 from conda.common.compat import on_win
 
 from conda_build import api, build, windows
+from conda_build.build import INTERPRETER_BAT
 from conda_build.exceptions import CondaBuildUserError
 from conda_build.metadata import MetaData
 from conda_build.variants import get_default_variant
@@ -462,16 +463,16 @@ def test_build_command_win_arm64_wrapper(
 
     work_script = tmp_path / "conda_build.bat"
     work_script.write_text("@echo off\r\n")
-    wrapper = tmp_path / "_conda_build_wrapper.bat"
+    wrapper = tmp_path / "conda_build.bat.wrapper.bat"
 
     cmd = windows.build_command_arguments(testing_metadata, str(work_script))
 
     if not wrapped:
-        assert cmd == ["cmd.exe", "/d", "/c", "conda_build.bat"]
+        assert cmd == [*INTERPRETER_BAT, "conda_build.bat"]
         assert not wrapper.exists()
         return
 
-    assert cmd == ["cmd.exe", "/d", "/c", "_conda_build_wrapper.bat"]
+    assert cmd == [*INTERPRETER_BAT, "conda_build.bat.wrapper.bat"]
 
     contents = wrapper.read_text()
     contents_bytes = wrapper.read_bytes()
@@ -483,6 +484,7 @@ def test_build_command_win_arm64_wrapper(
     assert str(work_script) in contents
     # batch files must be CRLF; a bare LF breaks cmd.exe
     assert contents_bytes.count(b"\n") == contents_bytes.count(b"\r\n")
+    assert b"\r\r\n" not in contents_bytes
 
 
 @pytest.mark.skipif(
@@ -515,6 +517,140 @@ def test_win_arm64_build_on_emulated_win_64(
     print(*sorted(os.listdir(testing_metadata.config.work_dir)), sep="\n")
     assert "PROCESSOR_ARCHITECTURE=ARM64" in out
     assert "ProcessArchitecture=Arm64" in out
+
+
+@pytest.mark.parametrize(
+    "script,pre_script,expected_command",
+    [
+        pytest.param("bld.bat", "", " ".join(INTERPRETER_BAT), id="bat-default"),
+        pytest.param(
+            "install.ps1",
+            "powershell -ExecutionPolicy ByPass -File",
+            "powershell -ExecutionPolicy ByPass -File",
+            id="ps1-explicit",
+        ),
+    ],
+)
+def test_wrap_script_with_machine(
+    testing_metadata: MetaData,
+    tmp_path: Path,
+    script: str,
+    pre_script: str,
+    expected_command: str,
+) -> None:
+    """The wrapper launches ``script`` through ``start /machine <build arch>``."""
+    testing_metadata.config.platform = "win"
+    testing_metadata.config.arch = "arm64"
+    testing_metadata.config.variant["target_platform"] = "win-arm64"
+
+    (source := tmp_path / script).write_text("@echo off\r\n")
+
+    wrapper = Path(
+        windows.wrap_script_with_machine(testing_metadata, source, pre_script)
+    )
+
+    # written next to the wrapped script, always a .bat regardless of the input
+    assert wrapper == tmp_path / f"{source.name}.wrapper.bat"
+
+    contents = wrapper.read_text()
+    assert 'start "" /b /wait /machine ARM64' in contents
+    assert expected_command in contents
+    assert str(source) in contents
+    # the child's exit code must reach conda-build
+    assert "exit /b %ERRORLEVEL%" in contents
+
+    # wrapper is always .bat; bare LF breaks cmd.exe and a stray CR
+    # (from newline translation) makes `goto`/`exit` targets unparseable
+    raw = wrapper.read_bytes()
+    assert raw.count(b"\n") == raw.count(b"\r\n")
+    assert b"\r\r\n" not in raw
+
+
+@pytest.mark.parametrize(
+    "script,build_subdir,running_subdir,wrapped",
+    [
+        pytest.param("install.bat", "win-arm64", "win-64", True, id="bat-arm64-on-64"),
+        pytest.param("install.bat", "win-64", "win-arm64", True, id="bat-64-on-arm64"),
+        pytest.param("install.ps1", "win-arm64", "win-64", True, id="ps1-arm64-on-64"),
+        pytest.param("install.bat", "win-arm64", "win-arm64", False, id="bat-native"),
+        pytest.param("install.sh", "win-arm64", "win-64", False, id="sh-never-wrapped"),
+    ],
+)
+def test_bundle_conda_win_arm64_wrapper(
+    testing_metadata: MetaData,
+    mocker: MockerFixture,
+    tmp_path: Path,
+    script: str,
+    build_subdir: str,
+    running_subdir: str,
+    wrapped: bool,
+) -> None:
+    """Output scripts are launched with the build_platform architecture.
+
+    Companion to ``test_build_command_win_arm64_wrapper``, which covers the
+    top-level build script. Here the script comes from an output definition and
+    is dispatched by ``bundle_conda``.
+    """
+    platform, arch = build_subdir.split("-")
+    testing_metadata.config.platform = platform
+    testing_metadata.config.arch = arch
+    testing_metadata.config.variant["target_platform"] = build_subdir
+
+    # the recipe (and its script) live in tmp_path
+    testing_metadata.path = str(tmp_path)
+    (tmp_path / script).write_text("@echo off\r\n")
+
+    mocker.patch.object(build, "on_win", True)
+    mocker.patch.object(windows, "_running_subdir", return_value=running_subdir)
+
+    # the interpreter is normally resolved out of BUILD_PREFIX; pin it so the
+    # assertions below do not depend on what is installed on the test machine
+    (interpreter := tmp_path / "interpreter.exe").touch()
+    mocker.patch(
+        "conda_build.os_utils.external.find_executable",
+        return_value=str(interpreter),
+    )
+
+    class _ScriptWouldHaveRun(Exception):
+        pass
+
+    check_call_env = mocker.patch(
+        "conda_build.utils.check_call_env",
+        side_effect=_ScriptWouldHaveRun,
+    )
+
+    with pytest.raises(_ScriptWouldHaveRun):
+        build.bundle_conda(
+            output={"script": script},
+            metadata=testing_metadata,
+            env={},
+            stats={},
+        )
+
+    work_dir = Path(testing_metadata.config.work_dir)
+    dest_file = work_dir / script
+    wrapper = work_dir / f"{dest_file.name}.wrapper.bat"
+    command = check_call_env.call_args.args[0]
+
+    if not wrapped:
+        assert command[0] == str(interpreter)
+        assert command[-1] == str(dest_file)
+        assert not wrapper.exists()
+        return
+
+    assert command == [*INTERPRETER_BAT, str(wrapper)]
+
+    contents = wrapper.read_text()
+    machine = "AMD64" if build_subdir == "win-64" else "ARM64"
+    assert f'start "" /b /wait /machine {machine}' in contents
+    # the real interpreter must be invoked *inside* the re-architected process
+    assert str(interpreter) in contents
+    assert str(dest_file) in contents
+    assert "exit /b %ERRORLEVEL%" in contents
+
+    raw = wrapper.read_bytes()
+    assert raw.count(b"\n") == raw.count(b"\r\n")
+    assert b"\r\r\n" not in raw
 
 
 @pytest.mark.parametrize("name", ["conda", "ordinary-pkg"])
