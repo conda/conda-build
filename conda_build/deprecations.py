@@ -8,6 +8,7 @@ import sys
 import warnings
 from argparse import Action
 from functools import wraps
+from packaging.version import InvalidVersion
 from types import ModuleType
 from typing import TYPE_CHECKING
 
@@ -75,7 +76,7 @@ class DeprecationHandler:
         if self._version_object is None:
             try:
                 self._version_object = parse(self._version)  # type: ignore[arg-type]
-            except TypeError:
+            except (TypeError, InvalidVersion):
                 # TypeError: self._version could not be parsed
                 self._version_object = parse("0.0.0.dev0+placeholder")
         return self._version_object < parse(version)
