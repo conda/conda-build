@@ -1,11 +1,21 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
 
+import os
+from pathlib import Path
+
 from rattler_build.package import Package
 from rattler_build.render import RenderConfig
 from rattler_build.stage0 import Stage0Recipe
 from rattler_build.tool_config import PlatformConfig
 from rattler_build.variant_config import VariantConfig
+
+from conda_build._rattler_build.compat import run_rattler
+from conda_build.cli import main_build
+from conda_build.config import Config
+
+from .utils import metadata_dir
+from .utils import reset_config as _reset_config
 
 
 def test_variants():
@@ -191,3 +201,33 @@ outputs:
     assert output2_win["build"]["string"] == "win_95d38b2_0"
     assert output2_win["build"]["noarch"] == "generic"
     assert output2_win["requirements"]["run"] == [pin]
+
+
+def test_build_v1_root_dir(testing_workdir, testing_config):
+    """Verify that root-dir setting will affect the package output folder"""
+    recipe = os.path.join(metadata_dir, "..", "variants", "32_v1_recipe")
+
+    with open(os.path.join(testing_workdir, ".condarc"), "w") as f:
+        print(
+            "conda_build:",
+            f"  root-dir: {testing_workdir}",
+            "channels:",
+            "  - conda-forge",
+            sep="\n",
+            file=f,
+        )
+    _reset_config([os.path.join(testing_workdir, ".condarc")])
+
+    args = [recipe, "--no-test"]
+    parser, args = main_build.parse_args(args)
+    config = Config(**args.__dict__)
+
+    run_rattler(command="build", parsed_args=args, config=config)
+
+    built_pkgs = [
+        str(path)
+        for path in Path(testing_workdir).rglob("*")
+        if path.name.endswith(".conda")
+    ]
+
+    assert built_pkgs, f"No built package found in {testing_workdir}"
