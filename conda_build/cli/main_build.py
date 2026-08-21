@@ -25,7 +25,7 @@ from ..config import (
     get_or_merge_config,
     zstd_compression_level_default,
 )
-from ..utils import LoggingContext, is_v1_recipe
+from ..utils import LoggingContext, is_v0_recipe, is_v1_recipe
 from .actions import KeyValueAction, PackageTypeNormalize
 from .main_render import get_render_parser
 
@@ -574,9 +574,10 @@ def execute(args: Sequence[str] | None = None) -> int:
     config.channel_urls = get_channel_urls(parsed.__dict__)
 
     config.verbose = not parsed.quiet or parsed.debug
-
+    n_v0_recipes = sum(1 for recipe in parsed.recipe if is_v0_recipe(recipe))
     n_v1_recipes = sum(1 for recipe in parsed.recipe if is_v1_recipe(recipe))
-    if n_v1_recipes == len(parsed.recipe):  # all are v1, proceed with rattler-build
+
+    if n_v1_recipes > 0 and n_v0_recipes == 0:  # all are v1, proceed with rattler-build
         # check cli arguments
         parser, parsed_only_recipe = parse_args(parsed.recipe)
         command = parser.prog.split()[-1]
@@ -584,7 +585,7 @@ def execute(args: Sequence[str] | None = None) -> int:
         # run rattler command
         return run_rattler(command, parsed, config)
 
-    if n_v1_recipes > 0:  # mixed recipe formats, error out
+    if n_v1_recipes > 0 and n_v0_recipes > 0:  # mixed recipe formats, error out
         print(
             "Cannot process several recipe versions at the same time!", file=sys.stderr
         )
