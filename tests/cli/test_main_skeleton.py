@@ -1,5 +1,6 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+import importlib
 import os
 import re
 from pathlib import Path
@@ -13,7 +14,8 @@ from conda_build.cli import main_build, main_skeleton
 @pytest.mark.sanity
 def test_skeleton_pypi(testing_workdir, testing_config):
     args = ["pypi", "peppercorn"]
-    main_skeleton.execute(args)
+    with pytest.deprecated_call():
+        main_skeleton.execute(args)
     assert os.path.isdir("peppercorn")
 
     # add setuptools to host dependencies
@@ -34,7 +36,8 @@ def test_skeleton_pypi(testing_workdir, testing_config):
 @pytest.mark.sanity
 def test_skeleton_pypi_compatible_versions(testing_workdir, testing_config):
     args = ["pypi", "openshift"]
-    main_skeleton.execute(args)
+    with pytest.deprecated_call():
+        main_skeleton.execute(args)
     assert os.path.isdir("openshift")
 
 
@@ -48,7 +51,8 @@ def test_skeleton_pypi_arguments_work(testing_workdir):
     https://github.com/conda/conda-build/pull/1384
     """
     args = ["pypi", "fasttext", "--version=0.9.2", "--pin-numpy"]
-    main_skeleton.execute(args)
+    with pytest.deprecated_call():
+        main_skeleton.execute(args)
     assert os.path.isdir("fasttext")
 
     # Deliberately bypass metadata reading in conda build to get as
@@ -63,10 +67,23 @@ def test_skeleton_pypi_arguments_work(testing_workdir):
         "--setup-options=--offline",
         "--extra-specs=extension-helpers",
     ]
-    main_skeleton.execute(args)
+    with pytest.deprecated_call():
+        main_skeleton.execute(args)
     assert os.path.isdir("photutils")
     # Check that the setup option occurs in bld.bat and build.sh.
 
     metadata = api.render("photutils")[0][0]
     assert "--offline" in metadata.meta["build"]["script"]
     assert metadata.version() == "1.10.0"
+
+
+def test_skeleton_deprecation_warning():
+    """
+    Verify that importing conda_build.cli.main_skeleton will raise a deprecation warning.
+    """
+    with pytest.deprecated_call(
+        match=r"conda_build.cli.main_skeleton is pending deprecation.*grayskull.*",
+    ):
+        import conda_build.cli.main_skeleton  # noqa F401
+
+        importlib.reload(conda_build.cli.main_skeleton)
