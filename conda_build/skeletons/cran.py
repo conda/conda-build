@@ -658,7 +658,7 @@ def _ssl_no_verify():
 
 def get_session(output_dir, verbose=True):
     session = requests.Session()
-    session.verify = _ssl_no_verify()
+    session.verify = not _ssl_no_verify()
     try:
         import cachecontrol
         import cachecontrol.caches
@@ -675,6 +675,42 @@ def get_session(output_dir, verbose=True):
     return session
 
 
+# CRAN mirrors serve directory listings in several flavours: Apache fancy
+# tables (cran.r-project.org), Apache plain pre-formatted text
+# (cloud.r-project.org) and nginx autoindex, so match the anchors alone
+# rather than relying on the surrounding <td> markup. The anchor text cannot
+# be trusted either: Apache (NameWidth) and nginx truncate long names to
+# "name..>", and some mirrors add extra attributes such as title="...", so
+# parse the href — restricted to bare file or directory names — and ignore
+# the display text.
+_LISTING_FILE = re.compile(r'<a href="([^"/:?#]+)"[^>]*>[^<]*</a>')
+
+
+def sortable_listing_date(date):
+    """Normalize a directory listing timestamp so it sorts chronologically.
+
+    nginx autoindex dates ("08-Apr-1999 11:06") are rewritten into the Apache
+    form ("1999-04-08 11:06") so that a plain lexical sort stays correct.
+    """
+    match = re.fullmatch(r"(\d{2})-([A-Za-z]{3})-(\d{4}) (\d{2}:\d{2})", date)
+    if not match:
+        return date
+    day, month, year, time = match.groups()
+    months = {
+        name: f"{number:02d}"
+        for number, name in enumerate(
+            "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split(), 1
+        )
+    }
+    month_number = months.get(month.title())
+    if month_number is None:
+        # An unrecognized month (e.g. a localized abbreviation) must not be
+        # rewritten into a fake-but-sortable timestamp; leave the date alone
+        # so entries from the same listing at least keep their relative order.
+        return date
+    return f"{year}-{month_number}-{day} {time}"
+
+
 def get_cran_archive_versions(cran_url, session, package, verbose=True):
     if verbose:
         print(f"Fetching archived versions for package {package} from {cran_url}")
@@ -687,12 +723,15 @@ def get_cran_archive_versions(cran_url, session, package, verbose=True):
             return []
         raise
     versions = []
-    for p, dt in re.findall(
-        r'<td><a href="([^"]+)">\1</a></td>\s*<td[^>]*>([^<]*)</td>', r.text
-    ):
+    # Apache dates read "1999-04-08 11:06", nginx autoindex "08-Apr-1999 11:06".
+    listing_file_date = re.compile(
+        _LISTING_FILE.pattern + r"\s*(?:</td>\s*<td[^>]*>)?\s*"
+        r"(\d{4}-\d{2}-\d{2} \d{2}:\d{2}|\d{2}-[A-Za-z]{3}-\d{4} \d{2}:\d{2})"
+    )
+    for p, dt in listing_file_date.findall(r.text):
         if p.endswith(".tar.gz") and "_" in p:
             name, version = p.rsplit(".", 2)[0].split("_", 1)
-            versions.append((dt.strip(), version))
+            versions.append((sortable_listing_date(dt), version))
     return [v for dt, v in sorted(versions, reverse=True)]
 
 
@@ -702,13 +741,36 @@ def get_cran_index(cran_url, session, verbose=True):
     r = session.get(cran_url + "/src/contrib/")
     r.raise_for_status()
     records = {}
-    for p in re.findall(r'<td><a href="([^"]+)">\1</a></td>', r.text):
+    for p in _LISTING_FILE.findall(r.text):
         if p.endswith(".tar.gz") and "_" in p:
             name, version = p.rsplit(".", 2)[0].split("_", 1)
             records[name.lower()] = (name, version)
-    r = session.get(cran_url + "/src/contrib/Archive/")
-    r.raise_for_status()
-    for p in re.findall(r'<td><a href="([^"]+)/">\1/</a></td>', r.text):
+    if not records:
+        sys.exit(
+            f"Error: no package listing could be parsed from {cran_url}/src/contrib/; "
+            "the mirror may serve an unsupported directory listing format"
+        )
+    try:
+        r = session.get(cran_url + "/src/contrib/Archive/")
+        r.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        # The full Archive listing is several megabytes and mirrors sometimes
+        # time out or fail generating it. Carry on with an index of just the
+        # currently published packages rather than failing the whole run.
+        print(
+            f"Warning: CRAN archive index is unavailable ({e}); the package "
+            "index is incomplete and archived packages will appear to be missing"
+        )
+        return records
+    listing_dir = re.compile(r'<a href="([^"/:?#]+)/"[^>]*>[^<]*</a>')
+    archive_dirs = listing_dir.findall(r.text)
+    if not archive_dirs:
+        print(
+            "Warning: no archived packages could be parsed from the CRAN "
+            f"archive index at {cran_url}/src/contrib/Archive/; the package "
+            "index is incomplete and archived packages will appear to be missing"
+        )
+    for p in archive_dirs:
         if re.match(r"^[A-Za-z]", p):
             records.setdefault(p.lower(), (p, None))
     return records
@@ -850,7 +912,7 @@ def get_available_binaries(cran_url, details):
     response = requests.get(url)
     response.raise_for_status()
     ext = details["ext"]
-    for filename in re.findall(r'<a href="([^"]*)">\1</a>', response.text):
+    for filename in _LISTING_FILE.findall(response.text):
         if filename.endswith(ext):
             pkg, _, ver = filename.rpartition("_")
             ver, _, _ = ver.rpartition(ext)
@@ -1056,6 +1118,12 @@ def skeletonize(
                 all_versions = get_cran_archive_versions(cran_url, session, package)
                 if cran_version:
                     all_versions = [cran_version] + all_versions
+                if not all_versions:
+                    print(
+                        f"ERROR: No versions of package {package} found in the "
+                        f"archive at {cran_url}"
+                    )
+                    sys.exit(1)
                 if not version:
                     version = all_versions[0]
                 elif version not in all_versions:
