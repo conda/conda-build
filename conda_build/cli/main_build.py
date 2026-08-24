@@ -585,10 +585,14 @@ def execute(args: Sequence[str] | None = None) -> int:
         # run rattler command
         return run_rattler(command, parsed, config)
 
-    if n_v1_recipes > 0 and n_v0_recipes > 0:  # mixed recipe formats, error out
+    elif n_v1_recipes > 0 and n_v0_recipes > 0:  # mixed recipe formats, error out
         print(
             "Cannot process several recipe versions at the same time!", file=sys.stderr
         )
+        return 1
+
+    elif n_v1_recipes == 0 and n_v0_recipes == 0:
+        print("No valid recipes found!", file=sys.stderr)
         return 1
 
     # No v1 recipes, then everything is meta.yaml, continue with conda-build
