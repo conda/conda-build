@@ -78,6 +78,9 @@ inherited from the shell environment in which you invoke
      - Inherited from your shell environment.
    * - HTTPS_PROXY
      - Inherited from your shell environment.
+   * - REQUESTS_CA_BUNDLE
+     - Inherited from your shell environment when set.
+       Omitted when unset so TLS clients do not see an empty CA path.
    * - LANG
      - Inherited from your shell environment.
    * - MAKEFLAGS
@@ -130,7 +133,7 @@ inherited from the shell environment in which you invoke
    * - STDLIB_DIR
      - Python standard library location.
    * - build_platform
-     - The native subdir of the conda executable
+     - The native subdir of the conda executable. Override with ``CONDA_SUBDIR`` env var when calling ``conda-build``.
 
 Unix-style packages on Windows, which are usually statically
 linked to executables, are built in a special ``Library``

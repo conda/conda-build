@@ -4,11 +4,11 @@
 
 ### Bug fixes
 
-* Fix finding used variables that do not feature spaces, e.g. `{{python_min}}`. (#6036)
+* <news item>
 
 ### Deprecations
 
-* <news item>
+* Mark unused `liefldd._inspect_linkages_this` as pending deprecation. (#6089 via #6090)
 
 ### Docs
 
