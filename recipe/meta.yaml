@@ -45,7 +45,7 @@ requirements:
     - patch >=2.6                  # [not win]
     # patchelf 0.18.* is buggy: ELF load command is garbled.
     # xref: https://github.com/conda/conda-build/issues/4881
-    - patchelf !=0.18              # [linux]
+    - patchelf >=0.17,!=0.18.*,<0.20  # [unix]
     - pkginfo
     - psutil
     - py-lief
