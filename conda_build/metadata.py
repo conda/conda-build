@@ -824,6 +824,33 @@ def _str_version(package_meta):
     return package_meta
 
 
+_CEP26_NAME_RE: re.Pattern[str] = re.compile(
+    r"^(([a-z0-9])|([a-z0-9_](?!_)))[._-]?([a-z0-9]+(\.|-|_|$))*$"
+)
+_CEP26_VIRTUAL_NAME_RE: re.Pattern[str] = re.compile(
+    r"^__[a-z0-9][._-]?([a-z0-9]+(\.|-|_|$))*$"
+)
+
+
+def check_package_name(name: str) -> None:
+    """Validate a package name against CEP-26 naming conventions.
+
+    See https://conda.org/learn/ceps/cep-0026
+    """
+    if not name:
+        return
+    if not (_CEP26_NAME_RE.match(name) or _CEP26_VIRTUAL_NAME_RE.match(name)):
+        if invalid := re.findall(r"[^a-z0-9._-]", name):
+            raise CondaBuildUserError(
+                f"package/name contains invalid characters "
+                f"({''.join(dict.fromkeys(invalid))}): {name}"
+            )
+        raise CondaBuildUserError(
+            f"package/name does not follow CEP-26 naming conventions: {name}. "
+            f"See https://conda.org/learn/ceps/cep-0026"
+        )
+
+
 def check_bad_chrs(value: str, field: str) -> None:
     bad_chrs = set("=@#$%^&*:;\"'\\|<>?/ ")
     if field in ("package/version", "build/string"):
@@ -1580,7 +1607,7 @@ class MetaData:
         name = str(name)
         if name != name.lower():
             sys.exit(f"Error: package/name must be lowercase, got: {name!r}")
-        check_bad_chrs(name, "package/name")
+        check_package_name(name)
         return name
 
     def version(self) -> str:
