@@ -170,6 +170,7 @@ def test_hash_no_apply_to_custom_build_string(testing_metadata, testing_workdir)
     metadata = api.render(testing_workdir)[0][0]
 
     assert metadata.build_id() == "steve"
+    assert metadata.build_id(force_final=True) == "steve"
 
 
 def test_pin_depends(testing_config):

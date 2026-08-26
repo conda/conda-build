@@ -1815,7 +1815,8 @@ class MetaData:
             return _hash_dependencies(hashing_dependencies, self.config.hash_length)
         return hash_
 
-    def build_id(self):
+    def build_id(self, *, force_final: bool = False):
+        """Return the build ID, optionally calculating it as final metadata."""
         manual_build_string = self.get_value("build/string")
         # we need the raw recipe for this metadata (possibly an output), so that we can say whether
         #    PKG_HASH is used for anything.
@@ -1835,7 +1836,7 @@ class MetaData:
         else:
             # default; build/string not set or uses PKG_HASH variable, so we should fill in the hash
             out = build_string_from_metadata(self)
-            if self.config.filename_hashing and self.final:
+            if self.config.filename_hashing and (self.final or force_final):
                 hash_ = self.hash_dependencies()
                 if not re.findall(f"h[0-9a-f]{{{self.config.hash_length}}}", out):
                     ret = out.rsplit("_", 1)

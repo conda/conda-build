@@ -384,14 +384,11 @@ def pin_subpackage_against_outputs(
                 pin = None
             else:
                 if exact:
-                    if not skip_build_id and not sp_m.final:
-                        sp_m = sp_m.copy()
-                        sp_m.final = True
                     pin = " ".join(
                         [
                             sp_m.name(),
                             sp_m.version(),
-                            sp_m.build_id()
+                            sp_m.build_id(force_final=True)
                             if not skip_build_id
                             else str(sp_m.build_number()),
                         ]

@@ -445,7 +445,6 @@ def test_native_stdlib_metadata(
 def test_hash_build_id(testing_metadata):
     testing_metadata.config.variant["zlib"] = "1.2"
     testing_metadata.meta["requirements"]["host"] = ["zlib"]
-    testing_metadata.final = True
     hash_contents = testing_metadata.get_hash_contents()
     assert hash_contents["zlib"] == "1.2"
     hdeps = testing_metadata.hash_dependencies()
@@ -462,6 +461,15 @@ def test_hash_build_id(testing_metadata):
     assert found, (
         f"Did not find build that matched {hdeps} when testing each of DEFAULT_SUBDIRS"
     )
+    assert testing_metadata.build_id() == "1"
+    assert testing_metadata.build_id(force_final=True) == hdeps + "_1"
+    assert not testing_metadata.final
+
+    testing_metadata.config.filename_hashing = False
+    assert testing_metadata.build_id(force_final=True) == "1"
+
+    testing_metadata.config.filename_hashing = True
+    testing_metadata.final = True
     assert testing_metadata.build_id() == hdeps + "_1"
 
 
