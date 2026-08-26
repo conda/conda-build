@@ -17,7 +17,12 @@ from conda.base.context import context
 from conda.common.io import dashlist
 
 from .. import api, build, source, utils
-from .._rattler_build.compat import check_arguments_rattler, run_rattler
+from .._rattler_build.compat import (
+    check_arguments_rattler,
+    is_v1_package,
+    run_rattler,
+    test_v1_package,
+)
 from ..config import (
     CondaPkgFormat,
     conda_pkg_format_default,
@@ -557,6 +562,9 @@ def test_action(recipe: os.PathLike, config: Config) -> bool:
     :param config: Config object used for various options
     :return: True if tests succeed
     """
+    if is_v1_package(recipe):
+        return test_v1_package(recipe, config)
+
     return api.test(recipe, move_broken=False, config=config)
 
 
