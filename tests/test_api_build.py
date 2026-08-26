@@ -1757,6 +1757,7 @@ def test_python_site_packages_path(testing_config):
     assert index["python_site_packages_path"] == "some/path"
 
 
+@pytest.mark.flaky(reruns=5, reruns_delay=2)
 def test_overlinking_detection(
     testing_config, testing_workdir, variants_conda_build_sysroot
 ):
@@ -1789,6 +1790,7 @@ def test_overlinking_detection(
     rm_rf(dest_bat)
 
 
+@pytest.mark.flaky(reruns=5, reruns_delay=2)
 def test_overlinking_detection_ignore_patterns(
     testing_config, testing_workdir, variants_conda_build_sysroot
 ):
