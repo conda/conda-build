@@ -574,6 +574,37 @@ def test_build_v1_recipe() -> None:
     assert main_build.execute(args) == 0
 
 
+def test_build_v1_recipe_with_legacy_cbc_selectors(tmp_path: Path) -> None:
+    """Build a v1 recipe with selectors in conda_build_config.yaml."""
+    recipe = tmp_path / "recipe"
+    recipe.mkdir()
+    (recipe / "recipe.yaml").write_text(
+        """
+schema_version: 1
+
+package:
+  name: test-legacy-cbc-selectors
+  version: "1.0"
+
+build:
+  number: ${{ build_number }}
+""",
+        encoding="utf-8",
+    )
+    (recipe / "conda_build_config.yaml").write_text(
+        """
+build_number:
+  - 1  # [not win]
+  - 2  # [win]
+""",
+        encoding="utf-8",
+    )
+
+    assert (
+        main_build.execute([str(recipe), "--output-folder", str(tmp_path / "out")]) == 0
+    )
+
+
 def test_build_v1_recipe_multi_output(testing_workdir: str) -> None:
     """Test building a multi-output v1 recipe"""
     recipe = os.path.join(metadata_dir, "..", "variants", "33_v1_recipe_multi_output")
