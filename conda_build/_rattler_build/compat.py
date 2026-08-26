@@ -11,7 +11,6 @@ from typing import TYPE_CHECKING
 
 import yaml
 from conda.base.context import context
-from rattler import Platform
 from rattler_build import (
     Package,
     RattlerBuildError,
@@ -441,8 +440,9 @@ def run_rattler(
             if Path(variant).name == "conda_build_config.yaml":
                 # legacy conda-build format
                 jinja_config = JinjaConfig(
-                    platform=PlatformConfig(target_platform=str(Platform.current()))
+                    platform=PlatformConfig(target_platform=config.subdir)
                 )
+
                 variant_config = variant_config.merge(
                     VariantConfig.from_conda_build_config(variant, jinja_config)
                 )
