@@ -1,5 +1,18 @@
 [//]: # (current developments)
 
+## 26.7.1 (2026-08-18)
+
+### Bug fixes
+
+* Make multi-output script subprocesses match `build_platform` architecture when running emulated Python processes too. Previous fix only dealt with top-level build scripts. (#6080)
+* Forward `win-arm64` entry point launchers to `cli-64.exe`. (#6081)
+
+### Contributors
+
+* @jaimergp
+
+
+
 ## 26.7.0 (2026-07-24)
 
 ### Enhancements
