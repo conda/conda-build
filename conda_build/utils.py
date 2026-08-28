@@ -1369,6 +1369,7 @@ def is_v1_recipe(recipe_dir: Path) -> bool:
 
 
 def is_v0_recipe(recipe_dir: Path) -> bool:
+    """Check if meta.yaml exists."""
     try:
         find_recipe(recipe_dir)
         return True
