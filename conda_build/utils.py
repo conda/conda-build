@@ -1363,9 +1363,9 @@ def find_recipe(path: str) -> str:
 
 
 def is_v1_recipe(recipe_dir: Path) -> bool:
-    """Check if recipe.yaml exists"""
+    """Check if recipe.yaml exists."""
     recipe_dir = Path(recipe_dir)
-    return (recipe_dir / "recipe.yaml").exists()
+    return (recipe_dir / "recipe.yaml").is_file()
 
 
 def is_v0_recipe(recipe_dir: Path) -> bool:
