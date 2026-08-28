@@ -388,7 +388,7 @@ def pin_subpackage_against_outputs(
                         [
                             sp_m.name(),
                             sp_m.version(),
-                            sp_m.build_id(force_final=True)
+                            sp_m.build_id(force_final_hash=True)
                             if not skip_build_id
                             else str(sp_m.build_number()),
                         ]

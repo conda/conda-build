@@ -108,7 +108,7 @@ def test_pin_subpackage_exact(testing_metadata, mocker):
     build_id = mocker.spy(fm, "build_id")
     pin = jinja_context.pin_subpackage(testing_metadata, name, exact=True)
     assert pin == f"{fm.name()} {fm.version()} {final_fm.build_id()}"
-    build_id.assert_called_once_with(force_final=True)
+    build_id.assert_called_once_with(force_final_hash=True)
     assert fm.meta == original_meta
     assert not fm.final
 

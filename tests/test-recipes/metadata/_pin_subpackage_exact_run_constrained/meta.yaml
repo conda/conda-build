@@ -1,0 +1,17 @@
+package:
+  name: blas-split
+  version: 3.9.0
+
+outputs:
+  - name: libblas
+    requirements:
+      run_constrained:
+        - {{ pin_subpackage("libcblas", exact=True) }}
+
+  - name: libcblas
+    build:
+      number: 27
+      string: 27_h{{ PKG_HASH }}_{{ blas_impl }}
+    requirements:
+      run:
+        - {{ pin_subpackage("libblas", exact=True) }}

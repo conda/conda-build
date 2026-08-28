@@ -462,11 +462,11 @@ def test_hash_build_id(testing_metadata):
         f"Did not find build that matched {hdeps} when testing each of DEFAULT_SUBDIRS"
     )
     assert testing_metadata.build_id() == "1"
-    assert testing_metadata.build_id(force_final=True) == hdeps + "_1"
+    assert testing_metadata.build_id(force_final_hash=True) == hdeps + "_1"
     assert not testing_metadata.final
 
     testing_metadata.config.filename_hashing = False
-    assert testing_metadata.build_id(force_final=True) == "1"
+    assert testing_metadata.build_id(force_final_hash=True) == "1"
 
     testing_metadata.config.filename_hashing = True
     testing_metadata.final = True

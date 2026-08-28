@@ -1371,6 +1371,26 @@ def test_pin_subpackage_exact(testing_config):
     )
 
 
+def test_pin_subpackage_exact_run_constrained(testing_config):
+    recipe = os.path.join(metadata_dir, "_pin_subpackage_exact_run_constrained")
+    metadata_by_name = {
+        metadata.name(): metadata
+        for metadata, _, _ in api.render(
+            recipe,
+            config=testing_config,
+            variants={"blas_impl": ["openblas"]},
+        )
+    }
+    libblas = metadata_by_name["libblas"]
+    libcblas = metadata_by_name["libcblas"]
+    libcblas_build_id = libcblas.build_id()
+    assert "h1234567" not in libcblas_build_id
+    assert re.search(rf"h[0-9a-f]{{{testing_config.hash_length}}}", libcblas_build_id)
+    assert libblas.info_index()["constrains"] == [
+        f"libcblas {libcblas.version()} {libcblas_build_id}"
+    ]
+
+
 @pytest.mark.sanity
 @pytest.mark.serial
 @pytest.mark.skipif(on_mac and not which("xattr"), reason="`xattr` unavailable")

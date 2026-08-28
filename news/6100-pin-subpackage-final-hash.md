@@ -4,7 +4,7 @@
 
 ### Bug fixes
 
-* Preserve final build IDs, including dependency hashes, in exact `pin_subpackage()` run exports. (#6078 via #6100)
+* Preserve final build IDs, including dependency hashes, in exact `pin_subpackage()` references. (#5572, #6078 via #6100)
 
 ### Deprecations
 
