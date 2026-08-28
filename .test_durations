@@ -1,5 +1,0 @@
-{
-    "tests/cli/test_main_build.py::test_build_v1_recipe_with_legacy_cbc_selectors[linux-1]": 0.0001080009969882667,
-    "tests/cli/test_main_build.py::test_build_v1_recipe_with_legacy_cbc_selectors[osx-3]": 0.23803729201608803,
-    "tests/cli/test_main_build.py::test_build_v1_recipe_with_legacy_cbc_selectors[win-2]": 7.20839889254421e-05
-}
