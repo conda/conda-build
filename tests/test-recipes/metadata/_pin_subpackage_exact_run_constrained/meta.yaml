@@ -4,6 +4,9 @@ package:
 
 outputs:
   - name: libblas
+    build:
+      number: 27
+      string: 27_h{{ PKG_HASH }}_{{ blas_impl }}
     requirements:
       run_constrained:
         - {{ pin_subpackage("libcblas", exact=True) }}

@@ -1383,11 +1383,17 @@ def test_pin_subpackage_exact_run_constrained(testing_config):
     }
     libblas = metadata_by_name["libblas"]
     libcblas = metadata_by_name["libcblas"]
+    libblas_build_id = libblas.build_id()
     libcblas_build_id = libcblas.build_id()
+    assert "h1234567" not in libblas_build_id
+    assert re.search(rf"h[0-9a-f]{{{testing_config.hash_length}}}", libblas_build_id)
     assert "h1234567" not in libcblas_build_id
     assert re.search(rf"h[0-9a-f]{{{testing_config.hash_length}}}", libcblas_build_id)
     assert libblas.info_index()["constrains"] == [
         f"libcblas {libcblas.version()} {libcblas_build_id}"
+    ]
+    assert libcblas.info_index()["depends"] == [
+        f"libblas {libblas.version()} {libblas_build_id}"
     ]
 
 
