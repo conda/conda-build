@@ -437,7 +437,7 @@ def run_rattler(
     # merge config files in the order they are stacked
     if config_files:
         for variant in config_files:
-            if Path(variant).name == "conda_build_config.yaml":
+            if Path(variant).name in {"cbc.yaml", "conda_build_config.yaml"}:
                 # legacy conda-build format
                 jinja_config = JinjaConfig(
                     platform=PlatformConfig(target_platform=config.subdir)
