@@ -366,6 +366,7 @@ def process_recipe(
 
 def is_v1_package(package_path: str | os.PathLike) -> bool:
     """Return whether a package was built from a v1 ``recipe.yaml`` recipe."""
+    package_path = str(package_path)
     if not os.path.isfile(package_path):
         return False
 
