@@ -693,3 +693,11 @@ def test_error_on_mixed_v0_v1_recipes(testing_workdir: str, capsys) -> None:
 
     captured = capsys.readouterr()
     assert "Cannot process several recipe versions at the same time!" in captured.err
+
+
+def test_build_no_recipe_files(testing_workdir: str) -> None:
+    recipe = Path(testing_workdir, "empty_recipe")
+    recipe.mkdir()
+
+    with pytest.raises(ValueError, match="No valid recipes found for input"):
+        main_build.execute([str(recipe)])
