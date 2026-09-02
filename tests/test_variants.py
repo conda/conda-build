@@ -84,23 +84,14 @@ def test_python_variants(testing_workdir, testing_config, as_yaml):
 
     # we should have one package/metadata per python version
     assert len(metadata_tuples) == 2
-
-    # Extract *python* run requirements (allow python_abi to exist)
-    python_reqs = []
-    for meta, _, _ in metadata_tuples:
-        run_reqs = meta.meta["requirements"]["run"]
-        python_reqs.extend([r for r in run_reqs if r.startswith("python ")])
-
-    # We expect exactly two python requirements, one per variant
-    assert len(python_reqs) == 2, f"Expected 2 python requirements, got {python_reqs}"
-
-    # Check that the python requirements match the expected ranges
-    expected = {
-        "python >=3.11,<3.12.0a0",
-        "python >=3.12,<3.13.0a0",
-    }
-    python_reqs_set = set(python_reqs)
-    assert python_reqs_set == expected
+    # there should only be one run requirement for each package/metadata
+    assert len(metadata_tuples[0][0].meta["requirements"]["run"]) == 1
+    assert len(metadata_tuples[1][0].meta["requirements"]["run"]) == 1
+    # the run requirements should be python ranges
+    assert {
+        *metadata_tuples[0][0].meta["requirements"]["run"],
+        *metadata_tuples[1][0].meta["requirements"]["run"],
+    } == {"python >=3.11,<3.12.0a0", "python >=3.12,<3.13.0a0"}
 
 
 def test_use_selectors_in_variants(testing_workdir, testing_config):
