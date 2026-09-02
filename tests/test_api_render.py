@@ -136,6 +136,41 @@ def test_transitive_subpackage_dependency(testing_config):
     )
 
 
+def test_transitive_pin_subpackage_variant_rows(testing_config):
+    """Each `pypin-tools` variant row must pick up the run requirements of the
+    matching `pypin` variant row, not a different one. Regression test for
+    issues #5645 / #5644 (PR #5603 bug, #5651 fix)."""
+    recipe_dir = os.path.join(metadata_dir, "_transitive_pin_variants")
+    testing_config.channel_urls = ["conda-forge"]
+    # permit_unsatisfiable_variants=False to force a hard failure (matching real
+    # `api.build()` behavior) if the merge-across-variants bug reappears, instead of
+    # silently swallowing the conflict as api.render()'s default (True) would.
+    metadata_tuples = api.render(
+        recipe_dir, config=testing_config, permit_unsatisfiable_variants=False
+    )
+
+    tools_metas = [m for m, _, _ in metadata_tuples if m.name() == "pypin-tools"]
+    assert len(tools_metas) == 2  # one per `python` row
+
+    seen_python_pins = set()
+    for m in tools_metas:
+        own_python = m.config.variant["python"]
+        host = m.get_value("requirements/host")
+        run = m.get_value("requirements/run")
+
+        # exactly one python entry in each section, matching this row's own version
+        host_python = [r for r in host if r.split()[0] == "python"]
+        run_python = [r for r in run if r.split()[0] == "python"]
+        assert len(host_python) == 1
+        assert len(run_python) == 1
+        assert own_python.split(".")[:2] == host_python[0].split()[1].split(".")[:2]
+
+        seen_python_pins.add(run_python[0])
+
+    # the two rows must have picked up *different* pinned python specs
+    assert len(seen_python_pins) == 2
+
+
 @pytest.mark.slow
 @pytest.mark.xfail(on_win, reason="Defaults channel has conflicting vc packages")
 def test_resolved_packages_recipe(testing_config):
