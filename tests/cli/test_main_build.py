@@ -641,8 +641,10 @@ def test_build_v1_recipe_multi_output(testing_workdir: str) -> None:
     ]
     assert main_build.execute(args) == 0
 
-    conda_packages = list(out.rglob("*.conda"))
+    conda_packages = sorted(out.rglob("*.conda"))
     assert len(conda_packages) == 2
+
+    assert main_build.execute(["--test", str(conda_packages[0])]) == 0
 
 
 @pytest.mark.parametrize(
