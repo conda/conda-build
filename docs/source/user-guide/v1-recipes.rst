@@ -36,7 +36,7 @@ supported:
 - ``--post``
 - ``--quiet``
 - ``--recipe``
-- ``root-dir`` (``.condarc`` only)
+- ``root-dir`` (``.condarc`` only, under a `conda_build:` section)
 - ``--skip-existing``
 - ``--user``
 - ``--variant-config-files``

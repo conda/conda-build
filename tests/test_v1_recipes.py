@@ -224,10 +224,6 @@ def test_build_v1_root_dir(testing_workdir, testing_config):
 
     run_rattler(command="build", parsed_args=args, config=config)
 
-    built_pkgs = [
-        str(path)
-        for path in Path(testing_workdir).rglob("*")
-        if path.name.endswith(".conda")
-    ]
+    built_pkgs = list(Path(testing_workdir).rglob("*.conda"))
 
     assert built_pkgs, f"No built package found in {testing_workdir}"
