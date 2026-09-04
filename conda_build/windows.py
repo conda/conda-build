@@ -201,7 +201,7 @@ def msvc_env_cmd(bits, config, override=None):
         "Otherwise, use {{compiler('<language>')}} jinja2 in requirements/build."
     )
     if bits not in ["64", "32"]:
-        log.warning(f"The legacy MSVC compiler setup does not support {bits} builds. ")
+        log.warning("The legacy MSVC compiler setup does not support %s builds. ", bits)
         return ""
     if override:
         log.warning(
