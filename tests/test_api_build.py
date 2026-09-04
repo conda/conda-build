@@ -796,10 +796,14 @@ def test_relative_git_url_submodule_clone(testing_workdir, testing_config, monke
             },
             "build": {
                 "script": [
-                    "git --no-pager submodule --quiet foreach git log -n 1 --pretty=format:%%s > "
-                    "%PREFIX%\\summaries.txt  # [win]",
-                    "git --no-pager submodule --quiet foreach git log -n 1 --pretty=format:%s > "
-                    "$PREFIX/summaries.txt   # [not win]",
+                    (
+                        "git --no-pager submodule --quiet foreach git log -n 1 --pretty=format:%%s > "
+                        "%PREFIX%\\summaries.txt  # [win]"
+                    ),
+                    (
+                        "git --no-pager submodule --quiet foreach git log -n 1 --pretty=format:%s > "
+                        "$PREFIX/summaries.txt   # [not win]"
+                    ),
                 ],
             },
             "test": {
