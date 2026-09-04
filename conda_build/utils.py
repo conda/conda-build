@@ -1363,11 +1363,18 @@ def find_recipe(path: str) -> str:
 
 
 def is_v1_recipe(recipe_dir: Path) -> bool:
-    """Check if recipe.yaml exists"""
+    """Check if recipe.yaml exists."""
     recipe_dir = Path(recipe_dir)
-    return (recipe_dir / "recipe.yaml").exists() and not any(
-        (recipe_dir / meta).exists() for meta in VALID_METAS
-    )
+    return (recipe_dir / "recipe.yaml").is_file()
+
+
+def is_v0_recipe(recipe_dir: Path) -> bool:
+    """Check if meta.yaml or any of the valid v0 recipe filenames exist."""
+    try:
+        find_recipe(recipe_dir)
+        return True
+    except OSError:
+        return False
 
 
 class LoggingContext:
