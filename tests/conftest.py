@@ -2,10 +2,13 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from __future__ import annotations
 
+import io
+import json
 import os
 import shutil
 import subprocess
 import sys
+import tarfile
 import tempfile
 import warnings
 from collections import defaultdict
@@ -14,6 +17,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 from conda.common.compat import on_mac, on_win
+from conda.utils import url_path
 from conda_index.api import update_index
 from filelock import FileLock, Timeout
 
@@ -360,3 +364,50 @@ def empty_channel(tmp_path_factory: pytest.TempPathFactory) -> Path:
     channel = tmp_path_factory.mktemp("empty_channel", numbered=False)
     update_index(channel)
     return channel
+
+
+def _write_fake_conda_package(
+    subdir_path: str, name: str, version: str, subdir: str
+) -> None:
+    """Write a minimal, fake ``.tar.bz2`` conda package containing nothing but an
+    ``info/index.json``. conda-build's dependency resolution during render/finalize
+    only ever inspects package *metadata* to compute variant hashes/pins -- it never
+    downloads or extracts the resulting packages -- so a real interpreter, compiler,
+    or payload of any kind is unnecessary here."""
+    index_json = {
+        "name": name,
+        "version": version,
+        "build": "h_mock_0",
+        "build_number": 0,
+        "depends": [],
+        "subdir": subdir,
+        "timestamp": 0,
+    }
+    data = json.dumps(index_json).encode("utf-8")
+    fname = f"{name}-{version}-h_mock_0.tar.bz2"
+    with tarfile.open(os.path.join(subdir_path, fname), "w:bz2") as tf:
+        info = tarfile.TarInfo(name="info/index.json")
+        info.size = len(data)
+        tf.addfile(info, io.BytesIO(data))
+
+
+@pytest.fixture
+def offline_cross_python_channel(tmp_path):
+    """
+    Build a tiny, fully offline local channel with fake `python` packages for
+    both `linux-64` and `osx-64`.
+
+    Also includes a fake noarch `pip` package.
+    """
+    channel_dir = tmp_path / "offline-cross-channel"
+    # conda_index expects a channel root that at least contains `noarch/`
+    noarch_path = channel_dir / "noarch"
+    noarch_path.mkdir(parents=True)
+    _write_fake_conda_package(str(noarch_path), "pip", "24.0", "noarch")
+    for subdir in ("linux-64", "osx-64"):
+        subdir_path = channel_dir / subdir
+        subdir_path.mkdir()
+        for version in ("3.10", "3.11"):
+            _write_fake_conda_package(str(subdir_path), "python", version, subdir)
+    update_index(str(channel_dir))
+    return url_path(str(channel_dir))

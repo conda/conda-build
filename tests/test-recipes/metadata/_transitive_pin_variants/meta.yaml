@@ -1,0 +1,40 @@
+# Minimal reproduction of the transitive pin_subpackage/variant-merge bug from
+# https://github.com/conda/conda-build/issues/5645 and
+# https://github.com/conda/conda-build/issues/5644, without requiring the real
+# grpc/pytorch recipes, compilers, or cross-compilation. See PR #5603 (bug),
+# #5647 (revert), #5651 (fix).
+{% set version = "1.0.0" %}
+
+package:
+  name: pin-split
+  version: {{ version }}
+
+build:
+  number: 0
+
+outputs:
+  # python-independent output (built once, analogous to libgrpc)
+  - name: libpin
+
+  # depends on python + pin_subpackage(libpin, exact=True) (analogous to grpcio)
+  # looped once per `python` variant row.
+  - name: pypin
+    requirements:
+      host:
+        - python
+        - {{ pin_subpackage('libpin', exact=True) }}
+      run:
+        - python
+        - {{ pin_subpackage('libpin', exact=True) }}
+
+  # depends on pypin by version+buildnum string (NOT pin_subpackage), forcing the
+  # transitive `extra_specs` lookup in finalize_metadata() (analogous to
+  # grpcio-tools depending on grpcio).
+  - name: pypin-tools
+    requirements:
+      host:
+        - python
+        - pypin {{ version }}.* *_{{ PKG_BUILDNUM }}
+      run:
+        - python
+        - pypin {{ version }}.* *_{{ PKG_BUILDNUM }}
