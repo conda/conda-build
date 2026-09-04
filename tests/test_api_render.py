@@ -12,7 +12,7 @@ from itertools import count, islice
 
 import pytest
 import yaml
-from conda.base.context import context
+from conda.base.context import Context, context
 from conda.common.compat import on_win
 
 from conda_build import api, render
@@ -171,16 +171,18 @@ def test_transitive_pin_subpackage_variant_rows(testing_config):
     assert len(seen_python_pins) == 2
 
 
-def test_transitive_pin_subpackage_variant_rows_cross_compile(testing_config):
+def test_transitive_pin_subpackage_variant_rows_cross_compile(
+    testing_config, offline_cross_python_channel, monkeypatch
+):
     """Same regression test as `test_transitive_pin_subpackage_variant_rows`, but
     rendered with a conda_build_config.yaml that forces "cross-compilation"
-    (build_platform != target_platform). The original issue #5644 reproduction
-    (the pytorch_cpu recipe) only triggered the transitive pin_subpackage/
-    variant-merge bug when actually cross-compiling (osx-64 -> osx-arm64), so this
-    covers that scenario too, without needing the real pytorch recipe, compilers,
-    or a second physical architecture."""
+    (build_platform != target_platform).
+
+    Related to regression for #5644
+    """
     recipe_dir = os.path.join(metadata_dir, "_transitive_pin_variants_cross")
-    testing_config.channel_urls = ["conda-forge"]
+    monkeypatch.setattr(Context, "channels", property(lambda self: ()))
+    testing_config.channel_urls = [offline_cross_python_channel]
     metadata_tuples = api.render(
         recipe_dir, config=testing_config, permit_unsatisfiable_variants=False
     )
