@@ -26,6 +26,7 @@ from conda_build.metadata import (
     OSModuleSubset,
     _hash_dependencies,
     check_bad_chrs,
+    check_package_name,
     eval_selector,
     get_output_dicts_from_metadata,
     get_selectors,
@@ -444,7 +445,6 @@ def test_native_stdlib_metadata(
 def test_hash_build_id(testing_metadata):
     testing_metadata.config.variant["zlib"] = "1.2"
     testing_metadata.meta["requirements"]["host"] = ["zlib"]
-    testing_metadata.final = True
     hash_contents = testing_metadata.get_hash_contents()
     assert hash_contents["zlib"] == "1.2"
     hdeps = testing_metadata.hash_dependencies()
@@ -461,6 +461,15 @@ def test_hash_build_id(testing_metadata):
     assert found, (
         f"Did not find build that matched {hdeps} when testing each of DEFAULT_SUBDIRS"
     )
+    assert testing_metadata.build_id() == "1"
+    assert testing_metadata.build_id(force_final_hash=True) == hdeps + "_1"
+    assert not testing_metadata.final
+
+    testing_metadata.config.filename_hashing = False
+    assert testing_metadata.build_id(force_final_hash=True) == "1"
+
+    testing_metadata.config.filename_hashing = True
+    testing_metadata.final = True
     assert testing_metadata.build_id() == hdeps + "_1"
 
 
@@ -729,6 +738,41 @@ def test_check_bad_chrs(value: str, field: str, invalid: str) -> None:
         else nullcontext()
     ):
         check_bad_chrs(value, field)
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "numpy",
+        "my-package",
+        "my_package",
+        "my.package",
+        "r-base",
+        "python-dateutil",
+        "_openmp_mutex",
+        "_pkg",
+        "__glibc",
+        "__unix",
+    ],
+)
+def test_check_package_name_valid(name: str) -> None:
+    check_package_name(name)
+
+
+@pytest.mark.parametrize(
+    "name,match",
+    [
+        ("pack@ge", "invalid characters"),
+        ("pkg..name", "CEP-26"),
+        ("pkg--name", "CEP-26"),
+        (".pkg", "CEP-26"),
+        ("-pkg", "CEP-26"),
+        ("UPPER", "invalid characters"),
+    ],
+)
+def test_check_package_name_invalid(name: str, match: str) -> None:
+    with pytest.raises(CondaBuildUserError, match=match):
+        check_package_name(name)
 
 
 def test_parse_until_resolved(testing_metadata: MetaData, tmp_path: Path) -> None:

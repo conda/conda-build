@@ -796,10 +796,14 @@ def test_relative_git_url_submodule_clone(testing_workdir, testing_config, monke
             },
             "build": {
                 "script": [
-                    "git --no-pager submodule --quiet foreach git log -n 1 --pretty=format:%%s > "
-                    "%PREFIX%\\summaries.txt  # [win]",
-                    "git --no-pager submodule --quiet foreach git log -n 1 --pretty=format:%s > "
-                    "$PREFIX/summaries.txt   # [not win]",
+                    (
+                        "git --no-pager submodule --quiet foreach git log -n 1 --pretty=format:%%s > "
+                        "%PREFIX%\\summaries.txt  # [win]"
+                    ),
+                    (
+                        "git --no-pager submodule --quiet foreach git log -n 1 --pretty=format:%s > "
+                        "$PREFIX/summaries.txt   # [not win]"
+                    ),
                 ],
             },
             "test": {
@@ -1369,6 +1373,32 @@ def test_pin_subpackage_exact(testing_config):
         for metadata, _, _ in metadata_tuples
         for req in metadata.meta.get("requirements", {}).get("run", [])
     )
+
+
+def test_pin_subpackage_exact_run_constrained(testing_config):
+    recipe = os.path.join(metadata_dir, "_pin_subpackage_exact_run_constrained")
+    metadata_by_name = {
+        metadata.name(): metadata
+        for metadata, _, _ in api.render(
+            recipe,
+            config=testing_config,
+            variants={"blas_impl": ["openblas"]},
+        )
+    }
+    libblas = metadata_by_name["libblas"]
+    libcblas = metadata_by_name["libcblas"]
+    libblas_build_id = libblas.build_id()
+    libcblas_build_id = libcblas.build_id()
+    assert "h1234567" not in libblas_build_id
+    assert re.search(rf"h[0-9a-f]{{{testing_config.hash_length}}}", libblas_build_id)
+    assert "h1234567" not in libcblas_build_id
+    assert re.search(rf"h[0-9a-f]{{{testing_config.hash_length}}}", libcblas_build_id)
+    assert libblas.info_index()["constrains"] == [
+        f"libcblas {libcblas.version()} {libcblas_build_id}"
+    ]
+    assert libcblas.info_index()["depends"] == [
+        f"libblas {libblas.version()} {libblas_build_id}"
+    ]
 
 
 @pytest.mark.sanity

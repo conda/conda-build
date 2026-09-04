@@ -824,6 +824,33 @@ def _str_version(package_meta):
     return package_meta
 
 
+_CEP26_NAME_RE: re.Pattern[str] = re.compile(
+    r"^(([a-z0-9])|([a-z0-9_](?!_)))[._-]?([a-z0-9]+(\.|-|_|$))*$"
+)
+_CEP26_VIRTUAL_NAME_RE: re.Pattern[str] = re.compile(
+    r"^__[a-z0-9][._-]?([a-z0-9]+(\.|-|_|$))*$"
+)
+
+
+def check_package_name(name: str) -> None:
+    """Validate a package name against CEP-26 naming conventions.
+
+    See https://conda.org/learn/ceps/cep-0026
+    """
+    if not name:
+        return
+    if not (_CEP26_NAME_RE.match(name) or _CEP26_VIRTUAL_NAME_RE.match(name)):
+        if invalid := re.findall(r"[^a-z0-9._-]", name):
+            raise CondaBuildUserError(
+                f"package/name contains invalid characters "
+                f"({''.join(dict.fromkeys(invalid))}): {name}"
+            )
+        raise CondaBuildUserError(
+            f"package/name does not follow CEP-26 naming conventions: {name}. "
+            f"See https://conda.org/learn/ceps/cep-0026"
+        )
+
+
 def check_bad_chrs(value: str, field: str) -> None:
     bad_chrs = set("=@#$%^&*:;\"'\\|<>?/ ")
     if field in ("package/version", "build/string"):
@@ -1580,7 +1607,7 @@ class MetaData:
         name = str(name)
         if name != name.lower():
             sys.exit(f"Error: package/name must be lowercase, got: {name!r}")
-        check_bad_chrs(name, "package/name")
+        check_package_name(name)
         return name
 
     def version(self) -> str:
@@ -1788,7 +1815,8 @@ class MetaData:
             return _hash_dependencies(hashing_dependencies, self.config.hash_length)
         return hash_
 
-    def build_id(self):
+    def build_id(self, *, force_final_hash: bool = False):
+        """Return the build ID, optionally hashing non-final metadata."""
         manual_build_string = self.get_value("build/string")
         # we need the raw recipe for this metadata (possibly an output), so that we can say whether
         #    PKG_HASH is used for anything.
@@ -1808,7 +1836,7 @@ class MetaData:
         else:
             # default; build/string not set or uses PKG_HASH variable, so we should fill in the hash
             out = build_string_from_metadata(self)
-            if self.config.filename_hashing and self.final:
+            if self.config.filename_hashing and (self.final or force_final_hash):
                 hash_ = self.hash_dependencies()
                 if not re.findall(f"h[0-9a-f]{{{self.config.hash_length}}}", out):
                     ret = out.rsplit("_", 1)

@@ -1803,10 +1803,23 @@ def bundle_conda(
         if activate_script:
             _write_activation_text(dest_file, metadata)
 
+        args_to_run = [*args, dest_file]
+        if on_win and dest_file.endswith((".bat", ".ps1")):
+            from .windows import _running_subdir, wrap_script_with_machine
+
+            if metadata.config.build_subdir != _running_subdir():
+                # Support native build platform on emulated Python interpreter
+                # Need to ensure subprocess runs on the adequate architecture
+                # See conda_build.windows. wrap_script_with_machine for more info.
+                args_to_run = [
+                    *INTERPRETER_BAT,
+                    wrap_script_with_machine(metadata, dest_file, tuple(args)),
+                ]
+
         bundle_stats = {}
         try:
             utils.check_call_env(
-                [*args, dest_file],
+                args_to_run,
                 cwd=metadata.config.work_dir,
                 env=env_output,
                 stats=bundle_stats,
@@ -3214,21 +3227,20 @@ def write_test_scripts(
             tf.write(f"set {trace}-e\n")
         if metadata.config.activate and not metadata.name() == "conda":
             if utils.on_win:
+                # conda.bat expands "%CONDA_EXE%" %_CE_M% %_CE_CONDA%.
+                ce_m = (
+                    "-I -m"
+                    if os.environ.get("_CONDA_BUILD_ISOLATED_ACTIVATION")
+                    else "-m"
+                )
                 tf.write(
                     'set "CONDA_SHLVL=" '
-                    "&& @CALL {}\\condabin\\conda_hook.bat {}"
-                    "&& set CONDA_EXE={python_exe}"
-                    "&& set CONDA_PYTHON_EXE={python_exe}"
-                    "&& set _CE_I={}"
-                    "&& set _CE_M=-m"
-                    "&& set _CE_CONDA=conda\n".format(
-                        sys.prefix,
-                        "--dev" if metadata.config.debug else "",
-                        "-i"
-                        if os.environ.get("_CONDA_BUILD_ISOLATED_ACTIVATION")
-                        else "",
-                        python_exe=sys.executable,
-                    )
+                    f"&& @CALL {sys.prefix}\\condabin\\conda_hook.bat"
+                    f"{' --dev' if metadata.config.debug else ''}"
+                    f"&& set CONDA_EXE={sys.executable}"
+                    f"&& set CONDA_PYTHON_EXE={sys.executable}"
+                    f"&& set _CE_M={ce_m}"
+                    "&& set _CE_CONDA=conda\n"
                 )
             else:
                 py_flags = (
