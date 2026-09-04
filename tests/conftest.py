@@ -395,11 +395,15 @@ def _write_fake_conda_package(
 def offline_cross_python_channel(tmp_path):
     """
     Build a tiny, fully offline local channel with fake `python` packages for
-    both `linux-64` and `osx-64`
+    both `linux-64` and `osx-64`.
+
+    Also includes a fake noarch `pip` package.
     """
     channel_dir = tmp_path / "offline-cross-channel"
     # conda_index expects a channel root that at least contains `noarch/`
-    (channel_dir / "noarch").mkdir(parents=True)
+    noarch_path = channel_dir / "noarch"
+    noarch_path.mkdir(parents=True)
+    _write_fake_conda_package(str(noarch_path), "pip", "24.0", "noarch")
     for subdir in ("linux-64", "osx-64"):
         subdir_path = channel_dir / subdir
         subdir_path.mkdir()
