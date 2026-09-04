@@ -352,8 +352,8 @@ jobs:
           CONDA_SUBDIR: win-64
 
       - name: Choco Install
-        if: runner.arch != 'ARM64'
-        # We may need the complete tooling so that cmake tests pass on windows
+        if: runner.arch != 'ARM64' && matrix.test-type == 'parallel'
+        # The parallel tests compile binaries with the Visual Studio 2017 toolchain
         run: choco install visualstudio2017-workload-vctools
 
       - name: Conda Install
