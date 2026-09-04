@@ -725,3 +725,31 @@ def test_build_v1_no_anaconda_upload(capsys) -> None:
     output = captured.out + captured.err
 
     assert "# Automatic uploading is disabled" in output
+
+
+def test_error_on_mixed_v0_v1_recipes(testing_workdir: str, capsys) -> None:
+    """
+    Ensure conda-build errors when both meta.yaml and recipe.yaml
+    are present in the same directory.
+    """
+
+    recipe = Path(testing_workdir) / "mixed_recipe"
+    recipe.mkdir()
+
+    # Create empty meta.yaml and recipe.yaml
+    (recipe / "meta.yaml").touch()
+    (recipe / "recipe.yaml").touch()
+
+    args = [str(recipe)]
+    assert main_build.execute(args) == 1
+
+    captured = capsys.readouterr()
+    assert "Cannot process several recipe versions at the same time!" in captured.err
+
+
+def test_build_no_recipe_files(testing_workdir: str) -> None:
+    recipe = Path(testing_workdir, "empty_recipe")
+    recipe.mkdir()
+
+    with pytest.raises(ValueError, match="No valid recipes found for input"):
+        main_build.execute([str(recipe)])
