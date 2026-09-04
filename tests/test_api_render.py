@@ -171,6 +171,47 @@ def test_transitive_pin_subpackage_variant_rows(testing_config):
     assert len(seen_python_pins) == 2
 
 
+def test_transitive_pin_subpackage_variant_rows_cross_compile(testing_config):
+    """Same regression test as `test_transitive_pin_subpackage_variant_rows`, but
+    rendered with a conda_build_config.yaml that forces "cross-compilation"
+    (build_platform != target_platform). The original issue #5644 reproduction
+    (the pytorch_cpu recipe) only triggered the transitive pin_subpackage/
+    variant-merge bug when actually cross-compiling (osx-64 -> osx-arm64), so this
+    covers that scenario too, without needing the real pytorch recipe, compilers,
+    or a second physical architecture."""
+    recipe_dir = os.path.join(metadata_dir, "_transitive_pin_variants_cross")
+    testing_config.channel_urls = ["conda-forge"]
+    metadata_tuples = api.render(
+        recipe_dir, config=testing_config, permit_unsatisfiable_variants=False
+    )
+
+    # sanity check: the conda_build_config.yaml actually forced cross-compilation
+    for m, _, _ in metadata_tuples:
+        assert m.config.host_subdir != m.config.build_subdir
+
+    tools_metas = [m for m, _, _ in metadata_tuples if m.name() == "pypin-tools-cross"]
+    assert len(tools_metas) == 2  # one per `python` row
+    assert all(m.is_cross for m in tools_metas)
+
+    seen_python_pins = set()
+    for m in tools_metas:
+        own_python = m.config.variant["python"]
+        host = m.get_value("requirements/host")
+        run = m.get_value("requirements/run")
+
+        # exactly one python entry in each section, matching this row's own version
+        host_python = [r for r in host if r.split()[0] == "python"]
+        run_python = [r for r in run if r.split()[0] == "python"]
+        assert len(host_python) == 1
+        assert len(run_python) == 1
+        assert own_python.split(".")[:2] == host_python[0].split()[1].split(".")[:2]
+
+        seen_python_pins.add(run_python[0])
+
+    # the two rows must have picked up *different* pinned python specs
+    assert len(seen_python_pins) == 2
+
+
 @pytest.mark.slow
 @pytest.mark.xfail(on_win, reason="Defaults channel has conflicting vc packages")
 def test_resolved_packages_recipe(testing_config):

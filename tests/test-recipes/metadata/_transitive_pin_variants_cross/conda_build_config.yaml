@@ -1,0 +1,14 @@
+python:
+  - "3.10"
+  - "3.11"
+pin_run_as_build:
+  python:
+    min_pin: x.x
+    max_pin: x.x
+# Force "cross-compilation" (build_platform != target_platform), mirroring the
+# original pytorch_cpu recipe (issue #5644), which only cross-compiled from
+# osx-64 to osx-arm64. Pick a target that differs from whatever platform is
+# actually running the tests, so this works on any CI runner.
+target_platform:
+  - linux-64     [not linux]
+  - osx-64     [linux]

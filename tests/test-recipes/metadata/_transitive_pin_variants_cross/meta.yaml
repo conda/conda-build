@@ -1,0 +1,46 @@
+# Same minimal reproduction of the transitive pin_subpackage/variant-merge bug as
+# ../_transitive_pin_variants (see https://github.com/conda/conda-build/issues/5645
+# and https://github.com/conda/conda-build/issues/5644, PR #5603 (bug), #5647
+# (revert), #5651 (fix)), but rendered under a conda_build_config.yaml that forces
+# "cross-compilation" (build_platform != target_platform).
+#
+# The original issue #5644 reproduction (the pytorch_cpu recipe) only triggered the
+# bug when actually cross-compiling (osx-64 -> osx-arm64), so this mock recipe keeps
+# a dedicated cross-compiling variant of the regression test alongside the
+# non-cross one, without requiring the real grpc/pytorch recipes, compilers, or an
+# actual second architecture.
+{% set version = "1.0.0" %}
+
+package:
+  name: pin-split-cross
+  version: {{ version }}
+
+build:
+  number: 0
+
+outputs:
+  # python-independent output (built once, analogous to libgrpc)
+  - name: libpin-cross
+
+  # depends on python + pin_subpackage(libpin, exact=True) (analogous to grpcio)
+  # looped once per `python` variant row.
+  - name: pypin-cross
+    requirements:
+      host:
+        - python
+        - {{ pin_subpackage('libpin-cross', exact=True) }}
+      run:
+        - python
+        - {{ pin_subpackage('libpin-cross', exact=True) }}
+
+  # depends on pypin-cross by version+buildnum string (NOT pin_subpackage), forcing
+  # the transitive `extra_specs` lookup in finalize_metadata() (analogous to
+  # grpcio-tools depending on grpcio).
+  - name: pypin-tools-cross
+    requirements:
+      host:
+        - python
+        - pypin-cross {{ version }}.* *_{{ PKG_BUILDNUM }}
+      run:
+        - python
+        - pypin-cross {{ version }}.* *_{{ PKG_BUILDNUM }}
