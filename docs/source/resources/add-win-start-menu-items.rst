@@ -13,7 +13,7 @@ The easiest way to ensure that a package made with
 `conda constructor <https://github.com/conda/constructor>`_ does
 not install any menu shortcuts is to remove menuinst from
 the list of conda packages included. To do this, add the
-following to the ``constuct.yaml`` file:
+following to the ``construct.yaml`` file:
 
 .. code-block:: yaml
 

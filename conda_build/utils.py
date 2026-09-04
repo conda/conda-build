@@ -481,7 +481,7 @@ def try_acquire_locks(locks, timeout):
     """Try to acquire all locks.
 
     If any lock can't be immediately acquired, free all locks.
-    If the timeout is reached withou acquiring all locks, free all locks and raise.
+    If the timeout is reached without acquiring all locks, free all locks and raise.
 
     http://stackoverflow.com/questions/9814008/multiple-mutex-locking-strategies-and-why-libraries-dont-use-address-comparison
     """
@@ -1077,7 +1077,7 @@ def iter_entry_points(items):
     for item in items:
         m = entry_pat.match(item)
         if m is None:
-            sys.exit(f"Error cound not match entry point: {item!r}")
+            sys.exit(f"Error could not match entry point: {item!r}")
         yield m.groups()
 
 
