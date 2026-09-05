@@ -14,6 +14,7 @@ from conda.base.context import context
 from conda.exceptions import PackagesNotFoundError
 
 from conda_build import api
+from conda_build import build as build_module
 from conda_build.cli import main_build, main_render
 from conda_build.config import (
     Config,
@@ -574,6 +575,55 @@ def test_build_v1_recipe() -> None:
     assert main_build.execute(args) == 0
 
 
+def test_build_v1_recipe_with_downstream_test(
+    mocker: MockerFixture, tmp_path: Path
+) -> None:
+    """Build a v1 recipe and execute its downstream package test."""
+    recipe = tmp_path / "recipe"
+    recipe.mkdir()
+    (recipe / "recipe.yaml").write_text(
+        """
+package:
+  name: mylib
+  version: "1.0.0"
+
+build:
+  number: 0
+  script:
+    - mkdir -p $PREFIX
+
+tests:
+  - downstream: libmambapy
+""",
+        encoding="utf-8",
+    )
+
+    output = tmp_path / "out"
+    assert (
+        main_build.execute(
+            [
+                str(recipe),
+                "--output-folder",
+                str(output),
+                "--override-channels",
+                "--channel",
+                "conda-forge",
+            ]
+        )
+        == 0
+    )
+    packages = list(output.rglob("mylib-1.0.0-*.conda"))
+    assert packages
+
+    # The downstream package path is routed through build.test(), which must
+    # delegate v1 artifacts to test_v1_package().
+    test_v1_package = mocker.patch(
+        "conda_build._rattler_build.compat.test_v1_package", return_value=True
+    )
+    assert build_module.test(packages[0], config=Config(), stats={})
+    test_v1_package.assert_called_once()
+
+
 def test_build_v1_recipe_multi_output(testing_workdir: str) -> None:
     """Test building a multi-output v1 recipe"""
     recipe = os.path.join(metadata_dir, "..", "variants", "33_v1_recipe_multi_output")
@@ -591,8 +641,10 @@ def test_build_v1_recipe_multi_output(testing_workdir: str) -> None:
     ]
     assert main_build.execute(args) == 0
 
-    conda_packages = list(out.rglob("*.conda"))
+    conda_packages = sorted(out.rglob("*.conda"))
     assert len(conda_packages) == 2
+
+    assert main_build.execute(["--test", str(conda_packages[0])]) == 0
 
 
 @pytest.mark.parametrize(

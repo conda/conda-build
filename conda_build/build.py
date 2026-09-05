@@ -3285,6 +3285,24 @@ def test(
     :param m: Package's metadata.
     :type m: Metadata
     """
+    # Delegate v1 packages to rattler-build
+    from ._rattler_build.compat import is_v1_package, test_v1_package
+
+    if is_v1_package(recipedir_or_package_or_metadata):
+        # Keep the package's local channel available so downstream tests can
+        # resolve the just-built upstream artifact.
+        v1_config = config.copy()
+        local_channel = utils.path2url(
+            os.path.abspath(
+                os.path.dirname(os.path.dirname(recipedir_or_package_or_metadata))
+            )
+        )
+        v1_config.channel_urls = [
+            local_channel,
+            *utils.ensure_list(v1_config.channel_urls),
+        ]
+        return test_v1_package(recipedir_or_package_or_metadata, v1_config)
+
     log = utils.get_logger(__name__)
     # we want to know if we're dealing with package input.  If so, we can move the input on success.
     hash_input = {}

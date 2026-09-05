@@ -5,7 +5,9 @@ from __future__ import annotations
 import os
 import sys
 import time
+from contextlib import redirect_stdout
 from dataclasses import dataclass, field
+from io import StringIO
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -318,9 +320,10 @@ def process_recipe(
                     # directory manually as a file:// channel
                     test_channels = [Path(output_dir).resolve().as_uri(), *channels]
 
-                    test_results = pkg.run_tests(
-                        progress_callback=CondaProgressCallback(show_logs=show_logs),
-                        channel=test_channels,
+                    test_results = run_v1_tests(
+                        pkg,
+                        channels=test_channels,
+                        show_logs=show_logs,
                     )
                 except RattlerBuildError as e:
                     result.outputs.append(
@@ -359,6 +362,50 @@ def process_recipe(
                 handle_anaconda_upload(paths=str(pkg_path), config=config)
 
     return result
+
+
+def is_v1_package(package_path: str | os.PathLike) -> bool:
+    """Return whether a package was built from a v1 ``recipe.yaml`` recipe."""
+    package_path = str(package_path)
+    if not os.path.isfile(package_path):
+        return False
+
+    import conda_package_handling.api
+
+    contents = StringIO()
+    with redirect_stdout(contents):
+        conda_package_handling.api.list_contents(package_path, components=["info"])
+
+    return any(
+        entry.strip() in {"info/recipe/recipe.yaml", "info/recipe/rendered_recipe.yaml"}
+        for entry in contents.getvalue().splitlines()
+    )
+
+
+def run_v1_tests(package: Package, *, channels: list[str], show_logs: bool) -> list:
+    """Run v1 package tests, including ``downstream`` tests."""
+    return package.run_tests(
+        channel=channels,
+        progress_callback=CondaProgressCallback(show_logs=show_logs),
+    )
+
+
+def test_v1_package(package_path: str | os.PathLike, config: Config) -> bool:
+    """Run tests in a conda package built from a v1 recipe."""
+    package = Package.from_file(Path(package_path))
+    try:
+        results = run_v1_tests(
+            package,
+            channels=list(config.channel_urls),
+            show_logs=config.verbose,
+        )
+    except RattlerBuildError as e:
+        raise CondaBuildUserError(f"Package tests failed: {e}") from e
+
+    if any(not result.success for result in results):
+        raise CondaBuildUserError("Package tests failed")
+
+    return 0
 
 
 def run_rattler(
