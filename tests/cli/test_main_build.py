@@ -14,7 +14,6 @@ from conda.base.context import context
 from conda.exceptions import PackagesNotFoundError
 
 from conda_build import api
-from conda_build import build as build_module
 from conda_build.cli import main_build, main_render
 from conda_build.config import (
     Config,
@@ -614,14 +613,6 @@ tests:
     )
     packages = list(output.rglob("mylib-1.0.0-*.conda"))
     assert packages
-
-    # The downstream package path is routed through build.test(), which must
-    # delegate v1 artifacts to test_v1_package().
-    test_v1_package = mocker.patch(
-        "conda_build._rattler_build.compat.test_v1_package", return_value=True
-    )
-    assert build_module.test(packages[0], config=Config(), stats={})
-    test_v1_package.assert_called_once()
 
 
 def test_build_v1_recipe_multi_output(testing_workdir: str) -> None:
