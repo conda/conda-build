@@ -253,11 +253,9 @@ def test_build_uses_cutoff_in_build_host_and_test_environments(
     recipe.mkdir()
     if sys.platform == "win32":
         check_prefix = (
-            'findstr /x "1.0" "%PREFIX%\\share\\cutoff-dependency\\version.txt"'
+            'findstr /l /x "1.0" "%PREFIX%\\share\\cutoff-dependency\\version.txt"'
         )
-        check_build_prefix = (
-            'findstr /x "1.0" "%BUILD_PREFIX%\\share\\cutoff-dependency\\version.txt"'
-        )
+        check_build_prefix = 'findstr /l /x "1.0" "%BUILD_PREFIX%\\share\\cutoff-dependency\\version.txt"'
     else:
         check_prefix = (
             'test "$(cat "$PREFIX/share/cutoff-dependency/version.txt")" = "1.0"'

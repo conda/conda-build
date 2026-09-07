@@ -65,7 +65,7 @@ def v1_channels(tmp_path, monkeypatch, policy_class):
 
 def _check_version(prefix, package, version):
     if sys.platform == "win32":
-        return f'findstr /x "{version}" "%{prefix}%\\share\\{package}\\version.txt"'
+        return f'findstr /l /x "{version}" "%{prefix}%\\share\\{package}\\version.txt"'
     return f'test "$(cat "${prefix}/share/{package}/version.txt")" = "{version}"'
 
 

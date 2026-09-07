@@ -1446,7 +1446,10 @@ def install_actions(
 
             PrefixData._cache_.clear()
 
-            solver_backend = context.plugin_manager.get_cached_solver_backend()
+            # Include the configured solver in the cache key after context resets.
+            solver_backend = context.plugin_manager.get_cached_solver_backend(
+                context.solver
+            )
             solver = solver_backend(prefix, channels, subdirs, specs_to_add=mspecs)
             if index:
                 # Solver can modify the index (e.g., Solver._prepare adds virtual
