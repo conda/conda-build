@@ -206,6 +206,7 @@ def get_env_dependencies(
                 max_env_retry=m.config.max_env_retry,
                 output_folder=m.config.output_folder,
                 channel_urls=tuple(m.config.channel_urls),
+                exclude_newer_policy=m.config.exclude_newer_policy,
             )
         except (UnsatisfiableError, DependencyNeedsBuildingError) as e:
             # we'll get here if the environment is unsatisfiable

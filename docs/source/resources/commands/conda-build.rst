@@ -4,6 +4,37 @@
 conda-build
 ===========
 
+Limit dependency publication dates
+---------------------------------
+
+With conda 26.9 or newer and a solver that supports ``exclude_newer``, use
+``--exclude-newer`` to limit the packages selected for build, host, and test
+environments::
+
+   conda build recipe/ --exclude-newer 2026-04-01
+   conda build recipe/ --exclude-newer 7d
+
+Conda parses the cutoff. A date includes the entire UTC day, while a duration
+is resolved relative to the start of the build configuration. Copies of that
+configuration use the same reference time. If the option is omitted,
+``exclude_newer`` in ``.condarc`` or ``CONDA_EXCLUDE_NEWER`` is used. Channel
+and package overrides follow conda's ``channel_settings`` and
+``exclude_newer_package`` settings.
+
+Packages in the build output channel remain available regardless of the global
+or channel cutoff so that newly built outputs can be tested and used by other
+outputs. An explicit per-package cutoff still takes precedence. Other local
+channels obey the configured cutoff.
+
+This option applies to ``meta.yaml`` recipes. The ``recipe.yaml`` backend does
+not support the policy through conda-build and rejects active cutoffs. Solver
+backends that do not support the required policy scopes also report an error.
+The classic solver supports all required scopes with conda 26.9 or newer.
+
+Publication dates limit dependency selection but do not guarantee an identical
+rebuild. Conda prefers ``indexed_timestamp`` when available and otherwise uses
+the package's ``timestamp``. Packages without either timestamp remain eligible.
+
 .. raw:: html
 
    <PRE>

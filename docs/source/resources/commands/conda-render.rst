@@ -4,6 +4,14 @@
 conda render
 ============
 
+Use ``--exclude-newer DURATION_OR_DATE`` to apply the same dependency cutoff
+when rendering a ``meta.yaml`` recipe as when building it. For example::
+
+   conda render recipe/ --exclude-newer 2026-04-01
+
+See :ref:`build_ref` for supported conda versions, solver requirements,
+configuration precedence, and build output channel handling.
+
 .. raw:: html
 
    <PRE>

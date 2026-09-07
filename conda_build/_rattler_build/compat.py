@@ -79,7 +79,10 @@ class CondaProgressCallback(SimpleProgressCallback):
 
 
 def check_arguments_rattler(
-    command: str, parsed: argparse.Namespace, parsed_only_recipe: argparse.Namespace
+    command: str,
+    parsed: argparse.Namespace,
+    parsed_only_recipe: argparse.Namespace,
+    config: Config,
 ) -> None:
     """Validate that arguments are compatible with rattler CLI commands.
 
@@ -93,7 +96,16 @@ def check_arguments_rattler(
             from the main argument parser.
         parsed_only_recipe: Namespace object containing only the recipe file as
             an argument.
+        config: Build configuration used to check the dependency cutoff.
     """
+
+    policy = config.exclude_newer_policy
+    if getattr(parsed, "exclude_newer", None) is not None or (
+        policy is not None and policy.active
+    ):
+        raise CondaBuildUserError(
+            "exclude-newer is not supported for v1 recipes in conda-build."
+        )
 
     diff = {
         k: v for k, v in vars(parsed).items() if vars(parsed_only_recipe).get(k) != v
