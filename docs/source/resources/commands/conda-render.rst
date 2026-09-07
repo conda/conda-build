@@ -12,6 +12,10 @@ when rendering a ``meta.yaml`` recipe as when building it. For example::
 See :ref:`build_ref` for supported conda versions, solver requirements,
 configuration precedence, and build output channel handling.
 
+Rendering a ``recipe.yaml`` recipe expands templates without solving dependency
+environments. Dependency cutoffs are applied when that recipe is built or
+prepared with ``conda debug``.
+
 .. raw:: html
 
    <PRE>

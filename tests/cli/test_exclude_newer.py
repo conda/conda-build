@@ -154,28 +154,6 @@ def test_explicit_cutoff_requires_new_conda(monkeypatch):
     assert Config().exclude_newer_policy is None
 
 
-@pytest.mark.parametrize("command", [main_build, main_render], ids=["build", "render"])
-@pytest.mark.parametrize("configured", [False, True], ids=["cli", "environment"])
-@pytest.mark.parametrize("warm_cached_policy", [False, True], ids=["fresh", "cached"])
-def test_v1_cutoff_is_rejected(
-    command, configured, warm_cached_policy, tmp_path, monkeypatch, policy_class
-):
-    recipe = tmp_path / "recipe"
-    recipe.mkdir()
-    (recipe / "recipe.yaml").write_text(
-        "schema_version: 1\npackage:\n  name: cutoff-v1\n  version: '1.0'\n"
-    )
-    args = [str(recipe)]
-    if warm_cached_policy:
-        assert not context.exclude_newer_policy.active
-    if configured:
-        monkeypatch.setenv("CONDA_EXCLUDE_NEWER", "2026-04-01")
-    else:
-        args.extend(["--exclude-newer", "2026-04-01"])
-    with pytest.raises(CondaBuildUserError, match="not supported for v1 recipes"):
-        command.execute(args)
-
-
 def test_injected_index_filters_external_channel_and_keeps_output(
     local_channels, tmp_path
 ):
