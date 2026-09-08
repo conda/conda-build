@@ -5,9 +5,8 @@ from __future__ import annotations
 import os
 import sys
 import time
-from contextlib import redirect_stdout
+from contextlib import closing
 from dataclasses import dataclass, field
-from io import StringIO
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -367,19 +366,23 @@ def process_recipe(
 def is_v1_package(package_path: str | os.PathLike) -> bool:
     """Return whether a package was built from a v1 ``recipe.yaml`` recipe."""
     package_path = str(package_path)
-    if not os.path.isfile(package_path):
+    if not package_path.endswith((".conda", ".tar.bz2")) or not os.path.isfile(
+        package_path
+    ):
         return False
 
-    import conda_package_handling.api
+    from conda_package_streaming.package_streaming import stream_conda_component
 
-    contents = StringIO()
-    with redirect_stdout(contents):
-        conda_package_handling.api.list_contents(package_path, components=["info"])
-
-    return any(
-        entry.strip() in {"info/recipe/recipe.yaml", "info/recipe/rendered_recipe.yaml"}
-        for entry in contents.getvalue().splitlines()
-    )
+    with closing(stream_conda_component(package_path, component="info")) as members:
+        return any(
+            member.name
+            in {
+                "info/tests/tests.yaml",
+                "info/recipe/recipe.yaml",
+                "info/recipe/rendered_recipe.yaml",
+            }
+            for _, member in members
+        )
 
 
 def run_v1_tests(package: Package, *, channels: list[str], show_logs: bool) -> list:
@@ -392,11 +395,31 @@ def run_v1_tests(package: Package, *, channels: list[str], show_logs: bool) -> l
 
 def test_v1_package(package_path: str | os.PathLike, config: Config) -> bool:
     """Run tests in a conda package built from a v1 recipe."""
-    package = Package.from_file(Path(package_path))
+    package_path = Path(package_path).resolve()
+    package = Package.from_file(package_path)
+
+    local_roots = [Path(config.output_folder).resolve()]
+    if package_path.parent.name in context.known_subdirs:
+        local_roots.append(package_path.parent.parent)
+
+    output_channel = local_roots[0].as_uri()
+    channels = [
+        output_channel if channel == "local" else channel
+        for channel in [*ensure_list(config.channel_urls), *context.channels]
+    ]
+    # Include the upstream build output, plus siblings when the package lives
+    # in a channel. A downloaded archive's cache directory is not a channel.
+    for root in reversed(dict.fromkeys(local_roots)):
+        _ensure_valid_channel(str(root), config.host_subdir)
+        _delegated_update_index(str(root), verbose=config.verbose)
+        channel = root.as_uri()
+        if channel not in channels:
+            channels.insert(0, channel)
+
     try:
         results = run_v1_tests(
             package,
-            channels=list(config.channel_urls),
+            channels=list(all_channel_urls(channels, subdirs=("",))),
             show_logs=config.verbose,
         )
     except RattlerBuildError as e:
@@ -405,7 +428,7 @@ def test_v1_package(package_path: str | os.PathLike, config: Config) -> bool:
     if any(not result.success for result in results):
         raise CondaBuildUserError("Package tests failed")
 
-    return 0
+    return True
 
 
 def run_rattler(
