@@ -1089,6 +1089,7 @@ def locate_conda_launcher(
     if arch not in ("32", "64", "arm64") or launcher_type not in ("cli", "gui"):
         raise ValueError(f"Unsupported Windows launcher: {launcher_type}-{arch}")
 
+    package_name = "conda-launchers"
     short_path = f"share/conda-launchers/{launcher_type}-{arch}.exe"
     record = PrefixData(sys.prefix).get("conda-launchers", None)
     if record is None or getattr(record, "paths_data", None) is None:
@@ -1099,17 +1100,28 @@ def locate_conda_launcher(
         (path for path in record.paths_data.paths if path.path == short_path), None
     )
     if path_data is None:
-        raise FileNotFoundError(
-            f"The installed conda-launchers package does not provide {short_path}."
-        )
-    launcher_src = join(sys.prefix, short_path)
-    if not getattr(path_data, "sha256", None) or not isfile(launcher_src):
+        if arch != "32":
+            raise FileNotFoundError(
+                f"The installed conda-launchers package does not provide {short_path}."
+            )
+        # defaults does not yet publish 32-bit launchers.
+        package_name = "conda-build"
+        launcher_src = join(dirname(__file__), f"{launcher_type}-32.exe")
+        sha256 = {
+            "cli": "37f0668b6a8f623ace63d19513e23066ee9cddf825251651d5220210f33bbc00",
+            "gui": "44db6ab8ea57335862b7b29510c0e1a80079e7569137c3dbebdec41389faa5b3",
+        }[launcher_type]
+    else:
+        launcher_src = join(sys.prefix, short_path)
+        sha256 = getattr(path_data, "sha256", None)
+    if not sha256 or not isfile(launcher_src):
         raise CondaBuildUserError(
-            f"Reinstall conda-launchers: {short_path} or its SHA256 is missing."
+            f"Reinstall {package_name}: {launcher_type}-{arch}.exe "
+            "or its SHA256 is missing."
         )
-    if compute_sum(launcher_src, "sha256") != path_data.sha256:
+    if compute_sum(launcher_src, "sha256") != sha256:
         raise CondaBuildUserError(
-            f"Reinstall conda-launchers: SHA256 mismatch for {short_path}."
+            f"Reinstall {package_name}: SHA256 mismatch for {launcher_type}-{arch}.exe."
         )
     return launcher_src
 
