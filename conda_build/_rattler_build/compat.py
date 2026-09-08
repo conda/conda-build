@@ -29,6 +29,11 @@ from ..config import CondaPkgFormat
 from ..exceptions import CondaBuildUserError
 from ..utils import get_logger, on_win
 
+from conda.models.channel import all_channel_urls
+
+from ..index import _delegated_update_index, _ensure_valid_channel
+from ..utils import ensure_list, get_logger, on_win
+
 if TYPE_CHECKING:
     import argparse
 
