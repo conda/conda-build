@@ -4,7 +4,7 @@
 
 ### Bug fixes
 
-* Fix finding used variables that do not feature spaces, e.g. `{{python_min}}`. (#6036)
+* Ensure `conda-build` will error out if both v0 and v1 recipes files are present in the same directory. (#6102).
 
 ### Deprecations
 

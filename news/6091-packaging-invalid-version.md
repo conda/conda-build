@@ -4,7 +4,7 @@
 
 ### Bug fixes
 
-* Fix platform config settings when building v1 recipes by checking `VariantConfig()` instead of `config.variant` (#6015).
+* Handle unavailable version metadata when `packaging` raises `InvalidVersion` during deprecation checks. (#6091)
 
 ### Deprecations
 

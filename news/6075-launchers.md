@@ -1,6 +1,6 @@
 ### Enhancements
 
-* Depend on NumFOCUS-signed ``conda-launchers`` package to provision the Windows executables for Python entry points. The originally bundled binaries signed by Anaconda have been deleted. (#6075)
+* Use the published ``conda-launchers >=24.7.1`` package for Windows entry point executables, select the native target architecture, and verify each launcher against its package metadata before copying it. (#6075)
 
 ### Bug fixes
 

@@ -7,7 +7,6 @@ import locale
 import logging
 import os
 import shutil
-from contextlib import suppress
 from os.path import basename, dirname, isfile, join
 from pathlib import Path
 
@@ -146,10 +145,11 @@ def transform(m, files, prefix):
     # copy in windows exe shims if there are any python-scripts
     if d["python-scripts"]:
         for arch in "32", "64", "arm64":
-            with suppress(ValueError):
-                shutil.copyfile(
-                    locate_conda_launcher(arch), join(prefix, f"cli-{arch}.exe")
-                )
+            try:
+                source = locate_conda_launcher(arch)
+            except FileNotFoundError:
+                continue
+            shutil.copyfile(source, join(prefix, f"cli-{arch}.exe"))
 
     # Read the local _link.py
     with open(join(this_dir, "_link.py")) as fi:

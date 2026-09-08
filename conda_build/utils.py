@@ -57,6 +57,7 @@ from conda.base.constants import (
 )
 from conda.base.context import context
 from conda.common.path import unix_path_to_win, win_path_to_unix
+from conda.core.prefix_data import PrefixData
 from conda.exceptions import CondaHTTPError
 from conda.gateways.connection.download import download
 from conda.gateways.disk.create import TemporaryDirectory
@@ -66,7 +67,7 @@ from conda.models.match_spec import MatchSpec
 from conda.models.records import PackageRecord
 from conda.models.version import VersionOrder
 
-from .exceptions import BuildLockError
+from .exceptions import BuildLockError, CondaBuildUserError
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -1082,18 +1083,35 @@ def iter_entry_points(items):
 
 
 def locate_conda_launcher(
-    *arch: str, launcher_type: Literal["cli", "gui"] = "cli"
+    arch: str, *, launcher_type: Literal["cli", "gui"] = "cli"
 ) -> str:
-    candidates = list(dict.fromkeys(f"{launcher_type}-{suffix}.exe" for suffix in arch))
-    for fn in candidates:
-        launcher_src = join(sys.prefix, "share", "conda-launchers", fn)
-        if isfile(launcher_src):
-            return launcher_src
-    raise ValueError(
-        "Installation error; "
-        "cannot locate suitable conda-launchers executable for any of the given archs: "
-        f"{arch}"
+    """Locate and verify the packaged launcher for a Windows target architecture."""
+    if arch not in ("32", "64", "arm64") or launcher_type not in ("cli", "gui"):
+        raise ValueError(f"Unsupported Windows launcher: {launcher_type}-{arch}")
+
+    short_path = f"share/conda-launchers/{launcher_type}-{arch}.exe"
+    record = PrefixData(sys.prefix).get("conda-launchers", None)
+    if record is None or getattr(record, "paths_data", None) is None:
+        raise CondaBuildUserError(
+            "Install conda-launchers >=24.7.1 in the environment running conda-build."
+        )
+    path_data = next(
+        (path for path in record.paths_data.paths if path.path == short_path), None
     )
+    if path_data is None:
+        raise FileNotFoundError(
+            f"The installed conda-launchers package does not provide {short_path}."
+        )
+    launcher_src = join(sys.prefix, short_path)
+    if not getattr(path_data, "sha256", None) or not isfile(launcher_src):
+        raise CondaBuildUserError(
+            f"Reinstall conda-launchers: {short_path} or its SHA256 is missing."
+        )
+    if compute_sum(launcher_src, "sha256") != path_data.sha256:
+        raise CondaBuildUserError(
+            f"Reinstall conda-launchers: SHA256 mismatch for {short_path}."
+        )
+    return launcher_src
 
 
 def create_entry_point(path, module, func, config):
@@ -1106,7 +1124,7 @@ def create_entry_point(path, module, func, config):
                 fo.write("#!python_d\n")
             fo.write(pyscript)
             copy_into(
-                locate_conda_launcher(config.host_arch, "64"),
+                locate_conda_launcher(config.host_arch),
                 path + ".exe",
                 config.timeout,
             )
@@ -1376,11 +1394,18 @@ def find_recipe(path: str) -> str:
 
 
 def is_v1_recipe(recipe_dir: Path) -> bool:
-    """Check if recipe.yaml exists"""
+    """Check if recipe.yaml exists."""
     recipe_dir = Path(recipe_dir)
-    return (recipe_dir / "recipe.yaml").exists() and not any(
-        (recipe_dir / meta).exists() for meta in VALID_METAS
-    )
+    return (recipe_dir / "recipe.yaml").is_file()
+
+
+def is_v0_recipe(recipe_dir: Path) -> bool:
+    """Check if meta.yaml or any of the valid v0 recipe filenames exist."""
+    try:
+        find_recipe(recipe_dir)
+        return True
+    except OSError:
+        return False
 
 
 class LoggingContext:
@@ -2144,6 +2169,15 @@ def write_bat_activation_text(file_handle, m):
     file_handle.write(f'call "{context.root_prefix}\\condabin\\conda_hook.bat"\n')
     for key, value in context.conda_exe_vars_dict.items():
         file_handle.write(f'set "{key}={value or ""}"\n')
+    # Opt-in isolated activation: run via `python -I -m conda` so a recipe named
+    # conda (or PYTHONPATH) cannot shadow the outer conda used for activation.
+    # Matches Unix `_write_sh_activation_text`. conda.bat expands
+    # "%CONDA_EXE%" %_CE_M% %_CE_CONDA%.
+    if os.environ.get("_CONDA_BUILD_ISOLATED_ACTIVATION"):
+        file_handle.write(f'set "CONDA_EXE={sys.executable}"\n')
+        file_handle.write(f'set "_CONDA_EXE={sys.executable}"\n')
+        file_handle.write('set "_CE_M=-I -m"\n')
+        file_handle.write('set "_CE_CONDA=conda"\n')
     if m.is_cross:
         # HACK: we need both build and host envs "active" - i.e. on PATH,
         #     and with their activate.d scripts sourced. Conda only

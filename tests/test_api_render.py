@@ -170,6 +170,7 @@ def test_hash_no_apply_to_custom_build_string(testing_metadata, testing_workdir)
     metadata = api.render(testing_workdir)[0][0]
 
     assert metadata.build_id() == "steve"
+    assert metadata.build_id(force_final_hash=True) == "steve"
 
 
 def test_pin_depends(testing_config):
@@ -277,6 +278,23 @@ def test_self_reference_run_exports_pin_subpackage_picks_up_version_correctly():
     assert run_exports
     assert len(run_exports) == 1
     assert run_exports[0].split()[1] == ">=1.0.0,<2.0a0"
+
+
+@pytest.mark.parametrize(
+    "explicit_build_string", [False, True], ids=["implicit", "explicit"]
+)
+def test_self_reference_exact_run_exports_picks_up_final_build_id(
+    testing_config, explicit_build_string
+):
+    recipe = os.path.join(metadata_dir, "_self_reference_run_exports_exact")
+    metadata = api.render(
+        recipe,
+        config=testing_config,
+        variants={"explicit_build_string": [explicit_build_string]},
+    )[0][0]
+    assert metadata.get_value("build/run_exports") == [
+        f"{metadata.name()} {metadata.version()} {metadata.build_id()}"
+    ]
 
 
 def test_run_exports_with_pin_compatible_in_subpackages(testing_config):

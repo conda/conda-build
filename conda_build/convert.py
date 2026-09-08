@@ -560,7 +560,7 @@ def create_exe_file(directory, executable, target_platform):
     renamed_executable_file = os.path.join(directory, f"{executable}.exe")
 
     shutil.copyfile(
-        locate_conda_launcher(target_platform.split("-")[-1], "64"),
+        locate_conda_launcher(target_platform.split("-")[-1]),
         renamed_executable_file,
     )
 

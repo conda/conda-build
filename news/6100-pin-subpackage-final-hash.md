@@ -4,7 +4,7 @@
 
 ### Bug fixes
 
-* Add a check to prevent duplicate rpaths on macos. (#5671) via (#5987)
+* Preserve final build IDs, including dependency hashes, in exact `pin_subpackage()` references. (#5572, #6078 via #6100)
 
 ### Deprecations
 

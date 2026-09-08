@@ -1,7 +1,6 @@
 ### Enhancements
 
-* When rendering a recipe with `conda render ...`, sort dependencies instead of
-  following unpredictable `set()` ordering.
+* Validate package names against CEP-26 naming conventions, rejecting names with invalid characters or structure. (#5976)
 
 ### Bug fixes
 

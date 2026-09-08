@@ -86,9 +86,10 @@ def signtool_unsupported() -> bool:
 
 @pytest.mark.skipif(signtool_unsupported(), reason=signtool_unsupported_because())
 @pytest.mark.parametrize("arch", ["32", "64", "arm64"])
-def test_stub_exe_signatures(arch: str) -> None:
+@pytest.mark.parametrize("kind", ["cli", "gui"])
+def test_stub_exe_signatures(arch: str, kind: str) -> None:
     """Verify that signtool verifies the signature of the stub exes"""
-    stub_file = locate_conda_launcher(arch)
+    stub_file = locate_conda_launcher(arch, launcher_type=kind)
     signtool_exe = find_signtool()
     completed_process = run([signtool_exe, "verify", "/pa", "/v", stub_file])
     assert completed_process.returncode == 0

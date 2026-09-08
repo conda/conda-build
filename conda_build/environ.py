@@ -413,7 +413,6 @@ def conda_build_vars(prefix, config):
         "SRC_DIR": src_dir,
         "HTTPS_PROXY": os.getenv("HTTPS_PROXY", ""),
         "HTTP_PROXY": os.getenv("HTTP_PROXY", ""),
-        "REQUESTS_CA_BUNDLE": os.getenv("REQUESTS_CA_BUNDLE", ""),
         "DIRTY": "1" if config.dirty else "",
         "ROOT": context.root_prefix,
     }
@@ -801,6 +800,7 @@ def os_vars(m, prefix):
     get_default("LANG")
     get_default("LC_ALL")
     get_default("MAKEFLAGS")
+    get_default("REQUESTS_CA_BUNDLE")
     d["SHLIB_EXT"] = get_shlib_ext(m.config.host_platform)
     d["PATH"] = os.environ.copy()["PATH"]
 
