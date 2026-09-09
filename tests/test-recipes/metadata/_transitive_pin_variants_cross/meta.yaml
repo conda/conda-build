@@ -32,12 +32,15 @@ outputs:
       run:
         - python
         - {{ pin_subpackage('libpin-cross', exact=True) }}
+        - host-only
 
   # depends on pypin-cross by version+buildnum string (NOT pin_subpackage), forcing
   # the transitive `extra_specs` lookup in finalize_metadata() (analogous to
   # grpcio-tools depending on grpcio).
   - name: pypin-tools-cross
     requirements:
+      build:
+        - build-only
       host:
         - python
         - pypin-cross {{ version }}.* *_{{ PKG_BUILDNUM }}

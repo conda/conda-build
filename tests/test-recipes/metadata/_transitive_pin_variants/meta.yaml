@@ -15,10 +15,16 @@ build:
 outputs:
   # python-independent output (built once, analogous to libgrpc)
   - name: libpin
+    test:
+      commands:
+        - echo "libpin installed"
 
   # depends on python + pin_subpackage(libpin, exact=True) (analogous to grpcio)
   # looped once per `python` variant row.
   - name: pypin
+    test:
+      commands:
+        - python -c "assert __import__('sys').version_info[:2] == ({{ python | replace('.', ', ') }})"
     requirements:
       host:
         - python
@@ -31,6 +37,9 @@ outputs:
   # transitive `extra_specs` lookup in finalize_metadata() (analogous to
   # grpcio-tools depending on grpcio).
   - name: pypin-tools
+    test:
+      commands:
+        - python -c "assert __import__('sys').version_info[:2] == ({{ python | replace('.', ', ') }})"
     requirements:
       host:
         - python

@@ -14,6 +14,7 @@ import pytest
 import yaml
 from conda.base.context import Context, context
 from conda.common.compat import on_win
+from conda.models.version import VersionSpec
 
 from conda_build import api, render
 from conda_build.exceptions import CondaBuildUserError
@@ -165,6 +166,9 @@ def test_transitive_pin_subpackage_variant_rows(testing_config):
         assert len(run_python) == 1
         assert own_python.split(".")[:2] == host_python[0].split()[1].split(".")[:2]
 
+        run_version = VersionSpec(run_python[0].split()[1])
+        for python_version in ("3.10", "3.11"):
+            assert run_version.match(python_version) == (python_version == own_python)
         seen_python_pins.add(run_python[0])
 
     # the two rows must have picked up *different* pinned python specs
@@ -200,6 +204,9 @@ def test_transitive_pin_subpackage_variant_rows_cross_compile(
         own_python = m.config.variant["python"]
         host = m.get_value("requirements/host")
         run = m.get_value("requirements/run")
+        assert m.get_value("requirements/build") == ["build-only 1.0 h_mock_0"]
+        assert "host-only 1.0 h_mock_0" in host
+        assert not any(r.split()[0] == "build-only" for r in host)
 
         # exactly one python entry in each section, matching this row's own version
         host_python = [r for r in host if r.split()[0] == "python"]
@@ -208,6 +215,9 @@ def test_transitive_pin_subpackage_variant_rows_cross_compile(
         assert len(run_python) == 1
         assert own_python.split(".")[:2] == host_python[0].split()[1].split(".")[:2]
 
+        run_version = VersionSpec(run_python[0].split()[1])
+        for python_version in ("3.10", "3.11"):
+            assert run_version.match(python_version) == (python_version == own_python)
         seen_python_pins.add(run_python[0])
 
     # the two rows must have picked up *different* pinned python specs

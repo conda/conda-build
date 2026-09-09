@@ -2203,7 +2203,24 @@ def test_api_build_transitive_pin_subpackage_regression(
     """
     testing_config.channel_urls = ["conda-forge"]
     monkeypatch.chdir(tmp_path)
-    api.build(str(metadata_path / "_transitive_pin_variants"), config=testing_config)
+    outputs = api.build(
+        str(metadata_path / "_transitive_pin_variants"), config=testing_config
+    )
+    records = [
+        json.loads(package_has_file(path, "info/index.json")) for path in outputs
+    ]
+    assert sorted(record["name"] for record in records) == [
+        "libpin",
+        "pypin",
+        "pypin",
+        "pypin-tools",
+        "pypin-tools",
+    ]
+    libpin = next(record for record in records if record["name"] == "libpin")
+    libpin_spec = f"libpin {libpin['version']} {libpin['build']}"
+    for record in records:
+        if record["name"] == "pypin":
+            assert libpin_spec in record["depends"]
 
 
 @pytest.mark.skipif(on_win, reason="file permissions not relevant on Windows")

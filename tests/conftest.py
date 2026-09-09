@@ -392,22 +392,23 @@ def _write_fake_conda_package(
 
 
 @pytest.fixture
-def offline_cross_python_channel(tmp_path):
-    """
-    Build a tiny, fully offline local channel with fake `python` packages for
-    both `linux-64` and `osx-64`.
-
-    Also includes a fake noarch `pip` package.
-    """
+def offline_cross_python_channel(tmp_path, testing_config):
+    """Provide target Python packages and separate build and host dependencies."""
     channel_dir = tmp_path / "offline-cross-channel"
     # conda_index expects a channel root that at least contains `noarch/`
     noarch_path = channel_dir / "noarch"
     noarch_path.mkdir(parents=True)
     _write_fake_conda_package(str(noarch_path), "pip", "24.0", "noarch")
-    for subdir in ("linux-64", "osx-64"):
+
+    build_subdir = testing_config.build_subdir
+    target_subdir = "osx-64" if build_subdir.startswith("linux-") else "linux-64"
+    for subdir, name in ((build_subdir, "build-only"), (target_subdir, "host-only")):
         subdir_path = channel_dir / subdir
         subdir_path.mkdir()
-        for version in ("3.10", "3.11"):
-            _write_fake_conda_package(str(subdir_path), "python", version, subdir)
+        _write_fake_conda_package(str(subdir_path), name, "1.0", subdir)
+    for version in ("3.10", "3.11"):
+        _write_fake_conda_package(
+            str(channel_dir / target_subdir), "python", version, target_subdir
+        )
     update_index(str(channel_dir))
     return url_path(str(channel_dir))
