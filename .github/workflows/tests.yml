@@ -36,7 +36,7 @@ env:
 jobs:
   # detect whether any code changes are included in this PR
   changes:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     permissions:
       # necessary to detect changes
       # https://github.com/dorny/paths-filter#supported-workflows
@@ -559,7 +559,7 @@ jobs:
         || needs.changes.outputs.code == 'true'
       )
 
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     steps:
       - name: Download Artifacts
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -583,7 +583,7 @@ jobs:
     needs: [linux, linux-benchmarks, windows, macos, aggregate]
     if: '!cancelled()'
 
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     steps:
       - name: Determine Success
         uses: re-actors/alls-green@05ac9388f0aebcb5727afa17fcccfecd6f8ec5fe # v1.2.2
