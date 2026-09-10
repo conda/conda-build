@@ -205,7 +205,7 @@ outputs:
         - test -f $PREFIX/lib/liblapacke.so                         # [linux]
         - test -f $PREFIX/lib/liblapacke.so.{{ version_major }}     # [linux]
 
-  # For compatiblity
+  # For compatibility
   - name: blas
     version: "{{ blas_major }}.{{ blas_minor }}"
     # script: test_blas.sh   # [unix]

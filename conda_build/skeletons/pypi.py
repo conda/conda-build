@@ -515,7 +515,7 @@ def add_parser(repos):
     pypi.add_argument(
         "--version",
         help="""Version to use. Applies to all packages. If not specified the
-              lastest visible version on PyPI is used.""",
+              latest visible version on PyPI is used.""",
     )
     pypi.add_argument(
         "--all-urls",
@@ -729,7 +729,7 @@ def version_compare(package, versions):
         # Comparing normalized versions, displaying non normalized ones
         new_versions = versions[: norm_versions.index(local_version)]
         if len(new_versions) > 0:
-            print(f"Following new versions of {package} are avaliable")
+            print(f"Following new versions of {package} are available")
             for ver in new_versions:
                 print(ver)
         else:

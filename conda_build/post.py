@@ -322,7 +322,7 @@ def compile_missing_pyc(files, cwd, python_exe, skip_compile_pyc=()):
             print("compiling .pyc files...")
             args = [python_exe, "-Wi", "-m", "py_compile"]
             args_len = len(" ".join(args)) + 1
-            # chunk them to avoid too long comand lines:
+            # chunk them to avoid too long command lines:
             groups = chunks(compile_files, MAX_CHUNK_SIZE - args_len)
             for group in groups:
                 call(args + group, cwd=cwd)
@@ -1513,7 +1513,7 @@ def check_overlinking_impl(
                         ]
                         replaced = install_names[0][1:]
                         if replaced.endswith("'"):
-                            # Some SDKs have install name surrounded by single qoutes
+                            # Some SDKs have install name surrounded by single quotes
                             replaced = replaced[1:-1]
                 sysroot_files.append(replaced)
             diffs = set(orig_sysroot_files) - set(sysroot_files)

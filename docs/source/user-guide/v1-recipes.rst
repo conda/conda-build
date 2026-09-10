@@ -115,7 +115,7 @@ Migrating recipes
 =================
 
 Migrating recipes to v1 format can be beneficial because it provides faster
-rendering and buiding, standardized schema with autocomplete support,
+rendering and building, standardized schema with autocomplete support,
 and pure YAML syntax, which guarantees easier updates in the future.
 
 To migrate a recipe from v0 to v1 format, use the `conda-recipe-manager <https://github.com/conda/conda-recipe-manager>`__ tool.

@@ -51,7 +51,7 @@ def relink_sharedobjects(pkg_path, build_prefix):
 def write_to_conda_pth(sp_dir, pkg_path):
     """
     Append pkg_path to conda.pth in site-packages directory for current
-    environment. Only add path if it doens't already exist.
+    environment. Only add path if it doesn't already exist.
 
     :param sp_dir: path to site-packages/. directory
     :param pkg_path: the package path to append to site-packes/. dir.

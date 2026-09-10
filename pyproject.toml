@@ -67,6 +67,10 @@ changelog = "https://github.com/conda/conda-build/blob/main/CHANGELOG.md"
 documentation = "https://docs.conda.io/projects/conda-build/en/stable/"
 repository = "https://github.com/conda/conda-build"
 
+[tool.codespell]
+ignore-words-list = ["lief", "rever", "fo", "uptodate", "astroid", "wee", "adament"]
+skip = "*/commands/*.rst,*.patch"
+
 [tool.coverage.report]
 exclude_lines = [
   "if TYPE_CHECKING:",  # ignoring type checking imports
