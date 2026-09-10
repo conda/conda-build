@@ -1861,6 +1861,7 @@ def test_overdepending_detection(testing_config, variants_conda_build_sysroot):
         api.build(recipe, config=testing_config, variants=variants_conda_build_sysroot)
 
 
+@pytest.mark.heavy
 @pytest.mark.skipif(not on_linux, reason="cannot compile for linux-ppc64le")
 def test_sysroots_detection(testing_config, variants_conda_build_sysroot):
     recipe = os.path.join(metadata_dir, "_sysroot_detection")
@@ -2116,6 +2117,7 @@ def test_rendered_is_reported(testing_config, capsys):
     assert "- base-outputs_overwrite_base_file >=1.0,<2.0a0" in captured.out
 
 
+@pytest.mark.heavy
 @pytest.mark.skipif(on_win, reason="Tests cross-compilation targeting Windows")
 def test_cross_unix_windows_mingw(testing_config):
     recipe = os.path.join(metadata_dir, "_cross_unix_windows_mingw")
@@ -2168,6 +2170,7 @@ def test_api_build_inject_jinja2_vars_on_first_pass(testing_config):
     api.build(recipe_dir, config=testing_config)
 
 
+@pytest.mark.heavy
 def test_ignore_run_exports_from_substr(monkeypatch, tmp_path, capsys, testing_config):
     monkeypatch.chdir(tmp_path)
     testing_config.channel_urls = ["conda-forge"]
@@ -2194,6 +2197,7 @@ def test_build_strings_glob_match(testing_config: Config) -> None:
         api.build(metadata_path / "_blas_pins", config=testing_config)
 
 
+@pytest.mark.heavy
 @pytest.mark.skipif(not on_linux, reason="needs __glibc virtual package")
 def test_api_build_grpc_issue5645(monkeypatch, tmp_path, testing_config):
     if Version(conda_version) < Version("25.1.0"):
