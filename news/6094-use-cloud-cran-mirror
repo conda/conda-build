@@ -1,0 +1,26 @@
+### Enhancements
+
+* Switch `cran_mirror` to use https://cloud.r-project.org/, a cloud mirror of
+  CRAN that auto-redirects to the optimal server based on where the user is
+  located. Note that recipes referencing `{{ cran_mirror }}` without pinning
+  `cran_mirror` in their variant configuration include the mirror URL in their
+  package hash, so rebuilding such recipes produces a new build string. (#6094)
+
+### Bug fixes
+
+* Teach the CRAN skeleton to parse every directory listing format served by
+  CRAN mirrors: Apache fancy tables, Apache plain pre-formatted text and nginx
+  autoindex, whose timestamps are also normalized so archived versions still
+  sort newest first. (#6094)
+
+### Deprecations
+
+* <news item>
+
+### Docs
+
+* <news item>
+
+### Other
+
+* <news item>

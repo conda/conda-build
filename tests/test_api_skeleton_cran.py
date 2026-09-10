@@ -58,7 +58,7 @@ def test_cran_license(
         ("blatr", "skip: True  # [not win]"),
     ],
 )
-@pytest.mark.flaky(rerun=5, reruns_delay=2)
+@pytest.mark.flaky(reruns=5, reruns_delay=2)
 def test_cran_os_type(package: str, skip_text: str, tmp_path: Path, testing_config):
     api.skeletonize(
         packages=package, repo="cran", output_dir=tmp_path, config=testing_config
@@ -67,7 +67,7 @@ def test_cran_os_type(package: str, skip_text: str, tmp_path: Path, testing_conf
 
 
 # Test cran skeleton argument --no-comments
-@pytest.mark.flaky(rerun=5, reruns_delay=2)
+@pytest.mark.flaky(reruns=5, reruns_delay=2)
 def test_cran_no_comments(tmp_path: Path, testing_config):
     package = "data.table"
     meta_yaml_comment = "  # This is required to make R link correctly on Linux."
