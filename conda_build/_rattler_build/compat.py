@@ -7,10 +7,10 @@ import sys
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from inspect import signature
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import rattler_build
 import yaml
 from conda.base.context import context
 from conda.models.channel import Channel
@@ -21,7 +21,7 @@ from rattler_build import (
 )
 from rattler_build.debug import DebugSession
 from rattler_build.progress import SimpleProgressCallback
-from rattler_build.render import RenderConfig, RenderedVariant
+from rattler_build.render import RenderConfig
 from rattler_build.stage0 import MultiOutputRecipe, Stage0Recipe
 from rattler_build.tool_config import PlatformConfig, ToolConfiguration
 from rattler_build.variant_config import VariantConfig
@@ -104,23 +104,12 @@ def check_arguments_rattler(
 
     policy = config.exclude_newer_policy
     if policy is not None and policy.active:
-        required_arguments = {
-            "exclude_newer",
-            "exclude_newer_package",
-            "exclude_newer_channel",
-            "exclude_newer_include_unknown_timestamp",
-        }
-        for method in (
-            RenderedVariant.run_build,
-            Package.run_tests,
-            DebugSession.create,
-        ):
-            if not required_arguments <= signature(method).parameters.keys():
-                raise CondaBuildUserError(
-                    "The installed py-rattler-build does not support exclude-newer "
-                    "policies for v1 recipes. Install a version with build, test, "
-                    "and debug policy support."
-                )
+        if not hasattr(rattler_build, "ExcludeNewer"):
+            raise CondaBuildUserError(
+                "The installed py-rattler-build does not support exclude-newer "
+                "policies for v1 recipes. Install a version with build, test, "
+                "and debug policy support."
+            )
 
     diff = {
         k: v for k, v in vars(parsed).items() if vars(parsed_only_recipe).get(k) != v
@@ -208,13 +197,15 @@ def exclude_newer_arguments(config: Config, channels: list[str]) -> dict:
                 channel_cutoffs[url.rstrip("/") + "/"] = as_datetime(override.cutoff)
 
     return {
-        "exclude_newer": as_datetime(policy.global_cutoff),
-        "exclude_newer_package": {
-            name: as_datetime(cutoff)
-            for name, cutoff in (policy.package_cutoffs or {}).items()
-        },
-        "exclude_newer_channel": channel_cutoffs,
-        "exclude_newer_include_unknown_timestamp": True,
+        "exclude_newer": rattler_build.ExcludeNewer(
+            as_datetime(policy.global_cutoff),
+            packages={
+                name: as_datetime(cutoff)
+                for name, cutoff in (policy.package_cutoffs or {}).items()
+            },
+            channels=channel_cutoffs,
+            include_unknown_timestamp=True,
+        )
     }
 
 
@@ -380,15 +371,9 @@ def process_recipe(
                     # tests are run in a different directory than build, so we need to add the build
                     # directory manually as a file:// channel
                     test_channels = [Path(output_dir).resolve().as_uri(), *channels]
-                    test_cutoff_arguments = cutoff_arguments
-                    if cutoff_arguments:
-                        test_cutoff_arguments = {
-                            **cutoff_arguments,
-                            "exclude_newer_channel": {
-                                **cutoff_arguments["exclude_newer_channel"],
-                                test_channels[0].rstrip("/") + "/": None,
-                            },
-                        }
+                    test_cutoff_arguments = exclude_newer_arguments(
+                        config, test_channels
+                    )
 
                     test_results = pkg.run_tests(
                         progress_callback=CondaProgressCallback(show_logs=show_logs),

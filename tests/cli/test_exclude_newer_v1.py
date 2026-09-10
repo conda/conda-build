@@ -2,19 +2,16 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from __future__ import annotations
 
-import inspect
 import io
 import json
 import sys
 import tarfile
 
 import pytest
+import rattler_build
 import yaml
 from conda.base.context import context, reset_context
 from conda_index.api import update_index
-from rattler_build.debug import DebugSession
-from rattler_build.package import Package
-from rattler_build.stage0 import RenderedVariant
 
 from conda_build.cli import main_build, main_debug
 from conda_build.config import Config
@@ -37,11 +34,8 @@ from .test_exclude_newer import (
 
 @pytest.fixture
 def v1_policy_support():
-    for method in (RenderedVariant.run_build, Package.run_tests, DebugSession.create):
-        if "exclude_newer_channel" not in inspect.signature(method).parameters:
-            pytest.skip(
-                "py-rattler-build does not yet support scoped dependency cutoffs"
-            )
+    if not hasattr(rattler_build, "ExcludeNewer"):
+        pytest.skip("py-rattler-build does not yet support scoped dependency cutoffs")
 
 
 @pytest.fixture
@@ -145,7 +139,8 @@ def _build_args(recipe, external, output, *, channel=None):
     ]
 
 
-def test_v1_build_without_cutoff(v1_channels, v1_recipe):
+def test_v1_build_without_cutoff(v1_channels, v1_recipe, monkeypatch):
+    monkeypatch.delattr(rattler_build, "ExcludeNewer", raising=False)
     external, output = v1_channels
     recipe = v1_recipe(build="2.0", host="2.0", test="2.0", sibling=True)
     assert main_build.execute(_build_args(recipe, external, output)) == 0
@@ -363,10 +358,11 @@ def test_v1_debug_installs_dependencies_before_cutoff(
     ],
 )
 def test_v1_channel_cutoff_preserves_credentials(
-    channel, isolated_context, policy_class
+    channel, isolated_context, policy_class, mocker
 ):
     from conda_build._rattler_build.compat import exclude_newer_arguments
 
+    policy_constructor = mocker.patch("rattler_build.ExcludeNewer", create=True)
     isolated_context.write_text(
         yaml.safe_dump(
             {
@@ -383,16 +379,14 @@ def test_v1_channel_cutoff_preserves_credentials(
     )
     reset_context()
     arguments = exclude_newer_arguments(Config(), [channel])
-    assert arguments["exclude_newer_channel"] == {channel + "/": None}
+    assert arguments == {"exclude_newer": policy_constructor.return_value}
+    assert policy_constructor.call_args.kwargs["channels"] == {channel + "/": None}
 
 
 def test_v1_cutoff_requires_supported_python_bindings(
     v1_recipe, monkeypatch, policy_class
 ):
-    def old_run_build(self, exclude_newer=None, exclude_newer_package=None):
-        pytest.fail("an unsupported binding must fail before creating environments")
-
-    monkeypatch.setattr(RenderedVariant, "run_build", old_run_build)
+    monkeypatch.delattr(rattler_build, "ExcludeNewer", raising=False)
     recipe = v1_recipe()
     with pytest.raises(CondaBuildUserError, match="py-rattler-build"):
         main_build.execute([str(recipe), "--exclude-newer=2026-04-01"])
