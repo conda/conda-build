@@ -202,8 +202,8 @@ def verify_git_repo(
         # metadata git_url or git_rev, then we aren't looking at the right source.
         if not os.path.isdir(remote_url) and remote_url.lower() != git_url.lower():
             log.debug("remote does not match git_url")
-            log.debug("Remote: " + remote_url.lower())
-            log.debug("git_url: " + git_url.lower())
+            log.debug("Remote: %s", remote_url.lower())
+            log.debug("git_url: %s", git_url.lower())
             OK = False
     except subprocess.CalledProcessError as error:
         log.debug("Error obtaining git information in verify_git_repo.  Error was: ")
@@ -849,7 +849,7 @@ def get_install_actions(
     global last_index_ts
 
     log = utils.get_logger(__name__)
-    conda_log_level = logging.WARN
+    conda_log_level = logging.WARNING
     specs = list(specs)
     if specs:
         specs.extend(context.create_default_packages)
@@ -1099,7 +1099,7 @@ def create_env(
     if config.debug:
         external_logger_context = utils.LoggingContext(logging.DEBUG)
     else:
-        external_logger_context = utils.LoggingContext(logging.WARN)
+        external_logger_context = utils.LoggingContext(logging.WARNING)
 
     if os.path.exists(prefix):
         for entry in glob(os.path.join(prefix, "*")):
@@ -1326,7 +1326,7 @@ def get_pkg_dirs_locks(dirs, config):
 
 
 def clean_pkg_cache(dist: str, config: Config) -> None:
-    with utils.LoggingContext(logging.DEBUG if config.debug else logging.WARN):
+    with utils.LoggingContext(logging.DEBUG if config.debug else logging.WARNING):
         locks = get_pkg_dirs_locks((config.bldpkgs_dir, *context.pkgs_dirs), config)
         with utils.try_acquire_locks(locks, timeout=config.timeout):
             for pkgs_dir in context.pkgs_dirs:

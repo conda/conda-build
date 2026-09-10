@@ -286,7 +286,7 @@ def _combine_spec_dictionaries(
         if spec:
             if log_output:
                 log = get_logger(__name__)
-                log.info(f"Adding in variants from {spec_source}")
+                log.info("Adding in variants from %s", spec_source)
             for k, v in spec.items():
                 if not keys or k in keys:
                     if k in extend_keys:
@@ -520,8 +520,12 @@ def filter_by_key_value(variants, key, values, source_name):
             else:
                 log = get_logger(__name__)
                 log.debug(
-                    f"Filtering variant with key {key} not matching target value(s) "
-                    f"({values}) from {source_name}, actual {variant.get(key)}"
+                    "Filtering variant with key %s not matching target value(s) "
+                    "%s from %s, actual %s",
+                    key,
+                    values,
+                    source_name,
+                    variant.get(key),
                 )
     return reduced_variants
 
