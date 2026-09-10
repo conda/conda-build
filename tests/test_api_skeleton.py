@@ -202,13 +202,14 @@ def test_repo(
     tmp_path: Path,
     testing_config,
 ):
-    api.skeletonize(
-        package,
-        repo,
-        version=version,
-        output_dir=tmp_path,
-        config=testing_config,
-    )
+    with pytest.deprecated_call():
+        api.skeletonize(
+            package,
+            repo,
+            version=version,
+            output_dir=tmp_path,
+            config=testing_config,
+        )
 
     package_name = f"{prefix}{Path(package).stem}".lower()
     assert len(
@@ -228,13 +229,14 @@ def test_repo(
     ],
 )
 def test_sympy(package: str, version: str | None, tmp_path: Path, testing_config):
-    api.skeletonize(
-        packages=package,
-        repo="pypi",
-        version=version,
-        config=testing_config,
-        output_dir=tmp_path,
-    )
+    with pytest.deprecated_call():
+        api.skeletonize(
+            packages=package,
+            repo="pypi",
+            version=version,
+            config=testing_config,
+            output_dir=tmp_path,
+        )
     metadata = api.render(str(tmp_path / "sympy" / "meta.yaml"))[0][0]
     assert metadata.version() == "1.10"
 
@@ -340,15 +342,16 @@ def test_pypi_with_setup_options(tmp_path: Path, testing_config):
     # occurs by default.
 
     # Test that the setup option is used in constructing the skeleton.
-    api.skeletonize(
-        packages="photutils",
-        repo="pypi",
-        version="1.10.0",
-        setup_options="--offline",
-        config=testing_config,
-        output_dir=tmp_path,
-        extra_specs=["extension-helpers"],
-    )
+    with pytest.deprecated_call():
+        api.skeletonize(
+            packages="photutils",
+            repo="pypi",
+            version="1.10.0",
+            setup_options="--offline",
+            config=testing_config,
+            output_dir=tmp_path,
+            extra_specs=["extension-helpers"],
+        )
 
     # Check that the setup option occurs in bld.bat and build.sh.
     metadata = api.render(str(tmp_path / "photutils"))[0][0]
@@ -358,50 +361,55 @@ def test_pypi_with_setup_options(tmp_path: Path, testing_config):
 def test_pypi_pin_numpy(tmp_path: Path, testing_config: Config):
     # The package used here must have a numpy dependence for pin-numpy to have
     # any effect.
-    api.skeletonize(
-        packages="fasttext",
-        repo="pypi",
-        version="0.9.2",
-        config=testing_config,
-        pin_numpy=True,
-        output_dir=tmp_path,
-    )
+    with pytest.deprecated_call():
+        api.skeletonize(
+            packages="fasttext",
+            repo="pypi",
+            version="0.9.2",
+            config=testing_config,
+            pin_numpy=True,
+            output_dir=tmp_path,
+        )
     assert (tmp_path / "fasttext" / "meta.yaml").read_text().count("numpy x.x") == 2
 
 
 def test_pypi_version_sorting(tmp_path: Path, testing_config: Config):
     # The package used here must have a numpy dependence for pin-numpy to have
     # any effect.
-    api.skeletonize(
-        packages="fasttext",
-        repo="pypi",
-        config=testing_config,
-        output_dir=tmp_path,
-    )
+    with pytest.deprecated_call():
+        api.skeletonize(
+            packages="fasttext",
+            repo="pypi",
+            config=testing_config,
+            output_dir=tmp_path,
+        )
     metadata = api.render(str(tmp_path / "fasttext"))[0][0]
     assert parse_version(metadata.version()) >= parse_version("0.9.2")
 
 
 def test_list_skeletons():
-    skeletons = api.list_skeletons()
+    with pytest.deprecated_call():
+        skeletons = api.list_skeletons()
     assert set(skeletons) == {"pypi", "cran", "cpan", "luarocks", "rpm"}
 
 
 def test_pypi_with_entry_points(tmp_path: Path):
     # planemo 0.75.29 dropped setup.py
-    api.skeletonize(
-        "planemo",
-        repo="pypi",
-        version="0.75.28",
-        python_version="3.12",
-        output_dir=tmp_path,
-    )
+    with pytest.deprecated_call():
+        api.skeletonize(
+            "planemo",
+            repo="pypi",
+            version="0.75.28",
+            python_version="3.12",
+            output_dir=tmp_path,
+        )
     assert (tmp_path / "planemo").is_dir()
 
 
 def test_pypi_with_version_arg(tmp_path: Path):
     # regression test for https://github.com/conda/conda-build/issues/1442
-    api.skeletonize("PrettyTable", "pypi", version="0.7.2", output_dir=tmp_path)
+    with pytest.deprecated_call():
+        api.skeletonize("PrettyTable", "pypi", version="0.7.2", output_dir=tmp_path)
     metadata = api.render(str(tmp_path / "prettytable"))[0][0]
     assert parse_version(metadata.version()) == parse_version("0.7.2")
 
@@ -418,15 +426,16 @@ def test_pypi_with_extra_specs(tmp_path: Path, testing_config):
     extra_specs = ["cython", "mpi4py"]
     if not on_win:
         extra_specs.append("nomkl")
-    api.skeletonize(
-        "bigfile",
-        "pypi",
-        extra_specs=extra_specs,
-        version="0.1.24",
-        python="3.6",
-        config=testing_config,
-        output_dir=tmp_path,
-    )
+    with pytest.deprecated_call():
+        api.skeletonize(
+            "bigfile",
+            "pypi",
+            extra_specs=extra_specs,
+            version="0.1.24",
+            python="3.6",
+            config=testing_config,
+            output_dir=tmp_path,
+        )
     metadata = api.render(str(tmp_path / "bigfile"))[0][0]
     assert parse_version(metadata.version()) == parse_version("0.1.24")
     assert any("cython" in req for req in metadata.meta["requirements"]["host"])
@@ -445,22 +454,24 @@ def test_pypi_with_version_inconsistency(tmp_path: Path, testing_config):
     if not on_win:
         extra_specs.append("nomkl")
     testing_config.channel_urls.append("https://repo.anaconda.com/pkgs/free")
-    api.skeletonize(
-        "mpi4py_test",
-        "pypi",
-        extra_specs=extra_specs,
-        version="0.0.10",
-        python="3.6",
-        config=testing_config,
-        output_dir=tmp_path,
-    )
+    with pytest.deprecated_call():
+        api.skeletonize(
+            "mpi4py_test",
+            "pypi",
+            extra_specs=extra_specs,
+            version="0.0.10",
+            python="3.6",
+            config=testing_config,
+            output_dir=tmp_path,
+        )
     metadata = api.render(str(tmp_path / "mpi4py_test"))[0][0]
     assert parse_version(metadata.version()) == parse_version("0.0.10")
 
 
 def test_pypi_with_basic_environment_markers(tmp_path: Path):
     # regression test for https://github.com/conda/conda-build/issues/1974
-    api.skeletonize("coconut", "pypi", version="1.2.2", output_dir=tmp_path)
+    with pytest.deprecated_call():
+        api.skeletonize("coconut", "pypi", version="1.2.2", output_dir=tmp_path)
     metadata = api.render(tmp_path / "coconut")[0][0]
 
     build_reqs = str(metadata.meta["requirements"]["host"])
@@ -473,9 +484,10 @@ def test_pypi_with_basic_environment_markers(tmp_path: Path):
 
 
 def test_setuptools_test_requirements(tmp_path: Path):
-    api.skeletonize(
-        packages="hdf5storage", repo="pypi", version="0.1.19", output_dir=tmp_path
-    )
+    with pytest.deprecated_call():
+        api.skeletonize(
+            packages="hdf5storage", repo="pypi", version="0.1.19", output_dir=tmp_path
+        )
     metadata = api.render(str(tmp_path / "hdf5storage"))[0][0]
     assert metadata.meta["test"]["requires"] == ["nose >=1.0"]
 
@@ -492,7 +504,8 @@ def test_pypi_section_order_preserved(tmp_path: Path):
         REQUIREMENTS_ORDER,
     )
 
-    api.skeletonize(packages="sympy", repo="pypi", output_dir=tmp_path)
+    with pytest.deprecated_call():
+        api.skeletonize(packages="sympy", repo="pypi", output_dir=tmp_path)
     # Since we want to check the order of items in the recipe (not whether
     # the metadata values themselves are sensible), read the file as (ordered)
     # yaml, and check the order.
@@ -532,12 +545,13 @@ def test_pypi_section_order_preserved(tmp_path: Path):
 def test_build_sh_shellcheck_clean(
     package: str, repo: str, tmp_path: Path, testing_config
 ):
-    api.skeletonize(
-        packages=package,
-        repo=repo,
-        output_dir=tmp_path,
-        config=testing_config,
-    )
+    with pytest.deprecated_call():
+        api.skeletonize(
+            packages=package,
+            repo=repo,
+            output_dir=tmp_path,
+            config=testing_config,
+        )
 
     build_sh = next(
         Path(root, filename)

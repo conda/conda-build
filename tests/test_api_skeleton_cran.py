@@ -38,9 +38,10 @@ def test_cran_license(
     tmp_path: Path,
     testing_config,
 ):
-    api.skeletonize(
-        packages=package, repo="cran", output_dir=tmp_path, config=testing_config
-    )
+    with pytest.deprecated_call():
+        api.skeletonize(
+            packages=package, repo="cran", output_dir=tmp_path, config=testing_config
+        )
     metadata = api.render(str(tmp_path / package / "meta.yaml"))[0][0]
 
     assert metadata.get_value("about/license") == license_id
@@ -60,9 +61,10 @@ def test_cran_license(
 )
 @pytest.mark.flaky(rerun=5, reruns_delay=2)
 def test_cran_os_type(package: str, skip_text: str, tmp_path: Path, testing_config):
-    api.skeletonize(
-        packages=package, repo="cran", output_dir=tmp_path, config=testing_config
-    )
+    with pytest.deprecated_call():
+        api.skeletonize(
+            packages=package, repo="cran", output_dir=tmp_path, config=testing_config
+        )
     assert skip_text in (tmp_path / f"r-{package.lower()}" / "meta.yaml").read_text()
 
 
@@ -79,13 +81,14 @@ def test_cran_no_comments(tmp_path: Path, testing_config):
     assert build_sh_comment in CRAN_BUILD_SH_SOURCE
     assert build_sh_shebang in CRAN_BUILD_SH_SOURCE
 
-    api.skeletonize(
-        packages=package,
-        repo="cran",
-        output_dir=tmp_path,
-        config=testing_config,
-        no_comments=True,
-    )
+    with pytest.deprecated_call():
+        api.skeletonize(
+            packages=package,
+            repo="cran",
+            output_dir=tmp_path,
+            config=testing_config,
+            no_comments=True,
+        )
 
     # Check that comments got removed
     meta_yaml_text = (tmp_path / f"r-{package.lower()}" / "meta.yaml").read_text()
