@@ -25,6 +25,7 @@ from conda.base.constants import (
 from conda.base.context import context
 from conda.utils import url_path
 
+from .exceptions import CondaBuildUserError
 from .utils import (
     get_build_folders,
     get_conda_operation_locks,
@@ -37,6 +38,8 @@ from .variants import get_default_variant
 if TYPE_CHECKING:
     from pathlib import Path
     from typing import Any, TypeVar
+
+    from conda.core.exclude_newer import ExcludeNewerPolicy
 
     T = TypeVar("T")
 
@@ -129,6 +132,7 @@ def _get_default_settings():
         Setting("anaconda_upload", context.binstar_upload),
         Setting("force_upload", True),
         Setting("channel_urls", []),
+        Setting("exclude_newer", getattr(context, "exclude_newer", None)),
         Setting("dirty", False),
         Setting("include_recipe", True),
         Setting("no_download_source", False),
@@ -300,6 +304,7 @@ class Config:
 
     def __init__(self, variant=None, **kwargs):
         super().__init__()
+        self._exclude_newer_now = time.time()
         # default variant is set in render's distribute_variants
         self.variant = variant or {}
         self.set_keys(**kwargs)
@@ -315,6 +320,9 @@ class Config:
             del kwargs[attr]
 
     def set_keys(self, **kwargs):
+        if kwargs.get("exclude_newer") is None:
+            kwargs.pop("exclude_newer", None)
+
         def env(lang, default):
             version = kwargs.pop(lang, None)
             if not version:
@@ -529,6 +537,29 @@ class Config:
     @output_folder.setter
     def output_folder(self, value):
         self._output_folder = value
+
+    @property
+    def exclude_newer_policy(self) -> ExcludeNewerPolicy | None:
+        try:
+            from conda.core.exclude_newer import ExcludeNewerPolicy
+        except ImportError:
+            if self.exclude_newer is not None:
+                raise CondaBuildUserError(
+                    "--exclude-newer requires conda 26.9 or newer."
+                ) from None
+            return None
+
+        return ExcludeNewerPolicy.from_values(
+            self.exclude_newer,
+            context.exclude_newer_package,
+            (
+                *context.channel_settings,
+                # Newly built outputs must remain available to dependent outputs
+                # and package tests. Other local channels still obey the cutoff.
+                {"channel": url_path(self.output_folder), "exclude_newer": False},
+            ),
+            now=self._exclude_newer_now,
+        )
 
     @property
     def build_folder(self):

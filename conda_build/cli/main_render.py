@@ -174,6 +174,17 @@ source to try fill in related template variables.",
         ),
     )
     add_parser_channels(p)
+    p.add_argument(
+        "--exclude-newer",
+        default=argparse.SUPPRESS,
+        metavar="DURATION_OR_DATE",
+        help=(
+            "Exclude dependency packages newer than a duration (e.g. 7d) or date "
+            "(e.g. 2026-04-01). Date-only values include the entire UTC day. "
+            "Requires conda 26.9 or newer and a solver supporting exclude-newer. "
+            "Newly built packages in the output channel remain available."
+        ),
+    )
     return p
 
 
@@ -206,6 +217,7 @@ def execute(args: Sequence[str] | None = None) -> int:
     context.__init__(argparse_args=parsed)
 
     config = get_or_merge_config(None, **parsed.__dict__)
+    config.exclude_newer_policy  # Validate the cutoff before rendering.
 
     variants = get_package_variants(parsed.recipe, config, variants=parsed.variants)
     from ..build import get_all_replacements
@@ -218,7 +230,7 @@ def execute(args: Sequence[str] | None = None) -> int:
     if is_v1_recipe(parsed.recipe):
         parser, parsed_only_recipe = parse_args([parsed.recipe])
         command = parser.prog.split()[-1]
-        check_arguments_rattler(command, parsed, parsed_only_recipe)
+        check_arguments_rattler(command, parsed, parsed_only_recipe, config)
 
         return run_rattler(command, parsed, config)
 
