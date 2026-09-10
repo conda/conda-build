@@ -21,7 +21,7 @@ from rattler_build.progress import SimpleProgressCallback
 from rattler_build.render import RenderConfig
 from rattler_build.stage0 import MultiOutputRecipe, Stage0Recipe
 from rattler_build.tool_config import PlatformConfig, ToolConfiguration
-from rattler_build.variant_config import VariantConfig
+from rattler_build.variant_config import JinjaConfig, VariantConfig
 
 from ..build import handle_anaconda_upload
 from ..config import CondaPkgFormat
@@ -437,7 +437,20 @@ def run_rattler(
     # merge config files in the order they are stacked
     if config_files:
         for variant in config_files:
-            variant_config = variant_config.merge(VariantConfig.from_file(variant))
+            if Path(variant).name == "conda_build_config.yaml":
+                # legacy conda-build format
+                jinja_config = JinjaConfig(
+                    platform=PlatformConfig(
+                        build_platform=config.build_subdir,
+                        target_platform=config.host_subdir,
+                    )
+                )
+
+                variant_config = variant_config.merge(
+                    VariantConfig.from_conda_build_config(variant, jinja_config)
+                )
+            else:
+                variant_config = variant_config.merge(VariantConfig.from_file(variant))
 
     def get_config_value(name, fallback=None):
         value = variant_config.get(name, fallback)
