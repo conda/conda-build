@@ -107,6 +107,10 @@ jobs:
       PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial and not benchmark' || 'not serial and not benchmark' }}
 
     steps:
+      # See https://github.com/conda/conda-build/pull/5866 — added to prevent the
+      # Post Cache step from running out of disk space. Trimmed to the entries
+      # that recover meaningful space; browser/editor/language-toolchain folders
+      # were removed as they contribute little to post-test disk pressure.
       - name: Free Disk Space
         uses: endersonmenezes/free-disk-space@7901478139cff6e9d44df5972fd8ab8fcade4db1  # v3.2.2
         with:
@@ -118,25 +122,13 @@ jobs:
           remove_packages: >-
             azure-cli
             google-cloud-cli
-            microsoft-edge-stable
-            google-chrome-stable
-            firefox
             postgresql*
             temurin-*
             *llvm*
-            mysql*
             dotnet-sdk-*
           remove_packages_one_command: true
           remove_folders: >-
-            /usr/share/swift
-            /usr/share/az*
             /usr/local/lib/node_modules
-            /usr/local/share/chromium
-            /usr/local/share/powershell
-            /usr/local/julia
-            /usr/local/aws-cli
-            /usr/local/aws-sam-cli
-            /usr/share/gradle
           rm_cmd: rmz
           rmz_version: 3.1.1
           testing: false
@@ -191,6 +183,10 @@ jobs:
           pytest
           --cov=conda_build
           --durations-path=durations/${{ runner.os }}.json
+          --cov-append
+          --cov-branch
+          --cov-report=term
+          --cov-report=xml
           --reruns 1
           --reruns-delay 1
           -n auto
@@ -387,6 +383,10 @@ jobs:
         run: >
           pytest
           --cov=conda_build
+          --cov-append
+          --cov-branch
+          --cov-report=term
+          --cov-report=xml
           --basetemp=${{ runner.temp }}
           --durations-path=durations\${{ runner.os }}.json
           -n auto
@@ -526,6 +526,10 @@ jobs:
           pytest
           --cov=conda_build
           --durations-path=durations/${{ runner.os }}.json
+          --cov-append
+          --cov-branch
+          --cov-report=term
+          --cov-report=xml
           -n auto
           -m "${{ env.PYTEST_MARKER }}"
         env:
