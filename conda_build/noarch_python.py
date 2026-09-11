@@ -11,7 +11,7 @@ from os.path import basename, dirname, isfile, join
 from pathlib import Path
 
 from .exceptions import CondaBuildUserError
-from .utils import bin_dirname, on_win, rm_rf
+from .utils import bin_dirname, locate_conda_launcher, on_win, rm_rf
 
 
 def rewrite_script(fn: str, prefix: str | os.PathLike) -> str:
@@ -144,9 +144,12 @@ def transform(m, files, prefix):
 
     # copy in windows exe shims if there are any python-scripts
     if d["python-scripts"]:
-        for fn in "cli-32.exe", "cli-64.exe":
-            # FIXME: Update once win-arm64 native launcher is available
-            shutil.copyfile(join(this_dir, fn), join(prefix, fn))
+        for arch in "32", "64", "arm64":
+            try:
+                source = locate_conda_launcher(arch)
+            except FileNotFoundError:
+                continue
+            shutil.copyfile(source, join(prefix, f"cli-{arch}.exe"))
 
     # Read the local _link.py
     with open(join(this_dir, "_link.py")) as fi:
