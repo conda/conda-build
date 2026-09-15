@@ -391,6 +391,9 @@ def run_v1_tests(package: Package, *, channels: list[str], show_logs: bool) -> l
     """Run v1 package tests, including ``downstream`` tests."""
     return package.run_tests(
         channel=channels,
+        channel_priority=(
+            "strict" if str(context.channel_priority) == "strict" else "disabled"
+        ),
         progress_callback=CondaProgressCallback(show_logs=show_logs),
     )
 

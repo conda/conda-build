@@ -12,6 +12,7 @@ import yaml
 from conda.base.context import reset_context
 from conda_index.api import update_index
 from conda_package_handling.api import create
+from conda_package_streaming.transmute import transmute
 
 from conda_build import api
 from conda_build._rattler_build.compat import is_v1_package
@@ -64,7 +65,10 @@ def make_v1_test_package(tmp_path):
             path.write_text(content, encoding="utf-8")
         package = channel / "noarch" / f"{name}-1-0.conda"
         package.parent.mkdir(parents=True, exist_ok=True)
-        create(str(source), list(files), str(package))
+        tarball = package.with_suffix(".tar.bz2")
+        create(str(source), list(files), str(tarball))
+        transmute(str(tarball), str(package.parent))
+        tarball.unlink()
         return package
 
     return make
@@ -219,7 +223,11 @@ def test_is_v1_package(tmp_path: Path, extension, metadata_files, expected):
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(contents, encoding="utf-8")
     package = tmp_path / f"detector-1-0{extension}"
-    create(str(source), list(files), str(package))
+    tarball = package.with_suffix(".tar.bz2") if extension == ".conda" else package
+    create(str(source), list(files), str(tarball))
+    if extension == ".conda":
+        transmute(str(tarball), str(package.parent))
+        tarball.unlink()
 
     assert is_v1_package(package) is expected
 
