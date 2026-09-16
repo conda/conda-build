@@ -47,7 +47,7 @@ outputs:
   #
   # Non-default variants track the "non_default_clang" feature.
   # This is used to weigh down non-default variants of the package, allowing
-  # the default variant to take precedence unless required explicitely.
+  # the default variant to take precedence unless required explicitly.
   - name: clang_variant
     version: 1.0
     build:

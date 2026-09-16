@@ -1,4 +1,4 @@
-#Automaticly generating npm conda package
+#Automatically generating npm conda package
 {% set data = load_npm()%}
 {% block body -%}
 {% block package -%}

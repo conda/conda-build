@@ -17,7 +17,7 @@ from .utils import bin_dirname, on_win, rm_rf
 def rewrite_script(fn: str, prefix: str | os.PathLike) -> str:
     """Take a file from the bin directory and rewrite it into the python-scripts
     directory with the same permissions after it passes some sanity checks for
-    noarch pacakges"""
+    noarch packages"""
 
     # Load and check the source file for not being a binary
     src = Path(prefix, bin_dirname, fn)
@@ -119,7 +119,7 @@ def transform(m, files, prefix):
     name = m.name()
 
     # Create *nix prelink script
-    # Note: it's important to use LF newlines or it wont work if we build on Win
+    # Note: it's important to use LF newlines or it won't work if we build on Win
     with open(join(bin_dir, f".{name}-pre-link.sh"), "wb") as fo:
         fo.write(
             b"""\

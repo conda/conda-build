@@ -1555,7 +1555,7 @@ def skeletonize(
                         continue
                     if name == "R":
                         # Put R first
-                        # Regarless of build or run, and whether this is a
+                        # Regardless of build or run, and whether this is a
                         # recommended package or not, it can only depend on
                         # r_interp since anything else can and will cause
                         # cycles in the dependency graph. The cran metadata
@@ -1746,7 +1746,7 @@ def get_license_info(license_text, allowed_license_families):
     license file shipped with R base. The template files are more complicated
     because they would need to be combined with the license information provided
     by the package authors. In this case, the template file and the license
-    information file are both packaged. All optional ('|' seperated) licenses
+    information file are both packaged. All optional ('|' separated) licenses
     are included, if they are matching.
 
     This function returns the path to the license file for the unambiguous

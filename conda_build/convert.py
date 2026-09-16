@@ -332,7 +332,7 @@ def update_executable_path(temp_dir, file_path, target_platform):
             renamed_executable_path = f"{renamed_path}-script.py"
 
     elif target_platform == "unix":
-        renamed_path = re.sub(r"\AScripts", "bin", file_path)
+        renamed_path = re.sub(r"\AScripts", "bin", file_path)  # codespell:ignore
         renamed_executable_path = renamed_path.replace("-script.py", "")
 
     return renamed_executable_path
