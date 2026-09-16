@@ -67,7 +67,7 @@ def _package(channel, subdir, name, version, timestamp, depends=()):
         for filename, content in {
             "info/index.json": json.dumps(metadata),
             "info/files": f"{payload}\n",
-            payload: f"{version}\n",
+            payload: f"{version}\r\n" if sys.platform == "win32" else f"{version}\n",
         }.items():
             data = content.encode()
             info = tarfile.TarInfo(filename)
