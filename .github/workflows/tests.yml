@@ -103,8 +103,8 @@ jobs:
     env:
       CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev::' || '' }}
       CONDA_VERSION: ${{ contains('canary|release', matrix.conda-version) && 'conda' || format('conda={0}', matrix.conda-version) }}
-      # Exclude benchmark tests from regular CI runs (they run separately in linux-benchmarks)
-      PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial and not benchmark' || 'not serial and not benchmark' }}
+      # Split heavy tests into the other matrix leg to balance the xdist jobs
+      PYTEST_MARKER: ${{ matrix.test-type == 'serial' && '(serial or heavy) and not benchmark' || 'not serial and not heavy and not benchmark' }}
 
     steps:
       # See https://github.com/conda/conda-build/pull/5866 — added to prevent the
@@ -314,8 +314,8 @@ jobs:
     env:
       ErrorActionPreference: Stop  # powershell exit on first error
       CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'defaults' }}
-      # Exclude benchmark and slow tests from Windows parallel runs
-      PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial and not benchmark' || (matrix.test-type == 'parallel' && 'not serial and not slow and not benchmark' || '') }}
+      # Split heavy tests into the other matrix leg while preserving the Windows slow-test exclusion
+      PYTEST_MARKER: ${{ matrix.test-type == 'serial' && '(serial or (heavy and not slow)) and not benchmark' || (matrix.test-type == 'parallel' && 'not serial and not heavy and not slow and not benchmark' || '') }}
 
     steps:
       - name: Checkout Source
@@ -446,8 +446,8 @@ jobs:
     env:
       # Use conda-forge for release tests since conda 25.11+ is not in defaults for osx-64
       CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'conda-forge' }}
-      # Exclude benchmark tests from regular CI runs
-      PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial and not benchmark' || 'not serial and not benchmark' }}
+      # Split heavy tests into the other matrix leg to balance the xdist jobs
+      PYTEST_MARKER: ${{ matrix.test-type == 'serial' && '(serial or heavy) and not benchmark' || 'not serial and not heavy and not benchmark' }}
 
     steps:
       - name: Checkout Source
