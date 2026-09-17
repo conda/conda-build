@@ -569,6 +569,7 @@ def execute(args: Sequence[str] | None = None) -> int:
     context.__init__(argparse_args=parsed)
 
     config = get_or_merge_config(None, **parsed.__dict__)
+    config.exclude_newer_policy  # Validate the cutoff before building.
 
     # change globals in build module, see comment there as well
     config.channel_urls = get_channel_urls(parsed.__dict__)
@@ -581,7 +582,7 @@ def execute(args: Sequence[str] | None = None) -> int:
         # check cli arguments
         parser, parsed_only_recipe = parse_args(parsed.recipe)
         command = parser.prog.split()[-1]
-        check_arguments_rattler(command, parsed, parsed_only_recipe)
+        check_arguments_rattler(command, parsed, parsed_only_recipe, config)
         # run rattler command
         return run_rattler(command, parsed, config)
 

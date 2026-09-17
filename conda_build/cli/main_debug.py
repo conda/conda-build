@@ -114,7 +114,9 @@ def execute(args: Sequence[str] | None = None) -> int:
         if is_v1_recipe(parsed.recipe_or_package_file_path):
             config = get_or_merge_config(None, **parsed.__dict__)
             parsed_only_recipe = parser.parse_args([parsed.recipe_or_package_file_path])
-            check_arguments_rattler(parser.prog.split()[-1], parsed, parsed_only_recipe)
+            check_arguments_rattler(
+                parser.prog.split()[-1], parsed, parsed_only_recipe, config
+            )
             parsed.recipe = parsed.recipe_or_package_file_path
             command = parser.prog.split()[-1]
             activation_string = run_rattler(command, parsed, config)

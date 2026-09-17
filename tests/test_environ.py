@@ -7,8 +7,11 @@ import platform
 from typing import TYPE_CHECKING
 
 import pytest
+from conda.base.context import context, reset_context
+from conda.core.index import Index
+from conda.exceptions import PackagesNotFoundError, ResolvePackageNotFound
 
-from conda_build.environ import create_env, os_vars
+from conda_build.environ import _install_actions, create_env, os_vars
 
 if TYPE_CHECKING:
     from typing import Any
@@ -19,6 +22,49 @@ if TYPE_CHECKING:
 
 
 on_linux = platform.system() == "Linux"
+
+
+@pytest.mark.parametrize(
+    "cached_solver, requested_solver, expected_error",
+    [
+        ("classic", "libmamba", PackagesNotFoundError),
+        ("libmamba", "classic", ResolvePackageNotFound),
+    ],
+)
+def test_install_actions_respects_changed_solver(
+    empty_channel,
+    tmp_path,
+    monkeypatch,
+    cached_solver,
+    requested_solver,
+    expected_error,
+):
+    cached_backend = context.plugin_manager.get_cached_solver_backend
+    cached_backend.cache_clear()
+    try:
+        with monkeypatch.context() as patch:
+            patch.setenv("CONDA_SOLVER", cached_solver)
+            reset_context()
+            cached_backend()
+
+            patch.setenv("CONDA_SOLVER", requested_solver)
+            reset_context()
+            index = Index(
+                channels=[empty_channel.as_uri()],
+                prepend=False,
+                platform=context.subdir,
+                use_system=True,
+            )
+            with pytest.raises(expected_error):
+                _install_actions(
+                    str(tmp_path / "prefix"),
+                    index,
+                    ["conda_build_missing_test_requirement"],
+                    subdir=context.subdir,
+                )
+    finally:
+        cached_backend.cache_clear()
+        reset_context()
 
 
 def test_environment_creation_preserves_PATH(testing_workdir, testing_config):

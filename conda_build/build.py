@@ -2245,6 +2245,7 @@ def create_build_envs(m: MetaData, notest):
             max_env_retry=m.config.max_env_retry,
             output_folder=m.config.output_folder,
             channel_urls=tuple(m.config.channel_urls),
+            exclude_newer_policy=m.config.exclude_newer_policy,
         )
         environ.create_env(
             m.config.host_prefix,
@@ -2271,6 +2272,7 @@ def create_build_envs(m: MetaData, notest):
         max_env_retry=m.config.max_env_retry,
         output_folder=m.config.output_folder,
         channel_urls=tuple(m.config.channel_urls),
+        exclude_newer_policy=m.config.exclude_newer_policy,
     )
 
     try:
@@ -2297,6 +2299,7 @@ def create_build_envs(m: MetaData, notest):
                 max_env_retry=m.config.max_env_retry,
                 output_folder=m.config.output_folder,
                 channel_urls=tuple(m.config.channel_urls),
+                exclude_newer_policy=m.config.exclude_newer_policy,
             )
     except DependencyNeedsBuildingError as e:
         # subpackages are not actually missing.  We just haven't built them yet.
@@ -2738,6 +2741,7 @@ def build(
                                 max_env_retry=m.config.max_env_retry,
                                 output_folder=m.config.output_folder,
                                 channel_urls=tuple(m.config.channel_urls),
+                                exclude_newer_policy=m.config.exclude_newer_policy,
                             )
                             environ.create_env(
                                 m.config.host_prefix,
@@ -2765,6 +2769,7 @@ def build(
                             max_env_retry=m.config.max_env_retry,
                             output_folder=m.config.output_folder,
                             channel_urls=tuple(m.config.channel_urls),
+                            exclude_newer_policy=m.config.exclude_newer_policy,
                         )
                         environ.create_env(
                             m.config.build_prefix,
@@ -3432,6 +3437,7 @@ def test(
             max_env_retry=metadata.config.max_env_retry,
             output_folder=metadata.config.output_folder,
             channel_urls=tuple(metadata.config.channel_urls),
+            exclude_newer_policy=metadata.config.exclude_newer_policy,
         )
     except (
         DependencyNeedsBuildingError,
@@ -3758,6 +3764,7 @@ def build_tree(
                                             subdir=meta.config.host_subdir,
                                             bldpkgs_dirs=meta.config.bldpkgs_dirs,
                                             channel_urls=channel_urls,
+                                            exclude_newer_policy=meta.config.exclude_newer_policy,
                                         )
                                 except (
                                     UnsatisfiableError,

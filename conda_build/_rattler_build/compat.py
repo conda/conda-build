@@ -6,11 +6,14 @@ import os
 import sys
 import time
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import rattler_build
 import yaml
 from conda.base.context import context
+from conda.models.channel import Channel
 from rattler_build import (
     Package,
     RattlerBuildError,
@@ -79,7 +82,10 @@ class CondaProgressCallback(SimpleProgressCallback):
 
 
 def check_arguments_rattler(
-    command: str, parsed: argparse.Namespace, parsed_only_recipe: argparse.Namespace
+    command: str,
+    parsed: argparse.Namespace,
+    parsed_only_recipe: argparse.Namespace,
+    config: Config,
 ) -> None:
     """Validate that arguments are compatible with rattler CLI commands.
 
@@ -93,7 +99,17 @@ def check_arguments_rattler(
             from the main argument parser.
         parsed_only_recipe: Namespace object containing only the recipe file as
             an argument.
+        config: Build configuration used to check the dependency cutoff.
     """
+
+    policy = config.exclude_newer_policy
+    if policy is not None and policy.active:
+        if not hasattr(rattler_build, "ExcludeNewer"):
+            raise CondaBuildUserError(
+                "The installed py-rattler-build does not support exclude-newer "
+                "policies for v1 recipes. Install a version with build, test, "
+                "and debug policy support."
+            )
 
     diff = {
         k: v for k, v in vars(parsed).items() if vars(parsed_only_recipe).get(k) != v
@@ -122,6 +138,7 @@ def check_arguments_rattler(
             "override_channels",
             "build_only",
             "post",
+            "exclude_newer",
         },
         "render": {
             "recipe",
@@ -129,6 +146,7 @@ def check_arguments_rattler(
             "exclusive_config_files",
             "channel",
             "override_channels",
+            "exclude_newer",
         },
         "debug": {
             "recipe",
@@ -138,6 +156,7 @@ def check_arguments_rattler(
             "channel",
             "override_channels",
             "activate_string_only",
+            "exclude_newer",
         },
     }
 
@@ -156,6 +175,38 @@ def check_arguments_rattler(
         raise ValueError(
             f"Invalid condarc settings for conda-{command}: {', '.join(sorted(unsupported_condarc_keys))}"
         )
+
+
+def exclude_newer_arguments(config: Config, channels: list[str]) -> dict:
+    """Translate conda's resolved cutoffs into rattler-build's Python arguments."""
+    policy = config.exclude_newer_policy
+    if policy is None or not policy.active:
+        return {}
+
+    def as_datetime(cutoff):
+        return (
+            datetime.fromtimestamp(cutoff, timezone.utc) if cutoff is not None else None
+        )
+
+    channel_cutoffs = {}
+    for channel in channels:
+        resolved = Channel(channel)
+        for override in policy.channel_cutoffs:
+            if override.matches({"channel": resolved}):
+                url = resolved.urls(with_credentials=True, subdirs=[""])[0]
+                channel_cutoffs[url.rstrip("/") + "/"] = as_datetime(override.cutoff)
+
+    return {
+        "exclude_newer": rattler_build.ExcludeNewer(
+            as_datetime(policy.global_cutoff),
+            packages={
+                name: as_datetime(cutoff)
+                for name, cutoff in (policy.package_cutoffs or {}).items()
+            },
+            channels=channel_cutoffs,
+            include_unknown_timestamp=True,
+        )
+    }
 
 
 def process_recipe(
@@ -183,6 +234,7 @@ def process_recipe(
         - If testing is enabled, run tests on the built package with `Package.run_tests()`
     """
     result = RecipeResult(recipe_path=recipe_path)
+    cutoff_arguments = exclude_newer_arguments(config, channels)
 
     try:
         recipe = Stage0Recipe.from_file(Path(recipe_path))
@@ -251,6 +303,7 @@ def process_recipe(
                 output_dir=os.path.join(output_dir, f"debug_{int(time.time() * 1000)}"),
                 channels=channels,
                 progress_callback=CondaProgressCallback(show_logs=True),
+                **cutoff_arguments,
             )
         except RattlerBuildError as e:
             result.error = (
@@ -286,6 +339,7 @@ def process_recipe(
                 no_build_id=no_build_id,
                 package_format=package_format,
                 no_include_recipe=no_include_recipe,
+                **cutoff_arguments,
             )
         except RattlerBuildError as e:
             result.outputs.append(
@@ -317,10 +371,14 @@ def process_recipe(
                     # tests are run in a different directory than build, so we need to add the build
                     # directory manually as a file:// channel
                     test_channels = [Path(output_dir).resolve().as_uri(), *channels]
+                    test_cutoff_arguments = exclude_newer_arguments(
+                        config, test_channels
+                    )
 
                     test_results = pkg.run_tests(
                         progress_callback=CondaProgressCallback(show_logs=show_logs),
                         channel=test_channels,
+                        **test_cutoff_arguments,
                     )
                 except RattlerBuildError as e:
                     result.outputs.append(
@@ -392,15 +450,27 @@ def run_rattler(
     else:
         source_channels = context.channels
 
+    policy = config.exclude_newer_policy
     for channel in source_channels:
         # handle multichannels ('defaults', 'local' and user defined multichannels)
         # TODO: fix multichannel priority
         if channel in context.custom_multichannels:
             channels.extend(
-                str(subchannel) for subchannel in context.custom_multichannels[channel]
+                subchannel.urls(with_credentials=True, subdirs=[""])[0]
+                if policy is not None and policy.active
+                else str(subchannel)
+                for subchannel in context.custom_multichannels[channel]
             )
         else:
             channels.append(channel)
+
+    if policy is not None and policy.active:
+        # Resolve conda's channel aliases before matching overrides or passing
+        # channels to rattler-build, which has its own channel configuration.
+        channels = [
+            Channel(channel).urls(with_credentials=True, subdirs=[""])[0]
+            for channel in channels
+        ]
 
     if context.channel_priority == "strict":
         channel_priority = "strict"
