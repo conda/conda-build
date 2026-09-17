@@ -114,7 +114,7 @@ jobs:
           remove_dotnet: true
           remove_haskell: true
           remove_tool_cache: true
-          remove_swap: true
+          remove_swap: false
           remove_packages: >-
             azure-cli
             google-cloud-cli
