@@ -114,7 +114,7 @@ jobs:
           remove_dotnet: true
           remove_haskell: true
           remove_tool_cache: true
-          remove_swap: true
+          remove_swap: false
           remove_packages: >-
             azure-cli
             google-cloud-cli
@@ -187,14 +187,38 @@ jobs:
         run: conda list --show-channel-urls
 
       - name: Run Tests
-        run: >
-          pytest
-          --cov=conda_build
-          --durations-path=durations/${{ runner.os }}.json
-          --reruns 1
-          --reruns-delay 1
-          -n auto
-          -m "${{ env.PYTEST_MARKER }}"
+        run: |
+          # Keep samples in the job log even if the runner stops before artifact upload.
+          monitor_resources() {
+            while true; do
+              echo "::group::Runner resources $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+              free --mebi
+              # RSS is in KiB. Avoid command arguments, which can contain credentials.
+              ps -eo pid,ppid,comm,rss,%cpu --sort=-rss | awk 'NR <= 21'
+              awk '/^oom_kill /' /proc/vmstat
+              if [[ -r /proc/pressure/memory ]]; then
+                cat /proc/pressure/memory
+              fi
+              echo "::endgroup::"
+              sleep 30
+            done
+          }
+          monitor_resources &
+          monitor_pid=$!
+          cleanup_monitor() {
+            pkill -P "$monitor_pid" 2>/dev/null || true
+            kill "$monitor_pid" 2>/dev/null || true
+            wait "$monitor_pid" 2>/dev/null || true
+          }
+          trap cleanup_monitor EXIT
+
+          pytest \
+            --cov=conda_build \
+            --durations-path=durations/${{ runner.os }}.json \
+            --reruns 1 \
+            --reruns-delay 1 \
+            -n auto \
+            -m "${{ env.PYTEST_MARKER }}"
 
       - name: Upload Coverage
         uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
