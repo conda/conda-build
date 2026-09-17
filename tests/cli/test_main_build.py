@@ -574,6 +574,47 @@ def test_build_v1_recipe() -> None:
     assert main_build.execute(args) == 0
 
 
+def test_build_v1_recipe_with_downstream_test(
+    mocker: MockerFixture, tmp_path: Path
+) -> None:
+    """Build a v1 recipe and execute its downstream package test."""
+    recipe = tmp_path / "recipe"
+    recipe.mkdir()
+    (recipe / "recipe.yaml").write_text(
+        """
+package:
+  name: mylib
+  version: "1.0.0"
+
+build:
+  number: 0
+  script:
+    - mkdir -p $PREFIX
+
+tests:
+  - downstream: libmambapy
+""",
+        encoding="utf-8",
+    )
+
+    output = tmp_path / "out"
+    assert (
+        main_build.execute(
+            [
+                str(recipe),
+                "--output-folder",
+                str(output),
+                "--override-channels",
+                "--channel",
+                "conda-forge",
+            ]
+        )
+        == 0
+    )
+    packages = list(output.rglob("mylib-1.0.0-*.conda"))
+    assert packages
+
+
 def test_build_v1_recipe_multi_output(testing_workdir: str) -> None:
     """Test building a multi-output v1 recipe"""
     recipe = os.path.join(metadata_dir, "..", "variants", "33_v1_recipe_multi_output")
@@ -591,8 +632,10 @@ def test_build_v1_recipe_multi_output(testing_workdir: str) -> None:
     ]
     assert main_build.execute(args) == 0
 
-    conda_packages = list(out.rglob("*.conda"))
+    conda_packages = sorted(out.rglob("*.conda"))
     assert len(conda_packages) == 2
+
+    assert main_build.execute(["--test", str(conda_packages[0])]) == 0
 
 
 @pytest.mark.parametrize(
