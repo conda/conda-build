@@ -125,6 +125,8 @@ def check_arguments_rattler(
             "override_channels",
             "build_only",
             "post",
+            "root-dir",
+            "croot",
         },
         "render": {
             "recipe",
