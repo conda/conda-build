@@ -173,8 +173,10 @@ select = [
   "E",  # pycodestyle errors
   "F",  # pyflakes
   "FA",  # flake8-future-annotations
+  "G",  # flake8-logging-format
   "I",  # isort
   "ISC",  # flake8-implicit-str-concat
+  "LOG",  # flake8-logging
   "T10",  # flake8-debugger
   "TCH",  # flake8-type-checking
   "UP",  # pyupgrade

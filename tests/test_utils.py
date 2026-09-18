@@ -196,6 +196,13 @@ def test_logger_filtering(caplog, capfd):
     assert "test warn message" in err
     assert "test error message" in err
     assert caplog.text.count("duplicate") == 1
+    # Lazy %-formatting: same template, different args → both must appear
+    log.info("lazy format %s", "one")
+    log.info("lazy format %s", "two")
+    log.info("lazy format %s", "one")
+    assert "lazy format one" in caplog.text
+    assert "lazy format two" in caplog.text
+    assert caplog.text.count("lazy format one") == 1
     log.removeHandler(logging.StreamHandler(sys.stdout))
     log.removeHandler(logging.StreamHandler(sys.stderr))
 
