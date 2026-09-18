@@ -120,52 +120,49 @@ def test_build_output_build_path(
     assert error == ""
 
 
-def test_build_output_build_path_variants(testing_config, capfd):
+@pytest.mark.parametrize(
+    "args, expected_outputs",
+    [
+        (
+            ["--output", os.path.join(variants_dir, "11_variant_output_names")],
+            [
+                "some_output_using_abc_ghi-1.0-*.conda",
+                "some_output_using_abc_jkl-1.0-*.conda",
+                "some_output_using_def_ghi-1.0-*.conda",
+                "some_output_using_def_jkl-1.0-*.conda",
+            ],
+        ),
+        (
+            [
+                "--output",
+                os.path.join(variants_dir, "11_variant_output_names"),
+                "--variants",
+                "something: abc",
+            ],
+            [
+                "some_output_using_abc_ghi-1.0-*.conda",
+                "some_output_using_abc_jkl-1.0-*.conda",
+            ],
+        ),
+    ],
+)
+def test_build_output_build_path_variants(
+    args, expected_outputs, testing_config, capfd
+):
     testing_config.verbose = False
     testing_config.debug = False
 
-    # Test that without passing --variants, we get all variants
-    args = ["--output", os.path.join(variants_dir, "11_variant_output_names")]
     main_build.execute(args)
 
-    # Build hash (h...) is not stable between local and CUI builds.
+    # Build hash (h...) is not stable between local and CI builds.
     # So rely on the build string without the content hash.
-    patterns = [
-        "some_output_using_abc_ghi-1.0-*.conda",
-        "some_output_using_abc_jkl-1.0-*.conda",
-        "some_output_using_def_ghi-1.0-*.conda",
-        "some_output_using_def_jkl-1.0-*.conda",
-    ]
     output, error = capfd.readouterr()
     names = [os.path.basename(path) for path in output.rstrip().splitlines()]
-    assert len(names) == len(patterns), (
-        f"Expected {len(patterns)} packages, got {len(names)}"
+    assert len(names) == len(expected_outputs), (
+        f"Expected {len(expected_outputs)} packages, got {len(names)}"
     )
     assert all(
-        fnmatch.fnmatch(name, pattern) for name, pattern in zip(names, patterns)
-    ), error or output
-    assert error == ""
-
-    # Test that passing --variants, we get the specified variants
-    args = [
-        "--output",
-        os.path.join(variants_dir, "11_variant_output_names"),
-        "--variants",
-        "something: abc",
-    ]
-    main_build.execute(args)
-
-    patterns = [
-        "some_output_using_abc_ghi-1.0-*.conda",
-        "some_output_using_abc_jkl-1.0-*.conda",
-    ]
-    output, error = capfd.readouterr()
-    names = [os.path.basename(path) for path in output.rstrip().splitlines()]
-    assert len(names) == len(patterns), (
-        f"Expected {len(patterns)} packages, got {len(names)}"
-    )
-    assert all(
-        fnmatch.fnmatch(name, pattern) for name, pattern in zip(names, patterns)
+        fnmatch.fnmatch(name, pattern) for name, pattern in zip(names, expected_outputs)
     ), error or output
     assert error == ""
 
