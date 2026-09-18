@@ -16,7 +16,10 @@ from conda_build.jinja_context import compiler
 def test_xs_needs_c_compiler(testing_config):
     """Perl packages with XS files need a C compiler"""
     # This uses Sub::Identify=0.14 since it includes no .c files but a .xs file.
-    api.skeletonize("Sub::Identify", version="0.14", repo="cpan", config=testing_config)
+    with pytest.deprecated_call():
+        api.skeletonize(
+            "Sub::Identify", version="0.14", repo="cpan", config=testing_config
+        )
     metadata = api.render(
         "perl-sub-identify/0.14", finalize=False, bypass_env_check=True
     )[0][0]
