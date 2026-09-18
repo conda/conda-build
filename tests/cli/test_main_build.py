@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from __future__ import annotations
 
+import fnmatch
 import os
 import re
 from pathlib import Path
@@ -23,7 +24,7 @@ from conda_build.exceptions import CondaBuildUserError, DependencyNeedsBuildingE
 from conda_build.os_utils.external import find_executable
 from conda_build.utils import get_build_folders, on_mac, on_win, package_has_file
 
-from ..utils import metadata_dir
+from ..utils import metadata_dir, variants_dir
 from ..utils import reset_config as _reset_config
 
 if TYPE_CHECKING:
@@ -116,6 +117,53 @@ def test_build_output_build_path(
     )
     output, error = capfd.readouterr()
     assert test_path == output.rstrip(), error
+    assert error == ""
+
+
+@pytest.mark.parametrize(
+    "args, expected_outputs",
+    [
+        (
+            ["--output", os.path.join(variants_dir, "11_variant_output_names")],
+            [
+                "some_output_using_abc_ghi-1.0-*.conda",
+                "some_output_using_abc_jkl-1.0-*.conda",
+                "some_output_using_def_ghi-1.0-*.conda",
+                "some_output_using_def_jkl-1.0-*.conda",
+            ],
+        ),
+        (
+            [
+                "--output",
+                os.path.join(variants_dir, "11_variant_output_names"),
+                "--variants",
+                "something: abc",
+            ],
+            [
+                "some_output_using_abc_ghi-1.0-*.conda",
+                "some_output_using_abc_jkl-1.0-*.conda",
+            ],
+        ),
+    ],
+)
+def test_build_output_build_path_variants(
+    args, expected_outputs, testing_config, capfd
+):
+    testing_config.verbose = False
+    testing_config.debug = False
+
+    main_build.execute(args)
+
+    # Build hash (h...) is not stable between local and CI builds.
+    # So rely on the build string without the content hash.
+    output, error = capfd.readouterr()
+    names = [os.path.basename(path) for path in output.rstrip().splitlines()]
+    assert len(names) == len(expected_outputs), (
+        f"Expected {len(expected_outputs)} packages, got {len(names)}"
+    )
+    assert all(
+        fnmatch.fnmatch(name, pattern) for name, pattern in zip(names, expected_outputs)
+    ), error or output
     assert error == ""
 
 
