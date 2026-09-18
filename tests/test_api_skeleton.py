@@ -519,7 +519,7 @@ def test_pypi_section_order_preserved(tmp_path: Path):
 
 @pytest.mark.skip("Use separate grayskull package instead of skeleton.")
 @pytest.mark.slow
-@pytest.mark.flaky(rerun=5, reruns_delay=2)
+@pytest.mark.flaky(reruns=5, reruns_delay=2)
 @pytest.mark.skipif(on_win, reason="shellcheck is not available on Windows")
 @pytest.mark.parametrize(
     "package, repo",
