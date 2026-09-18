@@ -57,6 +57,7 @@ from conda.base.constants import (
 )
 from conda.base.context import context
 from conda.common.path import unix_path_to_win, win_path_to_unix
+from conda.core.prefix_data import PrefixData
 from conda.exceptions import CondaHTTPError
 from conda.gateways.connection.download import download
 from conda.gateways.disk.create import TemporaryDirectory
@@ -66,11 +67,11 @@ from conda.models.match_spec import MatchSpec
 from conda.models.records import PackageRecord
 from conda.models.version import VersionOrder
 
-from .exceptions import BuildLockError
+from .exceptions import BuildLockError, CondaBuildUserError
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
-    from typing import TypeVar
+    from typing import Literal, TypeVar
 
     from .metadata import MetaData
 
@@ -1081,6 +1082,50 @@ def iter_entry_points(items):
         yield m.groups()
 
 
+def locate_conda_launcher(
+    arch: str, *, launcher_type: Literal["cli", "gui"] = "cli"
+) -> str:
+    """Locate and verify the packaged launcher for a Windows target architecture."""
+    if arch not in ("32", "64", "arm64") or launcher_type not in ("cli", "gui"):
+        raise ValueError(f"Unsupported Windows launcher: {launcher_type}-{arch}")
+
+    package_name = "conda-launchers"
+    short_path = f"share/conda-launchers/{launcher_type}-{arch}.exe"
+    record = PrefixData(sys.prefix).get("conda-launchers", None)
+    if record is None or getattr(record, "paths_data", None) is None:
+        raise CondaBuildUserError(
+            "Install conda-launchers >=24.7.1 in the environment running conda-build."
+        )
+    path_data = next(
+        (path for path in record.paths_data.paths if path.path == short_path), None
+    )
+    if path_data is None:
+        if arch != "32":
+            raise FileNotFoundError(
+                f"The installed conda-launchers package does not provide {short_path}."
+            )
+        # defaults does not yet publish 32-bit launchers.
+        package_name = "conda-build"
+        launcher_src = join(dirname(__file__), f"{launcher_type}-32.exe")
+        sha256 = {
+            "cli": "37f0668b6a8f623ace63d19513e23066ee9cddf825251651d5220210f33bbc00",
+            "gui": "44db6ab8ea57335862b7b29510c0e1a80079e7569137c3dbebdec41389faa5b3",
+        }[launcher_type]
+    else:
+        launcher_src = join(sys.prefix, short_path)
+        sha256 = getattr(path_data, "sha256", None)
+    if not sha256 or not isfile(launcher_src):
+        raise CondaBuildUserError(
+            f"Reinstall {package_name}: {launcher_type}-{arch}.exe "
+            "or its SHA256 is missing."
+        )
+    if compute_sum(launcher_src, "sha256") != sha256:
+        raise CondaBuildUserError(
+            f"Reinstall {package_name}: SHA256 mismatch for {launcher_type}-{arch}.exe."
+        )
+    return launcher_src
+
+
 def create_entry_point(path, module, func, config):
     """Creates an entry point for legacy noarch_python builds"""
     import_name = func.split(".")[0]
@@ -1090,10 +1135,8 @@ def create_entry_point(path, module, func, config):
             if os.path.isfile(os.path.join(config.host_prefix, "python_d.exe")):
                 fo.write("#!python_d\n")
             fo.write(pyscript)
-            # FIXME: Update once win-arm64 native launcher is available
-            host_arch = "64" if config.host_arch == "arm64" else str(config.host_arch)
             copy_into(
-                join(dirname(__file__), f"cli-{host_arch}.exe"),
+                locate_conda_launcher(config.host_arch),
                 path + ".exe",
                 config.timeout,
             )
