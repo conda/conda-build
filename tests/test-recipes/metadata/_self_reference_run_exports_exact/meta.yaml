@@ -1,0 +1,9 @@
+package:
+  name: test
+  version: 1.0.0
+
+build:
+  number: 37
+  string: dst_h{{ PKG_HASH }}_{{ PKG_BUILDNUM }}  # [explicit_build_string]
+  run_exports:
+    - {{ pin_subpackage('test', exact=True) }}

@@ -70,13 +70,13 @@ class DeprecationHandler:
         # If self._version or version could not be represented by a simple
         # tuple[int, ...], do a more elaborate version parsing and comparison.
         # Avoid this import otherwise to reduce import time for conda activate.
-        from packaging.version import parse
+        from packaging.version import InvalidVersion, parse
 
         if self._version_object is None:
             try:
                 self._version_object = parse(self._version)  # type: ignore[arg-type]
-            except TypeError:
-                # TypeError: self._version could not be parsed
+            except (InvalidVersion, TypeError):
+                # self._version could not be parsed
                 self._version_object = parse("0.0.0.dev0+placeholder")
         return self._version_object < parse(version)
 

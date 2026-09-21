@@ -1,5 +1,6 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+import json
 import os
 import subprocess
 import sys
@@ -8,6 +9,7 @@ from typing import NamedTuple
 
 import filelock
 import pytest
+from conda.core.prefix_data import PrefixData
 from pytest import MonkeyPatch
 
 import conda_build.utils as utils
@@ -23,6 +25,64 @@ def test_get_site_packages():
     crazy_path = os.path.join("/dummy", "lib", "python8.2", "site-packages")
     site_packages = utils.get_site_packages("/dummy", "8.2")
     assert site_packages == crazy_path
+
+
+def _write_python_record(prefix: Path, site_packages_path: str | None) -> None:
+    """Install a fake python into ``prefix`` so PrefixData can read it back."""
+    (prefix / "conda-meta").mkdir(parents=True, exist_ok=True)
+    record = {
+        "name": "python",
+        "version": "3.15.0",
+        "build": "h1234567_0_cp315",
+        "build_number": 0,
+        "channel": "conda-forge",
+        "subdir": "noarch",
+        "fn": "python-3.15.0-h1234567_0_cp315.conda",
+        "files": [],
+        "paths_data": {"paths_version": 1, "paths": []},
+    }
+    if site_packages_path is not None:
+        record["python_site_packages_path"] = site_packages_path
+    (prefix / "conda-meta" / "python-3.15.0-h1234567_0_cp315.json").write_text(
+        json.dumps(record)
+    )
+
+
+@pytest.mark.parametrize(
+    "site_packages_path",
+    [
+        # python >=3.15 on Windows, and any relocated layout
+        "lib/python/site-packages",
+        # free-threaded builds
+        "lib/python3.15t/site-packages",
+    ],
+)
+def test_get_site_packages_honors_python_record(
+    tmp_path: Path, site_packages_path: str
+) -> None:
+    """python declares its own site-packages; the version alone cannot imply it."""
+    _write_python_record(tmp_path, site_packages_path)
+    PrefixData._cache_.clear()
+
+    assert utils.get_site_packages(tmp_path, "3.15") == os.path.join(
+        tmp_path, *site_packages_path.split("/")
+    )
+
+
+def test_get_site_packages_falls_back_without_python_record(tmp_path: Path) -> None:
+    """Pythons predating the field, and prefixes without python, keep the old layout."""
+    _write_python_record(tmp_path, None)
+    PrefixData._cache_.clear()
+
+    assert utils.get_site_packages(tmp_path, "3.15") == os.path.join(
+        utils.get_stdlib_dir(tmp_path, "3.15"), "site-packages"
+    )
+
+
+def test_get_site_packages_missing_prefix() -> None:
+    """A prefix that does not exist yet must not raise."""
+    assert utils.get_site_packages("", "3.15")
+    assert utils.get_site_packages(os.path.join("/dummy", "nope"), "3.15")
 
 
 def test_prepend_sys_path():
@@ -574,3 +634,15 @@ def test_max_cmd_line_length_default():
         assert utils.MAX_CHUNK_SIZE == 8190
     else:
         assert utils.MAX_CHUNK_SIZE == 32760
+
+
+@pytest.mark.parametrize("arch", ["32", "64", "arm64"])
+def test_create_entry_point(monkeypatch, tmp_path, testing_config, arch):
+    monkeypatch.setattr(utils, "on_win", True)
+    testing_config.arch = arch
+    path = tmp_path / "example"
+    utils.create_entry_point(
+        str(path), "conda_build.cli.main_build", "execute", testing_config
+    )
+    assert (path.parent / "example-script.py").is_file()
+    assert (path.parent / "example.exe").is_file()

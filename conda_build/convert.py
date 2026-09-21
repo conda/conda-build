@@ -559,10 +559,10 @@ def create_exe_file(directory, executable, target_platform):
     """
     exe_directory = os.path.dirname(__file__)
 
-    if target_platform.endswith("32"):
+    if target_platform == "win-32":
         executable_file = os.path.join(exe_directory, "cli-32.exe")
-
     else:
+        # FIXME: Update once win-arm64 native launcher is available
         executable_file = os.path.join(exe_directory, "cli-64.exe")
 
     renamed_executable_file = os.path.join(directory, f"{executable}.exe")

@@ -57,7 +57,8 @@ from conda.base.constants import (
 )
 from conda.base.context import context
 from conda.common.path import unix_path_to_win, win_path_to_unix
-from conda.exceptions import CondaHTTPError
+from conda.core.prefix_data import PrefixData
+from conda.exceptions import CondaError, CondaHTTPError
 from conda.gateways.connection.download import download
 from conda.gateways.disk.create import TemporaryDirectory
 from conda.gateways.disk.read import compute_sum
@@ -1006,7 +1007,29 @@ def get_stdlib_dir(prefix, py_ver):
     return lib_dir
 
 
+def _get_python_site_packages_path(prefix):
+    """The ``python_site_packages_path`` recorded for the python installed in ``prefix``.
+
+    Returns ``None`` when there is no prefix, no python in it, or a python old
+    enough not to record the field.
+    """
+    if not prefix or not isdir(prefix):
+        return None
+    try:
+        record = PrefixData(str(prefix)).get("python", default=None)
+    except CondaError:
+        return None
+    return getattr(record, "python_site_packages_path", None) or None
+
+
 def get_site_packages(prefix, py_ver):
+    # python declares where its site-packages lives, which is the only way to get
+    # this right for layouts that are not derivable from the version alone -- e.g.
+    # free-threaded builds (lib/python3.14t/site-packages) and, per CFEP-27,
+    # python >=3.15 on Windows (lib/python/site-packages, not Lib/site-packages).
+    # https://github.com/conda-forge/cfep/blob/main/cfep-27.md
+    if site_packages_path := _get_python_site_packages_path(prefix):
+        return os.path.join(prefix, *site_packages_path.split("/"))
     return os.path.join(get_stdlib_dir(prefix, py_ver), "site-packages")
 
 
@@ -1090,8 +1113,10 @@ def create_entry_point(path, module, func, config):
             if os.path.isfile(os.path.join(config.host_prefix, "python_d.exe")):
                 fo.write("#!python_d\n")
             fo.write(pyscript)
+            # FIXME: Update once win-arm64 native launcher is available
+            host_arch = "64" if config.host_arch == "arm64" else str(config.host_arch)
             copy_into(
-                join(dirname(__file__), f"cli-{str(config.host_arch)}.exe"),
+                join(dirname(__file__), f"cli-{host_arch}.exe"),
                 path + ".exe",
                 config.timeout,
             )
@@ -1361,11 +1386,18 @@ def find_recipe(path: str) -> str:
 
 
 def is_v1_recipe(recipe_dir: Path) -> bool:
-    """Check if recipe.yaml exists"""
+    """Check if recipe.yaml exists."""
     recipe_dir = Path(recipe_dir)
-    return (recipe_dir / "recipe.yaml").exists() and not any(
-        (recipe_dir / meta).exists() for meta in VALID_METAS
-    )
+    return (recipe_dir / "recipe.yaml").is_file()
+
+
+def is_v0_recipe(recipe_dir: Path) -> bool:
+    """Check if meta.yaml or any of the valid v0 recipe filenames exist."""
+    try:
+        find_recipe(recipe_dir)
+        return True
+    except OSError:
+        return False
 
 
 class LoggingContext:
@@ -2129,6 +2161,15 @@ def write_bat_activation_text(file_handle, m):
     file_handle.write(f'call "{context.root_prefix}\\condabin\\conda_hook.bat"\n')
     for key, value in context.conda_exe_vars_dict.items():
         file_handle.write(f'set "{key}={value or ""}"\n')
+    # Opt-in isolated activation: run via `python -I -m conda` so a recipe named
+    # conda (or PYTHONPATH) cannot shadow the outer conda used for activation.
+    # Matches Unix `_write_sh_activation_text`. conda.bat expands
+    # "%CONDA_EXE%" %_CE_M% %_CE_CONDA%.
+    if os.environ.get("_CONDA_BUILD_ISOLATED_ACTIVATION"):
+        file_handle.write(f'set "CONDA_EXE={sys.executable}"\n')
+        file_handle.write(f'set "_CONDA_EXE={sys.executable}"\n')
+        file_handle.write('set "_CE_M=-I -m"\n')
+        file_handle.write('set "_CE_CONDA=conda"\n')
     if m.is_cross:
         # HACK: we need both build and host envs "active" - i.e. on PATH,
         #     and with their activate.d scripts sourced. Conda only

@@ -350,9 +350,11 @@ def install_perl_get_core_modules(version):
             args = [
                 f"{join(tmpdir, *subdirs[1:])}",
                 "-e",
-                "use Module::CoreList; "
-                "my @modules = grep {Module::CoreList::is_core($_)} Module::CoreList->find_modules(qr/.*/); "
-                'print join "\n", @modules;',
+                (
+                    "use Module::CoreList; "
+                    "my @modules = grep {Module::CoreList::is_core($_)} Module::CoreList->find_modules(qr/.*/); "
+                    'print join "\n", @modules;'
+                ),
             ]
             try:
                 all_core_modules = (

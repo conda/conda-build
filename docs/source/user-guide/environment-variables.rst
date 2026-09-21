@@ -78,6 +78,9 @@ inherited from the shell environment in which you invoke
      - Inherited from your shell environment.
    * - HTTPS_PROXY
      - Inherited from your shell environment.
+   * - REQUESTS_CA_BUNDLE
+     - Inherited from your shell environment when set.
+       Omitted when unset so TLS clients do not see an empty CA path.
    * - LANG
      - Inherited from your shell environment.
    * - MAKEFLAGS
