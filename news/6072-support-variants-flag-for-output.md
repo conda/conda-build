@@ -1,10 +1,10 @@
 ### Enhancements
 
-* Support `--variants` when using `--output`. (#6072)
+* <news item>
 
 ### Bug fixes
 
-* <news item>
+* Honor `--variants` when using `conda-build --output`. (#6072)
 
 ### Deprecations
 

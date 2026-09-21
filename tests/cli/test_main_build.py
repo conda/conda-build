@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from __future__ import annotations
 
-import fnmatch
 import os
 import re
 from pathlib import Path
@@ -121,49 +120,46 @@ def test_build_output_build_path(
 
 
 @pytest.mark.parametrize(
-    "args, expected_outputs",
+    "variants, expected_outputs",
     [
         (
-            ["--output", os.path.join(variants_dir, "11_variant_output_names")],
-            [
-                "some_output_using_abc_ghi-1.0-*.conda",
-                "some_output_using_abc_jkl-1.0-*.conda",
-                "some_output_using_def_ghi-1.0-*.conda",
-                "some_output_using_def_jkl-1.0-*.conda",
-            ],
+            None,
+            {
+                "some_output_using_abc_ghi",
+                "some_output_using_abc_jkl",
+                "some_output_using_def_ghi",
+                "some_output_using_def_jkl",
+            },
         ),
         (
-            [
-                "--output",
-                os.path.join(variants_dir, "11_variant_output_names"),
-                "--variants",
-                "something: abc",
-            ],
-            [
-                "some_output_using_abc_ghi-1.0-*.conda",
-                "some_output_using_abc_jkl-1.0-*.conda",
-            ],
+            "something: abc",
+            {
+                "some_output_using_abc_ghi",
+                "some_output_using_abc_jkl",
+            },
         ),
     ],
 )
 def test_build_output_build_path_variants(
-    args, expected_outputs, testing_config, capfd
+    variants, expected_outputs, testing_config, capfd
 ):
     testing_config.verbose = False
     testing_config.debug = False
+    args = ["--output", os.path.join(variants_dir, "11_variant_output_names")]
+    if variants:
+        args.extend(("--variants", variants))
 
     main_build.execute(args)
 
-    # Build hash (h...) is not stable between local and CI builds.
-    # So rely on the build string without the content hash.
     output, error = capfd.readouterr()
     names = [os.path.basename(path) for path in output.rstrip().splitlines()]
-    assert len(names) == len(expected_outputs), (
-        f"Expected {len(expected_outputs)} packages, got {len(names)}"
-    )
-    assert all(
-        fnmatch.fnmatch(name, pattern) for name, pattern in zip(names, expected_outputs)
-    ), error or output
+    # The hash includes platform-specific variant inputs, so assert its shape rather
+    # than a value that would only be correct for one CI runner.
+    pattern = re.compile(r"(.+)-1\.0-h[0-9a-f]+_0\.conda")
+    assert {
+        match.group(1) for name in names if (match := pattern.fullmatch(name))
+    } == expected_outputs, error or output
+    assert len(names) == len(expected_outputs)
     assert error == ""
 
 
