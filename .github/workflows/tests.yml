@@ -88,10 +88,10 @@ jobs:
         include:
           # minimum Python/conda combo
           - python-version: '3.10'
-            conda-version: 25.11.0
+            conda-version: 26.1.0
             test-type: serial
           - python-version: '3.10'
-            conda-version: 25.11.0
+            conda-version: 26.1.0
             test-type: parallel
           # maximum Python/conda combo
           - python-version: '3.14'
@@ -114,7 +114,7 @@ jobs:
           remove_dotnet: true
           remove_haskell: true
           remove_tool_cache: true
-          remove_swap: true
+          remove_swap: false
           remove_packages: >-
             azure-cli
             google-cloud-cli
