@@ -898,11 +898,17 @@ def get_install_actions(
                     precs = _actions["LINK"]
                 except (NoPackagesFoundError, UnsatisfiableError) as exc:
                     raise DependencyNeedsBuildingError(exc, subdir=subdir)
+                except DependencyNeedsBuildingError:
+                    # solver backends raise this (directly, or via the
+                    # conda-libmamba-solver conda-build hook) to report
+                    # definitive unsatisfiability or missing packages.
+                    # Retrying cannot change the outcome, and each attempt
+                    # is a full solver round-trip.
+                    raise
                 except (
                     SystemExit,
                     PaddingError,
                     LinkError,
-                    DependencyNeedsBuildingError,
                     CondaError,
                     AssertionError,
                     BuildLockError,

@@ -145,3 +145,76 @@ def test_build_variable_defaults_to_architecture_based_distro(testing_metadata):
 
     # Verify BUILD uses default cos6 or cos7 (not a custom cdt_name)
     assert "conda_cos6" in env_vars["BUILD"] or "conda_cos7" in env_vars["BUILD"]
+
+
+def test_get_package_records_no_retry_on_definitive_unsat(monkeypatch: MonkeyPatch):
+    """DependencyNeedsBuildingError from the solver is definitive unsatisfiability.
+
+    It must not be retried: each retry is a full solver round-trip that cannot
+    change the outcome.
+    """
+    from conda_build import environ
+    from conda_build.exceptions import DependencyNeedsBuildingError
+
+    monkeypatch.setattr(
+        environ, "get_build_index", lambda *args, **kwargs: (None, 0, None)
+    )
+
+    calls = []
+
+    def fake_install_actions(prefix, index, specs, subdir=None):
+        calls.append(specs)
+        raise DependencyNeedsBuildingError(
+            packages=["definitely-not-a-real-package"], subdir=subdir
+        )
+
+    monkeypatch.setattr(environ, "_install_actions", fake_install_actions)
+
+    with pytest.raises(DependencyNeedsBuildingError):
+        environ.get_package_records(
+            "unused-prefix",
+            ["definitely-not-a-real-package"],
+            "host",
+            bldpkgs_dirs=("unused-bldpkgs",),
+            channel_urls=("https://conda.anaconda.org/conda-forge",),
+            subdir="noarch",
+            verbose=False,
+            max_env_retry=3,
+        )
+
+    # exactly one solver attempt: no retries for definitive unsatisfiability
+    assert len(calls) == 1
+
+
+def test_get_package_records_retries_transient_errors(monkeypatch: MonkeyPatch):
+    """Transient errors (e.g. CondaError) are still retried up to max_env_retry times."""
+    from conda.exceptions import CondaError
+
+    from conda_build import environ
+
+    monkeypatch.setattr(
+        environ, "get_build_index", lambda *args, **kwargs: (None, 0, None)
+    )
+
+    calls = []
+
+    def fake_install_actions(prefix, index, specs, subdir=None):
+        calls.append(specs)
+        raise CondaError("some transient error")
+
+    monkeypatch.setattr(environ, "_install_actions", fake_install_actions)
+
+    with pytest.raises(CondaError):
+        environ.get_package_records(
+            "unused-prefix",
+            ["some-package"],
+            "host",
+            bldpkgs_dirs=("unused-bldpkgs",),
+            channel_urls=("https://conda.anaconda.org/conda-forge",),
+            subdir="noarch",
+            verbose=False,
+            max_env_retry=1,
+        )
+
+    # initial attempt + max_env_retry retries
+    assert len(calls) == 2
