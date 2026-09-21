@@ -6,7 +6,7 @@ requires = [
 ]
 
 [project]
-authors = [{ name = "Anaconda, Inc.", email = "conda@continuum.io" }]
+authors = [{name = "Anaconda, Inc.", email = "conda@continuum.io"}]
 classifiers = [
   "Development Status :: 5 - Production/Stable",
   "Intended Audience :: Developers",
@@ -162,13 +162,13 @@ show-fixes = true
 target-version = "py310"
 
 [tool.ruff.lint]
-flake8-type-checking = { exempt-modules = [], strict = true }
+flake8-type-checking = {exempt-modules = [], strict = true}
 ignore = [
   "E402",  # module level import not at top of file
   "E722",  # do not use bare 'except'
   "E731",  # do not assign a lambda expression, use a def
 ]
-pycodestyle = { max-line-length = 120 }
+pycodestyle = {max-line-length = 120}
 # see https://docs.astral.sh/ruff/rules/
 select = [
   "E",  # pycodestyle errors
