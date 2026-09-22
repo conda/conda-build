@@ -43,7 +43,6 @@ from .utils import (
 from .variants import get_default_variant, set_language_env_vars
 
 VS_VERSION_STRING = {
-    "8.0": "Visual Studio 8 2005",
     "9.0": "Visual Studio 9 2008",
     "10.0": "Visual Studio 10 2010",
     "11.0": "Visual Studio 11 2012",
@@ -52,6 +51,16 @@ VS_VERSION_STRING = {
     "15.0": "Visual Studio 15 2017",
     "16.0": "Visual Studio 16 2019",
     "17.0": "Visual Studio 17 2022",
+}
+
+VS_COMPILERS = {
+    "vs2008": ("9.0", "Visual Studio 9 2008"),
+    "vs2010": ("10.0", "Visual Studio 10 2010"),
+    "vs2015": ("14.0", "Visual Studio 14 2015"),
+    "vs2017": ("15.0", "Visual Studio 15 2017"),
+    "vs2019": ("16.0", "Visual Studio 16 2019"),
+    "vs2022": ("17.0", "Visual Studio 17 2022"),
+    "vs2026": ("18.0", "Visual Studio 18 2026"),
 }
 
 
@@ -244,11 +253,12 @@ def msvc_env_cmd(bits, config, override=None):
     if float(version) >= 14.0:
         # For Python 3.5+, ensure that we link with the dynamic runtime.  See
         # http://stevedower.id.au/blog/building-for-python-3-5-part-two/ for more info
-        msvc_env_lines.append(
-            "set PY_VCRUNTIME_REDIST=%LIBRARY_BIN%\\vcruntime{}.dll".format(
-                version.replace(".", "")
-            )
-        )
+
+        # vcruntime140.dll is the correct filename for every VS2015+ toolset
+        # (VS2017/2019/2022/2026 all still ship "vcruntime140.dll" - the
+        # Universal CRT split in VS2015 froze this name; it is NOT keyed to
+        # the VS product/IDE version. Do not template this off `version`.
+        msvc_env_lines.append("set PY_VCRUNTIME_REDIST=%LIBRARY_BIN%\\vcruntime140.dll")
 
     vcvarsall_vs_path = build_vcvarsall_vs_path(version)
 
@@ -363,24 +373,19 @@ def write_build_scripts(m, env, bld_bat):
             )
         else:
             # Set CMAKE_GENERATOR for new-style compiler activation
-            version = m.get_value("build/msvc_compiler", None)
-            if not version:
-                from .variants import get_default_variant
 
-                py_ver = m.config.variant.get(
-                    "python", get_default_variant(m.config)["python"]
+            # On windows the c and cxx compiler should be set as the same value
+            # so getting c_complier == cxx_complier.  Should be in the form of vs20xx
+            compiler = m.config.variant.get("c_compiler", None)
+            if compiler in VS_COMPILERS:
+                fo.write(f'set "CMAKE_GENERATOR={VS_COMPILERS[compiler][1]}"\n')
+            else:
+                log = get_logger(__name__)
+                log.warning(
+                    "'c_complier'={} is not a valid Windows compiler. Please use one of: {}",
+                    compiler,
+                    ", ".join(VS_COMPILERS.keys()),
                 )
-                py_ver = tuple([int(x) for x in py_ver.split(".")[:2]])
-                if py_ver >= (3, 6):
-                    version = "17.0"
-                elif py_ver == (3, 5):
-                    version = "15.0"
-                elif py_ver >= (3, 0):
-                    version = "10.0"
-                else:  # 2.x
-                    version = "9.0"
-            if version:
-                fo.write(f'set "CMAKE_GENERATOR={VS_VERSION_STRING[version]}"\n')
         # Reset echo on, because MSVC scripts might have turned it off
         fo.write("@echo on\n")
         fo.write('set "INCLUDE={};%INCLUDE%"\n'.format(env["LIBRARY_INC"]))
