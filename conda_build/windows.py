@@ -80,7 +80,7 @@ def fix_staged_scripts(scripts_dir, config):
                 fo.write(f.read())
             # now create the .exe file
             copy_into(
-                locate_conda_launcher(config.host_arch),
+                locate_conda_launcher(str(config.host_arch)),
                 join(scripts_dir, fn + ".exe"),
             )
 

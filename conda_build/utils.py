@@ -1158,7 +1158,7 @@ def create_entry_point(path, module, func, config):
                 fo.write("#!python_d\n")
             fo.write(pyscript)
             copy_into(
-                locate_conda_launcher(config.host_arch),
+                locate_conda_launcher(str(config.host_arch)),
                 path + ".exe",
                 config.timeout,
             )

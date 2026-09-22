@@ -135,10 +135,10 @@ def test_locate_conda_launcher_rejects_invalid_bundled_win32(
         utils.locate_conda_launcher("32")
 
 
-@pytest.mark.parametrize("arch", ["32", "64", "arm64"])
+@pytest.mark.parametrize("arch", ["32", "64", "arm64", 32, 64])
 def test_create_entry_point(launcher_package, mocker, tmp_path, testing_config, arch):
     mocker.patch.object(utils, "on_win", True)
-    testing_config.arch = arch
+    testing_config.host_arch = arch
     path = tmp_path / "example"
     utils.create_entry_point(
         str(path), "conda_build.cli.main_build", "execute", testing_config
@@ -153,14 +153,14 @@ def test_convert_uses_target_launcher(launcher_package, tmp_path, arch):
     assert (tmp_path / "example.exe").read_bytes() == f"cli-{arch}".encode()
 
 
-@pytest.mark.parametrize("arch", ["32", "64", "arm64"])
+@pytest.mark.parametrize("arch", ["32", "64", "arm64", 32, 64])
 def test_windows_scripts_use_target_launcher(
     launcher_package, tmp_path, testing_config, arch
 ):
     scripts = tmp_path / "Scripts"
     scripts.mkdir()
     (scripts / "example").write_bytes(b"#!python\nprint('hello')\n")
-    testing_config.arch = arch
+    testing_config.host_arch = arch
     windows.fix_staged_scripts(str(scripts), testing_config)
     assert (scripts / "example.exe").read_bytes() == f"cli-{arch}".encode()
 
