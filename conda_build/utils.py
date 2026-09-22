@@ -1105,7 +1105,7 @@ def iter_entry_points(items):
 
 
 def locate_conda_launcher(
-    arch: str, *, launcher_type: Literal["cli", "gui"] = "cli"
+    arch: Literal["32", "64", "arm64"], *, launcher_type: Literal["cli", "gui"] = "cli"
 ) -> str:
     """Locate and verify the packaged launcher for a Windows target architecture."""
     if arch not in ("32", "64", "arm64") or launcher_type not in ("cli", "gui"):
