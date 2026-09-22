@@ -57,7 +57,8 @@ from conda.base.constants import (
 )
 from conda.base.context import context
 from conda.common.path import unix_path_to_win, win_path_to_unix
-from conda.exceptions import CondaHTTPError
+from conda.core.prefix_data import PrefixData
+from conda.exceptions import CondaError, CondaHTTPError
 from conda.gateways.connection.download import download
 from conda.gateways.disk.create import TemporaryDirectory
 from conda.gateways.disk.read import compute_sum
@@ -1006,7 +1007,29 @@ def get_stdlib_dir(prefix, py_ver):
     return lib_dir
 
 
+def _get_python_site_packages_path(prefix):
+    """The ``python_site_packages_path`` recorded for the python installed in ``prefix``.
+
+    Returns ``None`` when there is no prefix, no python in it, or a python old
+    enough not to record the field.
+    """
+    if not prefix or not isdir(prefix):
+        return None
+    try:
+        record = PrefixData(str(prefix)).get("python", default=None)
+    except CondaError:
+        return None
+    return getattr(record, "python_site_packages_path", None) or None
+
+
 def get_site_packages(prefix, py_ver):
+    # python declares where its site-packages lives, which is the only way to get
+    # this right for layouts that are not derivable from the version alone -- e.g.
+    # free-threaded builds (lib/python3.14t/site-packages) and, per CFEP-27,
+    # python >=3.15 on Windows (lib/python/site-packages, not Lib/site-packages).
+    # https://github.com/conda-forge/cfep/blob/main/cfep-27.md
+    if site_packages_path := _get_python_site_packages_path(prefix):
+        return os.path.join(prefix, *site_packages_path.split("/"))
     return os.path.join(get_stdlib_dir(prefix, py_ver), "site-packages")
 
 

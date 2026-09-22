@@ -13,6 +13,7 @@ import subprocess
 import sys
 import warnings
 from collections import defaultdict
+from copy import copy
 from functools import cache
 from glob import glob
 from logging import getLogger
@@ -1451,19 +1452,17 @@ def install_actions(
                 context.solver
             )
             solver = solver_backend(prefix, channels, subdirs, specs_to_add=mspecs)
-            if index:
-                # Solver can modify the index (e.g., Solver._prepare adds virtual
-                # package) => Copy index (just outer container, not deep copy)
-                # to conserve it.
-                solver._index = index.copy()
+            # Give the solver its own index without realizing the cached records.
+            solver._index = copy(index)
+            if exclude_newer_policy is not None and exclude_newer_policy.active:
+                # Classic skips ReducedIndex filtering for an injected index.
+                solver._index.use_system = True
                 solver._index.reload(system=True)
-                if exclude_newer_policy is not None and exclude_newer_policy.active:
-                    # Classic skips ReducedIndex filtering for an injected index.
-                    solver._index = {
-                        key: record
-                        for key, record in solver._index.items()
-                        if exclude_newer_policy.should_include(record)
-                    }
+                solver._index = {
+                    key: record
+                    for key, record in solver._index.items()
+                    if exclude_newer_policy.should_include(record)
+                }
             txn = solver.solve_for_transaction(prune=False, ignore_pinned=False)
             prefix_setup = txn.prefix_setups[prefix]
             return {

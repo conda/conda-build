@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import sys
 import time
+from contextlib import closing
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -13,7 +14,7 @@ from typing import TYPE_CHECKING
 import rattler_build
 import yaml
 from conda.base.context import context
-from conda.models.channel import Channel
+from conda.models.channel import Channel, all_channel_urls
 from rattler_build import (
     Package,
     RattlerBuildError,
@@ -24,12 +25,13 @@ from rattler_build.progress import SimpleProgressCallback
 from rattler_build.render import RenderConfig
 from rattler_build.stage0 import MultiOutputRecipe, Stage0Recipe
 from rattler_build.tool_config import PlatformConfig, ToolConfiguration
-from rattler_build.variant_config import VariantConfig
+from rattler_build.variant_config import JinjaConfig, VariantConfig
 
 from ..build import handle_anaconda_upload
 from ..config import CondaPkgFormat
 from ..exceptions import CondaBuildUserError
-from ..utils import get_logger, on_win
+from ..index import _delegated_update_index, _ensure_valid_channel
+from ..utils import ensure_list, get_logger, on_win
 
 if TYPE_CHECKING:
     import argparse
@@ -82,10 +84,7 @@ class CondaProgressCallback(SimpleProgressCallback):
 
 
 def check_arguments_rattler(
-    command: str,
-    parsed: argparse.Namespace,
-    parsed_only_recipe: argparse.Namespace,
-    config: Config,
+    command: str, parsed: argparse.Namespace, parsed_only_recipe: argparse.Namespace
 ) -> None:
     """Validate that arguments are compatible with rattler CLI commands.
 
@@ -99,17 +98,7 @@ def check_arguments_rattler(
             from the main argument parser.
         parsed_only_recipe: Namespace object containing only the recipe file as
             an argument.
-        config: Build configuration used to check the dependency cutoff.
     """
-
-    policy = config.exclude_newer_policy
-    if policy is not None and policy.active:
-        if not hasattr(rattler_build, "ExcludeNewer"):
-            raise CondaBuildUserError(
-                "The installed py-rattler-build does not support exclude-newer "
-                "policies for v1 recipes. Install a version with build, test, "
-                "and debug policy support."
-            )
 
     diff = {
         k: v for k, v in vars(parsed).items() if vars(parsed_only_recipe).get(k) != v
@@ -139,6 +128,8 @@ def check_arguments_rattler(
             "build_only",
             "post",
             "exclude_newer",
+            "root-dir",
+            "croot",
         },
         "render": {
             "recipe",
@@ -182,6 +173,13 @@ def exclude_newer_arguments(config: Config, channels: list[str]) -> dict:
     policy = config.exclude_newer_policy
     if policy is None or not policy.active:
         return {}
+
+    if not hasattr(rattler_build, "ExcludeNewer"):
+        raise CondaBuildUserError(
+            "The installed py-rattler-build does not support exclude-newer "
+            "policies for v1 recipes. Install a version with build, test, "
+            "and debug policy support."
+        )
 
     def as_datetime(cutoff):
         return (
@@ -371,14 +369,12 @@ def process_recipe(
                     # tests are run in a different directory than build, so we need to add the build
                     # directory manually as a file:// channel
                     test_channels = [Path(output_dir).resolve().as_uri(), *channels]
-                    test_cutoff_arguments = exclude_newer_arguments(
-                        config, test_channels
-                    )
 
-                    test_results = pkg.run_tests(
-                        progress_callback=CondaProgressCallback(show_logs=show_logs),
-                        channel=test_channels,
-                        **test_cutoff_arguments,
+                    test_results = run_v1_tests(
+                        pkg,
+                        config=config,
+                        channels=test_channels,
+                        show_logs=show_logs,
                     )
                 except RattlerBuildError as e:
                     result.outputs.append(
@@ -417,6 +413,81 @@ def process_recipe(
                 handle_anaconda_upload(paths=str(pkg_path), config=config)
 
     return result
+
+
+def is_v1_package(package_path: str | os.PathLike) -> bool:
+    """Return whether a package was built from a v1 ``recipe.yaml`` recipe."""
+    package_path = str(package_path)
+    if not package_path.endswith((".conda", ".tar.bz2")) or not os.path.isfile(
+        package_path
+    ):
+        return False
+
+    from conda_package_streaming.package_streaming import stream_conda_component
+
+    with closing(stream_conda_component(package_path, component="info")) as members:
+        return any(
+            member.name
+            in {
+                "info/tests/tests.yaml",
+                "info/recipe/recipe.yaml",
+                "info/recipe/rendered_recipe.yaml",
+            }
+            for _, member in members
+        )
+
+
+def run_v1_tests(
+    package: Package, *, config: Config, channels: list[str], show_logs: bool
+) -> list:
+    """Run v1 package tests, including ``downstream`` tests."""
+    return package.run_tests(
+        channel=channels,
+        channel_priority=(
+            "strict" if str(context.channel_priority) == "strict" else "disabled"
+        ),
+        progress_callback=CondaProgressCallback(show_logs=show_logs),
+        **exclude_newer_arguments(config, channels),
+    )
+
+
+def test_v1_package(package_path: str | os.PathLike, config: Config) -> bool:
+    """Run tests in a conda package built from a v1 recipe."""
+    package_path = Path(package_path).resolve()
+    package = Package.from_file(package_path)
+
+    local_roots = [Path(config.output_folder).resolve()]
+    if package_path.parent.name in context.known_subdirs:
+        local_roots.append(package_path.parent.parent)
+
+    output_channel = local_roots[0].as_uri()
+    channels = [
+        output_channel if channel == "local" else channel
+        for channel in [*ensure_list(config.channel_urls), *context.channels]
+    ]
+    # Include the upstream build output, plus siblings when the package lives
+    # in a channel. A downloaded archive's cache directory is not a channel.
+    for root in reversed(dict.fromkeys(local_roots)):
+        _ensure_valid_channel(str(root), config.host_subdir)
+        _delegated_update_index(str(root), verbose=config.verbose)
+        channel = root.as_uri()
+        if channel not in channels:
+            channels.insert(0, channel)
+
+    try:
+        results = run_v1_tests(
+            package,
+            config=config,
+            channels=list(all_channel_urls(channels, subdirs=("",))),
+            show_logs=config.verbose,
+        )
+    except RattlerBuildError as e:
+        raise CondaBuildUserError(f"Package tests failed: {e}") from e
+
+    if any(not result.success for result in results):
+        raise CondaBuildUserError("Package tests failed")
+
+    return True
 
 
 def run_rattler(
@@ -507,7 +578,20 @@ def run_rattler(
     # merge config files in the order they are stacked
     if config_files:
         for variant in config_files:
-            variant_config = variant_config.merge(VariantConfig.from_file(variant))
+            if Path(variant).name == "conda_build_config.yaml":
+                # legacy conda-build format
+                jinja_config = JinjaConfig(
+                    platform=PlatformConfig(
+                        build_platform=config.build_subdir,
+                        target_platform=config.host_subdir,
+                    )
+                )
+
+                variant_config = variant_config.merge(
+                    VariantConfig.from_conda_build_config(variant, jinja_config)
+                )
+            else:
+                variant_config = variant_config.merge(VariantConfig.from_file(variant))
 
     def get_config_value(name, fallback=None):
         value = variant_config.get(name, fallback)

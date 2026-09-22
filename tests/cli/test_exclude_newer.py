@@ -154,8 +154,9 @@ def test_explicit_cutoff_requires_new_conda(monkeypatch):
     assert Config().exclude_newer_policy is None
 
 
+@pytest.mark.parametrize("realized", [False, True], ids=["lazy", "realized"])
 def test_injected_index_filters_external_channel_and_keeps_output(
-    local_channels, tmp_path
+    local_channels, tmp_path, realized
 ):
     external, output = local_channels
     config = Config(output_folder=str(output), exclude_newer="2026-04-01")
@@ -164,6 +165,8 @@ def test_injected_index_filters_external_channel_and_keeps_output(
         prepend=False,
         platform=context.subdir,
     )
+    if realized:
+        assert index.data
     previous_policy = context.exclude_newer_policy
     actions = environ._install_actions(
         str(tmp_path / "prefix"),
@@ -177,6 +180,7 @@ def test_injected_index_filters_external_channel_and_keeps_output(
         "cutoff-output": "1.0",
     }
     assert context.exclude_newer_policy is previous_policy
+    assert index.use_system is False
     assert any(
         record.name == "cutoff-dependency" and record.version == "2.0"
         for record in index

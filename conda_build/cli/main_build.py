@@ -582,7 +582,7 @@ def execute(args: Sequence[str] | None = None) -> int:
         # check cli arguments
         parser, parsed_only_recipe = parse_args(parsed.recipe)
         command = parser.prog.split()[-1]
-        check_arguments_rattler(command, parsed, parsed_only_recipe, config)
+        check_arguments_rattler(command, parsed, parsed_only_recipe)
         # run rattler command
         return run_rattler(command, parsed, config)
 

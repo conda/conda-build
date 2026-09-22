@@ -230,7 +230,7 @@ def execute(args: Sequence[str] | None = None) -> int:
     if is_v1_recipe(parsed.recipe):
         parser, parsed_only_recipe = parse_args([parsed.recipe])
         command = parser.prog.split()[-1]
-        check_arguments_rattler(command, parsed, parsed_only_recipe, config)
+        check_arguments_rattler(command, parsed, parsed_only_recipe)
 
         return run_rattler(command, parsed, config)
 

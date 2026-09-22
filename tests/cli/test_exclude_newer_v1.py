@@ -13,10 +13,14 @@ import yaml
 from conda.base.context import context, reset_context
 from conda_index.api import update_index
 
+from conda_build import api
 from conda_build.cli import main_build, main_debug
 from conda_build.config import Config
 from conda_build.exceptions import CondaBuildUserError
 
+from ..test_rattler_build_compat import (
+    make_v1_test_package as make_v1_test_package,
+)
 from .test_exclude_newer import (
     _package,
     _timestamp,
@@ -383,10 +387,63 @@ def test_v1_channel_cutoff_preserves_credentials(
     assert policy_constructor.call_args.kwargs["channels"] == {channel + "/": None}
 
 
+@pytest.mark.parametrize("entry_point", ["api", "cli"])
+def test_v1_standalone_test_passes_cutoff(
+    v1_channels, make_v1_test_package, mocker, entry_point
+):
+    external, output = v1_channels
+    package = make_v1_test_package("cutoff-v1", output)
+    config = Config(
+        exclude_newer="2026-04-01",
+        output_folder=str(output),
+        channel_urls=[external.as_uri()],
+    )
+    policy_constructor = mocker.patch("rattler_build.ExcludeNewer", create=True)
+    run_tests = mocker.patch.object(
+        rattler_build.Package,
+        "run_tests",
+        return_value=[mocker.Mock(success=True)],
+    )
+
+    if entry_point == "api":
+        assert api.test(str(package), config=config)
+    else:
+        assert (
+            main_build.execute(
+                [
+                    *_build_args(package, external, output),
+                    "--test",
+                    "--exclude-newer=2026-04-01",
+                ]
+            )
+            == 0
+        )
+
+    run_tests.assert_called_once()
+    assert (
+        run_tests.call_args.kwargs["exclude_newer"] is policy_constructor.return_value
+    )
+    policy_constructor.assert_called_once()
+    assert (
+        policy_constructor.call_args.args[0].timestamp()
+        == config.exclude_newer_policy.global_cutoff
+    )
+    assert policy_constructor.call_args.kwargs == {
+        "packages": {},
+        "channels": {output.as_uri() + "/": None},
+        "include_unknown_timestamp": True,
+    }
+
+
+@pytest.mark.parametrize("standalone", [False, True], ids=["build", "test"])
 def test_v1_cutoff_requires_supported_python_bindings(
-    v1_recipe, monkeypatch, policy_class
+    v1_recipe, make_v1_test_package, tmp_path, monkeypatch, policy_class, standalone
 ):
     monkeypatch.delattr(rattler_build, "ExcludeNewer", raising=False)
-    recipe = v1_recipe()
+    if standalone:
+        package = make_v1_test_package("cutoff-v1", tmp_path / "output")
+        args = ["--test", str(package)]
+    else:
+        args = [str(v1_recipe())]
     with pytest.raises(CondaBuildUserError, match="py-rattler-build"):
-        main_build.execute([str(recipe), "--exclude-newer=2026-04-01"])
+        main_build.execute([*args, "--exclude-newer=2026-04-01"])
