@@ -14,6 +14,12 @@ on:
 
   # https://docs.github.com/en/webhooks-and-events/webhooks/webhook-events-and-payloads#workflow_dispatch
   workflow_dispatch:
+    inputs:
+      os:
+        description: Which OS to test
+        type: choice
+        default: all
+        options: [all, linux, macos, windows]
 
   # no payload
   schedule:
@@ -68,8 +74,9 @@ jobs:
   # linux test suite
   linux:
     # only run test suite if there are code changes
-    needs: changes
-    if: github.event_name == 'schedule' || needs.changes.outputs.code == 'true'
+    if: >-
+      (github.event_name == 'schedule' || needs.changes.outputs.code == 'true') &&
+      (github.event_name != 'workflow_dispatch' || github.event.inputs.os == 'all' || github.event.inputs.os == 'linux')
 
     runs-on: ubuntu-latest
     defaults:
@@ -217,7 +224,10 @@ jobs:
   linux-benchmarks:
     # only run test suite if there are code changes
     needs: changes
-    if: needs.changes.outputs.code == 'true'
+    if: >-
+      (needs.changes.outputs.code == 'true') &&
+      (github.event_name != 'workflow_dispatch' || github.event.inputs.os == 'all' || github.event.inputs.os == 'linux')
+
 
     runs-on: ubuntu-latest
     defaults:
@@ -289,7 +299,10 @@ jobs:
   windows:
     # only run test suite if there are code changes
     needs: changes
-    if: github.event_name == 'schedule' || needs.changes.outputs.code == 'true'
+    if: >-
+      (github.event_name == 'schedule' || needs.changes.outputs.code == 'true') &&
+      (github.event_name != 'workflow_dispatch' || github.event.inputs.os == 'all' || github.event.inputs.os == 'windows')
+
 
     runs-on: ${{ matrix.runs-on && matrix.runs-on || 'windows-2022' }}
     strategy:
@@ -414,7 +427,9 @@ jobs:
   macos:
     # only run test suite if there are code changes
     needs: changes
-    if: github.event_name == 'schedule' || needs.changes.outputs.code == 'true'
+    if: >-
+      (github.event_name == 'schedule' || needs.changes.outputs.code == 'true') &&
+      (github.event_name != 'workflow_dispatch' || github.event.inputs.os == 'all' || github.event.inputs.os == 'macos')
 
     runs-on: ${{ matrix.runs-on }}
     defaults:
