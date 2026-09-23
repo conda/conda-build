@@ -145,10 +145,7 @@ def transform(m, files, prefix):
     # copy in windows exe shims if there are any python-scripts
     if d["python-scripts"]:
         for arch in "32", "64", "arm64":
-            try:
-                source = locate_conda_launcher(arch)
-            except FileNotFoundError:
-                continue
+            source = locate_conda_launcher(arch)
             shutil.copyfile(source, join(prefix, f"cli-{arch}.exe"))
 
     # Read the local _link.py

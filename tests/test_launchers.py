@@ -227,3 +227,25 @@ def test_legacy_noarch_rejects_modified_launcher(
 
     with pytest.raises(CondaBuildUserError, match="SHA256 mismatch"):
         noarch_python.transform(testing_metadata, ["bin/example"], str(tmp_path))
+
+
+@pytest.mark.parametrize("arch", ["64", "arm64"])
+def test_legacy_noarch_requires_native_launchers(
+    launcher_package, tmp_path, testing_metadata, mocker, arch
+):
+    metadata = launcher_package / "conda-meta/conda-launchers-24.7.1-0.json"
+    record = json.loads(metadata.read_text())
+    record["paths_data"]["paths"] = [
+        item
+        for item in record["paths_data"]["paths"]
+        if item["_path"] != f"share/conda-launchers/cli-{arch}.exe"
+    ]
+    metadata.write_text(json.dumps(record))
+    mocker.patch.object(noarch_python, "on_win", False)
+    mocker.patch.object(noarch_python, "bin_dirname", "bin")
+    script = tmp_path / "bin" / "example"
+    script.parent.mkdir()
+    script.write_text("print('hello')\n")
+
+    with pytest.raises(FileNotFoundError, match=f"cli-{arch}.exe"):
+        noarch_python.transform(testing_metadata, ["bin/example"], str(tmp_path))
