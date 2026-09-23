@@ -74,6 +74,7 @@ jobs:
   # linux test suite
   linux:
     # only run test suite if there are code changes
+    needs: changes
     if: >-
       (github.event_name == 'schedule' || needs.changes.outputs.code == 'true') &&
       (github.event_name != 'workflow_dispatch' || github.event.inputs.os == 'all' || github.event.inputs.os == 'linux')
