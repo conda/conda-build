@@ -23,7 +23,7 @@ from conda_build.exceptions import CondaBuildUserError, DependencyNeedsBuildingE
 from conda_build.os_utils.external import find_executable
 from conda_build.utils import get_build_folders, on_mac, on_win, package_has_file
 
-from ..utils import metadata_dir
+from ..utils import metadata_dir, variants_dir
 from ..utils import reset_config as _reset_config
 
 if TYPE_CHECKING:
@@ -116,6 +116,50 @@ def test_build_output_build_path(
     )
     output, error = capfd.readouterr()
     assert test_path == output.rstrip(), error
+    assert error == ""
+
+
+@pytest.mark.parametrize(
+    "variants, expected_outputs",
+    [
+        (
+            None,
+            {
+                "some_output_using_abc_ghi",
+                "some_output_using_abc_jkl",
+                "some_output_using_def_ghi",
+                "some_output_using_def_jkl",
+            },
+        ),
+        (
+            "something: abc",
+            {
+                "some_output_using_abc_ghi",
+                "some_output_using_abc_jkl",
+            },
+        ),
+    ],
+)
+def test_build_output_build_path_variants(
+    variants, expected_outputs, testing_config, capfd
+):
+    testing_config.verbose = False
+    testing_config.debug = False
+    args = ["--output", os.path.join(variants_dir, "11_variant_output_names")]
+    if variants:
+        args.extend(("--variants", variants))
+
+    main_build.execute(args)
+
+    output, error = capfd.readouterr()
+    names = [os.path.basename(path) for path in output.rstrip().splitlines()]
+    # The hash includes platform-specific variant inputs, so assert its shape rather
+    # than a value that would only be correct for one CI runner.
+    pattern = re.compile(r"(.+)-1\.0-h[0-9a-f]+_0\.conda")
+    assert {
+        match.group(1) for name in names if (match := pattern.fullmatch(name))
+    } == expected_outputs, error or output
+    assert len(names) == len(expected_outputs)
     assert error == ""
 
 
