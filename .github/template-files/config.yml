@@ -23,6 +23,10 @@ conda/infrastructure:
   # [optional] canary build workflow
   - src: templates/workflows/build.yml
     dst: .github/workflows/build.yml
+    with:
+      win_arm64: true
+      conda_build_arguments: >-
+        ${{ matrix.subdir == 'win-arm64' && '--override-channels -c conda-forge --python 3.14' || '' }}
   # For noarch packages, add:
   #   with:
   #     noarch: true
