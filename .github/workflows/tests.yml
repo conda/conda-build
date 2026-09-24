@@ -14,6 +14,12 @@ on:
 
   # https://docs.github.com/en/webhooks-and-events/webhooks/webhook-events-and-payloads#workflow_dispatch
   workflow_dispatch:
+    inputs:
+      os:
+        description: Which OS to test
+        type: choice
+        default: all
+        options: [all, linux, macos, windows]
 
   # no payload
   schedule:
@@ -69,7 +75,9 @@ jobs:
   linux:
     # only run test suite if there are code changes
     needs: changes
-    if: github.event_name == 'schedule' || needs.changes.outputs.code == 'true'
+    if: >-
+      (github.event_name == 'schedule' || needs.changes.outputs.code == 'true') &&
+      (github.event_name != 'workflow_dispatch' || github.event.inputs.os == 'all' || github.event.inputs.os == 'linux')
 
     runs-on: ubuntu-latest
     defaults:
@@ -88,10 +96,10 @@ jobs:
         include:
           # minimum Python/conda combo
           - python-version: '3.10'
-            conda-version: 25.11.0
+            conda-version: 26.1.0
             test-type: serial
           - python-version: '3.10'
-            conda-version: 25.11.0
+            conda-version: 26.1.0
             test-type: parallel
           # maximum Python/conda combo
           - python-version: '3.14'
@@ -217,7 +225,10 @@ jobs:
   linux-benchmarks:
     # only run test suite if there are code changes
     needs: changes
-    if: needs.changes.outputs.code == 'true'
+    if: >-
+      (needs.changes.outputs.code == 'true') &&
+      (github.event_name != 'workflow_dispatch' || github.event.inputs.os == 'all' || github.event.inputs.os == 'linux')
+
 
     runs-on: ubuntu-latest
     defaults:
@@ -289,7 +300,10 @@ jobs:
   windows:
     # only run test suite if there are code changes
     needs: changes
-    if: github.event_name == 'schedule' || needs.changes.outputs.code == 'true'
+    if: >-
+      (github.event_name == 'schedule' || needs.changes.outputs.code == 'true') &&
+      (github.event_name != 'workflow_dispatch' || github.event.inputs.os == 'all' || github.event.inputs.os == 'windows')
+
 
     runs-on: ${{ matrix.runs-on && matrix.runs-on || 'windows-2022' }}
     strategy:
@@ -409,7 +423,9 @@ jobs:
   macos:
     # only run test suite if there are code changes
     needs: changes
-    if: github.event_name == 'schedule' || needs.changes.outputs.code == 'true'
+    if: >-
+      (github.event_name == 'schedule' || needs.changes.outputs.code == 'true') &&
+      (github.event_name != 'workflow_dispatch' || github.event.inputs.os == 'all' || github.event.inputs.os == 'macos')
 
     runs-on: ${{ matrix.runs-on }}
     defaults:

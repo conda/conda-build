@@ -37,7 +37,9 @@ def _configured_channel(channel):
 
 @pytest.fixture
 def make_v1_test_package(tmp_path):
-    def make(name, channel, *, dependencies=(), script="exit 0", include_recipe=True):
+    def make(
+        name, channel, *, dependencies=(), script="echo test", include_recipe=True
+    ):
         source = tmp_path / name
         files = {
             "info/index.json": json.dumps(
