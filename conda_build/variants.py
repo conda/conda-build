@@ -66,13 +66,13 @@ DEFAULT_COMPILERS = {
             "2.7": "vs2008",
             "3.3": "vs2010",
             "3.4": "vs2010",
-            "3.5": "vs2017",
+            "3.5": "vs2022",  # was vs2017 — covers all py >= 3.5 via the clamp
         },
         "cxx": {
             "2.7": "vs2008",
             "3.3": "vs2010",
             "3.4": "vs2010",
-            "3.5": "vs2017",
+            "3.5": "vs2022",  # was vs2017 — covers all py >= 3.5 via the clamp
         },
         "vc": {
             "2.7": "9",
