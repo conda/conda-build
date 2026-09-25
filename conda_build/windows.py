@@ -374,14 +374,15 @@ def write_build_scripts(m, env, bld_bat):
             # Set CMAKE_GENERATOR for new-style compiler activation
 
             # On windows the c and cxx compiler should be set as the same value
-            # so getting c_complier == cxx_complier.  Should be in the form of vs20xx
+            # so getting c_compiler == cxx_compiler.  Should be in the form of vs20xx
             compiler = m.config.variant.get("c_compiler", None)
             if compiler in VS_COMPILERS:
                 fo.write(f'set "CMAKE_GENERATOR={VS_COMPILERS[compiler][1]}"\n')
-            else:
+            elif compiler and m.config.platform == "win":
                 log = get_logger(__name__)
                 log.warning(
-                    "'c_complier'={} is not a valid Windows compiler. Please use one of: {}",
+                    "'c_compiler'=%s is not a recognized Windows compiler; "
+                    "CMAKE_GENERATOR left unset (expected one of: %s)",
                     compiler,
                     ", ".join(VS_COMPILERS.keys()),
                 )
