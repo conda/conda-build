@@ -1,5 +1,8 @@
 name: Tests
 
+permissions:
+  contents: read  # Check out the source for tests.
+
 on:
   # https://docs.github.com/en/webhooks-and-events/webhooks/webhook-events-and-payloads#push
   push:
@@ -44,9 +47,9 @@ jobs:
   changes:
     runs-on: ubuntu-slim
     permissions:
-      # necessary to detect changes
       # https://github.com/dorny/paths-filter#supported-workflows
-      pull-requests: read
+      contents: read  # Check out the source for non-PR events.
+      pull-requests: read  # Read the changed files in a PR.
     outputs:
       code: ${{ steps.filter.outputs.code }}
     steps:
@@ -55,6 +58,8 @@ jobs:
         # dorny/paths-filter needs git clone for non-PR events
         # https://github.com/dorny/paths-filter#supported-workflows
         if: github.event_name != 'pull_request'
+        with:
+          persist-credentials: false
 
       - name: Filter Changes
         uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
@@ -109,6 +114,7 @@ jobs:
             conda-version: canary
             test-type: parallel
     env:
+      TEST_PYTHON_VERSION: ${{ matrix.python-version }}
       CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev::' || '' }}
       CONDA_VERSION: ${{ contains('canary|release', matrix.conda-version) && 'conda' || format('conda={0}', matrix.conda-version) }}
       # Exclude benchmark tests from regular CI runs (they run separately in linux-benchmarks)
@@ -153,9 +159,12 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Hash + Timestamp
-        run: echo "HASH=${{ runner.os }}-${{ runner.arch }}-Py${{ matrix.python-version }}-${{ matrix.conda-version }}-${{ matrix.test-type }}-$(date -u "+%Y%m")" >> $GITHUB_ENV
+        env:
+          HASH_PREFIX: ${{ runner.os }}-${{ runner.arch }}-Py${{ matrix.python-version }}-${{ matrix.conda-version }}-${{ matrix.test-type }}
+        run: echo "HASH=${HASH_PREFIX}-$(date -u "+%Y%m")" >> "$GITHUB_ENV"
 
       - name: Cache Conda
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -178,10 +187,10 @@ jobs:
           conda install
           --yes
           --file tests/requirements.txt
-          --file tests/requirements-${{ runner.os }}.txt
+          --file "tests/requirements-${RUNNER_OS}.txt"
           --file tests/requirements-ci.txt
-          python=${{ matrix.python-version }}
-          ${{ env.CONDA_CHANNEL_LABEL }}${{ env.CONDA_VERSION }}
+          "python=${TEST_PYTHON_VERSION}"
+          "${CONDA_CHANNEL_LABEL}${CONDA_VERSION}"
 
       # TODO: how can we remove this step?
       - name: Install Self
@@ -198,11 +207,11 @@ jobs:
         run: >
           pytest
           --cov=conda_build
-          --durations-path=durations/${{ runner.os }}.json
+          --durations-path="durations/${RUNNER_OS}.json"
           --reruns 1
           --reruns-delay 1
           -n auto
-          -m "${{ env.PYTEST_MARKER }}"
+          -m "$PYTEST_MARKER"
 
       - name: Upload Coverage
         uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
@@ -211,7 +220,7 @@ jobs:
 
       - name: Upload Test Results
         if: '!cancelled()'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v4.4.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: test-results-${{ env.HASH }}
           include-hidden-files: true
@@ -239,15 +248,20 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ['3.14']
+    env:
+      TEST_PYTHON_VERSION: ${{ matrix.python-version }}
 
     steps:
       - name: Checkout Source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Hash + Timestamp
-        run: echo "HASH=${{ runner.os }}-${{ runner.arch }}-Py${{ matrix.python-version }}-benchmark-$(date -u "+%Y%m")" >> $GITHUB_ENV
+        env:
+          HASH_PREFIX: ${{ runner.os }}-${{ runner.arch }}-Py${{ matrix.python-version }}-benchmark
+        run: echo "HASH=${HASH_PREFIX}-$(date -u "+%Y%m")" >> "$GITHUB_ENV"
 
       - name: Cache Conda
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -270,10 +284,10 @@ jobs:
           conda install
           --yes
           --file tests/requirements.txt
-          --file tests/requirements-${{ runner.os }}.txt
+          --file "tests/requirements-${RUNNER_OS}.txt"
           --file tests/requirements-ci.txt
           --file tests/requirements-benchmarks.txt
-          python=${{ matrix.python-version }}
+          "python=${TEST_PYTHON_VERSION}"
 
       # TODO: how can we remove this step?
       - name: Install Self
@@ -306,6 +320,9 @@ jobs:
 
 
     runs-on: ${{ matrix.runs-on && matrix.runs-on || 'windows-2022' }}
+    defaults:
+      run:
+        shell: pwsh
     strategy:
       fail-fast: false
       matrix:
@@ -331,6 +348,7 @@ jobs:
             runs-on: windows-11-arm
     env:
       ErrorActionPreference: Stop  # powershell exit on first error
+      TEST_PYTHON_VERSION: ${{ matrix.python-version }}
       CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'defaults' }}
       # Exclude benchmark and slow tests from Windows parallel runs
       PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial and not benchmark' || (matrix.test-type == 'parallel' && 'not serial and not slow and not benchmark' || '') }}
@@ -340,10 +358,13 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Hash + Timestamp
         shell: bash  # use bash to run date command
-        run: echo "HASH=${{ runner.os }}-${{ runner.arch }}-Py${{ matrix.python-version }}-${{ matrix.conda-version }}-${{ matrix.test-type }}-$(date -u "+%Y%m")" >> $GITHUB_ENV
+        env:
+          HASH_PREFIX: ${{ runner.os }}-${{ runner.arch }}-Py${{ matrix.python-version }}-${{ matrix.conda-version }}-${{ matrix.test-type }}
+        run: echo "HASH=${HASH_PREFIX}-$(date -u "+%Y%m")" >> "$GITHUB_ENV"
 
       - name: Cache Conda
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -379,10 +400,10 @@ jobs:
           conda install
           --yes
           --file tests\requirements.txt
-          --file tests\requirements-${{ runner.os }}.txt
+          --file "tests\requirements-${env:RUNNER_OS}.txt"
           --file tests\requirements-ci.txt
-          python=${{ matrix.python-version }}
-          ${{ env.CONDA_CHANNEL_LABEL }}::conda
+          "python=${env:TEST_PYTHON_VERSION}"
+          "${env:CONDA_CHANNEL_LABEL}::conda"
 
       # TODO: how can we remove this step?
       - name: Install Self
@@ -396,16 +417,24 @@ jobs:
         run: conda list --show-channel-urls
 
       - name: Run Tests
-        # Windows is sensitive to long paths, using `--basetemp=${{ runner.temp }} to
+        # Windows is sensitive to long paths, using RUNNER_TEMP to
         # keep the test directories shorter
-        run: >
-          pytest
-          --cov=conda_build
-          --basetemp=${{ runner.temp }}
-          --durations-path=durations\${{ runner.os }}.json
-          -n auto
-          ${{ env.PYTEST_MARKER && '-m "' || ''}}${{ env.PYTEST_MARKER }}${{ env.PYTEST_MARKER && '"' || ''}}
-          ${{ matrix.pytest-expression && '-k "' || ''}}${{ matrix.pytest-expression }}${{ matrix.pytest-expression && '"' || ''}}
+        env:
+          PYTEST_EXPRESSION: ${{ matrix.pytest-expression }}
+        run: |
+          $pytestArgs = @(
+            '--cov=conda_build'
+            "--basetemp=${env:RUNNER_TEMP}"
+            "--durations-path=durations\${env:RUNNER_OS}.json"
+            '-n', 'auto'
+          )
+          if ($env:PYTEST_MARKER) {
+            $pytestArgs += @('-m', $env:PYTEST_MARKER)
+          }
+          if ($env:PYTEST_EXPRESSION) {
+            $pytestArgs += @('-k', $env:PYTEST_EXPRESSION)
+          }
+          pytest @pytestArgs
 
       - name: Upload Coverage
         uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
@@ -414,7 +443,7 @@ jobs:
 
       - name: Upload Test Results
         if: '!cancelled()'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v4.4.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: test-results-${{ env.HASH }}
           include-hidden-files: true
@@ -460,6 +489,7 @@ jobs:
             test-type: parallel
             runs-on: macos-latest  # osx-arm64
     env:
+      TEST_PYTHON_VERSION: ${{ matrix.python-version }}
       # Use conda-forge for release tests since conda 25.11+ is not in defaults for osx-64
       CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'conda-forge' }}
       # Exclude benchmark tests from regular CI runs
@@ -470,9 +500,12 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Hash + Timestamp
-        run: echo "HASH=${{ runner.os }}-${{ runner.arch }}-Py${{ matrix.python-version }}-${{ matrix.conda-version }}-${{ matrix.test-type }}-$(date -u "+%Y%m")" >> $GITHUB_ENV
+        env:
+          HASH_PREFIX: ${{ runner.os }}-${{ runner.arch }}-Py${{ matrix.python-version }}-${{ matrix.conda-version }}-${{ matrix.test-type }}
+        run: echo "HASH=${HASH_PREFIX}-$(date -u "+%Y%m")" >> "$GITHUB_ENV"
 
       - name: Cache Conda
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -495,8 +528,10 @@ jobs:
       - name: SDK Download
         # SDK needed for cross-compilation tests
         # ARM64 runners: use 11.3 SDK, Intel runners: use 10.15 SDK
+        env:
+          TEST_RUNNER_IMAGE: ${{ matrix.runs-on }}
         run: |
-          if [ "${{ matrix.runs-on }}" = "macos-latest" ]; then
+          if [ "$TEST_RUNNER_IMAGE" = "macos-latest" ]; then
             MACOSX_SDK_ROOT="$(xcrun --sdk macosx --show-sdk-path)"
           else
             MACOSX_SDK_VERSION=10.15
@@ -521,10 +556,10 @@ jobs:
           conda install
           --yes
           --file tests/requirements.txt
-          --file tests/requirements-${{ runner.os }}.txt
+          --file "tests/requirements-${RUNNER_OS}.txt"
           --file tests/requirements-ci.txt
-          python=${{ matrix.python-version }}
-          ${{ env.CONDA_CHANNEL_LABEL }}::conda
+          "python=${TEST_PYTHON_VERSION}"
+          "${CONDA_CHANNEL_LABEL}::conda"
 
       # TODO: how can we remove this step?
       - name: Install Self
@@ -541,9 +576,9 @@ jobs:
         run: >
           pytest
           --cov=conda_build
-          --durations-path=durations/${{ runner.os }}.json
+          --durations-path="durations/${RUNNER_OS}.json"
           -n auto
-          -m "${{ env.PYTEST_MARKER }}"
+          -m "$PYTEST_MARKER"
         env:
           CONDA_BUILD_SYSROOT: ${{ env.MACOSX_SDK_ROOT }}
 
@@ -554,7 +589,7 @@ jobs:
 
       - name: Upload Test Results
         if: '!cancelled()'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v4.4.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: test-results-${{ env.HASH }}
           include-hidden-files: true
@@ -582,7 +617,7 @@ jobs:
 
       - name: Upload Combined Test Results
         # provides one downloadable archive of all matrix run test results for further analysis
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v4.4.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: test-results-${{ github.sha }}-all
           include-hidden-files: true
@@ -618,23 +653,23 @@ jobs:
           GH_TOKEN: ${{ secrets.AUTO_REPORT_TEST_FAILURE }}
         run: |
           DAY=$(date -u '+%Y-%m-%d')
-          TITLE="${{ github.workflow }} failed (${DAY})"
-          BODY="The ${{ github.workflow }} workflow failed at $(date -u '+%Y-%m-%d %H:%M') UTC
+          TITLE="${GITHUB_WORKFLOW} failed (${DAY})"
+          BODY="The ${GITHUB_WORKFLOW} workflow failed at $(date -u '+%Y-%m-%d %H:%M') UTC
 
-          Full run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          Full run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
           existing=$(gh issue list \
-            --repo "${{ github.repository }}" \
+            --repo "$GITHUB_REPOSITORY" \
             --state open \
             --search "\"${TITLE}\" in:title label:source::auto" \
             --json number \
             --jq '.[0].number')
           if [ -n "$existing" ]; then
             gh issue comment "$existing" \
-              --repo "${{ github.repository }}" \
+              --repo "$GITHUB_REPOSITORY" \
               --body "$BODY"
           else
             gh issue create \
-              --repo "${{ github.repository }}" \
+              --repo "$GITHUB_REPOSITORY" \
               --title "$TITLE" \
               --body "$BODY" \
               --label "¡blocking!,type::bug,type::testing,source::auto"
