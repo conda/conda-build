@@ -33,6 +33,8 @@ from os.path import (
 import requests
 import yaml
 
+from ..deprecations import deprecated
+
 # try to import C dumper
 try:
     from yaml import CSafeDumper as SafeDumper
@@ -864,6 +866,7 @@ def remove_comments(template):
     return "\n".join(lines_no_comments)
 
 
+@deprecated("27.3", "27.9", addendum="Use `grayskull` instead.")
 def skeletonize(
     in_packages: list[str],
     output_dir: str = ".",
