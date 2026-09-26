@@ -390,11 +390,6 @@ jobs:
         env:
           CONDA_SUBDIR: win-64
 
-      - name: Choco Install
-        if: runner.arch != 'ARM64'
-        # We may need the complete tooling so that cmake tests pass on windows
-        run: choco install visualstudio2017-workload-vctools
-
       - name: Conda Install
         run: >
           conda install
