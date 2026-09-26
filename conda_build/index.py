@@ -86,7 +86,9 @@ def get_build_index(
         if debug:
             log_context = partial(utils.LoggingContext, logging.DEBUG, loggers=loggers)
         elif verbose:
-            log_context = partial(utils.LoggingContext, logging.WARN, loggers=loggers)
+            log_context = partial(
+                utils.LoggingContext, logging.WARNING, loggers=loggers
+            )
         else:
             log_context = partial(
                 utils.LoggingContext, logging.CRITICAL + 1, loggers=loggers
