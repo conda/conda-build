@@ -12,7 +12,7 @@ from conda_build.jinja_context import compiler
 
 
 @pytest.mark.slow
-@pytest.mark.flaky(rerun=5, reruns_delay=2)
+@pytest.mark.flaky(reruns=5, reruns_delay=2)
 def test_xs_needs_c_compiler(testing_config):
     """Perl packages with XS files need a C compiler"""
     # This uses Sub::Identify=0.14 since it includes no .c files but a .xs file.
