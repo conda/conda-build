@@ -3285,6 +3285,12 @@ def test(
     :param m: Package's metadata.
     :type m: Metadata
     """
+    # Delegate v1 packages to rattler-build
+    from ._rattler_build.compat import is_v1_package, test_v1_package
+
+    if is_v1_package(recipedir_or_package_or_metadata):
+        return test_v1_package(recipedir_or_package_or_metadata, config)
+
     log = utils.get_logger(__name__)
     # we want to know if we're dealing with package input.  If so, we can move the input on success.
     hash_input = {}

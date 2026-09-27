@@ -480,7 +480,7 @@ platforms = ["64" if sys.maxsize > 2**32 else "32"]
 if on_win:
     platforms = sorted({"32", *platforms})
     compilers = ["3.10", "3.11", "3.12", "3.13"]
-    msvc_vers = ["15.0"]
+    msvc_vers = ["17.0"]
 else:
     msvc_vers = []
     compilers = [".".join([str(sys.version_info.major), str(sys.version_info.minor)])]
@@ -2194,31 +2194,33 @@ def test_build_strings_glob_match(testing_config: Config) -> None:
         api.build(metadata_path / "_blas_pins", config=testing_config)
 
 
-@pytest.mark.skipif(not on_linux, reason="needs __glibc virtual package")
-def test_api_build_grpc_issue5645(monkeypatch, tmp_path, testing_config):
-    if Version(conda_version) < Version("25.1.0"):
-        pytest.skip("needs conda 25.1.0")
+def test_api_build_transitive_pin_subpackage_regression(
+    monkeypatch, tmp_path, testing_config
+):
+    """Minimal, fast regression test for the transitive pin_subpackage/variant-merge
+    bug from issues #5645 and #5644 (see PR #5603, #5647, #5651), without needing
+    the real grpc/pytorch recipes, compilers, or network-heavy toolchains.
+    """
     testing_config.channel_urls = ["conda-forge"]
-
     monkeypatch.chdir(tmp_path)
-    api.build(str(metadata_path / "_grpc"), config=testing_config)
-
-
-@pytest.mark.skipif(
-    not on_mac,
-    reason="needs to cross-compile from osx-64 to osx-arm64",
-)
-def test_api_build_pytorch_cpu_issue5644(monkeypatch, tmp_path, testing_config):
-    # this test has to cross-compile from osx-64 to osx-arm64
-    # monkeypatch.setenv("CONDA_SUBDIR", "osx-64")
-    monkeypatch.chdir(tmp_path)
-    api.build(
-        str(metadata_path / "_pytorch_cpu"),
-        config=testing_config,
-        channel_urls=["conda-forge"],
-        platform="osx",
-        arch="64",
+    outputs = api.build(
+        str(metadata_path / "_transitive_pin_variants"), config=testing_config
     )
+    records = [
+        json.loads(package_has_file(path, "info/index.json")) for path in outputs
+    ]
+    assert sorted(record["name"] for record in records) == [
+        "libpin",
+        "pypin",
+        "pypin",
+        "pypin-tools",
+        "pypin-tools",
+    ]
+    libpin = next(record for record in records if record["name"] == "libpin")
+    libpin_spec = f"libpin {libpin['version']} {libpin['build']}"
+    for record in records:
+        if record["name"] == "pypin":
+            assert libpin_spec in record["depends"]
 
 
 @pytest.mark.skipif(on_win, reason="file permissions not relevant on Windows")

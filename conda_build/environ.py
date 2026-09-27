@@ -13,6 +13,7 @@ import subprocess
 import sys
 import warnings
 from collections import defaultdict
+from copy import copy
 from functools import cache
 from glob import glob
 from logging import getLogger
@@ -1413,11 +1414,8 @@ def install_actions(
 
         solver_backend = context.plugin_manager.get_cached_solver_backend()
         solver = solver_backend(prefix, channels, subdirs, specs_to_add=mspecs)
-        if index:
-            # Solver can modify the index (e.g., Solver._prepare adds virtual
-            # package) => Copy index (just outer container, not deep copy)
-            # to conserve it.
-            solver._index = index.copy()
+        # Give the solver its own index without realizing the cached records.
+        solver._index = copy(index)
         txn = solver.solve_for_transaction(prune=False, ignore_pinned=False)
         prefix_setup = txn.prefix_setups[prefix]
         return {

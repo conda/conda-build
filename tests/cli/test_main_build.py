@@ -21,9 +21,9 @@ from conda_build.config import (
 )
 from conda_build.exceptions import CondaBuildUserError, DependencyNeedsBuildingError
 from conda_build.os_utils.external import find_executable
-from conda_build.utils import get_build_folders, on_win, package_has_file
+from conda_build.utils import get_build_folders, on_mac, on_win, package_has_file
 
-from ..utils import metadata_dir
+from ..utils import metadata_dir, variants_dir
 from ..utils import reset_config as _reset_config
 
 if TYPE_CHECKING:
@@ -116,6 +116,50 @@ def test_build_output_build_path(
     )
     output, error = capfd.readouterr()
     assert test_path == output.rstrip(), error
+    assert error == ""
+
+
+@pytest.mark.parametrize(
+    "variants, expected_outputs",
+    [
+        (
+            None,
+            {
+                "some_output_using_abc_ghi",
+                "some_output_using_abc_jkl",
+                "some_output_using_def_ghi",
+                "some_output_using_def_jkl",
+            },
+        ),
+        (
+            "something: abc",
+            {
+                "some_output_using_abc_ghi",
+                "some_output_using_abc_jkl",
+            },
+        ),
+    ],
+)
+def test_build_output_build_path_variants(
+    variants, expected_outputs, testing_config, capfd
+):
+    testing_config.verbose = False
+    testing_config.debug = False
+    args = ["--output", os.path.join(variants_dir, "11_variant_output_names")]
+    if variants:
+        args.extend(("--variants", variants))
+
+    main_build.execute(args)
+
+    output, error = capfd.readouterr()
+    names = [os.path.basename(path) for path in output.rstrip().splitlines()]
+    # The hash includes platform-specific variant inputs, so assert its shape rather
+    # than a value that would only be correct for one CI runner.
+    pattern = re.compile(r"(.+)-1\.0-h[0-9a-f]+_0\.conda")
+    assert {
+        match.group(1) for name in names if (match := pattern.fullmatch(name))
+    } == expected_outputs, error or output
+    assert len(names) == len(expected_outputs)
     assert error == ""
 
 
@@ -574,6 +618,98 @@ def test_build_v1_recipe() -> None:
     assert main_build.execute(args) == 0
 
 
+def test_build_v1_recipe_with_downstream_test(
+    mocker: MockerFixture, tmp_path: Path
+) -> None:
+    """Build a v1 recipe and execute its downstream package test."""
+    recipe = tmp_path / "recipe"
+    recipe.mkdir()
+    (recipe / "recipe.yaml").write_text(
+        """
+package:
+  name: mylib
+  version: "1.0.0"
+
+build:
+  number: 0
+  script:
+    - mkdir -p $PREFIX
+
+tests:
+  - downstream: libmambapy
+""",
+        encoding="utf-8",
+    )
+
+    output = tmp_path / "out"
+    assert (
+        main_build.execute(
+            [
+                str(recipe),
+                "--output-folder",
+                str(output),
+                "--override-channels",
+                "--channel",
+                "conda-forge",
+            ]
+        )
+        == 0
+    )
+    packages = list(output.rglob("mylib-1.0.0-*.conda"))
+    assert packages
+
+
+@pytest.mark.parametrize(
+    ("selector", "expected_build_number"),
+    [
+        pytest.param(
+            "linux",
+            1,
+            marks=pytest.mark.skipif(on_mac or on_win, reason="Linux selector"),
+        ),
+        pytest.param(
+            "win", 2, marks=pytest.mark.skipif(not on_win, reason="Windows selector")
+        ),
+        pytest.param(
+            "osx", 3, marks=pytest.mark.skipif(not on_mac, reason="macOS selector")
+        ),
+    ],
+)
+def test_build_v1_recipe_with_legacy_cbc_selectors(
+    tmp_path: Path, selector: str, expected_build_number: int
+) -> None:
+    """Build a v1 recipe with selectors in conda_build_config.yaml."""
+    recipe = tmp_path / "recipe"
+    recipe.mkdir()
+    (recipe / "recipe.yaml").write_text(
+        """
+schema_version: 1
+
+package:
+  name: test-legacy-cbc-selectors
+  version: "1.0"
+
+build:
+  number: ${{ build_number }}
+""",
+        encoding="utf-8",
+    )
+    (recipe / "conda_build_config.yaml").write_text(
+        f"""
+build_number:
+  - {expected_build_number}  # [{selector}]
+""",
+        encoding="utf-8",
+    )
+
+    assert (
+        main_build.execute([str(recipe), "--output-folder", str(tmp_path / "out")]) == 0
+    )
+    packages = list((tmp_path / "out").rglob("*.conda"))
+    assert len(packages) == 1
+    assert packages[0].name.endswith(f"_{expected_build_number}.conda")
+
+
 def test_build_v1_recipe_multi_output(testing_workdir: str) -> None:
     """Test building a multi-output v1 recipe"""
     recipe = os.path.join(metadata_dir, "..", "variants", "33_v1_recipe_multi_output")
@@ -591,8 +727,10 @@ def test_build_v1_recipe_multi_output(testing_workdir: str) -> None:
     ]
     assert main_build.execute(args) == 0
 
-    conda_packages = list(out.rglob("*.conda"))
+    conda_packages = sorted(out.rglob("*.conda"))
     assert len(conda_packages) == 2
+
+    assert main_build.execute(["--test", str(conda_packages[0])]) == 0
 
 
 @pytest.mark.parametrize(
