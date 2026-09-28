@@ -1078,6 +1078,38 @@ def _clone_template_env(
         return False
 
 
+@contextlib.contextmanager
+def _macos_env_copies():
+    if not on_mac:
+        yield
+        return
+
+    # Separate inodes keep dyld from resolving build tools through the package cache.
+    overrides = {"CONDA_ALWAYS_COPY": "true", "CONDA_ALWAYS_SOFTLINK": "false"}
+    saved_env = {name: os.environ.get(name) for name in overrides}
+    search_path = context._search_path
+    argparse_args = context._argparse_args.copy()
+    try:
+        os.environ.update(overrides)
+        reset_context(
+            search_path=search_path,
+            argparse_args={
+                **argparse_args,
+                "always_copy": True,
+                "always_softlink": False,
+            },
+        )
+        yield
+    finally:
+        for name, value in saved_env.items():
+            if value is None:
+                os.environ.pop(name, None)
+            else:
+                os.environ[name] = value
+        reset_context(search_path=search_path, argparse_args=argparse_args)
+
+
+@_macos_env_copies()
 def create_env(
     prefix: str | os.PathLike | Path,
     specs_or_precs: Iterable[str | MatchSpec] | Iterable[PackageRecord],
