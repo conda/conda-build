@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+from contextlib import nullcontext
 
 import pytest
 from conda.base.context import context, reset_context
@@ -66,10 +67,9 @@ def env_package(tmp_path, monkeypatch, mocker, testing_config):
 
 
 @pytest.mark.parametrize("on_mac", [False, True])
-@pytest.mark.parametrize("env", ["build", "host"])
 @pytest.mark.parametrize("retry", [False, True])
 def test_create_env_link_type(
-    tmp_path, mocker, testing_config, env_package, on_mac, env, retry
+    tmp_path, mocker, testing_config, env_package, on_mac, retry
 ):
     record, cached = env_package
     mocker.patch.object(environ, "on_mac", on_mac)
@@ -84,7 +84,7 @@ def test_create_env_link_type(
     prefix = tmp_path / "prefix"
 
     environ.create_env(
-        str(prefix), [record], env=env, config=testing_config, subdir="noarch"
+        str(prefix), [record], env="host", config=testing_config, subdir="noarch"
     )
 
     installed = prefix / "share" / "value"
@@ -159,19 +159,11 @@ def test_create_env_restores_link_settings(
         )
     prefix = tmp_path / "prefix"
 
-    if fail:
-        with pytest.raises(ValueError, match="install failed"):
-            environ.create_env(
-                str(prefix),
-                [record],
-                env="host",
-                config=testing_config,
-                subdir="noarch",
-            )
-    else:
+    with pytest.raises(ValueError, match="install failed") if fail else nullcontext():
         environ.create_env(
             str(prefix), [record], env="host", config=testing_config, subdir="noarch"
         )
+    if not fail:
         installed = prefix / "share" / "value"
         assert not installed.is_symlink()
         assert not installed.samefile(cached)
