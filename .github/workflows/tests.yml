@@ -484,6 +484,8 @@ jobs:
             test-type: parallel
             runs-on: macos-latest  # osx-arm64
     env:
+      # Test copy mode for https://github.com/conda-forge/cmake-feedstock/issues/230.
+      CONDA_ALWAYS_COPY: 'true'
       TEST_PYTHON_VERSION: ${{ matrix.python-version }}
       # Use conda-forge for release tests since conda 25.11+ is not in defaults for osx-64
       CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'conda-forge' }}
