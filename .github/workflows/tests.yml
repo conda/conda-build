@@ -177,7 +177,7 @@ jobs:
             cache-${{ runner.os }}-${{ runner.arch }}-
 
       - name: Setup Miniconda
-        uses: conda-incubator/setup-miniconda@8ee1f361103df19b6f8c8655fd3967a8ecb162d5 # v4.0.1
+        uses: conda-incubator/setup-miniconda@be893c923ea9cf1cf7cd510fbdde27c7e18cbdcb # v4.1.0
         with:
           condarc-file: .github/condarc
           run-post: false  # skip post cleanup
@@ -274,7 +274,7 @@ jobs:
             cache-${{ runner.os }}-${{ runner.arch }}-
 
       - name: Setup Miniconda
-        uses: conda-incubator/setup-miniconda@8ee1f361103df19b6f8c8655fd3967a8ecb162d5 # v4.0.1
+        uses: conda-incubator/setup-miniconda@be893c923ea9cf1cf7cd510fbdde27c7e18cbdcb # v4.1.0
         with:
           condarc-file: .github/condarc
           run-post: false  # skip post cleanup
@@ -379,7 +379,7 @@ jobs:
             cache-${{ runner.os }}-${{ runner.arch }}-
 
       - name: Setup Miniconda
-        uses: conda-incubator/setup-miniconda@8ee1f361103df19b6f8c8655fd3967a8ecb162d5 # v4.0.1
+        uses: conda-incubator/setup-miniconda@be893c923ea9cf1cf7cd510fbdde27c7e18cbdcb # v4.1.0
         with:
           condarc-file: .github\condarc
           run-post: false  # skip post cleanup
@@ -484,6 +484,8 @@ jobs:
             test-type: parallel
             runs-on: macos-latest  # osx-arm64
     env:
+      # Test copy mode for https://github.com/conda-forge/cmake-feedstock/issues/230.
+      CONDA_ALWAYS_COPY: 'true'
       TEST_PYTHON_VERSION: ${{ matrix.python-version }}
       # Use conda-forge for release tests since conda 25.11+ is not in defaults for osx-64
       CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'conda-forge' }}
@@ -515,7 +517,7 @@ jobs:
             cache-${{ runner.os }}-${{ runner.arch }}-
 
       - name: Setup Miniconda
-        uses: conda-incubator/setup-miniconda@8ee1f361103df19b6f8c8655fd3967a8ecb162d5 # v4.0.1
+        uses: conda-incubator/setup-miniconda@be893c923ea9cf1cf7cd510fbdde27c7e18cbdcb # v4.1.0
         with:
           condarc-file: .github/condarc
           run-post: false  # skip post cleanup
