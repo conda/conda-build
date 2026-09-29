@@ -15,13 +15,148 @@ from conda_package_handling.api import create
 from conda_package_streaming.transmute import transmute
 
 from conda_build import api
-from conda_build._rattler_build.compat import is_v1_package
-from conda_build.cli import main_build
+from conda_build._rattler_build.compat import (
+    _load_variant_config,
+    is_v1_package,
+    run_rattler,
+)
+from conda_build.cli import main_build, main_render
 from conda_build.config import Config
 from conda_build.exceptions import CondaBuildUserError
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+
+@pytest.mark.parametrize(
+    "filename", ("conda_build_config.yaml", "custom.yaml", "variants.yaml")
+)
+@pytest.mark.parametrize(
+    "variant_yaml, expected",
+    (
+        pytest.param("value: 3.10\n", "3.10", id="scalar"),
+        pytest.param(
+            "value:\n  - 3.10  # [linux]\n  - 3.12  # [win]\n",
+            "3.10",
+            id="legacy-selectors",
+        ),
+        pytest.param(
+            "value:\n  - 3.10  # [target_platform == 'linux-64' and host_platform]\n"
+            "  - 3.12  # [target_platform in ['win-64', 'win-arm64']]\n",
+            "3.10",
+            id="legacy-platform-context",
+        ),
+        pytest.param(
+            "value:\n  - 3.10  # [match('3.10', '>=3') and "
+            "os.environ.get('CONDA_BUILD_TEST_SELECTOR').startswith('enabled')]\n",
+            "3.10",
+            id="legacy-functions",
+        ),
+        pytest.param(
+            "value:\n  - if: linux\n    then: 3.10\n    else: 3.12\n",
+            "3.10",
+            id="native-conditional",
+        ),
+        pytest.param(
+            "value: [\"${{ '3.10' if linux else '3.12' }}\"]\n",
+            "3.10",
+            id="native-template",
+        ),
+        pytest.param("value: [3.10]\n", "3.10", id="flow-list"),
+        pytest.param(
+            "# See [https://example.com/variants]\nvalue: [3.10]\n",
+            "3.10",
+            id="full-line-comment",
+        ),
+        pytest.param(
+            "value: [3.10]  # See [https://example.com/variants]\n",
+            "3.10",
+            id="inline-comment",
+        ),
+        pytest.param(
+            'value: ["literal # [win]"]\n', "literal # [win]", id="quoted-selector"
+        ),
+        pytest.param(
+            'value: ["literal # [win]"]  # [linux]\n',
+            "literal # [win]",
+            id="quoted-text-before-selector",
+        ),
+        pytest.param(
+            "value:\n  - |\n    literal # [win]\n",
+            "literal # [win]\n",
+            id="block-selector",
+        ),
+        pytest.param("value: [true]\n", True, id="boolean"),
+    ),
+)
+def test_v1_variant_config_formats(
+    tmp_path, capsys, monkeypatch, filename, variant_yaml, expected
+):
+    monkeypatch.setenv("CONDA_BUILD_TEST_SELECTOR", "enabled")
+    recipe = tmp_path / "recipe"
+    recipe.mkdir()
+    (recipe / "recipe.yaml").write_text(
+        "package: {name: variant-config-test, version: '1'}\n"
+        "build:\n  variant:\n    use_keys: [value]\n"
+        "extra:\n  selected: ${{ value }}\n  is_boolean: ${{ value == true }}\n",
+        encoding="utf-8",
+    )
+    variant_file = tmp_path / filename
+    variant_file.write_text(variant_yaml, encoding="utf-8")
+    _, args = main_render.parse_args([str(recipe)])
+    config = Config(
+        croot=str(tmp_path / "croot"),
+        host_subdir="linux-64",
+        ignore_system_variants=True,
+        variant_config_files=[str(variant_file)],
+    )
+
+    assert run_rattler("render", args, config) == 0
+    rendered = yaml.safe_load(capsys.readouterr().out)
+    assert rendered["extra"]["selected"] == ("true" if expected is True else expected)
+    assert rendered["extra"]["is_boolean"] == ("true" if expected is True else "false")
+
+
+@pytest.mark.parametrize("option", ("-m", "--exclusive-config-file"))
+def test_v1_render_legacy_variant_file(tmp_path, capsys, option):
+    recipe = tmp_path / "recipe"
+    recipe.mkdir()
+    (recipe / "recipe.yaml").write_text(
+        "package: {name: legacy-variant-config-test, version: '${{ version }}'}\n"
+        "build:\n  variant:\n    use_keys: [channel_targets]\n"
+        "extra:\n  channel: ${{ channel_targets }}\n",
+        encoding="utf-8",
+    )
+    variant_file = tmp_path / "conda_build_config_1.yaml"
+    variant_file.write_text(
+        "channel_targets: defaults\n"
+        "version:\n  - 3.10  # [True]\n  - 3.12  # [False]\n",
+        encoding="utf-8",
+    )
+
+    assert main_render.execute([str(recipe), option, str(variant_file)]) == 0
+    rendered = yaml.safe_load(capsys.readouterr().out)
+    assert rendered["package"]["version"] == "3.10"
+    assert rendered["extra"]["channel"] == "defaults"
+
+
+def test_v1_variant_config_zip_keys_and_filtered_values(tmp_path):
+    variant_file = tmp_path / "custom.yaml"
+    variant_file.write_text(
+        "python: [3.10, 3.11]\n"
+        "numpy: [1.24, 1.25]\n"
+        "zip_keys: [[python, numpy]]\n"
+        "pin_run_as_build: {python: {max_pin: x.x}}\n"
+        "filtered:\n  - ignored  # [win]\n",
+        encoding="utf-8",
+    )
+
+    variants = _load_variant_config(str(variant_file), Config(host_subdir="linux-64"))
+
+    assert variants.combinations() == [
+        {"python": "3.10", "numpy": "1.24"},
+        {"python": "3.11", "numpy": "1.25"},
+    ]
 
 
 @contextmanager
