@@ -25,7 +25,7 @@ requirements:
   host:
     - python
     - pip
-    - hatchling >=1.12.2
+    - hatchling >=1.27.0
     - hatch-vcs >=0.2.0
     - wheel
   run:
