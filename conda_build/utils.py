@@ -1435,8 +1435,6 @@ def is_v1_recipe(recipe_dir: Path) -> bool:
 
 def is_v0_recipe(recipe_dir: Path) -> bool:
     """Check if meta.yaml or any of the valid v0 recipe filenames exist."""
-    if is_v1_recipe(recipe_dir):
-        return any((Path(recipe_dir) / meta).is_file() for meta in VALID_METAS)
     try:
         find_recipe(recipe_dir)
         return True

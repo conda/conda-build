@@ -849,6 +849,19 @@ def test_error_on_mixed_v0_v1_recipes(testing_workdir: str, capsys) -> None:
     assert "Cannot process several recipe versions at the same time!" in captured.err
 
 
+def test_error_on_separate_v1_and_nested_v0_recipes(tmp_path: Path, capsys) -> None:
+    v1_recipe = tmp_path / "v1"
+    v1_recipe.mkdir()
+    (v1_recipe / "recipe.yaml").touch()
+    v0_recipe = tmp_path / "v0"
+    (v0_recipe / "nested").mkdir(parents=True)
+    (v0_recipe / "nested" / "meta.yaml").touch()
+
+    assert main_build.execute([str(v1_recipe), str(v0_recipe)]) == 1
+    captured = capsys.readouterr()
+    assert "Cannot process several recipe versions at the same time!" in captured.err
+
+
 def test_build_no_recipe_files(testing_workdir: str) -> None:
     recipe = Path(testing_workdir, "empty_recipe")
     recipe.mkdir()
