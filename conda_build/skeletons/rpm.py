@@ -50,6 +50,10 @@ build:
 
 {depends}
 
+test:
+  commands:
+    - test -d "${PREFIX}/x86_64-conda_cos6-linux-gnu/sysroot"
+
 about:
   home: {home}
   license: {license}
