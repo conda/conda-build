@@ -13,7 +13,6 @@ classifiers = [
   "Operating System :: OS Independent",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3 :: Only",
-  "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
@@ -39,7 +38,6 @@ dependencies = [
   "pyyaml",
   "requests",
   "evalidate >=2,<3",
-  "tomli ; python_version<'3.11'",
   "tqdm",
 ]
 description = "tools for building conda packages"
@@ -48,7 +46,7 @@ license = "BSD-3-Clause"
 license-files = ["LICENSE", "AUTHORS.md"]
 name = "conda-build"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 
 [project.entry-points.conda]
 conda-build = "conda_build.plugin"
@@ -159,7 +157,7 @@ testpaths = ["tests"]
 
 [tool.ruff]
 show-fixes = true
-target-version = "py310"
+target-version = "py311"
 
 [tool.ruff.lint]
 flake8-type-checking = {exempt-modules = [], strict = true}
