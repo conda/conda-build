@@ -198,7 +198,6 @@ def check(
     return all(m[0].check_fields() for m in metadata)
 
 
-# UP007 can be exception can be dropped when Python 3.10 is minimum version.
 def build(
     recipe_paths_or_metadata: str | os.PathLike | Path | MetaData,
     post: bool | None = None,
