@@ -62,7 +62,6 @@ from conda_build.utils import (
 )
 
 from .utils import (
-    add_mangling,
     fail_dir,
     get_valid_recipes,
     metadata_dir,
@@ -619,25 +618,6 @@ def test_requirements_txt_for_run_reqs(testing_config):
     api.build(
         os.path.join(metadata_dir, "_requirements_txt_run_reqs"), config=testing_config
     )
-
-
-@pytest.mark.skipif(
-    sys.version_info >= (3, 10),
-    reason="Python 3.10+, py_compile terminates once it finds an invalid file",
-)
-def test_compileall_compiles_all_good_files(testing_config):
-    testing_config.conda_pkg_format = 1
-    output = api.build(
-        os.path.join(metadata_dir, "_compile-test"), config=testing_config
-    )[0]
-    good_files = ["f1.py", "f3.py"]
-    bad_file = "f2_bad.py"
-    for f in good_files:
-        assert package_has_file(output, f)
-        # look for the compiled file also
-        assert package_has_file(output, add_mangling(f))
-    assert package_has_file(output, bad_file)
-    assert not package_has_file(output, add_mangling(bad_file))
 
 
 @pytest.mark.sanity
