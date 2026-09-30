@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # This file makes sure that our API has not changed.  Doing so can not be accidental.  Whenever it
 #    happens, we should bump our major build number, because we may have broken someone.
+import inspect
 import sys
 from inspect import getfullargspec as getargspec
 
@@ -86,22 +87,25 @@ def test_api_test():
 
 
 def test_api_list_skeletons():
-    argspec = getargspec(api.list_skeletons)
-    assert argspec.args == []
-    assert argspec.defaults is None
+    sig = inspect.signature(api.list_skeletons)
+    assert list(sig.parameters) == []
+    assert all(p.default is inspect._empty for p in sig.parameters.values())
 
 
 def test_api_skeletonize():
-    argspec = getargspec(api.skeletonize)
-    assert argspec.args == [
+    sig = inspect.signature(api.skeletonize)
+    assert list(sig.parameters) == [
         "packages",
         "repo",
         "output_dir",
         "version",
         "recursive",
         "config",
+        "kwargs",
     ]
-    assert argspec.defaults == (".", None, False, None)
+    assert tuple(
+        p.default for p in sig.parameters.values() if p.default is not inspect._empty
+    ) == (".", None, False, None)
 
 
 def test_api_develop():
