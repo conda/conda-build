@@ -18,6 +18,8 @@ from typing import TYPE_CHECKING
 import pytest
 from conda.base.context import context, reset_context
 from conda.common.compat import on_mac, on_win
+from conda.testing.fixtures import http_test_server as http_test_server
+from conda.testing.fixtures import path_factory as path_factory
 from conda.utils import url_path
 from conda_index.api import update_index
 from filelock import FileLock, Timeout
@@ -75,6 +77,15 @@ def testing_workdir(monkeypatch: MonkeyPatch, tmp_path: Path) -> Iterator[str]:
     if (saved_path / "prof").is_dir() and prof.is_dir():
         for file in prof.glob("*.prof"):
             copy_into(str(file), str(saved_path / "prof" / file.name))
+
+
+@pytest.fixture
+def local_python_source(tmp_path: Path) -> Path:
+    """Provide a writable Python project for packaging tests without PyPI."""
+    source = tmp_path / "python-source"
+    shutil.copytree(Path(__file__).parent / "test-recipes" / "test-package", source)
+    shutil.copyfile(Path(__file__).parents[1] / "LICENSE", source / "LICENSE")
+    return source
 
 
 @pytest.fixture(scope="function")

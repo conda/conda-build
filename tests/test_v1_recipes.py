@@ -1,8 +1,8 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
 
+import json
 import os
-from pathlib import Path
 
 from rattler_build.package import Package
 from rattler_build.render import RenderConfig
@@ -14,7 +14,6 @@ from conda_build._rattler_build.compat import run_rattler
 from conda_build.cli import main_build
 from conda_build.config import Config
 
-from .utils import metadata_dir
 from .utils import reset_config as _reset_config
 
 
@@ -76,46 +75,37 @@ numpy:
     assert "np20py312" in rendered[1].recipe.build.string
 
 
-def test_noarch_python():
-    recipe_yaml = """
+def test_noarch_python(local_python_source):
+    recipe_yaml = f"""
 context:
-  name: toml
-  version: 0.10.2
+  name: conda-build-test-project
+  version: "1.0"
 
 package:
-  name: "${{ name|lower }}"
-  version: "${{ version }}"
+  name: "${{{{ name|lower }}}}"
+  version: "${{{{ version }}}}"
 
 source:
-  url: https://pypi.io/packages/source/${{ name[0] }}/${{ name }}/${{ name }}-${{ version }}.tar.gz
-  sha256: b3bda1d108d5dd99f4a20d24d9c348e91c4db7ab1b749200bded2f839ccbe68f
+  path: {json.dumps(str(local_python_source))}
 
 build:
   noarch: python
-  script: python -m pip install . --no-deps -vv
+  script: python -m pip install . --no-build-isolation --no-deps -vv
 
 requirements:
   host:
     - python 3.10.*
     - pip
     - setuptools
+    - wheel
   run:
     - python >=3.10
 
 about:
-  homepage: https://github.com/uiri/toml
-  license: MIT
+  homepage: https://github.com/conda/conda-build
+  license: BSD-3-Clause
   license_file: LICENSE
-  summary: Python lib for TOML.
-
-extra:
-  recipe-maintainers:
-    - conda-forge/toml-feedstock
-  foobar: 123
-  tags:
-    - toml
-    - config
-    - parser
+  summary: Test package for conda-build.
     """
 
     # load, render and build the recipe
@@ -125,8 +115,14 @@ extra:
 
     package = Package.from_file(build_result.packages[0])
 
-    assert "site-packages/toml-0.10.2.dist-info/INSTALLER" in package.files
-    assert "site-packages/toml-0.10.2.dist-info/licenses/LICENSE" in package.files
+    assert (
+        "site-packages/conda_build_test_project-1.0.dist-info/INSTALLER"
+        in package.files
+    )
+    assert (
+        "site-packages/conda_build_test_project-1.0.dist-info/licenses/LICENSE"
+        in package.files
+    )
 
     assert "python" in package.depends
     assert "python >=3.10" in package.depends
@@ -203,14 +199,26 @@ outputs:
     assert output2_win["requirements"]["run"] == [pin]
 
 
-def test_build_v1_root_dir(testing_workdir, testing_config):
+def test_build_v1_root_dir(testing_workdir, testing_config, tmp_path):
     """Verify that root-dir setting will affect the package output folder"""
-    recipe = os.path.join(metadata_dir, "..", "variants", "32_v1_recipe")
+    root_dir = tmp_path / "custom-output"
+    recipe = tmp_path / "recipe"
+    recipe.mkdir()
+    (recipe / "recipe.yaml").write_text(
+        """
+package:
+  name: test-root-dir
+  version: "1.0"
+
+build:
+  noarch: generic
+"""
+    )
 
     with open(os.path.join(testing_workdir, ".condarc"), "w") as f:
         print(
             "conda_build:",
-            f"  root-dir: {testing_workdir}",
+            f"  root-dir: {root_dir}",
             "channels:",
             "  - conda-forge",
             sep="\n",
@@ -218,12 +226,12 @@ def test_build_v1_root_dir(testing_workdir, testing_config):
         )
     _reset_config([os.path.join(testing_workdir, ".condarc")])
 
-    args = [recipe, "--no-test"]
+    args = [str(recipe), "--no-test"]
     parser, args = main_build.parse_args(args)
     config = Config(**args.__dict__)
 
     run_rattler(command="build", parsed_args=args, config=config)
 
-    built_pkgs = list(Path(testing_workdir).rglob("*.conda"))
+    built_pkgs = list((root_dir / "noarch").glob("test-root-dir-1.0-*.conda"))
 
-    assert built_pkgs, f"No built package found in {testing_workdir}"
+    assert len(built_pkgs) == 1

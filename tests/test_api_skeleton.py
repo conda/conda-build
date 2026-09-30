@@ -2,9 +2,12 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from __future__ import annotations
 
+import hashlib
+import json
 import os
 import subprocess
 import sys
+import tarfile
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -33,17 +36,62 @@ if TYPE_CHECKING:
     from conda_build.config import Config
 
 
-SYMPY_URL = (
-    "https://files.pythonhosted.org/packages/7d/23/70fa970c07f0960f7543af982d2554be805e1034b9dcee9cb3082ce80f80/sympy-1.10.tar.gz"
-    "#sha256=6cf85a5cfe8fff69553e745b05128de6fc8de8f291965c63871c79701dc6efc9"
-)
-
 PYLINT_VERSION = "2.7.4"  # last version to use setup.py without setup.cfg
 PYLINT_HASH_TYPE = "sha256"
 PYLINT_SHA256 = "bd38914c7731cdc518634a8d3c5585951302b6e2b6de60fbb3f7a0220e21eeee"
 PYLINT_BLAKE2 = "2d5b491cf9e85288c29759a6535e6009938c2141b137b27a0653e435dcbad6a2"
 PYLINT_FILENAME = f"pylint-{PYLINT_VERSION}.tar.gz"
 PYLINT_URL = f"https://files.pythonhosted.org/packages/{PYLINT_BLAKE2[:2]}/{PYLINT_BLAKE2[2:4]}/{PYLINT_BLAKE2[4:]}/{PYLINT_FILENAME}"
+
+
+@pytest.fixture
+def local_pypi(local_python_source, http_test_server):
+    name = "conda-build-test-project"
+    setup = local_python_source / "setup.py"
+    setup_source = setup.read_text().replace(
+        "setup(\n",
+        "setup(\n"
+        "    extras_require={\n"
+        "        \":python_version<'3'\": ['futures'],\n"
+        "        \":python_version>='3'\": ['pygments'],\n"
+        "    },\n",
+        1,
+    )
+    releases = {}
+    for version in ("1.0", "2.0"):
+        setup.write_text(
+            setup_source.replace("version='1.0'", f"version='{version}'", 1)
+        )
+        archive = (
+            http_test_server.directory
+            / "packages"
+            / "source"
+            / name[0]
+            / name
+            / f"{name}-{version}.tar.gz"
+        )
+        archive.parent.mkdir(parents=True, exist_ok=True)
+        with tarfile.open(archive, "w:gz") as source:
+            source.add(local_python_source, arcname=f"{name}-{version}")
+        digest = hashlib.sha256(archive.read_bytes()).hexdigest()
+        url = http_test_server.get_url(
+            archive.relative_to(http_test_server.directory).as_posix()
+        )
+        releases[version] = [
+            {
+                "packagetype": "sdist",
+                "filename": archive.name,
+                "url": url,
+                "size": archive.stat().st_size,
+                "digests": {"sha256": digest},
+            }
+        ]
+    metadata = http_test_server.directory / "pypi" / name / "json"
+    metadata.parent.mkdir(parents=True)
+    metadata.write_text(json.dumps({"info": {}, "releases": releases}))
+    url = releases["1.0"][0]["url"]
+    digest = releases["1.0"][0]["digests"]["sha256"]
+    return http_test_server.get_url("pypi/"), f"{url}#sha256={digest}"
 
 
 @pytest.fixture
@@ -221,22 +269,26 @@ def test_repo(
 
 
 @pytest.mark.parametrize(
-    "package,version",
+    "version",
     [
-        pytest.param("sympy", "1.10", id="with version"),
-        pytest.param(SYMPY_URL, None, id="with url"),
+        pytest.param("1.0", id="with version"),
+        pytest.param(None, id="with url"),
     ],
 )
-def test_sympy(package: str, version: str | None, tmp_path: Path, testing_config):
+def test_pypi_version(version: str | None, tmp_path: Path, testing_config, local_pypi):
+    pypi_url, source_url = local_pypi
     api.skeletonize(
-        packages=package,
+        packages="conda-build-test-project" if version else source_url,
         repo="pypi",
         version=version,
         config=testing_config,
         output_dir=tmp_path,
+        pypi_url=pypi_url,
     )
-    metadata = api.render(str(tmp_path / "sympy" / "meta.yaml"))[0][0]
-    assert metadata.version() == "1.10"
+    metadata = api.render(str(tmp_path / "conda-build-test-project" / "meta.yaml"))[0][
+        0
+    ]
+    assert metadata.version() == "1.0"
 
 
 def test_get_entry_points(pylint_pkginfo, pylint_metadata):
@@ -458,10 +510,17 @@ def test_pypi_with_version_inconsistency(tmp_path: Path, testing_config):
     assert parse_version(metadata.version()) == parse_version("0.0.10")
 
 
-def test_pypi_with_basic_environment_markers(tmp_path: Path):
+def test_pypi_with_basic_environment_markers(tmp_path: Path, local_pypi):
     # regression test for https://github.com/conda/conda-build/issues/1974
-    api.skeletonize("coconut", "pypi", version="1.2.2", output_dir=tmp_path)
-    metadata = api.render(tmp_path / "coconut")[0][0]
+    pypi_url, _ = local_pypi
+    api.skeletonize(
+        "conda-build-test-project",
+        "pypi",
+        version="1.0",
+        output_dir=tmp_path,
+        pypi_url=pypi_url,
+    )
+    metadata = api.render(tmp_path / "conda-build-test-project")[0][0]
 
     build_reqs = str(metadata.meta["requirements"]["host"])
     run_reqs = str(metadata.meta["requirements"]["run"])
