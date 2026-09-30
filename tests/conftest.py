@@ -271,6 +271,8 @@ def worker_package_cache(
 
     pkgs_dirs = (str(tmp_path_factory.mktemp("pkgs")), *context.pkgs_dirs)
     try:
+        # The monkeypatch fixture is function-scoped, so this session-scoped
+        # fixture needs its own patcher to restore the environment at teardown.
         with pytest.MonkeyPatch.context() as monkeypatch:
             monkeypatch.setenv("CONDA_PKGS_DIRS", ",".join(pkgs_dirs))
             reset_context()
