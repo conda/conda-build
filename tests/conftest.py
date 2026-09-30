@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
+from conda.base.context import context, reset_context
 from conda.common.compat import on_mac, on_win
 from conda.utils import url_path
 from conda_index.api import update_index
@@ -259,8 +260,29 @@ def variants_conda_build_sysroot(monkeypatch, request):
     return request.param
 
 
+@pytest.fixture(scope="session")
+def worker_package_cache(
+    request: FixtureRequest, tmp_path_factory: pytest.TempPathFactory
+) -> Iterator[None]:
+    """Give parallel workers private primary package caches for repodata."""
+    if not hasattr(request.config, "workerinput"):
+        yield
+        return
+
+    pkgs_dirs = (str(tmp_path_factory.mktemp("pkgs")), *context.pkgs_dirs)
+    try:
+        with pytest.MonkeyPatch.context() as monkeypatch:
+            monkeypatch.setenv("CONDA_PKGS_DIRS", ",".join(pkgs_dirs))
+            reset_context()
+            yield
+    finally:
+        reset_context()
+
+
 @pytest.fixture(scope="session", autouse=True)
-def warm_package_cache(tmp_path_factory: pytest.TempPathFactory) -> Path | None:
+def warm_package_cache(
+    tmp_path_factory: pytest.TempPathFactory, worker_package_cache
+) -> Path | None:
     """Pre-warm the conda package cache and create a template environment.
 
     Creates a persistent template environment with commonly-used packages
@@ -271,9 +293,9 @@ def warm_package_cache(tmp_path_factory: pytest.TempPathFactory) -> Path | None:
     template is therefore created under the *shared* xdist base directory
     (``tmp_path_factory.getbasetemp().parent``) and guarded by a file lock so
     only the first worker actually invokes ``conda create``. The remaining
-    workers wait on the lock and reuse the leader's template, avoiding
-    ``LockError``/``InvalidArchiveError`` races against the shared
-    ``~/conda_pkgs_dir``.
+    workers wait on the lock and reuse the leader's template. Each worker's
+    primary writable package cache is isolated by ``worker_package_cache`` before
+    template creation.
 
     Returns:
         Path to the template environment, or None if creation failed.
