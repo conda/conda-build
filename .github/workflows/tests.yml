@@ -183,6 +183,8 @@ jobs:
           run-post: false  # skip post cleanup
 
       - name: Conda Install
+        env:
+          CONDA_REMOTE_MAX_RETRIES: '10'
         run: >
           conda install
           --yes
@@ -280,6 +282,8 @@ jobs:
           run-post: false  # skip post cleanup
 
       - name: Conda Install
+        env:
+          CONDA_REMOTE_MAX_RETRIES: '10'
         run: >
           conda install
           --yes
@@ -391,6 +395,8 @@ jobs:
           CONDA_SUBDIR: win-64
 
       - name: Conda Install
+        env:
+          CONDA_REMOTE_MAX_RETRIES: '10'
         run: >
           conda install
           --yes
@@ -549,6 +555,8 @@ jobs:
           echo "MACOSX_SDK_ROOT=${MACOSX_SDK_ROOT}" >> "$GITHUB_ENV"
 
       - name: Conda Install
+        env:
+          CONDA_REMOTE_MAX_RETRIES: '10'
         run: >
           conda install
           --yes
