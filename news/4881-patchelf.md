@@ -16,4 +16,4 @@
 
 ### Other
 
-* Skip `patchelf 0.18` instead of adding an upper bound (`<0.18`), since 0.19 is fixed. (#4881)
+* Allow patchelf 0.19 while excluding the broken 0.18 releases. (#4881 via #6077)
