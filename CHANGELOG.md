@@ -7,13 +7,13 @@
 * Validate package names against CEP-26 naming conventions, rejecting names with invalid characters or structure. (#5976)
 * ``REQUESTS_CA_BUNDLE`` can now also be supplied via the build variant (``conda_build_config.yaml``). (#6063 via #6083)
 * Use the published ``conda-launchers >=24.7.1`` package for Windows entry point executables, select the native target architecture, and verify each launcher's SHA256 before copying it. Retain the bundled 32-bit launchers for packages that do not provide them, and require ``conda >=26.1.0`` so installed package records preserve those checksums. (#6075)
-* Add support for running tests in conda packages built from v1 recipes as well as running downstream v1 recipe tests. (#6076 via #6113).
+* Add support for running tests in conda packages built from v1 recipes as well as running downstream v1 recipe tests. (#6076 via #6113)
 
 ### Bug fixes
 
 * Determine `SP_DIR` from the `python_site_packages_path` recorded by the python installed in the prefix, rather than deriving it from the python version and platform. Fixes site-packages missing the ABI suffix for free-threaded builds (`lib/python3.14t/site-packages`), and being reported as `%PREFIX%\Lib\site-packages` on Windows for python 3.15, which [CFEP-27](https://github.com/conda-forge/cfep/blob/main/cfep-27.md) relocates to `%PREFIX%\lib\python\site-packages`. Prefixes whose python does not record the field keep the previous behaviour. (#5563)
 * Fix Windows compiler selection to use vs2022 for Python 3.5 and later. (#6025 via #6162)
-* Add support for missing `conda_build.root-dir` setting in `.condarc` and `--croot` CLI argument for v1 recipes (#6043 via #6044).
+* Add support for missing `conda_build.root-dir` setting in `.condarc` and `--croot` CLI argument for v1 recipes. (#6043 via #6044)
 * Only pass through ``REQUESTS_CA_BUNDLE`` when it is set in the environment, matching ``SSL_CERT_FILE``. Setting it to an empty string broke TLS clients such as botocore. (#6063 via #6083)
 * Activate the host and build environments in Windows build scripts when packaging a recipe named `conda`, matching Unix. Previously `build_env_setup.bat` omitted activation entirely for such recipes, so host `etc/conda/activate.d` scripts never ran. (#6069)
 * Honor `build/activate_in_script: false` in Windows build scripts, matching Unix build scripts and Windows output scripts, which already respected it. (#6069)
@@ -21,8 +21,8 @@
 * Honor `--variants` when using `conda-build --output`. (#6072)
 * Handle unavailable version metadata when `packaging` raises `InvalidVersion` during deprecation checks. (#6091)
 * Preserve final build IDs, including dependency hashes, in exact `pin_subpackage()` references. (#5572, #6078 via #6100)
-* Ensure `conda-build` will error out if both v0 and v1 recipes files are present in the same directory. (#6102).
-* Support `conda_build_config` files with legacy syntax when processing v1 recipes (#6101 via #6103).
+* Ensure `conda-build` will error out if both v0 and v1 recipe files are present in the same directory. (#6102)
+* Support `conda_build_config` files with legacy syntax when processing v1 recipes. (#6101 via #6103)
 * Preserve lazy package indexes when passing them to the solver during builds. (#6125)
 * Require Hatchling 1.27.0 or newer to support the package's license metadata. (#6174)
 
@@ -38,7 +38,7 @@
 
 ### Docs
 
-* Document support for `conda_build.root-dir` and `--croot` options for building v1 recipes (#6044).
+* Document support for `conda_build.root-dir` and `--croot` options for building v1 recipes. (#6044)
 * Document ``REQUESTS_CA_BUNDLE`` as an inherited build environment variable. (#6063 via #6083)
 
 ### Other
@@ -55,9 +55,9 @@
 * @jaimergp
 * @jsmolic
 * @jezdez
-* @JeanChristopheMorinPerso
+* @JeanChristopheMorinPerso made their first contribution in #6072
 * @kenodegard
-* @mwtoews
+* @mwtoews made their first contribution in #6060
 * @ryanskeith
 * @travishathaway
 * @dependabot[bot]
