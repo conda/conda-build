@@ -2,8 +2,10 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from __future__ import annotations
 
+import hashlib
 import os
 import re
+import tarfile
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -285,9 +287,24 @@ def test_build_output_folder(testing_workdir: str, testing_metadata: MetaData):
     ).is_file()
 
 
-def test_build_source(testing_workdir: str):
+def test_build_source(
+    testing_workdir: str,
+    testing_metadata: MetaData,
+    local_python_source,
+    http_test_server,
+):
+    # Keep HTTP download and archive extraction coverage without relying on PyPI.
+    archive = http_test_server.directory / "source.tar.gz"
+    with tarfile.open(archive, "w:gz") as tar:
+        tar.add(local_python_source, arcname="source")
+    testing_metadata.meta["source"] = {
+        "url": http_test_server.get_url(archive.name),
+        "sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),
+    }
+    recipe = Path(testing_workdir, "meta.yaml")
+    api.output_yaml(testing_metadata, recipe)
     args = [
-        os.path.join(metadata_dir, "_pyyaml_find_header"),
+        str(recipe),
         "--source",
         "--no-build-id",
         "--croot",
@@ -296,7 +313,10 @@ def test_build_source(testing_workdir: str):
         "--no-anaconda-upload",
     ]
     main_build.execute(args)
-    assert Path(testing_workdir, "work", "setup.py").is_file()
+    assert (
+        Path(testing_workdir, "work", "setup.py").read_bytes()
+        == (local_python_source / "setup.py").read_bytes()
+    )
 
 
 @pytest.mark.serial

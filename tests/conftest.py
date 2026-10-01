@@ -16,7 +16,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
+from conda.base.context import context, reset_context
 from conda.common.compat import on_mac, on_win
+from conda.testing.fixtures import http_test_server as http_test_server
+from conda.testing.fixtures import path_factory as path_factory
 from conda.utils import url_path
 from conda_index.api import update_index
 from filelock import FileLock, Timeout
@@ -74,6 +77,15 @@ def testing_workdir(monkeypatch: MonkeyPatch, tmp_path: Path) -> Iterator[str]:
     if (saved_path / "prof").is_dir() and prof.is_dir():
         for file in prof.glob("*.prof"):
             copy_into(str(file), str(saved_path / "prof" / file.name))
+
+
+@pytest.fixture
+def local_python_source(tmp_path: Path) -> Path:
+    """Provide a writable Python project for packaging tests without PyPI."""
+    source = tmp_path / "python-source"
+    shutil.copytree(Path(__file__).parent / "test-recipes" / "test-package", source)
+    shutil.copyfile(Path(__file__).parents[1] / "LICENSE", source / "LICENSE")
+    return source
 
 
 @pytest.fixture(scope="function")
@@ -259,8 +271,31 @@ def variants_conda_build_sysroot(monkeypatch, request):
     return request.param
 
 
+@pytest.fixture(scope="session")
+def worker_package_cache(
+    request: FixtureRequest, tmp_path_factory: pytest.TempPathFactory
+) -> Iterator[None]:
+    """Give parallel workers private primary package caches for repodata."""
+    if not hasattr(request.config, "workerinput"):
+        yield
+        return
+
+    pkgs_dirs = (str(tmp_path_factory.mktemp("pkgs")), *context.pkgs_dirs)
+    try:
+        # The monkeypatch fixture is function-scoped, so this session-scoped
+        # fixture needs its own patcher to restore the environment at teardown.
+        with pytest.MonkeyPatch.context() as monkeypatch:
+            monkeypatch.setenv("CONDA_PKGS_DIRS", ",".join(pkgs_dirs))
+            reset_context()
+            yield
+    finally:
+        reset_context()
+
+
 @pytest.fixture(scope="session", autouse=True)
-def warm_package_cache(tmp_path_factory: pytest.TempPathFactory) -> Path | None:
+def warm_package_cache(
+    tmp_path_factory: pytest.TempPathFactory, worker_package_cache
+) -> Path | None:
     """Pre-warm the conda package cache and create a template environment.
 
     Creates a persistent template environment with commonly-used packages
@@ -271,9 +306,9 @@ def warm_package_cache(tmp_path_factory: pytest.TempPathFactory) -> Path | None:
     template is therefore created under the *shared* xdist base directory
     (``tmp_path_factory.getbasetemp().parent``) and guarded by a file lock so
     only the first worker actually invokes ``conda create``. The remaining
-    workers wait on the lock and reuse the leader's template, avoiding
-    ``LockError``/``InvalidArchiveError`` races against the shared
-    ``~/conda_pkgs_dir``.
+    workers wait on the lock and reuse the leader's template. Each worker's
+    primary writable package cache is isolated by ``worker_package_cache`` before
+    template creation.
 
     Returns:
         Path to the template environment, or None if creation failed.
