@@ -54,7 +54,7 @@ DEFAULT_VARIANTS = {
         "ignore_build_only_deps",
         "extend_keys",
     ],
-    "cran_mirror": "https://cran.r-project.org",
+    "cran_mirror": "https://cloud.r-project.org",
 }
 
 # map python version to default compiler on windows, to match upstream python
