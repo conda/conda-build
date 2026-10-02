@@ -145,3 +145,147 @@ def test_build_variable_defaults_to_architecture_based_distro(testing_metadata):
 
     # Verify BUILD uses default cos6 or cos7 (not a custom cdt_name)
     assert "conda_cos6" in env_vars["BUILD"] or "conda_cos7" in env_vars["BUILD"]
+
+
+def test_get_package_records_no_retry_on_definitive_unsat(monkeypatch: MonkeyPatch):
+    """DependencyNeedsBuildingError from the solver is definitive unsatisfiability.
+
+    It must not be retried: each retry is a full solver round-trip that cannot
+    change the outcome.
+    """
+    from conda_build import environ
+    from conda_build.exceptions import DependencyNeedsBuildingError
+
+    monkeypatch.setattr(
+        environ, "get_build_index", lambda *args, **kwargs: (None, 0, None)
+    )
+
+    calls = []
+
+    def fake_install_actions(prefix, index, specs, subdir=None):
+        calls.append(specs)
+        raise DependencyNeedsBuildingError(
+            packages=["definitely-not-a-real-package"], subdir=subdir
+        )
+
+    monkeypatch.setattr(environ, "_install_actions", fake_install_actions)
+
+    with pytest.raises(DependencyNeedsBuildingError):
+        environ.get_package_records(
+            "unused-prefix",
+            ["definitely-not-a-real-package"],
+            "host",
+            bldpkgs_dirs=("unused-bldpkgs",),
+            channel_urls=("https://conda.anaconda.org/conda-forge",),
+            subdir="noarch",
+            verbose=False,
+            max_env_retry=3,
+        )
+
+    # exactly one solver attempt: no retries for definitive unsatisfiability
+    assert len(calls) == 1
+
+
+def test_get_package_records_retries_transient_errors(monkeypatch: MonkeyPatch):
+    """Transient errors (e.g. CondaError) are still retried up to max_env_retry times."""
+    from conda.exceptions import CondaError
+
+    from conda_build import environ
+
+    monkeypatch.setattr(
+        environ, "get_build_index", lambda *args, **kwargs: (None, 0, None)
+    )
+
+    calls = []
+
+    def fake_install_actions(prefix, index, specs, subdir=None):
+        calls.append(specs)
+        raise CondaError("some transient error")
+
+    monkeypatch.setattr(environ, "_install_actions", fake_install_actions)
+
+    with pytest.raises(CondaError):
+        environ.get_package_records(
+            "unused-prefix",
+            ["some-package"],
+            "host",
+            bldpkgs_dirs=("unused-bldpkgs",),
+            channel_urls=("https://conda.anaconda.org/conda-forge",),
+            subdir="noarch",
+            verbose=False,
+            max_env_retry=1,
+        )
+
+    # initial attempt + max_env_retry retries
+    assert len(calls) == 2
+
+
+def test_create_env_no_retry_on_definitive_unsat(
+    testing_config, monkeypatch: MonkeyPatch
+):
+    """DependencyNeedsBuildingError must propagate out of create_env immediately.
+
+    Its message embeds package specs, so it can false-positive match the
+    handler's "lock" substring check (e.g. a spec for "filelock"). Retrying a
+    definitive failure only wastes solver round-trips.
+    """
+    from conda_build import environ
+    from conda_build.exceptions import DependencyNeedsBuildingError
+
+    calls = []
+
+    def fake_get_package_records(prefix, specs, env, **kwargs):
+        calls.append(specs)
+        exc = DependencyNeedsBuildingError(packages=["filelock"], subdir="noarch")
+        # match the shape of the exception raised by conda-libmamba-solver's
+        # conda-build hook, which populates matchspecs (reflected in the
+        # message text that the "lock" substring check inspects)
+        exc.matchspecs = ["filelock >=3.0"]
+        raise exc
+
+    monkeypatch.setattr(environ, "get_package_records", fake_get_package_records)
+
+    with pytest.raises(DependencyNeedsBuildingError):
+        environ.create_env(
+            "unused-prefix",
+            ("filelock",),
+            env="host",
+            config=testing_config,
+            subdir="noarch",
+        )
+
+    # exactly one solver attempt: no retries for definitive unsatisfiability
+    assert len(calls) == 1
+
+
+def test_create_env_lock_error_raises_after_exhausted_retries(
+    testing_config, monkeypatch: MonkeyPatch
+):
+    """Lock errors are retried up to max_env_retry times, then re-raised.
+
+    Previously the exception was silently swallowed once retries were
+    exhausted, letting the build continue with a missing environment.
+    """
+    from conda.exceptions import CondaError
+
+    from conda_build import environ
+
+    calls = []
+
+    def fake_get_package_records(prefix, specs, env, **kwargs):
+        calls.append(specs)
+        raise CondaError("failed to acquire lock")
+
+    monkeypatch.setattr(environ, "get_package_records", fake_get_package_records)
+
+    with pytest.raises(CondaError):
+        environ.create_env(
+            "unused-prefix",
+            ("some-package",),
+            env="host",
+            config=testing_config,
+            subdir="noarch",
+        )
+
+    # initial attempt + max_env_retry retries
+    assert len(calls) == 1 + testing_config.max_env_retry
