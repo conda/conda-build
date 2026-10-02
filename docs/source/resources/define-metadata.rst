@@ -772,6 +772,8 @@ disable this with:
      include_recipe: False
 
 
+.. _script-env:
+
 Use environment variables
 -------------------------
 
@@ -1280,6 +1282,40 @@ Commands that are run as part of the test.
      commands:
        - bsdiff4 -h
        - bspatch4 -h
+
+
+.. _test-script-env:
+
+Test environment variables
+---------------------------
+
+Pass environment variables through to the test environment.
+This works identically to :ref:`build/script_env <script-env>`.
+
+.. code-block:: yaml
+
+   test:
+     script_env:
+       - MYVAR
+       - ANOTHER_VAR
+
+If a listed environment variable is missing from the environment
+seen by the conda-build process itself, a UserWarning is
+emitted during the test phase and the variable remains
+undefined.
+
+Values can also be set inline with ``=`` syntax:
+
+.. code-block:: yaml
+
+   test:
+     script_env:
+       - MY_VAR=some value
+
+.. note::
+   Environment variables inherited via ``test/script_env`` are only
+   visible during the test phase, not the build phase. Use
+   :ref:`build/script_env <script-env>` for build-time variables.
 
 
 Python imports

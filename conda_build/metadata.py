@@ -727,6 +727,7 @@ FIELDS = {
         "files": list,
         "imports": list,
         "source_files": list,
+        "script_env": list,
         "downstreams": list,
     },
     "about": {
