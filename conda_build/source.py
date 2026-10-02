@@ -49,6 +49,7 @@ git_submod_re = re.compile(r"(?:.+)\.(.+)\.(?:.+)\s(.+)")
 ext_re = re.compile(r"(.*?)(\.(?:tar\.)?[^.]+)$")
 ACCEPTED_HASH_TYPES = ("md5", "sha1", "sha224", "sha256", "sha384", "sha512")
 CONTENT_HASH_KEYS = ("content_sha256", "content_sha384", "content_sha512")
+CONTENT_HASH_KEYS_V2 = ("content_sha256_v2", "content_sha384_v2", "content_sha512_v2")
 
 
 def append_hash_to_fn(fn, hash_value):
@@ -1116,25 +1117,36 @@ def provide(metadata):
                 if not isdir(src_dir):
                     os.makedirs(src_dir)
 
-            for hash_type in CONTENT_HASH_KEYS:
-                if hash_type in source_dict:
-                    expected_content_hash = source_dict[hash_type]
-                    if expected_content_hash in (None, ""):
-                        raise ValueError(
-                            f"Empty {hash_type} hash provided for source item #{idx}"
+            skip = ensure_list(source_dict.get("content_hash_skip") or ())
+
+            def _check_content_hashes(content_hash_keys, legacy=False):
+                for hash_type in content_hash_keys:
+                    if hash_type in source_dict:
+                        expected_content_hash = source_dict[hash_type]
+                        if expected_content_hash in (None, ""):
+                            raise ValueError(
+                                f"Empty {hash_type} hash provided for source item #{idx}"
+                            )
+                        if legacy:
+                            algorithm = hash_type[len("content_") :]
+                        else:
+                            algorithm = hash_type[len("content_") : -len("_v2")]
+                        obtained_content_hash = compute_content_hash(
+                            src_dir,
+                            algorithm,
+                            skip=skip,
+                            legacy=legacy,
                         )
-                    algorithm = hash_type[len("content_") :]
-                    obtained_content_hash = compute_content_hash(
-                        src_dir,
-                        algorithm,
-                        skip=ensure_list(source_dict.get("content_hash_skip") or ()),
-                    )
-                    if expected_content_hash != obtained_content_hash:
-                        raise RuntimeError(
-                            f"{hash_type} mismatch in source item #{idx}: "
-                            f"obtained '{obtained_content_hash}' != "
-                            f"expected '{expected_content_hash}'"
-                        )
+                        if expected_content_hash != obtained_content_hash:
+                            raise RuntimeError(
+                                f"{hash_type} mismatch in source item #{idx}: "
+                                f"obtained '{obtained_content_hash}' != "
+                                f"expected '{expected_content_hash}'"
+                            )
+
+            # Un-versioned keys use the original CEP-19 algorithm (deprecated).
+            _check_content_hashes(CONTENT_HASH_KEYS, legacy=True)
+            _check_content_hashes(CONTENT_HASH_KEYS_V2)
             patches = ensure_list(source_dict.get("patches", []))
             patch_attributes_output = []
             for patch in patches:
