@@ -8,6 +8,7 @@ import os
 import pathlib
 import re
 import time
+import tomllib
 from functools import partial
 from io import StringIO, TextIOBase
 from subprocess import CalledProcessError
@@ -32,11 +33,6 @@ from .utils import (
     rm_rf,
 )
 from .variants import DEFAULT_COMPILERS
-
-try:
-    import tomllib  # Python 3.11
-except:
-    import tomli as tomllib
 
 if TYPE_CHECKING:
     from typing import IO, Any

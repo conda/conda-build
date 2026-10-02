@@ -92,18 +92,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # For PRs: test only boundary versions (3.10, 3.13)
-        # For main/schedule: test all versions (3.10, 3.12, 3.13)
-        # Note: 3.11 skipped as 3.10 and 3.12 provide sufficient coverage
-        python-version: ${{ github.event_name == 'pull_request' && fromJSON('["3.10", "3.13"]') || fromJSON('["3.10", "3.12", "3.13"]') }}
+        # For PRs: test only boundary versions (3.11, 3.13)
+        # For main/schedule: test all versions (3.11, 3.12, 3.13)
+        python-version: ${{ github.event_name == 'pull_request' && fromJSON('["3.11", "3.13"]') || fromJSON('["3.11", "3.12", "3.13"]') }}
         conda-version: [release]
         test-type: [serial, parallel]
         include:
           # minimum Python/conda combo
-          - python-version: '3.10'
+          - python-version: '3.11'
             conda-version: 26.1.0
             test-type: serial
-          - python-version: '3.10'
+          - python-version: '3.11'
             conda-version: 26.1.0
             test-type: parallel
           # maximum Python/conda combo
@@ -332,10 +331,10 @@ jobs:
       matrix:
         include:
           # test lower version (w/ stable conda)
-          - python-version: '3.10'
+          - python-version: '3.11'
             conda-version: release
             test-type: serial
-          - python-version: '3.10'
+          - python-version: '3.11'
             conda-version: release
             test-type: parallel
           # upper version (w/ canary conda)
@@ -472,11 +471,11 @@ jobs:
       matrix:
         include:
           # test lower version (w/ osx-64 & stable conda)
-          - python-version: '3.10'
+          - python-version: '3.11'
             conda-version: release
             test-type: serial
             runs-on: macos-15-intel  # osx-64
-          - python-version: '3.10'
+          - python-version: '3.11'
             conda-version: release
             test-type: parallel
             runs-on: macos-15-intel  # osx-64
