@@ -13,8 +13,8 @@ from conda_build import _link, convert, noarch_python, utils, windows
 from conda_build.exceptions import CondaBuildUserError
 
 
-@pytest.fixture
-def launcher_package(tmp_path, mocker):
+@pytest.fixture(params=["/", "\\"], ids=["posix", "windows"])
+def launcher_package(tmp_path, mocker, request):
     prefix = tmp_path / "launchers"
     paths = []
     for arch in ("32", "64", "arm64"):
@@ -26,7 +26,7 @@ def launcher_package(tmp_path, mocker):
             path.write_bytes(content)
             paths.append(
                 {
-                    "_path": short_path,
+                    "_path": short_path.replace("/", request.param),
                     "path_type": "hardlink",
                     "sha256": hashlib.sha256(content).hexdigest(),
                     "size_in_bytes": len(content),
@@ -81,7 +81,7 @@ def test_locate_conda_launcher_requires_owned_native_launcher(launcher_package, 
     record["paths_data"]["paths"] = [
         item
         for item in record["paths_data"]["paths"]
-        if item["_path"] != f"share/conda-launchers/cli-{arch}.exe"
+        if not item["_path"].endswith(f"cli-{arch}.exe")
     ]
     metadata.write_text(json.dumps(record))
 
@@ -238,7 +238,7 @@ def test_legacy_noarch_requires_native_launchers(
     record["paths_data"]["paths"] = [
         item
         for item in record["paths_data"]["paths"]
-        if item["_path"] != f"share/conda-launchers/cli-{arch}.exe"
+        if not item["_path"].endswith(f"cli-{arch}.exe")
     ]
     metadata.write_text(json.dumps(record))
     mocker.patch.object(noarch_python, "on_win", False)
