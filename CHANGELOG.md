@@ -1,5 +1,17 @@
 [//]: # (current developments)
 
+## 26.9.1 (2026-10-05)
+
+### Bug fixes
+
+* Recognize Windows launcher paths recorded with backslashes by older micromamba versions. (#6193)
+
+### Contributors
+
+* @jezdez
+
+
+
 ## 26.9.0 (2026-10-01)
 
 ### Enhancements
