@@ -56,7 +56,7 @@ from conda.base.constants import (
     KNOWN_SUBDIRS,
 )
 from conda.base.context import context
-from conda.common.path import unix_path_to_win, win_path_to_unix
+from conda.common.path import unix_path_to_win, win_path_backout, win_path_to_unix
 from conda.core.prefix_data import PrefixData
 from conda.exceptions import CondaError, CondaHTTPError
 from conda.gateways.connection.download import download
@@ -1119,7 +1119,12 @@ def locate_conda_launcher(
             "Install conda-launchers >=24.7.1 in the environment running conda-build."
         )
     path_data = next(
-        (path for path in record.paths_data.paths if path.path == short_path), None
+        (
+            path
+            for path in record.paths_data.paths
+            if win_path_backout(path.path) == short_path
+        ),
+        None,
     )
     if path_data is None:
         if arch != "32":
