@@ -1226,7 +1226,7 @@
   first_commit: 2020-11-19 10:46:41
 - name: Jannis Leidel
   email: jannis@leidel.info
-  num_commits: 65
+  num_commits: 64
   github: jezdez
   first_commit: 2020-11-19 10:46:41
 - name: Christof Kaufmann
@@ -1282,7 +1282,7 @@
 - name: Travis Hathaway
   email: travis.j.hathaway@gmail.com
   github: travishathaway
-  num_commits: 17
+  num_commits: 18
   first_commit: 2022-05-12 05:53:02
 - name: Kyle Leaders
   email: remkade@users.noreply.github.com
