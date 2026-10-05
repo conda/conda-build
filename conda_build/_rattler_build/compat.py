@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import os
+import re
 import sys
 import time
 from contextlib import closing
 from dataclasses import dataclass, field
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import TYPE_CHECKING
 
 import yaml
@@ -438,6 +440,80 @@ def test_v1_package(package_path: str | os.PathLike, config: Config) -> bool:
     return True
 
 
+def _load_variant_config(path: str, config: Config) -> VariantConfig:
+    contents = Path(path).read_text(encoding="utf-8")
+    jinja_config = JinjaConfig(
+        platform=PlatformConfig(
+            build_platform=config.build_subdir,
+            target_platform=config.host_subdir,
+        )
+    )
+    try:
+        tokens = tuple(yaml.scan(contents))
+        lines = contents.splitlines(keepends=True)
+        selectors = {}
+        offset = 0
+        for index, line in enumerate(lines):
+            for match in re.finditer("#", line):
+                if any(
+                    token.start_mark.index
+                    <= offset + match.start()
+                    < token.end_mark.index
+                    for token in tokens
+                ):
+                    continue
+                # Only actual comments can select a line, not quoted or block scalars.
+                if line[: match.start()].strip() and re.fullmatch(
+                    r"#\s*\[.*\]\s*", line[match.start() :]
+                ):
+                    selectors[str(index)] = line[match.start() :].strip()
+                break
+            offset += len(line)
+
+        if selectors:
+            # Reuse rattler's legacy selector context and functions without parsing values.
+            with TemporaryDirectory() as directory:
+                selector_file = Path(directory, "conda_build_config.yaml")
+                selector_file.write_text(
+                    "selected_lines:\n"
+                    + "".join(
+                        f"  - {index} {comment}\n"
+                        for index, comment in selectors.items()
+                    ),
+                    encoding="utf-8",
+                )
+                selected = VariantConfig.from_conda_build_config(
+                    selector_file, jinja_config
+                ).get("selected_lines", [])
+            for index in selectors:
+                if index not in selected:
+                    lines[int(index)] = "\n"
+
+        node = yaml.compose("".join(lines))
+        if node is None:
+            return VariantConfig()
+        if isinstance(node, yaml.MappingNode):
+            node.value = [
+                (key, value)
+                for key, value in node.value
+                if value.tag != "tag:yaml.org,2002:null"
+            ]
+            for index, (key, value) in enumerate(node.value):
+                if key.value not in {"zip_keys", "pin_run_as_build"} and isinstance(
+                    value, yaml.ScalarNode
+                ):
+                    node.value[index] = (
+                        key,
+                        yaml.SequenceNode("tag:yaml.org,2002:seq", [value]),
+                    )
+        # Keep YAML scalar text and types, including version numbers such as 3.10.
+        return VariantConfig.from_yaml_with_context(yaml.serialize(node), jinja_config)
+    except (yaml.YAMLError, RattlerBuildError) as error:
+        raise CondaBuildUserError(
+            f"Invalid variant configuration in {path}: {error}"
+        ) from error
+
+
 def run_rattler(
     command: str, parsed_args: argparse.Namespace, config: Config
 ) -> str | int:
@@ -514,20 +590,7 @@ def run_rattler(
     # merge config files in the order they are stacked
     if config_files:
         for variant in config_files:
-            if Path(variant).name == "conda_build_config.yaml":
-                # legacy conda-build format
-                jinja_config = JinjaConfig(
-                    platform=PlatformConfig(
-                        build_platform=config.build_subdir,
-                        target_platform=config.host_subdir,
-                    )
-                )
-
-                variant_config = variant_config.merge(
-                    VariantConfig.from_conda_build_config(variant, jinja_config)
-                )
-            else:
-                variant_config = variant_config.merge(VariantConfig.from_file(variant))
+            variant_config = variant_config.merge(_load_variant_config(variant, config))
 
     def get_config_value(name, fallback=None):
         value = variant_config.get(name, fallback)
