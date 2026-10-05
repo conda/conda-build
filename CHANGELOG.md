@@ -9,7 +9,6 @@
 ### Contributors
 
 * @jezdez
-* @travishathaway
 
 
 
