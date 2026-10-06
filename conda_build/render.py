@@ -132,7 +132,7 @@ def _categorize_deps(m, specs, exclude_pattern, variant):
     subpackages = []
     dependencies = []
     pass_through_deps = []
-    dash_or_under = re.compile("[-_]")
+    separator = utils.variant_key_separator_re
     # ones that get filtered from actual versioning, to exclude them from the hash calculation
     for spec in specs:
         if not exclude_pattern or not exclude_pattern.match(spec):
@@ -147,8 +147,8 @@ def _categorize_deps(m, specs, exclude_pattern, variant):
                 dependencies.append(spec)
             # fill in variant version iff no version at all is provided
             for key, value in variant.items():
-                # for sake of comparison, ignore dashes and underscores
-                if dash_or_under.sub("", key) == dash_or_under.sub(
+                # for sake of comparison, ignore dashes, underscores, and dots
+                if separator.sub("", key) == separator.sub(
                     "", spec_name
                 ) and not re.search(rf"{spec_name}\s+[0-9a-zA-Z\_\.\<\>\=\*]", spec):
                     dependencies.append(" ".join((spec_name, value)))

@@ -536,6 +536,22 @@ def test_variants_used_in_jinja2_conditionals():
     )
 
 
+def test_variant_key_matches_dotted_requirement_name():
+    """Regression test for https://github.com/conda/conda-build/issues/6200"""
+    metadata_tuples = api.render(
+        os.path.join(variants_dir, "34_dotted_requirement_name"),
+        finalize=False,
+        bypass_env_check=True,
+    )
+    assert len(metadata_tuples) == 2
+    for metadata, _, _ in metadata_tuples:
+        assert "libfoo_4_0" in metadata.get_used_vars()
+    assert {
+        tuple(metadata.meta["requirements"]["host"])
+        for metadata, _, _ in metadata_tuples
+    } == {("libfoo-4.0 4.0.*",), ("libfoo-4.0 4.1.*",)}
+
+
 def test_build_run_exports_act_on_host(caplog):
     """Regression test for https://github.com/conda/conda-build/issues/2559"""
     api.render(
@@ -915,6 +931,16 @@ def test_get_vars():
             ("zlib", "xz", "ace"),
             "{%set p = azlib.replace('.', '') ~ xz ~ 'a'%}",
             {"xz"},
+        ),
+        (
+            ("libfoo_4", "libfoo_4_0"),
+            "    - libfoo-4",
+            {"libfoo_4"},
+        ),
+        (
+            ("libfoo_4", "libfoo_4_0"),
+            "    - libfoo-4.0",
+            {"libfoo_4_0"},
         ),
     ],
 )
