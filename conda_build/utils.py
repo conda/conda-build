@@ -2020,13 +2020,25 @@ def ensure_valid_spec(spec: str | MatchSpec, warn: bool = False) -> str | MatchS
     return spec
 
 
+# A requirement name is matched to a variant key with "-", "_", and "." treated as
+# equivalent, e.g. the key "libxmlpp_4_0" pins the requirement "libxmlpp-4.0".
+# rattler-build normalizes variant keys in the same way.
+variant_key_separator_re = re.compile("[-_.]")
+
+
+def normalize_variant_key(name: str) -> str:
+    return variant_key_separator_re.sub("_", name)
+
+
 def insert_variant_versions(requirements_dict, variant, env):
     build_deps = ensure_list(requirements_dict.get("build")) + ensure_list(
         requirements_dict.get("host")
     )
     reqs = ensure_list(requirements_dict.get(env))
     for key, val in variant.items():
-        regex = re.compile(r"^({})(?:\s*$)".format(key.replace("_", "[-_]")))
+        regex = re.compile(
+            r"^({})(?:\s*$)".format(key.replace("_", variant_key_separator_re.pattern))
+        )
         matches = [regex.match(pkg) for pkg in reqs]
         if any(matches):
             for i, x in enumerate(matches):
