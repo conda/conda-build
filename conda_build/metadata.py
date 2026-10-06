@@ -1192,8 +1192,12 @@ def trim_build_only_deps(metadata, requirements_used):
     build_reqs = utils.ensure_list(output_reqs.get("build", []))
     host_reqs = utils.ensure_list(output_reqs.get("host", []))
     run_reqs = output_reqs.get("run", [])
-    build_reqs = {req.split()[0].replace("-", "_") for req in build_reqs if req}
-    host_reqs = {req.split()[0].replace("-", "_") for req in host_reqs if req}
+    build_reqs = {
+        utils.normalize_variant_key(req.split()[0]) for req in build_reqs if req
+    }
+    host_reqs = {
+        utils.normalize_variant_key(req.split()[0]) for req in host_reqs if req
+    }
 
     to_remove = set()
     ignore_build_only_deps = sorted(
