@@ -4,6 +4,39 @@
 conda-build
 ===========
 
+Limit dependency publication dates
+---------------------------------
+
+With conda 26.9 or newer, use ``--exclude-newer`` to limit the packages selected
+for build, host, and test environments::
+
+   conda build recipe/ --exclude-newer 2026-04-01
+   conda build recipe/ --exclude-newer 7d
+
+Conda parses the cutoff. A date includes the entire UTC day, while a duration
+is resolved relative to the start of the build configuration. Copies of that
+configuration use the same reference time. If the option is omitted,
+``exclude_newer`` in ``.condarc`` or ``CONDA_EXCLUDE_NEWER`` is used. Channel
+and package overrides follow conda's ``channel_settings`` and
+``exclude_newer_package`` settings.
+
+Packages in the build output channel remain available regardless of the global
+or channel cutoff so that newly built outputs can be tested and used by other
+outputs. An explicit per-package cutoff still takes precedence. Other local
+channels obey the configured cutoff.
+
+For ``meta.yaml`` recipes, the configured conda solver must support the required
+policy scopes. The classic solver supports all scopes with conda 26.9 or newer.
+For ``recipe.yaml`` recipes, a py-rattler-build release with exclude-newer policy
+support is also required. Rattler-build resolves these dependencies independently
+of the configured conda solver. Older bindings report an error when a cutoff is
+requested.
+
+Publication dates limit dependency selection but do not guarantee an identical
+rebuild. The conda solver policy prefers ``indexed_timestamp`` when available and
+otherwise uses the package's ``timestamp``. Rattler-build currently uses
+``timestamp``. Packages without timestamps remain eligible with both backends.
+
 .. raw:: html
 
    <PRE>
