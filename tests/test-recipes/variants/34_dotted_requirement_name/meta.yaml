@@ -1,0 +1,9 @@
+package:
+  name: dotted_requirement_name
+  version: 1.0
+
+requirements:
+  host:
+    - libfoo-4.0
+  run:
+    - libfoo-4.0
