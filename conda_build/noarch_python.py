@@ -84,7 +84,7 @@ def handle_file(f, d, prefix):
     else:
         # this should be the built-in logging module, not conda-build's stuff, because this file is standalone.
         log = logging.getLogger(__name__)
-        log.debug(f"Don't know how to handle file: {f}.  Including it as-is.")
+        log.debug("Don't know how to handle file: %s.  Including it as-is.", f)
 
 
 def populate_files(m, files, prefix, entry_point_scripts=None):

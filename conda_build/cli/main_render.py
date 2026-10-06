@@ -236,7 +236,8 @@ def execute(args: Sequence[str] | None = None) -> int:
     if parsed.file and len(metadata_tuples) > 1:
         log.warning(
             "Multiple variants rendered. "
-            f"Only one will be written to the file you specified ({parsed.file})."
+            "Only one will be written to the file you specified (%s).",
+            parsed.file,
         )
 
     if parsed.output:
