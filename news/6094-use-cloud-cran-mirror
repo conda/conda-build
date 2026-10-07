@@ -1,6 +1,10 @@
 ### Enhancements
 
-* <news item>
+* Switch `cran_mirror` to use https://cloud.r-project.org/, a cloud mirror of
+  CRAN that auto-redirects to the optimal server based on where the user is
+  located. Note that recipes referencing `{{ cran_mirror }}` without pinning
+  `cran_mirror` in their variant configuration include the mirror URL in their
+  package hash, so rebuilding such recipes produces a new build string. (#6094)
 
 ### Bug fixes
 
