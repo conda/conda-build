@@ -741,10 +741,32 @@ def get_cran_index(cran_url, session, verbose=True):
         if p.endswith(".tar.gz") and "_" in p:
             name, version = p.rsplit(".", 2)[0].split("_", 1)
             records[name.lower()] = (name, version)
-    r = session.get(cran_url + "/src/contrib/Archive/")
-    r.raise_for_status()
+    if not records:
+        sys.exit(
+            f"Error: no package listing could be parsed from {cran_url}/src/contrib/; "
+            "the mirror may serve an unsupported directory listing format"
+        )
+    try:
+        r = session.get(cran_url + "/src/contrib/Archive/")
+        r.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        # The full Archive listing is several megabytes and mirrors sometimes
+        # time out or fail generating it. Carry on with an index of just the
+        # currently published packages rather than failing the whole run.
+        print(
+            f"Warning: CRAN archive index is unavailable ({e}); the package "
+            "index is incomplete and archived packages will appear to be missing"
+        )
+        return records
     listing_dir = re.compile(r'<a href="([^"/:?#]+)/"[^>]*>[^<]*</a>')
-    for p in listing_dir.findall(r.text):
+    archive_dirs = listing_dir.findall(r.text)
+    if not archive_dirs:
+        print(
+            "Warning: no archived packages could be parsed from the CRAN "
+            f"archive index at {cran_url}/src/contrib/Archive/; the package "
+            "index is incomplete and archived packages will appear to be missing"
+        )
+    for p in archive_dirs:
         if re.match(r"^[A-Za-z]", p):
             records.setdefault(p.lower(), (p, None))
     return records
@@ -1092,6 +1114,12 @@ def skeletonize(
                 all_versions = get_cran_archive_versions(cran_url, session, package)
                 if cran_version:
                     all_versions = [cran_version] + all_versions
+                if not all_versions:
+                    print(
+                        f"ERROR: No versions of package {package} found in the "
+                        f"archive at {cran_url}"
+                    )
+                    sys.exit(1)
                 if not version:
                     version = all_versions[0]
                 elif version not in all_versions:

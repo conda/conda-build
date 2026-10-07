@@ -333,6 +333,37 @@ def test_get_cran_index(main_index, archive_index):
 
 
 @pytest.mark.parametrize(
+    "archive_failure",
+    [
+        pytest.param(make_response(status_code=504), id="http-error"),
+        pytest.param(requests.exceptions.ReadTimeout("timed out"), id="timeout"),
+        pytest.param(
+            requests.exceptions.ConnectionError("connection reset"), id="connection"
+        ),
+    ],
+)
+@pytest.mark.parametrize(
+    "main_index",
+    [
+        pytest.param(FANCY_MAIN_INDEX, id="fancy"),
+        pytest.param(PLAIN_MAIN_INDEX, id="plain"),
+    ],
+)
+def test_get_cran_index_archive_unavailable(main_index, archive_failure, capsys):
+    session = MockSession(
+        {
+            f"{CRAN_URL}/src/contrib/": make_response(main_index),
+            f"{CRAN_URL}/src/contrib/Archive/": archive_failure,
+        }
+    )
+    assert get_cran_index(CRAN_URL, session) == {
+        "data.table": ("data.table", "1.18.4"),
+        "matrix": ("Matrix", "1.7-1"),
+    }
+    assert "CRAN archive index is unavailable" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize(
     "archive_listing",
     [
         pytest.param(FANCY_RPART_ARCHIVE, id="fancy"),
@@ -352,6 +383,17 @@ def test_get_cran_archive_versions(archive_listing):
         "1.1-1",
         "1.0-6",
     ]
+
+
+def test_get_cran_index_unparseable():
+    # A mirror serving a listing format the parser does not recognize (e.g. a
+    # custom-templated index) must fail loudly instead of returning an empty
+    # index that downstream misreports as "Package not found".
+    session = MockSession(
+        {f"{CRAN_URL}/src/contrib/": make_response("<html>themed mirror</html>")}
+    )
+    with pytest.raises(SystemExit, match="no package listing could be parsed"):
+        get_cran_index(CRAN_URL, session)
 
 
 def test_get_cran_archive_versions_missing():
