@@ -1,0 +1,22 @@
+### Enhancements
+
+* <news item>
+
+### Bug fixes
+
+* Teach the CRAN skeleton to parse every directory listing format served by
+  CRAN mirrors: Apache fancy tables, Apache plain pre-formatted text and nginx
+  autoindex, whose timestamps are also normalized so archived versions still
+  sort newest first. (#6094)
+
+### Deprecations
+
+* <news item>
+
+### Docs
+
+* <news item>
+
+### Other
+
+* <news item>

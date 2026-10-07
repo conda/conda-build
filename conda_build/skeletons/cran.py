@@ -675,6 +675,38 @@ def get_session(output_dir, verbose=True):
     return session
 
 
+# CRAN mirrors serve directory listings in several flavours: Apache fancy
+# tables (cran.r-project.org), Apache plain pre-formatted text
+# (cloud.r-project.org) and nginx autoindex, so match the anchors alone
+# rather than relying on the surrounding <td> markup. The anchor text cannot
+# be trusted either: Apache (NameWidth) and nginx truncate long names to
+# "name..>", and some mirrors add extra attributes such as title="...", so
+# parse the href — restricted to bare file or directory names — and ignore
+# the display text.
+_LISTING_FILE = re.compile(r'<a href="([^"/:?#]+)"[^>]*>[^<]*</a>')
+
+
+def _sortable_listing_date(date):
+    """Normalize a directory listing timestamp so it sorts chronologically.
+
+    nginx autoindex dates ("08-Apr-1999 11:06") are rewritten into the Apache
+    form ("1999-04-08 11:06") so that a plain lexical sort stays correct.
+    """
+    months = "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split()
+    # Only the English abbreviations match, so a date with an unrecognized
+    # month (e.g. a localized abbreviation) is left alone rather than
+    # rewritten into a fake-but-sortable timestamp.
+    match = re.fullmatch(
+        rf"(\d{{2}})-({'|'.join(months)})-(\d{{4}}) (\d{{2}}:\d{{2}})",
+        date,
+        flags=re.IGNORECASE,
+    )
+    if not match:
+        return date
+    day, month, year, time = match.groups()
+    return f"{year}-{months.index(month.title()) + 1:02d}-{day} {time}"
+
+
 def get_cran_archive_versions(cran_url, session, package, verbose=True):
     if verbose:
         print(f"Fetching archived versions for package {package} from {cran_url}")
@@ -687,12 +719,15 @@ def get_cran_archive_versions(cran_url, session, package, verbose=True):
             return []
         raise
     versions = []
-    for p, dt in re.findall(
-        r'<td><a href="([^"]+)">\1</a></td>\s*<td[^>]*>([^<]*)</td>', r.text
-    ):
+    # Apache dates read "1999-04-08 11:06", nginx autoindex "08-Apr-1999 11:06".
+    listing_file_date = re.compile(
+        _LISTING_FILE.pattern + r"\s*(?:</td>\s*<td[^>]*>\s*)?"
+        r"(\d{4}-\d{2}-\d{2} \d{2}:\d{2}|\d{2}-[A-Za-z]{3}-\d{4} \d{2}:\d{2})"
+    )
+    for p, dt in listing_file_date.findall(r.text):
         if p.endswith(".tar.gz") and "_" in p:
             name, version = p.rsplit(".", 2)[0].split("_", 1)
-            versions.append((dt.strip(), version))
+            versions.append((_sortable_listing_date(dt), version))
     return [v for dt, v in sorted(versions, reverse=True)]
 
 
@@ -702,13 +737,14 @@ def get_cran_index(cran_url, session, verbose=True):
     r = session.get(cran_url + "/src/contrib/")
     r.raise_for_status()
     records = {}
-    for p in re.findall(r'<td><a href="([^"]+)">\1</a></td>', r.text):
+    for p in _LISTING_FILE.findall(r.text):
         if p.endswith(".tar.gz") and "_" in p:
             name, version = p.rsplit(".", 2)[0].split("_", 1)
             records[name.lower()] = (name, version)
     r = session.get(cran_url + "/src/contrib/Archive/")
     r.raise_for_status()
-    for p in re.findall(r'<td><a href="([^"]+)/">\1/</a></td>', r.text):
+    listing_dir = re.compile(r'<a href="([^"/:?#]+)/"[^>]*>[^<]*</a>')
+    for p in listing_dir.findall(r.text):
         if re.match(r"^[A-Za-z]", p):
             records.setdefault(p.lower(), (p, None))
     return records
@@ -850,7 +886,7 @@ def get_available_binaries(cran_url, details):
     response = requests.get(url)
     response.raise_for_status()
     ext = details["ext"]
-    for filename in re.findall(r'<a href="([^"]*)">\1</a>', response.text):
+    for filename in _LISTING_FILE.findall(response.text):
         if filename.endswith(ext):
             pkg, _, ver = filename.rpartition("_")
             ver, _, _ = ver.rpartition(ext)
