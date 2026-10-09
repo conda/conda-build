@@ -26,7 +26,6 @@ from conda.base.constants import (
     UNKNOWN_CHANNEL,
 )
 from conda.base.context import context, reset_context
-from conda.common.io import env_vars
 from conda.core.link import PrefixSetup, UnlinkLinkTransaction
 from conda.core.package_cache_data import PackageCacheData, ProgressiveFetchExtract
 from conda.core.prefix_data import PrefixData
@@ -52,6 +51,7 @@ from .utils import (
     CONDA_PACKAGE_EXTENSIONS,
     ensure_list,
     env_var,
+    env_vars,
     on_mac,
     on_win,
     package_record_to_requirement,
