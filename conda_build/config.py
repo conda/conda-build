@@ -18,14 +18,12 @@ from enum import Enum
 from os.path import abspath, expanduser, expandvars, join
 from typing import TYPE_CHECKING
 
-from conda.base.constants import (
-    CONDA_PACKAGE_EXTENSION_V1,
-    CONDA_PACKAGE_EXTENSION_V2,  # noqa: F401
-)
 from conda.base.context import context
 from conda.utils import url_path
 
 from .utils import (
+    CONDA_PACKAGE_EXTENSION_V1,
+    CONDA_PACKAGE_EXTENSION_V2,
     get_build_folders,
     get_conda_operation_locks,
     get_logger,
