@@ -50,11 +50,7 @@ import conda_package_handling.api
 import filelock
 import libarchive
 import yaml
-from conda.base.constants import (
-    CONDA_PACKAGE_EXTENSION_V1,
-    CONDA_PACKAGE_EXTENSION_V2,
-    KNOWN_SUBDIRS,
-)
+from conda.base.constants import KNOWN_SUBDIRS
 from conda.base.context import context
 from conda.common.path import unix_path_to_win, win_path_backout, win_path_to_unix
 from conda.core.prefix_data import PrefixData
@@ -71,13 +67,16 @@ from .exceptions import BuildLockError, CondaBuildUserError
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
-    from typing import Literal, TypeVar
+    from typing import Final, Literal, TypeVar
 
     from .metadata import MetaData
 
     T = TypeVar("T")
     K = TypeVar("K")
     V = TypeVar("V")
+
+CONDA_PACKAGE_EXTENSION_V1: Final = ".tar.bz2"
+CONDA_PACKAGE_EXTENSION_V2: Final = ".conda"
 
 CONDA_PACKAGE_EXTENSIONS = (CONDA_PACKAGE_EXTENSION_V2, CONDA_PACKAGE_EXTENSION_V1)
 
