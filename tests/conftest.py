@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from __future__ import annotations
 
+import hashlib
 import io
 import json
 import os
@@ -14,7 +15,6 @@ import warnings
 from collections import defaultdict
 from pathlib import Path
 from typing import TYPE_CHECKING
-import hashlib
 
 import pytest
 from conda.base.context import context, reset_context
