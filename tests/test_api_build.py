@@ -28,7 +28,7 @@ import yaml
 from binstar_client.commands import remove, show
 from binstar_client.errors import NotFound
 from conda import __version__ as conda_version
-from conda.base.context import context, reset_context
+from conda.base.context import context, reset_context, Context
 from conda.common.compat import on_linux, on_mac, on_win
 from conda.exceptions import ClobberError, CondaError, CondaMultiError, LinkError
 from conda.utils import url_path
@@ -2097,11 +2097,12 @@ def test_rendered_is_reported(testing_config, capsys):
 
 
 @pytest.mark.skipif(on_win, reason="Tests cross-compilation targeting Windows")
-def test_cross_unix_windows_mingw(testing_config):
+def test_cross_unix_windows_mingw(
+    testing_config, offline_mingw_sysroot_channel, monkeypatch
+):
     recipe = os.path.join(metadata_dir, "_cross_unix_windows_mingw")
-    testing_config.channel_urls = [
-        "conda-forge",
-    ]
+    monkeypatch.setattr(Context, "channels", property(lambda self: ()))
+    testing_config.channel_urls = [offline_mingw_sysroot_channel]
     api.build(recipe, config=testing_config)
 
 
