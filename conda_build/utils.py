@@ -50,11 +50,7 @@ import conda_package_handling.api
 import filelock
 import libarchive
 import yaml
-from conda.base.constants import (
-    CONDA_PACKAGE_EXTENSION_V1,
-    CONDA_PACKAGE_EXTENSION_V2,
-    KNOWN_SUBDIRS,
-)
+from conda.base.constants import KNOWN_SUBDIRS
 from conda.base.context import context
 from conda.common.path import unix_path_to_win, win_path_backout, win_path_to_unix
 from conda.core.prefix_data import PrefixData
@@ -70,14 +66,17 @@ from conda.models.version import VersionOrder
 from .exceptions import BuildLockError, CondaBuildUserError
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
-    from typing import Literal, TypeVar
+    from collections.abc import Callable, Generator, Mapping
+    from typing import Final, Literal, TypeVar
 
     from .metadata import MetaData
 
     T = TypeVar("T")
     K = TypeVar("K")
     V = TypeVar("V")
+
+CONDA_PACKAGE_EXTENSION_V1: Final = ".tar.bz2"
+CONDA_PACKAGE_EXTENSION_V2: Final = ".conda"
 
 CONDA_PACKAGE_EXTENSIONS = (CONDA_PACKAGE_EXTENSION_V2, CONDA_PACKAGE_EXTENSION_V1)
 
@@ -1541,25 +1540,79 @@ def capture():
         out[1] = out[1].getvalue()
 
 
-# copied from conda; added in 4.3, not currently part of exported functionality
+def encode_for_env_var(value) -> str:
+    """Environment names and values need to be string."""
+    if isinstance(value, str):
+        return value
+    elif isinstance(value, bytes):
+        return value.decode()
+    return str(value)
+
+
+def encode_environment(env):
+    return {encode_for_env_var(k): encode_for_env_var(v) for k, v in env.items()}
+
+
 @contextlib.contextmanager
-def env_var(name, value, callback=None):
-    # NOTE: will likely want to call reset_context() when using this function, so pass
-    #       it as callback
-    name, value = str(name), str(value)
-    saved_env_var = os.environ.get(name)
-    try:
+def env_vars(
+    var_map: dict[str, str] | None = None,
+    callback: Callable[[], None] | None = None,
+    stack_callback: Callable[[bool], None] | None = None,
+) -> Generator[None, None, None]:
+    """Temporarily set environment variables.
+
+    Args:
+        var_map: Dictionary of environment variable names to values.
+        callback: Optional callback invoked when entering and exiting the context.
+        stack_callback: Optional callback invoked with True when entering, False when exiting.
+    """
+    if var_map is None:
+        var_map = {}
+
+    new_var_map = encode_environment(var_map)
+    saved_vars = {}
+    for name, value in new_var_map.items():
+        saved_vars[name] = os.environ.get(name)
         os.environ[name] = value
+    try:
         if callback:
             callback()
+        if stack_callback:
+            stack_callback(True)
         yield
     finally:
-        if saved_env_var:
-            os.environ[name] = saved_env_var
-        else:
-            del os.environ[name]
+        for name, value in saved_vars.items():
+            if value is None:
+                del os.environ[name]
+            else:
+                os.environ[name] = value
         if callback:
             callback()
+        if stack_callback:
+            stack_callback(False)
+
+
+# copied from conda; added in 4.3, not currently part of exported functionality
+@contextlib.contextmanager
+def env_var(
+    name: str,
+    value: str,
+    callback: Callable[[], None] | None = None,
+):
+    """Temporarily set a single environment variable.
+
+    Users will likely want to call reset_context() when using this function,
+    so pass it as callback.
+
+    Args:
+        name: Environment variable name.
+        value: Environment variable value.
+        callback: Optional callback invoked when entering and exiting the context.
+        stack_callback: Optional callback invoked with True when entering, False when exiting.
+    """
+    d = {name: value}
+    with env_vars(d, callback=callback) as es:
+        yield es
 
 
 def trim_empty_keys(dict_):
