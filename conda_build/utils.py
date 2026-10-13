@@ -66,8 +66,8 @@ from conda.models.version import VersionOrder
 from .exceptions import BuildLockError, CondaBuildUserError
 
 if TYPE_CHECKING:
-    from typing import Final, Literal, TypeVar
     from collections.abc import Callable, Generator, Mapping
+    from typing import Final, Literal, TypeVar
 
     from .metadata import MetaData
 
