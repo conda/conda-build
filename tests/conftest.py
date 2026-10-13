@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from __future__ import annotations
 
+import hashlib
 import io
 import json
 import os
@@ -426,6 +427,61 @@ def _write_fake_conda_package(
         tf.addfile(info, io.BytesIO(data))
 
 
+def _write_fake_conda_package_with_files(
+    subdir_path: str,
+    name: str,
+    version: str,
+    subdir: str,
+    *,
+    build: str,
+    depends: list[str],
+    files: dict[str, str],
+    noarch: str | None = None,
+) -> None:
+    """Write a fake ``.tar.bz2`` that conda can install, not only solve against.
+
+    ``files`` maps paths relative to the prefix to their contents.
+    """
+    index_json = {
+        "name": name,
+        "version": version,
+        "build": build,
+        "build_number": 0,
+        "depends": depends,
+        "subdir": subdir,
+        "timestamp": 0,
+    }
+    if noarch:
+        index_json["noarch"] = noarch
+
+    archive_files = {
+        "info/index.json": json.dumps(index_json).encode("utf-8"),
+    }
+    paths = []
+    for relpath, content in files.items():
+        data = content.encode("utf-8")
+        archive_files[relpath] = data
+        paths.append(
+            {
+                "_path": relpath,
+                "path_type": "hardlink",
+                "sha256": hashlib.sha256(data).hexdigest(),
+                "size_in_bytes": len(data),
+            }
+        )
+    archive_files["info/paths.json"] = json.dumps(
+        {"paths_version": 1, "paths": paths}
+    ).encode("utf-8")
+    archive_files["info/files"] = "\n".join(files).encode("utf-8")
+
+    fname = f"{name}-{version}-{build}.tar.bz2"
+    with tarfile.open(os.path.join(subdir_path, fname), "w:bz2") as tf:
+        for archive_path, data in archive_files.items():
+            info = tarfile.TarInfo(name=archive_path)
+            info.size = len(data)
+            tf.addfile(info, io.BytesIO(data))
+
+
 @pytest.fixture
 def offline_cross_python_channel(tmp_path, testing_config):
     """Provide target Python packages and separate build and host dependencies."""
@@ -445,5 +501,35 @@ def offline_cross_python_channel(tmp_path, testing_config):
         _write_fake_conda_package(
             str(channel_dir / target_subdir), "python", version, target_subdir
         )
+    update_index(str(channel_dir))
+    return url_path(str(channel_dir))
+
+
+@pytest.fixture
+def offline_mingw_sysroot_channel(tmp_path):
+    channel_dir = tmp_path / "offline-mingw-channel"
+    noarch_path = channel_dir / "noarch"
+    noarch_path.mkdir(parents=True)
+
+    _write_fake_conda_package_with_files(
+        str(noarch_path),
+        "m2w64-sysroot_win-64",
+        "1.0",
+        "noarch",
+        build="h_unix_0",
+        depends=["__unix"],
+        files={"x86_64-w64-mingw32/.keep": ""},
+        noarch="generic",
+    )
+    _write_fake_conda_package_with_files(
+        str(noarch_path),
+        "m2w64-sysroot_win-64",
+        "1.0",
+        "noarch",
+        build="h_win_0",
+        depends=["__win"],
+        files={"Library/.keep": ""},
+        noarch="generic",
+    )
     update_index(str(channel_dir))
     return url_path(str(channel_dir))
