@@ -38,7 +38,6 @@ from conda.exceptions import (
     UnsatisfiableError,
 )
 from conda.gateways.disk.create import TemporaryDirectory
-from conda.models.channel import Channel
 from conda.models.match_spec import MatchSpec
 from conda.models.records import PackageRecord
 
@@ -64,6 +63,7 @@ if TYPE_CHECKING:
     from typing import Any, TypedDict
 
     from conda.core.index import Index
+    from conda.models.channel import Channel
 
     from .config import Config
     from .metadata import MetaData
@@ -1464,23 +1464,18 @@ def _display_actions(prefix, precs):
 
     show_channel_urls = context.show_channel_urls
 
-    def channel_str(rec):
-        if rec.get("channel_name"):
-            return rec["channel_name"]
-        if rec.get("schannel"):
-            return rec["schannel"]
-        if rec.get("url"):
-            return Channel(rec["url"]).canonical_name
-        if rec.get("channel"):
-            return Channel(rec["channel"]).canonical_name
-        return UNKNOWN_CHANNEL
-
-    def channel_filt(s):
+    def channel_filt(channel):
         if show_channel_urls is False:
             return ""
-        if show_channel_urls is None and s == DEFAULTS_CHANNEL_NAME:
+        if (
+            show_channel_urls is None
+            and channel.canonical_name == DEFAULTS_CHANNEL_NAME
+        ):
             return ""
-        return s
+        # Use the channel name, not the canonical multichannel alias.
+        # This allows to more easily see which channel is used, even if the record
+        # is coming from a multichannel.
+        return channel.name or UNKNOWN_CHANNEL
 
     packages = defaultdict(lambda: "")
     features = defaultdict(lambda: "")
@@ -1489,7 +1484,7 @@ def _display_actions(prefix, precs):
     for prec in precs:
         assert isinstance(prec, PackageRecord)
         pkg = prec["name"]
-        channels[pkg] = channel_filt(channel_str(prec))
+        channels[pkg] = channel_filt(prec.channel)
         packages[pkg] = prec["version"] + "-" + prec["build"]
         features[pkg] = ",".join(prec.get("features") or ())
 
