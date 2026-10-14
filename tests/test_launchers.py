@@ -74,7 +74,7 @@ def test_locate_conda_launcher_rejects_invalid_source(launcher_package, problem,
         utils.locate_conda_launcher(arch)
 
 
-@pytest.mark.parametrize("arch", ["64", "arm64"])
+@pytest.mark.parametrize("arch", ["32", "64", "arm64"])
 def test_locate_conda_launcher_requires_owned_native_launcher(launcher_package, arch):
     metadata = launcher_package / "conda-meta/conda-launchers-24.7.1-0.json"
     record = json.loads(metadata.read_text())
@@ -100,39 +100,6 @@ def test_locate_conda_launcher_rechecks_source(launcher_package):
     Path(path).write_bytes(b"changed after initial use")
     with pytest.raises(CondaBuildUserError, match="SHA256 mismatch"):
         utils.locate_conda_launcher("arm64")
-
-
-@pytest.mark.parametrize("kind", ["cli", "gui"])
-def test_locate_conda_launcher_uses_bundled_win32(launcher_package, kind):
-    metadata = launcher_package / "conda-meta/conda-launchers-24.7.1-0.json"
-    record = json.loads(metadata.read_text())
-    record["paths_data"]["paths"] = [
-        item for item in record["paths_data"]["paths"] if "-32.exe" not in item["_path"]
-    ]
-    metadata.write_text(json.dumps(record))
-
-    path = utils.locate_conda_launcher("32", launcher_type=kind)
-    assert path == str(Path(utils.__file__).with_name(f"{kind}-32.exe"))
-
-    assert Path(utils.locate_conda_launcher("64")).read_bytes() == b"cli-64"
-
-
-@pytest.mark.parametrize("problem", ["missing", "modified"])
-def test_locate_conda_launcher_rejects_invalid_bundled_win32(
-    launcher_package, tmp_path, mocker, problem
-):
-    metadata = launcher_package / "conda-meta/conda-launchers-24.7.1-0.json"
-    record = json.loads(metadata.read_text())
-    record["paths_data"]["paths"] = [
-        item for item in record["paths_data"]["paths"] if "-32.exe" not in item["_path"]
-    ]
-    metadata.write_text(json.dumps(record))
-    mocker.patch.object(utils, "__file__", str(tmp_path / "utils.py"))
-    if problem == "modified":
-        (tmp_path / "cli-32.exe").write_bytes(b"modified")
-
-    with pytest.raises(CondaBuildUserError):
-        utils.locate_conda_launcher("32")
 
 
 @pytest.mark.parametrize("arch", ["32", "64", "arm64", 32, 64])
@@ -184,19 +151,9 @@ def test_legacy_link_selects_arm64_launcher(tmp_path, mocker):
     assert (target / "example.exe").read_bytes() == b"arm64"
 
 
-@pytest.mark.parametrize("missing_win32", [False, True])
 def test_legacy_noarch_packages_available_launchers(
-    launcher_package, tmp_path, testing_metadata, mocker, missing_win32
+    launcher_package, tmp_path, testing_metadata, mocker
 ):
-    if missing_win32:
-        metadata = launcher_package / "conda-meta/conda-launchers-24.7.1-0.json"
-        record = json.loads(metadata.read_text())
-        record["paths_data"]["paths"] = [
-            item
-            for item in record["paths_data"]["paths"]
-            if "-32.exe" not in item["_path"]
-        ]
-        metadata.write_text(json.dumps(record))
     mocker.patch.object(noarch_python, "on_win", False)
     mocker.patch.object(noarch_python, "bin_dirname", "bin")
     script = tmp_path / "bin" / "example"
@@ -205,14 +162,8 @@ def test_legacy_noarch_packages_available_launchers(
 
     noarch_python.transform(testing_metadata, ["bin/example"], str(tmp_path))
 
-    for arch in ("64", "arm64"):
+    for arch in ("32", "64", "arm64"):
         assert (tmp_path / f"cli-{arch}.exe").read_bytes() == f"cli-{arch}".encode()
-    expected = (
-        Path(utils.__file__).with_name("cli-32.exe").read_bytes()
-        if missing_win32
-        else b"cli-32"
-    )
-    assert (tmp_path / "cli-32.exe").read_bytes() == expected
 
 
 def test_legacy_noarch_rejects_modified_launcher(
