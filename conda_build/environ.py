@@ -898,11 +898,17 @@ def get_install_actions(
                     precs = _actions["LINK"]
                 except (NoPackagesFoundError, UnsatisfiableError) as exc:
                     raise DependencyNeedsBuildingError(exc, subdir=subdir)
+                except DependencyNeedsBuildingError:
+                    # solver backends raise this (directly, or via the
+                    # conda-libmamba-solver conda-build hook) to report
+                    # definitive unsatisfiability or missing packages.
+                    # Retrying cannot change the outcome, and each attempt
+                    # is a full solver round-trip.
+                    raise
                 except (
                     SystemExit,
                     PaddingError,
                     LinkError,
-                    DependencyNeedsBuildingError,
                     CondaError,
                     AssertionError,
                     BuildLockError,
@@ -1180,11 +1186,18 @@ def create_env(
                     with env_var("CONDA_QUIET", not config.verbose, reset_context):
                         with env_var("CONDA_JSON", not config.verbose, reset_context):
                             _execute_actions(prefix, precs)
+            # NOTE: DependencyNeedsBuildingError subclasses CondaError, so it
+            # must be re-raised before the generic handler below: it reports
+            # definitive unsatisfiability or missing packages, which retrying
+            # cannot resolve, and its message embeds package specs that can
+            # false-positive match the "lock" substring check (e.g. a spec for
+            # "filelock").
+            except DependencyNeedsBuildingError:
+                raise
             except (
                 SystemExit,
                 PaddingError,
                 LinkError,
-                DependencyNeedsBuildingError,
                 CondaError,
                 BuildLockError,
             ) as exc:
@@ -1245,6 +1258,9 @@ def create_env(
                             retry=retry + 1,
                             is_cross=is_cross,
                         )
+                    else:
+                        log.error("Failed to create env, max retries exceeded.")
+                        raise
                 elif "requires a minimum conda version" in str(
                     exc
                 ) or "link a source that does not" in str(exc):

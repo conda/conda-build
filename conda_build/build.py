@@ -3447,7 +3447,8 @@ def test(
         AssertionError,
     ) as exc:
         log.warning(
-            "failed to get package records, retrying.  exception was: %s", str(exc)
+            "failed to get package records for test environment.  exception was: %s",
+            str(exc),
         )
         tests_failed(
             metadata,
