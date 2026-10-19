@@ -576,8 +576,15 @@ def execute(args: Sequence[str] | None = None) -> int:
     config.channel_urls = get_channel_urls(parsed.__dict__)
 
     config.verbose = not parsed.quiet or parsed.debug
-    n_v0_recipes = sum(1 for recipe in parsed.recipe if is_v0_recipe(recipe))
-    n_v1_recipes = sum(1 for recipe in parsed.recipe if is_v1_recipe(recipe))
+    n_v0_recipes = n_v1_recipes = 0
+    for recipe in parsed.recipe:
+        if is_v1_recipe(recipe):
+            n_v1_recipes += 1
+            n_v0_recipes += any(
+                Path(recipe, meta).is_file() for meta in utils.VALID_METAS
+            )
+        else:
+            n_v0_recipes += is_v0_recipe(recipe)
 
     if n_v1_recipes > 0 and n_v0_recipes == 0:  # all are v1, proceed with rattler-build
         # check cli arguments

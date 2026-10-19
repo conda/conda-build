@@ -833,6 +833,22 @@ def test_build_v1_no_anaconda_upload(capsys) -> None:
     assert "# Automatic uploading is disabled" in output
 
 
+def test_build_v1_recipe_with_nested_v0_recipe(tmp_path: Path) -> None:
+    recipe = tmp_path / "recipe"
+    recipe.mkdir()
+    (recipe / "recipe.yaml").write_text(
+        "package:\n  name: nested-recipe-example\n  version: '1.0'\n",
+        encoding="utf-8",
+    )
+    example = recipe / "examples"
+    example.mkdir()
+    (example / "meta.yaml").touch()
+    output = tmp_path / "out"
+
+    assert main_build.execute([str(recipe), "--output-folder", str(output)]) == 0
+    assert len(list(output.rglob("nested-recipe-example-1.0-*.conda"))) == 1
+
+
 def test_error_on_mixed_v0_v1_recipes(testing_workdir: str, capsys) -> None:
     """
     Ensure conda-build errors when both meta.yaml and recipe.yaml
@@ -849,6 +865,19 @@ def test_error_on_mixed_v0_v1_recipes(testing_workdir: str, capsys) -> None:
     args = [str(recipe)]
     assert main_build.execute(args) == 1
 
+    captured = capsys.readouterr()
+    assert "Cannot process several recipe versions at the same time!" in captured.err
+
+
+def test_error_on_separate_v1_and_nested_v0_recipes(tmp_path: Path, capsys) -> None:
+    v1_recipe = tmp_path / "v1"
+    v1_recipe.mkdir()
+    (v1_recipe / "recipe.yaml").touch()
+    v0_recipe = tmp_path / "v0"
+    (v0_recipe / "nested").mkdir(parents=True)
+    (v0_recipe / "nested" / "meta.yaml").touch()
+
+    assert main_build.execute([str(v1_recipe), str(v0_recipe)]) == 1
     captured = capsys.readouterr()
     assert "Cannot process several recipe versions at the same time!" in captured.err
 
