@@ -9,7 +9,7 @@ import tarfile
 import pytest
 from conda.gateways.connection.download import download
 
-from conda_build import api
+from conda_build import api, convert
 from conda_build.exceptions import CondaBuildUserError
 from conda_build.utils import on_win, package_has_file
 
@@ -179,13 +179,29 @@ def test_convert_platform_to_others(base_platform, package):
 @pytest.mark.skipif(
     on_win, reason="we create the pkg to be converted in *nix; don't run on win."
 )
-def test_convert_from_unix_to_win_creates_entry_points(testing_config, request):
+def test_convert_from_unix_to_win_creates_entry_points(
+    testing_config, request, mocker, tmp_path
+):
     testing_config.conda_pkg_format = 1
     recipe_dir = os.path.join(metadata_dir, "entry_points")
     # Recipe "entry_points" is used in other test -> add test-specific variant
     # (change build hash) to avoid clashes in package cache from other tests.
     variants = {"pytest_name": [request.node.name]}
     fn = api.build(recipe_dir, config=testing_config, variants=variants)[0]
+    # Launcher stubs are provided by conda-launchers, but the main channel
+    # only ships the 64-bit and arm64 stubs. Prefer the real launcher and fall
+    # back to a stub so the test also runs where the 32-bit stub is missing.
+    launcher = tmp_path / "launcher.exe"
+    launcher.write_bytes(b"launcher")
+    locate_conda_launcher = convert.locate_conda_launcher
+
+    def locate_or_stub(arch, *, launcher_type="cli"):
+        try:
+            return locate_conda_launcher(arch, launcher_type=launcher_type)
+        except (FileNotFoundError, CondaBuildUserError):
+            return str(launcher)
+
+    mocker.patch.object(convert, "locate_conda_launcher", locate_or_stub)
     for platform in ["win-64", "win-32"]:
         api.convert(fn, platforms=[platform], force=True)
         converted_fn = os.path.join(platform, os.path.basename(fn))
