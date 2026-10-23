@@ -1,0 +1,3 @@
+{
+    "tests/test_subpackages.py::test_toplevel_entry_points_do_not_apply_to_subpackages": 29.072436624997863
+}
