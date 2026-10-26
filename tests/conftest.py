@@ -35,9 +35,7 @@ from conda_build.config import (
     enable_static_default,
     error_overdepending_default,
     error_overlinking_default,
-    exit_on_verify_error_default,
     filename_hashing_default,
-    ignore_verify_codes_default,
     no_rewrite_stdout_env_default,
 )
 from conda_build.metadata import MetaData
@@ -127,8 +125,6 @@ def testing_config(testing_workdir, warm_package_cache):
         error_overdepending=boolify(error_overdepending_default),
         enable_static=boolify(enable_static_default),
         no_rewrite_stdout_env=boolify(no_rewrite_stdout_env_default),
-        ignore_verify_codes=ignore_verify_codes_default,
-        exit_on_verify_error=exit_on_verify_error_default,
         conda_pkg_format=conda_pkg_format_default,
         # Use template environment for faster test env creation when available
         test_env_template=str(warm_package_cache) if warm_package_cache else None,
