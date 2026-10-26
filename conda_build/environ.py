@@ -63,6 +63,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
     from typing import Any, TypedDict
 
+    from conda.core.exclude_newer import ExcludeNewerPolicy
     from conda.core.index import Index
 
     from .config import Config
@@ -845,9 +846,14 @@ def get_install_actions(
     max_env_retry: int = 3,
     output_folder=None,
     channel_urls=None,
+    exclude_newer_policy: ExcludeNewerPolicy | None = None,
 ) -> list[PackageRecord]:
     global cached_precs
     global last_index_ts
+
+    if exclude_newer_policy is None:
+        exclude_newer_policy = getattr(context, "exclude_newer_policy", None)
+    policy_active = exclude_newer_policy is not None and exclude_newer_policy.active
 
     log = utils.get_logger(__name__)
     conda_log_level = logging.WARN
@@ -879,14 +885,15 @@ def get_install_actions(
     )
 
     precs: list[PackageRecord] = []
-    if (
+    cache_key = (
         specs,
         env,
         subdir,
         channel_urls,
         disable_pip,
-    ) in cached_precs and last_index_ts >= index_ts:
-        precs = cached_precs[(specs, env, subdir, channel_urls, disable_pip)].copy()
+    )
+    if not policy_active and cache_key in cached_precs and last_index_ts >= index_ts:
+        precs = cached_precs[cache_key].copy()
     elif specs:
         # this is hiding output like:
         #    Fetching package metadata ...........
@@ -894,7 +901,13 @@ def get_install_actions(
         with utils.LoggingContext(conda_log_level):
             with capture():
                 try:
-                    _actions = _install_actions(prefix, index, specs, subdir=subdir)
+                    _actions = _install_actions(
+                        prefix,
+                        index,
+                        specs,
+                        subdir=subdir,
+                        exclude_newer_policy=exclude_newer_policy,
+                    )
                     precs = _actions["LINK"]
                 except (NoPackagesFoundError, UnsatisfiableError) as exc:
                     raise DependencyNeedsBuildingError(exc, subdir=subdir)
@@ -958,6 +971,7 @@ def get_install_actions(
                             max_env_retry=max_env_retry,
                             output_folder=output_folder,
                             channel_urls=tuple(channel_urls),
+                            exclude_newer_policy=exclude_newer_policy,
                         )
                     else:
                         log.error(
@@ -972,8 +986,9 @@ def get_install_actions(
                     re.match(rf"^{pkg}(?:$|[\s=].*)", str(dep)) for dep in specs
                 ):
                     precs = [prec for prec in precs if prec.name != pkg]
-        cached_precs[(specs, env, subdir, channel_urls, disable_pip)] = precs.copy()
-        last_index_ts = index_ts
+        if not policy_active:
+            cached_precs[cache_key] = precs.copy()
+            last_index_ts = index_ts
     return precs
 
 
@@ -1108,8 +1123,15 @@ def create_env(
 
     specs_or_precs_tuple = tuple(ensure_list(specs_or_precs))
 
+    exclude_newer_policy = config.exclude_newer_policy
+    policy_active = exclude_newer_policy is not None and exclude_newer_policy.active
     template_env = getattr(config, "test_env_template", None)
-    if template_env and os.path.isdir(template_env) and specs_or_precs_tuple:
+    if (
+        not policy_active
+        and template_env
+        and os.path.isdir(template_env)
+        and specs_or_precs_tuple
+    ):
         log = utils.get_logger(__name__)
         log.debug(
             "Attempting to clone from template environment: %s",
@@ -1162,6 +1184,7 @@ def create_env(
                             max_env_retry=config.max_env_retry,
                             output_folder=config.output_folder,
                             channel_urls=tuple(config.channel_urls),
+                            exclude_newer_policy=exclude_newer_policy,
                         )
                     else:
                         precs = specs_or_precs
@@ -1378,6 +1401,7 @@ def get_pinned_deps(m, section):
             max_env_retry=m.config.max_env_retry,
             output_folder=m.config.output_folder,
             channel_urls=tuple(m.config.channel_urls),
+            exclude_newer_policy=m.config.exclude_newer_policy,
         )
     return [package_record_to_requirement(prec) for prec in precs]
 
@@ -1390,6 +1414,7 @@ def install_actions(
     index: Index,
     specs: Iterable[str | MatchSpec],
     subdir: str | None = None,
+    exclude_newer_policy: ExcludeNewerPolicy | None = None,
 ) -> InstallActionsType:
     # This is copied over from https://github.com/conda/conda/blob/23.11.0/conda/plan.py#L471
     # but reduced to only the functionality actually used within conda-build.
@@ -1397,31 +1422,56 @@ def install_actions(
     if subdir not in (None, "", "noarch"):
         subdir_kwargs["CONDA_SUBDIR"] = subdir
 
-    with env_vars(
-        {
-            "CONDA_ALLOW_NON_CHANNEL_URLS": "true",
-            "CONDA_SOLVER_IGNORE_TIMESTAMPS": "false",
-            **subdir_kwargs,
-        },
-        callback=reset_context,
-    ):
-        channels: tuple[Channel, ...] | None = tuple(index.expanded_channels) or None
-        subdirs: tuple[str, ...] | None = tuple(index._subdirs) or None
+    previous_policy = getattr(context, "exclude_newer_policy", None)
+    if exclude_newer_policy is None:
+        exclude_newer_policy = previous_policy
 
-        mspecs = tuple(MatchSpec(spec) for spec in specs)
+    try:
+        with env_vars(
+            {
+                "CONDA_ALLOW_NON_CHANNEL_URLS": "true",
+                "CONDA_SOLVER_IGNORE_TIMESTAMPS": "false",
+                **subdir_kwargs,
+            },
+            callback=reset_context,
+        ):
+            if exclude_newer_policy is not None:
+                context.exclude_newer_policy = exclude_newer_policy
 
-        PrefixData._cache_.clear()
+            channels: tuple[Channel, ...] | None = (
+                tuple(index.expanded_channels) or None
+            )
+            subdirs: tuple[str, ...] | None = tuple(index._subdirs) or None
 
-        solver_backend = context.plugin_manager.get_cached_solver_backend()
-        solver = solver_backend(prefix, channels, subdirs, specs_to_add=mspecs)
-        # Give the solver its own index without realizing the cached records.
-        solver._index = copy(index)
-        txn = solver.solve_for_transaction(prune=False, ignore_pinned=False)
-        prefix_setup = txn.prefix_setups[prefix]
-        return {
-            "PREFIX": prefix,
-            "LINK": [prec for prec in prefix_setup.link_precs],
-        }
+            mspecs = tuple(MatchSpec(spec) for spec in specs)
+
+            PrefixData._cache_.clear()
+
+            # Include the configured solver in the cache key after context resets.
+            solver_backend = context.plugin_manager.get_cached_solver_backend(
+                context.solver
+            )
+            solver = solver_backend(prefix, channels, subdirs, specs_to_add=mspecs)
+            # Give the solver its own index without realizing the cached records.
+            solver._index = copy(index)
+            if exclude_newer_policy is not None and exclude_newer_policy.active:
+                # Classic skips ReducedIndex filtering for an injected index.
+                solver._index.use_system = True
+                solver._index.reload(system=True)
+                solver._index = {
+                    key: record
+                    for key, record in solver._index.items()
+                    if exclude_newer_policy.should_include(record)
+                }
+            txn = solver.solve_for_transaction(prune=False, ignore_pinned=False)
+            prefix_setup = txn.prefix_setups[prefix]
+            return {
+                "PREFIX": prefix,
+                "LINK": [prec for prec in prefix_setup.link_precs],
+            }
+    finally:
+        if previous_policy is not None:
+            context.exclude_newer_policy = previous_policy
 
 
 _install_actions = install_actions
