@@ -10,22 +10,118 @@ import pytest
 from conda.base.context import context
 from conda.core.index import Index
 from conda.core.subdir_data import SubdirData
+from conda.models.channel import Channel
 from conda.models.match_spec import MatchSpec
 from conda.models.records import PackageRecord
 
-from conda_build.environ import _install_actions, create_env, os_vars
+from conda_build.environ import _display_actions, _install_actions, create_env, os_vars
 
 if TYPE_CHECKING:
     from pathlib import Path
     from typing import Any
 
-    from pytest import MonkeyPatch
+    from pytest import CaptureFixture, MonkeyPatch
     from pytest_mock import MockerFixture
 
     from conda_build.metadata import MetaData
 
 
 on_linux = platform.system() == "Linux"
+
+
+@pytest.mark.parametrize(
+    "show_channel_urls,expected_rows",
+    [
+        (
+            None,
+            (
+                "    a:                      1.0-0 secondary\n"
+                "    b:                      1.0-0          \n"
+                "    very-long-package-name: 1.0-0 main      [mkl]\n"
+            ),
+        ),
+        (
+            False,
+            (
+                "    a:                      1.0-0\n"
+                "    b:                      1.0-0\n"
+                "    very-long-package-name: 1.0-0 [mkl]\n"
+            ),
+        ),
+        (
+            True,
+            (
+                "    a:                      1.0-0 secondary\n"
+                "    b:                      1.0-0 pkgs/main\n"
+                "    very-long-package-name: 1.0-0 main      [mkl]\n"
+            ),
+        ),
+    ],
+    ids=["default", "hidden", "shown"],
+)
+@pytest.mark.parametrize("subdir", ["linux-64", "noarch"])
+def test_display_actions_resolves_multichannel(
+    capsys: CaptureFixture[str],
+    monkeypatch: MonkeyPatch,
+    show_channel_urls: bool | None,
+    expected_rows: str,
+    subdir: str,
+):
+    channels = (
+        Channel("https://example.org/main"),
+        Channel("https://example.org/secondary"),
+    )
+    for name in tuple(context.custom_multichannels):
+        monkeypatch.delitem(context.custom_multichannels, name)
+
+    monkeypatch.setitem(context.custom_multichannels, "pbp_src_multichannel", channels)
+
+    defaults_channel = Channel(
+        scheme="https", location="repo.anaconda.com", name="pkgs/main"
+    )
+
+    monkeypatch.setitem(context.custom_multichannels, "defaults", (defaults_channel,))
+    monkeypatch.setattr(context, "show_channel_urls", show_channel_urls)
+
+    records = [
+        PackageRecord(
+            name=name,
+            version="1.0",
+            build="0",
+            build_number=0,
+            channel=channel,
+            subdir=subdir,
+            features=features,
+        )
+        for name, channel, features in (
+            ("very-long-package-name", channels[0], "mkl"),
+            ("a", channels[1], ""),
+            ("b", defaults_channel, ""),
+        )
+    ]
+    records[0].metadata.add("test-metadata")
+    assert all(
+        record.channel.canonical_name == "pbp_src_multichannel"
+        for record in records[:2]
+    )
+    assert records[2].channel.canonical_name == "defaults"
+
+    _display_actions("/build/host", records)
+
+    assert capsys.readouterr().out == (
+        "\n## Package Plan ##\n\n"
+        "  environment location: /build/host\n\n\n"
+        "The following NEW packages will be INSTALLED:\n\n"
+        f"{expected_rows}\n"
+    )
+
+
+def test_display_actions_empty(capsys: CaptureFixture[str]):
+    _display_actions("/build/host", [])
+
+    output = capsys.readouterr().out
+    assert "environment location: /build/host" in output
+    assert "NEW packages" not in output
 
 
 @pytest.mark.parametrize("realized", [False, True], ids=["lazy", "realized"])
