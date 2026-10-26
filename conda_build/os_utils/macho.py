@@ -184,8 +184,10 @@ def find_apple_cctools_executable(name, build_prefix, nofail=False):
                     except Exception as e:
                         log = utils.get_logger(__name__)
                         log.error(
-                            f"ERROR :: Found `{tool}` but is is an Apple Xcode stub executable\n"
-                            f"and it returned an error:\n{e.output}"
+                            "ERROR :: Found `%s` but is is an Apple Xcode stub executable\n"
+                            "and it returned an error:\n%s",
+                            tool,
+                            e.output,
                         )
                         raise e
                     tool = tool_xcr
