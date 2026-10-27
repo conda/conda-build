@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import conda.exports  # noqa: F401
 import pytest
 import yaml
 from conda.base.context import context
