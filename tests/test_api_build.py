@@ -1772,7 +1772,6 @@ def test_overlinking_detection(
 ):
     testing_config.activate = True
     testing_config.error_overlinking = True
-    testing_config.verify = False
     recipe = os.path.join(testing_workdir, "recipe")
     copy_into(
         os.path.join(metadata_dir, "_overlinking_detection"),
@@ -1804,7 +1803,6 @@ def test_overlinking_detection_ignore_patterns(
 ):
     testing_config.activate = True
     testing_config.error_overlinking = True
-    testing_config.verify = False
     recipe = os.path.join(testing_workdir, "recipe")
     copy_into(
         os.path.join(metadata_dir, "_overlinking_detection_ignore_patterns"),
@@ -1835,7 +1833,6 @@ def test_overdepending_detection(testing_config, variants_conda_build_sysroot):
     testing_config.activate = True
     testing_config.error_overlinking = True
     testing_config.error_overdepending = True
-    testing_config.verify = False
     recipe = os.path.join(metadata_dir, "_overdepending_detection")
     with pytest.raises(OverDependingError):
         api.build(recipe, config=testing_config, variants=variants_conda_build_sysroot)
@@ -1862,7 +1859,6 @@ def test_macos_tbd_handling(testing_config, variants_conda_build_sysroot):
     testing_config.activate = True
     testing_config.error_overlinking = True
     testing_config.error_overdepending = True
-    testing_config.verify = False
     recipe = os.path.join(metadata_dir, "_macos_tbd_handling")
     api.build(recipe, config=testing_config, variants=variants_conda_build_sysroot)
 
@@ -1929,30 +1925,6 @@ def test_warning_on_file_clobbering(
     with pytest.raises((ClobberError, CondaMultiError)):
         with env_var("CONDA_PATH_CONFLICT", "prevent", reset_context):
             api.build(os.path.join(recipe_dir, "b"), config=testing_config)
-
-
-@pytest.mark.sanity
-@pytest.mark.skip(reason="conda-verify is deprecated because it is unsupported")
-def test_verify_bad_package(testing_config):
-    from conda_verify.errors import PackageError
-
-    recipe_dir = os.path.join(fail_dir, "create_bad_folder_for_conda_verify")
-    api.build(recipe_dir, config=testing_config)
-    with pytest.raises(PackageError):
-        testing_config.exit_on_verify_error = True
-        api.build(recipe_dir, config=testing_config)
-    # ignore the error that we know should be raised, and re-run to make sure it is actually ignored
-    testing_config.ignore_verify_codes = ["C1125", "C1115"]
-    api.build(recipe_dir, config=testing_config)
-
-
-@pytest.mark.sanity
-def test_ignore_verify_codes(testing_config):
-    recipe_dir = os.path.join(metadata_dir, "_ignore_verify_codes")
-    testing_config.exit_on_verify_error = True
-    # this recipe intentionally has a license error.  If ignore_verify_codes works,
-    #    it will build OK.  If not, it will error out.
-    api.build(recipe_dir, config=testing_config)
 
 
 @pytest.mark.sanity

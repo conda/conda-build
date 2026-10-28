@@ -12,6 +12,7 @@ from conda.auxlib.ish import dals
 from conda_build.license_family import allowed_license_families
 from conda_build.skeletons.cran import (
     get_license_info,
+    get_session,
     read_description_contents,
     remove_comments,
 )
@@ -153,3 +154,21 @@ def test_remove_comments():
         """
     )
     assert remove_comments(with_comments) == without_comments
+
+
+@pytest.mark.parametrize(
+    "ssl_no_verify, verify",
+    [
+        pytest.param(None, True, id="unset"),
+        pytest.param("0", True, id="0"),
+        pytest.param("1", False, id="1"),
+        pytest.param("true", False, id="true"),
+    ],
+)
+def test_get_session_verify(ssl_no_verify, verify, tmp_path, monkeypatch):
+    """Regression test for https://github.com/conda/conda-build/issues/6202"""
+    if ssl_no_verify is None:
+        monkeypatch.delenv("SSL_NO_VERIFY", raising=False)
+    else:
+        monkeypatch.setenv("SSL_NO_VERIFY", ssl_no_verify)
+    assert get_session(tmp_path, verbose=False).verify is verify
