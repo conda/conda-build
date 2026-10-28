@@ -46,6 +46,15 @@ def test_build_empty_sections(conda_build_test_recipe_envvar: str):
     main_build.execute(args)
 
 
+@pytest.mark.parametrize("flag", ["--verify", "--no-verify", "--strict-verify"])
+def test_verify_flags_are_deprecated_noops(flag):
+    with pytest.deprecated_call(match="conda-verify.*no effect"):
+        _, parsed = main_build.parse_args([flag, "recipe"])
+    assert parsed.recipe == ["recipe"]
+    _, defaults = main_build.parse_args(["recipe"])
+    main_build.check_arguments_rattler("build", parsed, defaults)
+
+
 @pytest.mark.serial
 @pytest.mark.skipif(
     context.subdir == "osx-arm64",
