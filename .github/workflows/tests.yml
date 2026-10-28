@@ -105,6 +105,14 @@ jobs:
           - python-version: '3.11'
             conda-version: 26.1.0
             test-type: parallel
+          - python-version: '3.11'
+            conda-version: 26.1.0
+            conda-libmamba-solver-version: 25.11.0
+            test-type: serial
+          - python-version: '3.11'
+            conda-version: 26.1.0
+            conda-libmamba-solver-version: 25.11.0
+            test-type: parallel
           # maximum Python/conda combo
           - python-version: '3.14'
             conda-version: canary
@@ -118,6 +126,8 @@ jobs:
       CONDA_VERSION: ${{ contains('canary|release', matrix.conda-version) && 'conda' || format('conda={0}', matrix.conda-version) }}
       # Exclude benchmark tests from regular CI runs (they run separately in linux-benchmarks)
       PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial and not benchmark' || 'not serial and not benchmark' }}
+      # 'latest' (or unset, for include entries) leaves the version to tests/requirements.txt
+      CONDA_LIBMAMBA_SOLVER_VERSION: ${{ (!matrix.conda-libmamba-solver-version ) && 'conda-libmamba-solver' || format('conda-libmamba-solver={0}', matrix.conda-libmamba-solver-version) }}
 
     steps:
       - name: Free Disk Space
@@ -191,6 +201,7 @@ jobs:
           --file "tests/requirements-${RUNNER_OS}.txt"
           --file tests/requirements-ci.txt
           "python=${TEST_PYTHON_VERSION}"
+          "${CONDA_LIBMAMBA_SOLVER_VERSION}"
           "${CONDA_CHANNEL_LABEL}${CONDA_VERSION}"
 
       # TODO: how can we remove this step?
