@@ -60,7 +60,11 @@ import yaml
 from conda.base.context import context
 from conda.cli.common import specs_from_url
 from conda.core.package_cache_data import ProgressiveFetchExtract
-from conda.exceptions import NoPackagesFoundError, UnsatisfiableError
+from conda.exceptions import (
+    NoPackagesFoundError,
+    PackagesNotFoundError,
+    UnsatisfiableError,
+)
 from conda.gateways.disk.create import TemporaryDirectory
 from conda.models.records import PackageRecord
 from conda.models.version import VersionOrder
@@ -207,7 +211,11 @@ def get_env_dependencies(
                 output_folder=m.config.output_folder,
                 channel_urls=tuple(m.config.channel_urls),
             )
-        except (UnsatisfiableError, DependencyNeedsBuildingError) as e:
+        except (
+            UnsatisfiableError,
+            DependencyNeedsBuildingError,
+            PackagesNotFoundError,
+        ) as e:
             # we'll get here if the environment is unsatisfiable
             if hasattr(e, "packages"):
                 unsat = ", ".join(e.packages)

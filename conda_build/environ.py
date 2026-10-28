@@ -35,6 +35,7 @@ from conda.exceptions import (
     LockError,
     NoPackagesFoundError,
     PaddingError,
+    PackagesNotFoundError,
     UnsatisfiableError,
 )
 from conda.gateways.disk.create import TemporaryDirectory
@@ -903,6 +904,7 @@ def get_install_actions(
                     PaddingError,
                     LinkError,
                     DependencyNeedsBuildingError,
+                    PackagesNotFoundError,
                     CondaError,
                     AssertionError,
                     BuildLockError,

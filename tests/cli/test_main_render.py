@@ -6,11 +6,9 @@ import os
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import conda.exports  # noqa: F401
 import pytest
 import yaml
 from conda.base.context import context
-from conda.exceptions import PackagesNotFoundError
 
 from conda_build import api
 from conda_build.cli import main_render
@@ -57,16 +55,26 @@ def test_render_add_channel(tmp_path: Path) -> None:
     )
 
 
-def test_render_with_empty_channel_fails(tmp_path: Path, empty_channel: Path) -> None:
-    with pytest.raises(PackagesNotFoundError):
-        main_render.execute(
-            [
-                "--override-channels",
-                f"--channel={empty_channel}",
-                os.path.join(metadata_dir, "_recipe_requiring_external_channel"),
-                f"--file={tmp_path / 'out.yaml'}",
-            ]
-        )
+def test_render_with_empty_channel_is_not_final(
+    tmp_path: Path, empty_channel: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Rendering permits unsatisfiable variants, so a missing dependency yields a
+    non-final recipe instead of an error."""
+    rendered_filename = tmp_path / "out.yaml"
+    main_render.execute(
+        [
+            "--override-channels",
+            f"--channel={empty_channel}",
+            os.path.join(metadata_dir, "_recipe_requiring_external_channel"),
+            f"--file={rendered_filename}",
+        ]
+    )
+    assert "Returning non-final recipe" in caplog.text
+    assert "Build: conda_build_test_requirement" in caplog.text
+
+    rendered_meta = yaml.safe_load(rendered_filename.read_text())
+    # the dependency could not be resolved, so it is left unpinned
+    assert "conda_build_test_requirement" in rendered_meta["requirements"]["build"]
 
 
 def test_render_output_build_path(
