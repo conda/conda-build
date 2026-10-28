@@ -1,0 +1,7 @@
+### Enhancements
+
+* Allow setting environment variables in the test section via `test/script_env`, matching the existing `build/script_env` feature. (#4940)
+
+### Docs
+
+* Document `test/script_env` in the test section reference.
