@@ -34,8 +34,8 @@ from conda.exceptions import (
     LinkError,
     LockError,
     NoPackagesFoundError,
-    PaddingError,
     PackagesNotFoundError,
+    PaddingError,
     UnsatisfiableError,
 )
 from conda.gateways.disk.create import TemporaryDirectory
