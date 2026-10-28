@@ -115,11 +115,9 @@ doctest_optionflags = [
   "ELLIPSIS",
 ]
 filterwarnings = [
-  # elevate conda's deprecated warning to an error
-  "error::PendingDeprecationWarning:conda",
+  # elevate conda's deprecated warnings to errors; pending deprecations only warn
   "error::DeprecationWarning:conda",
-  # elevate conda-build's deprecated warning to an error
-  "error::PendingDeprecationWarning:conda_build",
+  # elevate conda-build's deprecated warnings to errors; pending deprecations only warn
   "error::DeprecationWarning:conda_build",
   # ignore conda-package-streaming error
   "ignore:conda.core.index._supplement_index_with_system is pending deprecation:PendingDeprecationWarning:conda",

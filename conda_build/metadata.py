@@ -617,9 +617,14 @@ FIELDS = {
         "sha256": None,
         "sha384": None,
         "sha512": None,
+        # Deprecated: use the original CEP-19 algorithm (no length-prefixing). Migrate to
+        # content_sha*_v2 keys which use the fixed algorithm.
         "content_sha256": None,
         "content_sha384": None,
         "content_sha512": None,
+        "content_sha256_v2": None,
+        "content_sha384_v2": None,
+        "content_sha512_v2": None,
         "content_hash_skip": list,
         "path": str,
         "path_via_symlink": None,
