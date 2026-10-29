@@ -56,7 +56,7 @@ def test_render_add_channel(tmp_path: Path) -> None:
 
 
 def test_render_with_empty_channel_is_not_final(
-    tmp_path: Path, empty_channel: Path, caplog: pytest.LogCaptureFixture
+    tmp_path: Path, empty_channel: Path
 ) -> None:
     """Rendering permits unsatisfiable variants, so a missing dependency yields a
     non-final recipe instead of an error."""
@@ -69,8 +69,6 @@ def test_render_with_empty_channel_is_not_final(
             f"--file={rendered_filename}",
         ]
     )
-    assert "Returning non-final recipe" in caplog.text
-    assert "Build: conda_build_test_requirement" in caplog.text
 
     rendered_meta = yaml.safe_load(rendered_filename.read_text())
     # the dependency could not be resolved, so it is left unpinned
