@@ -107,7 +107,6 @@ def render(
     )
 
 
-@_conda_build_user_agent()
 def output_yaml(
     metadata: MetaData,
     file_path: str | os.PathLike | Path | None = None,
@@ -119,7 +118,6 @@ def output_yaml(
     return output_yaml(metadata, file_path, suppress_outputs=suppress_outputs)
 
 
-@_conda_build_user_agent()
 def get_output_file_paths(
     recipe_path_or_metadata: str
     | os.PathLike
@@ -180,7 +178,6 @@ def get_output_file_paths(
     return sorted(set(outs))
 
 
-@_conda_build_user_agent()
 def check(
     recipe_path: str | os.PathLike | Path,
     no_download_source: bool = False,
@@ -293,7 +290,6 @@ def test(
         )
 
 
-@_conda_build_user_agent()
 def list_skeletons() -> list[str]:
     """List available skeletons for generating conda recipes from external sources.
 
@@ -309,7 +305,6 @@ def list_skeletons() -> list[str]:
     return files
 
 
-@_conda_build_user_agent()
 def skeletonize(
     packages: str | Iterable[str],
     repo: Literal["cpan", "cran", "luarocks", "pypi", "rpm"],
@@ -356,7 +351,7 @@ def skeletonize(
     for arg in skeletonize.__code__.co_varnames:
         if arg in kwargs:
             del kwargs[arg]
-    with config:
+    with _conda_build_user_agent(), config:
         module.skeletonize(
             packages,
             output_dir=output_dir,
@@ -367,7 +362,6 @@ def skeletonize(
         )
 
 
-@_conda_build_user_agent()
 def develop(
     recipe_dir: str | Iterable[str],
     prefix: str = sys.prefix,
@@ -385,7 +379,6 @@ def develop(
     execute(recipe_dir, prefix, no_pth_file, build_ext, clean, uninstall)
 
 
-@_conda_build_user_agent()
 def convert(
     package_file: str,
     output_dir: str = ".",
@@ -432,7 +425,6 @@ def test_installable(channel: str = "defaults") -> bool:
     return test_installable(channel)
 
 
-@_conda_build_user_agent()
 def inspect_linkages(
     packages: str | Iterable[str],
     prefix: str | os.PathLike | Path = sys.prefix,
@@ -456,7 +448,6 @@ def inspect_linkages(
     )
 
 
-@_conda_build_user_agent()
 def inspect_objects(packages, prefix=sys.prefix, groupby="filename"):
     from .inspect_pkg import inspect_objects
 
@@ -464,7 +455,6 @@ def inspect_objects(packages, prefix=sys.prefix, groupby="filename"):
     return inspect_objects(packages, prefix=prefix, groupby=groupby)
 
 
-@_conda_build_user_agent()
 def inspect_prefix_length(packages, min_prefix_length=_prefix_length):
     from .tarcheck import check_prefix_lengths
 
@@ -486,7 +476,6 @@ def inspect_prefix_length(packages, min_prefix_length=_prefix_length):
     return len(prefix_lengths) == 0
 
 
-@_conda_build_user_agent()
 def inspect_hash_inputs(packages):
     """Return dictionaries of data that created the hash value (h????) for the provided package(s)
 
@@ -498,7 +487,6 @@ def inspect_hash_inputs(packages):
     return get_hash_input(packages)
 
 
-@_conda_build_user_agent()
 def create_metapackage(
     name,
     version,

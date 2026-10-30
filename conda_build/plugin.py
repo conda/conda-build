@@ -25,52 +25,52 @@ def conda_session_headers():
 
 
 # lazy-import to avoid nasty import-time side effects when not using conda-build
-def build(args: Sequence[str] | None = None) -> int:
-    from .cli import execute
+def build(args: Sequence[str]) -> int:
+    from .cli.main_build import execute
 
-    return execute("build", args)
-
-
-def convert(args: Sequence[str] | None = None) -> int:
-    from .cli import execute
-
-    return execute("convert", args)
+    return execute(args)
 
 
-def debug(args: Sequence[str] | None = None) -> int:
-    from .cli import execute
+def convert(args: Sequence[str]) -> int:
+    from .cli.main_convert import execute
 
-    return execute("debug", args)
-
-
-def develop(args: Sequence[str] | None = None) -> int:
-    from .cli import execute
-
-    return execute("develop", args)
+    return execute(args)
 
 
-def inspect(args: Sequence[str] | None = None) -> int:
-    from .cli import execute
+def debug(args: Sequence[str]) -> int:
+    from .cli.main_debug import execute
 
-    return execute("inspect", args)
-
-
-def metapackage(args: Sequence[str] | None = None) -> int:
-    from .cli import execute
-
-    return execute("metapackage", args)
+    return execute(args)
 
 
-def render(args: Sequence[str] | None = None) -> int:
-    from .cli import execute
+def develop(args: Sequence[str]) -> int:
+    from .cli.main_develop import execute
 
-    return execute("render", args)
+    return execute(args)
 
 
-def skeleton(args: Sequence[str] | None = None) -> int:
-    from .cli import execute
+def inspect(args: Sequence[str]) -> int:
+    from .cli.main_inspect import execute
 
-    return execute("skeleton", args)
+    return execute(args)
+
+
+def metapackage(args: Sequence[str]) -> int:
+    from .cli.main_metapackage import execute
+
+    return execute(args)
+
+
+def render(args: Sequence[str]) -> int:
+    from .cli.main_render import execute
+
+    return execute(args)
+
+
+def skeleton(args: Sequence[str]) -> int:
+    from .cli.main_skeleton import execute
+
+    return execute(args)
 
 
 @conda.plugins.hookimpl

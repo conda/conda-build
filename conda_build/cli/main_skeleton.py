@@ -13,6 +13,7 @@ from conda.base.context import context
 
 from .. import api
 from ..config import Config
+from ..user_agent import conda_build_user_agent
 
 if TYPE_CHECKING:
     from argparse import ArgumentParser, Namespace
@@ -52,6 +53,7 @@ options available.
     return parser, parser.parse_args(args)
 
 
+@conda_build_user_agent()
 def execute(args: Sequence[str] | None = None) -> int:
     parser, parsed = parse_args(args)
     context.__init__(argparse_args=parsed)

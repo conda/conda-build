@@ -26,6 +26,7 @@ from ..config import (
     zstd_compression_level_default,
 )
 from ..deprecations import deprecated
+from ..user_agent import conda_build_user_agent
 from ..utils import LoggingContext, is_v0_recipe, is_v1_recipe
 from .actions import KeyValueAction, PackageTypeNormalize
 from .main_render import get_render_parser
@@ -563,6 +564,7 @@ def check_action(recipe: os.PathLike, config: Config):
     return api.check(recipe, config=config)
 
 
+@conda_build_user_agent()
 def execute(args: Sequence[str] | None = None) -> int:
     _, parsed = parse_args(args)
     context.__init__(argparse_args=parsed)

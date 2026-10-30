@@ -12,7 +12,8 @@ from conda.base.context import context, reset_context
 from conda.gateways.connection.session import CondaSession
 from requests import Request
 
-from conda_build import __version__, api, plugin, render
+from conda_build import __version__, api, inspect_pkg, plugin, render
+from conda_build.config import Config
 
 
 def user_agent(session, host="example.invalid"):
@@ -55,22 +56,23 @@ def test_nested_api_user_agent(monkeypatch, fail):
     baseline = user_agent(session)
     expected = f"{baseline} conda-build/{__version__}"
 
-    def output_yaml(*args, **kwargs):
+    def test_installable(channel):
+        assert channel == "example.invalid"
         assert user_agent(session) == expected
         if fail:
             raise ValueError("nested call failed")
-        return "recipe"
+        return True
 
     def render_recipe(*args, **kwargs):
         if fail:
             with pytest.raises(ValueError, match="nested call failed"):
-                api.output_yaml(None)
+                api.test_installable("example.invalid")
         else:
-            assert api.output_yaml(None) == "recipe"
+            assert api.test_installable("example.invalid")
         assert user_agent(session) == expected
         return []
 
-    monkeypatch.setattr(render, "output_yaml", output_yaml)
+    monkeypatch.setattr(inspect_pkg, "test_installable", test_installable)
     monkeypatch.setattr(render, "render_recipe", render_recipe)
     assert api.render("recipe") == []
     assert user_agent(session) == baseline
@@ -138,7 +140,7 @@ def test_cli_user_agent(monkeypatch, command, entry_point):
     execute = command_action(command, entry_point)
     for args in (["--help"], None):
         with pytest.raises(SystemExit) as exc:
-            if args is None:
+            if args is None and entry_point == "standalone":
                 execute()
             else:
                 execute(args)
@@ -148,25 +150,54 @@ def test_cli_user_agent(monkeypatch, command, entry_point):
 
 @pytest.mark.parametrize("entry_point", ["plugin", "standalone"])
 @pytest.mark.parametrize("fail", [False, True])
-def test_cli_user_agent_return_and_exception(monkeypatch, entry_point, fail):
-    module = import_module("conda_build.cli.main_render")
+def test_cli_user_agent_return_and_exception(monkeypatch, tmp_path, entry_point, fail):
     command = next(c for c in plugin.conda_subcommands() if c.name == "render")
     session = CondaSession()
     baseline = user_agent(session)
-    args = ["recipe"]
+    (tmp_path / "meta.yaml").write_text(
+        "package:\n  name: user-agent-test\n  version: 1.0\n"
+    )
 
-    def render(args):
-        assert args == ["recipe"]
+    def render(recipe, **kwargs):
+        assert recipe == str(tmp_path)
         assert user_agent(session) == f"{baseline} conda-build/{__version__}"
         if fail:
             raise ValueError("stop")
-        return 42
+        return []
 
-    monkeypatch.setattr(module, "execute", render)
+    monkeypatch.setattr(api, "render", render)
     execute = command_action(command, entry_point)
     if fail:
         with pytest.raises(ValueError, match="stop"):
-            execute(args)
+            execute([str(tmp_path)])
     else:
-        assert execute(args) == 42
+        assert execute([str(tmp_path)]) == 0
+    assert user_agent(session) == baseline
+
+
+def test_skeletonize_user_agent_and_keyword_arguments(monkeypatch, tmp_path):
+    module = import_module("conda_build.skeletons.pypi")
+    session = CondaSession()
+    baseline = user_agent(session)
+    output = str(tmp_path / "recipes")
+    config = Config(croot=str(tmp_path / "build"))
+    calls = []
+
+    def skeletonize(packages, output_dir, version, recursive, config, extra_option):
+        assert user_agent(session) == f"{baseline} conda-build/{__version__}"
+        calls.append((packages, output_dir, version, recursive, extra_option))
+        assert config.croot == str(tmp_path / "build")
+
+    monkeypatch.setattr(module, "skeletonize", skeletonize)
+    api.skeletonize(
+        "example",
+        "pypi",
+        output_dir=output,
+        version="1.2.3",
+        recursive=True,
+        config=config,
+        extra_option="forwarded",
+    )
+
+    assert calls == [(["example"], output, "1.2.3", True, "forwarded")]
     assert user_agent(session) == baseline
