@@ -11,10 +11,10 @@ from uuid import uuid4
 
 import pytest
 from conda.base.context import context
-from conda.models.match_spec import MatchSpec
 from conda.core.subdir_data import SubdirData
 from conda.exceptions import PackagesNotFoundError
 from conda.models.channel import Channel
+from conda.models.match_spec import MatchSpec
 
 from conda_build.api import get_output_file_paths
 from conda_build.render import (
