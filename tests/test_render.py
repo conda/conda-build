@@ -10,10 +10,14 @@ from typing import TYPE_CHECKING
 from uuid import uuid4
 
 import pytest
+from conda.base.context import context
+from conda.core.subdir_data import SubdirData
+from conda.models.channel import Channel
 
 from conda_build.api import get_output_file_paths
 from conda_build.render import (
     _simplify_to_exact_constraints,
+    execute_download_actions,
     find_pkg_dir_or_file_in_pkgs_dirs,
     get_pin_from_build,
     open_recipe,
@@ -121,6 +125,30 @@ def test_find_package(
         files_only=files_only,
     )
     assert package is found is None or package.samefile(found)
+
+
+def test_download_solved_package_with_missing_channel(
+    testing_metadata: MetaData,
+    offline_cross_python_channel: str,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    cache = tmp_path / "pkgs"
+    testing_metadata.config.channel_urls = [
+        (tmp_path / "missing-channel").as_uri(),
+        offline_cross_python_channel,
+    ]
+    monkeypatch.setattr(context, "_pkgs_dirs", (str(cache),))
+    monkeypatch.setattr(context, "_channels", (offline_cross_python_channel,))
+    monkeypatch.setattr(context, "allow_non_channel_urls", False)
+    record = next(
+        SubdirData(Channel(f"{offline_cross_python_channel}/noarch")).query("pip")
+    )
+
+    package, dist = execute_download_actions(testing_metadata, [record], "host")[record]
+
+    assert dist == "pip-24.0-h_mock_0"
+    assert (cache / "pip-24.0-h_mock_0.tar.bz2").samefile(package)
 
 
 def test_open_recipe(tmp_path: Path):
