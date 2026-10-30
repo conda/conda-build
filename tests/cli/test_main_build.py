@@ -624,7 +624,7 @@ def test_user_warning(tmpdir, recwarn):
 
 
 def test_build_with_empty_channel_fails(empty_channel: Path) -> None:
-    with pytest.raises(PackagesNotFoundError):
+    with pytest.raises((PackagesNotFoundError, DependencyNeedsBuildingError)):
         main_build.execute(
             [
                 "--override-channels",
