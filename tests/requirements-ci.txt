@@ -1,7 +1,6 @@
 anaconda-client
 contextlib2
 coverage
-cytoolz
 git
 numpy
 perl
