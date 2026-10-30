@@ -10,11 +10,14 @@ from typing import TYPE_CHECKING
 from uuid import uuid4
 
 import pytest
+from conda.exceptions import PackagesNotFoundError
+from conda.models.match_spec import MatchSpec
 
 from conda_build.api import get_output_file_paths
 from conda_build.render import (
     _simplify_to_exact_constraints,
     find_pkg_dir_or_file_in_pkgs_dirs,
+    get_env_dependencies,
     get_pin_from_build,
     open_recipe,
     render_recipe,
@@ -61,6 +64,41 @@ def test_pin_run_as_build_preserve_string(testing_metadata):
     m.config.variant["pin_run_as_build"]["pkg"] = {"max_pin": "x.x"}
     dep = get_pin_from_build(m, "pkg * somestring*", {"pkg": "1.2.3 somestring_h1234"})
     assert dep == "pkg >=1.2.3,<1.3.0a0 somestring*"
+
+
+@pytest.mark.parametrize("package", ["missing", MatchSpec("missing")])
+@pytest.mark.parametrize("permit_unsatisfiable_variants", [False, True])
+def test_missing_package_specs(
+    testing_metadata: MetaData,
+    monkeypatch: pytest.MonkeyPatch,
+    package: str | MatchSpec,
+    permit_unsatisfiable_variants: bool,
+):
+    testing_metadata.meta["requirements"]["host"] = ["missing"]
+    error = PackagesNotFoundError([package])
+    # Older conda versions do not expose package specs on the exception.
+    error.packages = [package]
+
+    def missing_packages(*args, **kwargs):
+        raise error
+
+    monkeypatch.setattr(
+        "conda_build.render.environ.get_package_records", missing_packages
+    )
+
+    if permit_unsatisfiable_variants:
+        assert get_env_dependencies(
+            testing_metadata,
+            "host",
+            testing_metadata.config.variant,
+            permit_unsatisfiable_variants=True,
+        ) == (["missing"], [], "missing")
+    else:
+        with pytest.raises(PackagesNotFoundError) as exc:
+            get_env_dependencies(
+                testing_metadata, "host", testing_metadata.config.variant
+            )
+        assert exc.value is error
 
 
 @pytest.mark.parametrize(
