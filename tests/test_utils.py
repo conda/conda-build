@@ -328,6 +328,17 @@ def test_insert_variant_versions(testing_metadata):
     assert len(testing_metadata.meta["requirements"]["build"]) == 2
 
 
+def test_insert_variant_versions_dotted_name(testing_metadata):
+    testing_metadata.meta["requirements"]["build"] = ["libfoo-4.0"]
+    testing_metadata.config.variant = {"libfoo_4_0": "4.0"}
+    utils.insert_variant_versions(
+        testing_metadata.meta.get("requirements", {}),
+        testing_metadata.config.variant,
+        "build",
+    )
+    assert testing_metadata.meta["requirements"]["build"] == ["libfoo-4.0 4.0.*"]
+
+
 def test_subprocess_stats_call(testing_workdir):
     stats = {}
     utils.check_call_env(["hostname"], stats=stats, cwd=testing_workdir)
