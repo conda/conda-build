@@ -546,7 +546,8 @@ def source_action(recipe: os.PathLike, config: Config):
     :param config: Config object used for various options
     """
     metadata = api.render(recipe, config=config)[0][0]
-    source.provide(metadata)
+    with conda_build_user_agent():
+        source.provide(metadata)
     print("Source tree in:", metadata.config.work_dir)
 
 
@@ -564,7 +565,6 @@ def check_action(recipe: os.PathLike, config: Config):
     return api.check(recipe, config=config)
 
 
-@conda_build_user_agent()
 def execute(args: Sequence[str] | None = None) -> int:
     _, parsed = parse_args(args)
     context.__init__(argparse_args=parsed)

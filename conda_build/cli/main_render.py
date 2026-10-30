@@ -14,7 +14,6 @@ from yaml.parser import ParserError
 from .. import __version__, api
 from .._rattler_build.compat import check_arguments_rattler, run_rattler
 from ..config import get_channel_urls, get_or_merge_config
-from ..user_agent import conda_build_user_agent
 from ..utils import LoggingContext, is_v1_recipe
 from ..variants import get_package_variants, set_language_env_vars
 
@@ -202,7 +201,6 @@ def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
     return parser, parser.parse_args(args)
 
 
-@conda_build_user_agent()
 def execute(args: Sequence[str] | None = None) -> int:
     _, parsed = parse_args(args)
     context.__init__(argparse_args=parsed)

@@ -10,7 +10,6 @@ from conda.base.context import context
 from conda_build.deprecations import deprecated
 
 from .. import api
-from ..user_agent import conda_build_user_agent
 
 deprecated.module(
     "27.3",
@@ -104,7 +103,6 @@ This works by creating a conda.pth file in site-packages.""",
     deprecation_type=FutureWarning,
     addendum="Please install `conda-pypi` and use `conda pypi install --editable` instead.",
 )
-@conda_build_user_agent()
 def execute(args: Sequence[str] | None = None) -> int:
     _, parsed = parse_args(args)
     context.__init__(argparse_args=parsed)

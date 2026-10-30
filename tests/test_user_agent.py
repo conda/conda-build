@@ -1,6 +1,5 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
-import sys
 import tomllib
 from concurrent.futures import ThreadPoolExecutor
 from importlib import import_module
@@ -118,37 +117,6 @@ def command_action(command, entry_point):
 
 
 @pytest.mark.parametrize("entry_point", ["plugin", "standalone"])
-@pytest.mark.parametrize(
-    "command", list(plugin.conda_subcommands()), ids=lambda c: c.name
-)
-@pytest.mark.filterwarnings(
-    "ignore:conda_build.cli.main_develop:PendingDeprecationWarning"
-)
-def test_cli_user_agent(monkeypatch, command, entry_point):
-    module = import_module(f"conda_build.cli.main_{command.name}")
-    session = CondaSession()
-    baseline = user_agent(session)
-    parser_name = "get_parser" if command.name == "debug" else "parse_args"
-    original = getattr(module, parser_name)
-
-    def parse_args(*args, **kwargs):
-        assert user_agent(session) == f"{baseline} conda-build/{__version__}"
-        return original(*args, **kwargs)
-
-    monkeypatch.setattr(module, parser_name, parse_args)
-    monkeypatch.setattr(sys, "argv", [f"conda-{command.name}", "--help"])
-    execute = command_action(command, entry_point)
-    for args in (["--help"], None):
-        with pytest.raises(SystemExit) as exc:
-            if args is None and entry_point == "standalone":
-                execute()
-            else:
-                execute(args)
-        assert exc.value.code == 0
-        assert user_agent(session) == baseline
-
-
-@pytest.mark.parametrize("entry_point", ["plugin", "standalone"])
 @pytest.mark.parametrize("fail", [False, True])
 def test_cli_user_agent_return_and_exception(monkeypatch, tmp_path, entry_point, fail):
     command = next(c for c in plugin.conda_subcommands() if c.name == "render")
@@ -158,14 +126,14 @@ def test_cli_user_agent_return_and_exception(monkeypatch, tmp_path, entry_point,
         "package:\n  name: user-agent-test\n  version: 1.0\n"
     )
 
-    def render(recipe, **kwargs):
+    def render_recipe(recipe, **kwargs):
         assert recipe == str(tmp_path)
         assert user_agent(session) == f"{baseline} conda-build/{__version__}"
         if fail:
             raise ValueError("stop")
         return []
 
-    monkeypatch.setattr(api, "render", render)
+    monkeypatch.setattr(render, "render_recipe", render_recipe)
     execute = command_action(command, entry_point)
     if fail:
         with pytest.raises(ValueError, match="stop"):
