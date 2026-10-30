@@ -72,7 +72,6 @@ from conda.models.version import VersionOrder
 from . import environ, exceptions, source, utils
 from .config import CondaPkgFormat
 from .exceptions import CondaBuildUserError, DependencyNeedsBuildingError, RecipeError
-from .index import get_build_index
 from .metadata import MetaData, MetaDataTuple, combine_top_level_metadata_with_output
 from .utils import (
     CONDA_PACKAGE_EXTENSION_V1,
@@ -371,30 +370,6 @@ def _read_specs_from_package(pkg_loc, pkg_dist):
 
 
 def execute_download_actions(m, precs, env, package_subset=None, require_files=False):
-    subdir = getattr(m.config, f"{env}_subdir")
-    index, _, _ = get_build_index(
-        subdir=subdir,
-        bldpkgs_dir=m.config.bldpkgs_dir,
-        output_folder=m.config.output_folder,
-        clear_cache=False,
-        omit_defaults=False,
-        channel_urls=m.config.channel_urls,
-        debug=m.config.debug,
-        verbose=m.config.verbose,
-    )
-
-    # this should be just downloading packages.  We don't need to extract them -
-
-    # NOTE: The following commented execute_actions is defunct
-    # (FETCH/EXTRACT were replaced by PROGRESSIVEFETCHEXTRACT).
-    #
-    # download_actions = {
-    #     k: v for k, v in actions.items() if k in (FETCH, EXTRACT, PREFIX)
-    # }
-    # if FETCH in actions or EXTRACT in actions:
-    #     # this is to force the download
-    #     execute_actions(download_actions, index, verbose=m.config.debug)
-
     pkg_files = {}
 
     if isinstance(package_subset, PackageRecord):
@@ -422,17 +397,8 @@ def execute_download_actions(m, precs, env, package_subset=None, require_files=F
             pkg_dist, m, files_only=require_files
         )
 
-        # ran through all pkgs_dirs, and did not find package or folder.  Download it.
-        # TODO: this is a vile hack reaching into conda's internals. Replace with
-        #    proper conda API when available.
         if not pkg_loc:
-            link_prec = [
-                rec
-                for rec in index
-                if (rec.name, rec.version, rec.build)
-                == (prec.name, prec.version, prec.build)
-            ][0]
-            pfe = ProgressiveFetchExtract(link_prefs=(link_prec,))
+            pfe = ProgressiveFetchExtract(link_prefs=(prec,))
             with utils.LoggingContext():
                 pfe.execute()
             for pkg_dir in context.pkgs_dirs:
