@@ -20,6 +20,8 @@ from os.path import dirname, expanduser, join
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from ._user_agent import conda_build_user_agent as _conda_build_user_agent
+
 # make the Config class available in the api namespace
 from .config import DEFAULT_PREFIX_LENGTH as _prefix_length
 from .config import Config, get_channel_urls, get_or_merge_config
@@ -68,6 +70,7 @@ def _error_if_package_contains_recipe_yaml(pkg_path: str) -> None:
             )
 
 
+@_conda_build_user_agent
 def render(
     recipe_path: str | os.PathLike | Path,
     config: Config | None = None,
@@ -105,6 +108,7 @@ def render(
     )
 
 
+@_conda_build_user_agent
 def output_yaml(
     metadata: MetaData,
     file_path: str | os.PathLike | Path | None = None,
@@ -116,6 +120,7 @@ def output_yaml(
     return output_yaml(metadata, file_path, suppress_outputs=suppress_outputs)
 
 
+@_conda_build_user_agent
 def get_output_file_paths(
     recipe_path_or_metadata: str
     | os.PathLike
@@ -176,6 +181,7 @@ def get_output_file_paths(
     return sorted(set(outs))
 
 
+@_conda_build_user_agent
 def check(
     recipe_path: str | os.PathLike | Path,
     no_download_source: bool = False,
@@ -198,6 +204,7 @@ def check(
     return all(m[0].check_fields() for m in metadata)
 
 
+@_conda_build_user_agent
 def build(
     recipe_paths_or_metadata: str | os.PathLike | Path | MetaData,
     post: bool | None = None,
@@ -251,6 +258,7 @@ def build(
     )
 
 
+@_conda_build_user_agent
 def test(
     recipedir_or_package_or_metadata: str | os.PathLike | Path | MetaData,
     move_broken: bool = True,
@@ -286,6 +294,7 @@ def test(
         )
 
 
+@_conda_build_user_agent
 def list_skeletons() -> list[str]:
     """List available skeletons for generating conda recipes from external sources.
 
@@ -301,6 +310,7 @@ def list_skeletons() -> list[str]:
     return files
 
 
+@_conda_build_user_agent
 def skeletonize(
     packages: str | Iterable[str],
     repo: Literal["cpan", "cran", "luarocks", "pypi", "rpm"],
@@ -358,6 +368,7 @@ def skeletonize(
         )
 
 
+@_conda_build_user_agent
 def develop(
     recipe_dir: str | Iterable[str],
     prefix: str = sys.prefix,
@@ -375,6 +386,7 @@ def develop(
     execute(recipe_dir, prefix, no_pth_file, build_ext, clean, uninstall)
 
 
+@_conda_build_user_agent
 def convert(
     package_file: str,
     output_dir: str = ".",
@@ -412,6 +424,7 @@ def convert(
         raise RuntimeError(f"cannot convert: {package_file}")
 
 
+@_conda_build_user_agent
 def test_installable(channel: str = "defaults") -> bool:
     """Check to make sure that packages in channel are installable.
     This is a consistency check for the channel."""
@@ -420,6 +433,7 @@ def test_installable(channel: str = "defaults") -> bool:
     return test_installable(channel)
 
 
+@_conda_build_user_agent
 def inspect_linkages(
     packages: str | Iterable[str],
     prefix: str | os.PathLike | Path = sys.prefix,
@@ -443,6 +457,7 @@ def inspect_linkages(
     )
 
 
+@_conda_build_user_agent
 def inspect_objects(packages, prefix=sys.prefix, groupby="filename"):
     from .inspect_pkg import inspect_objects
 
@@ -450,6 +465,7 @@ def inspect_objects(packages, prefix=sys.prefix, groupby="filename"):
     return inspect_objects(packages, prefix=prefix, groupby=groupby)
 
 
+@_conda_build_user_agent
 def inspect_prefix_length(packages, min_prefix_length=_prefix_length):
     from .tarcheck import check_prefix_lengths
 
@@ -471,6 +487,7 @@ def inspect_prefix_length(packages, min_prefix_length=_prefix_length):
     return len(prefix_lengths) == 0
 
 
+@_conda_build_user_agent
 def inspect_hash_inputs(packages):
     """Return dictionaries of data that created the hash value (h????) for the provided package(s)
 
@@ -482,6 +499,7 @@ def inspect_hash_inputs(packages):
     return get_hash_input(packages)
 
 
+@_conda_build_user_agent
 def create_metapackage(
     name,
     version,
@@ -512,6 +530,7 @@ def create_metapackage(
     )
 
 
+@_conda_build_user_agent
 def debug(
     recipe_or_package_path_or_metadata_tuples,
     path=None,

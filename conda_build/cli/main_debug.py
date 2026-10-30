@@ -11,6 +11,7 @@ from conda.base.context import context
 
 from .. import api
 from .._rattler_build.compat import check_arguments_rattler, run_rattler
+from .._user_agent import conda_build_user_agent
 from ..config import get_or_merge_config
 from ..utils import is_v1_recipe, on_win
 from . import validators as valid
@@ -96,6 +97,7 @@ Set up environments and activation scripts to debug your build or test phase.
     return p
 
 
+@conda_build_user_agent
 def execute(args: Sequence[str] | None = None) -> int:
     parser = get_parser()
     parsed = parser.parse_args(args)

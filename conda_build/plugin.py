@@ -5,10 +5,23 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import conda.plugins
-from conda.plugins.types import CondaSubcommand
+from conda.plugins.types import CondaRequestHeader, CondaSubcommand
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+
+
+@conda.plugins.hookimpl
+def conda_session_headers():
+    from conda.base.context import context
+
+    from . import __version__
+    from ._user_agent import is_conda_build_active
+
+    if is_conda_build_active():
+        yield CondaRequestHeader(
+            name="User-Agent", value=f"{context.user_agent} conda-build/{__version__}"
+        )
 
 
 # lazy-import to avoid nasty import-time side effects when not using conda-build
