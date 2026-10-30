@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
-from inspect import signature
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -40,7 +39,4 @@ def _conda_build_user_agent() -> Iterator[None]:
 
 
 def conda_build_user_agent(func):
-    wrapped = _conda_build_user_agent()(func)
-    # getfullargspec does not follow __wrapped__, unlike inspect.signature.
-    wrapped.__signature__ = signature(func)
-    return wrapped
+    return _conda_build_user_agent()(func)
