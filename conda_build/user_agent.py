@@ -16,7 +16,7 @@ def is_conda_build_active() -> bool:
 
 
 @contextmanager
-def _conda_build_user_agent() -> Iterator[None]:
+def conda_build_user_agent() -> Iterator[None]:
     """Identify requests from nested calls and conda's download threads.
 
     Like conda-build's other process-wide settings, this assumes independent
@@ -36,7 +36,3 @@ def _conda_build_user_agent() -> Iterator[None]:
         _active = previous
         if not previous:
             context.plugin_manager.get_cached_session_headers.cache_clear()
-
-
-def conda_build_user_agent(func):
-    return _conda_build_user_agent()(func)
