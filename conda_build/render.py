@@ -217,7 +217,7 @@ def get_env_dependencies(
         ) as e:
             # we'll get here if the environment is unsatisfiable
             if hasattr(e, "packages"):
-                unsat = ", ".join(e.packages)
+                unsat = ", ".join(map(str, e.packages))
             else:
                 unsat = e.message
             if permit_unsatisfiable_variants:
