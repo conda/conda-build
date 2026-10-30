@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING
 from conda.base.context import context
 
 from .. import api
-from .._user_agent import conda_build_user_agent
 
 try:
     from conda.cli.helpers import add_parser_channels
@@ -121,7 +120,6 @@ command line with the conda metapackage command.
     return parser, parser.parse_args(args)
 
 
-@conda_build_user_agent
 def execute(args: Sequence[str] | None = None) -> int:
     _, parsed = parse_args(args)
     context.__init__(argparse_args=parsed)

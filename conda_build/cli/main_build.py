@@ -18,7 +18,6 @@ from conda.common.io import dashlist
 
 from .. import api, build, source, utils
 from .._rattler_build.compat import check_arguments_rattler, run_rattler
-from .._user_agent import conda_build_user_agent
 from ..config import (
     CondaPkgFormat,
     conda_pkg_format_default,
@@ -564,7 +563,6 @@ def check_action(recipe: os.PathLike, config: Config):
     return api.check(recipe, config=config)
 
 
-@conda_build_user_agent
 def execute(args: Sequence[str] | None = None) -> int:
     _, parsed = parse_args(args)
     context.__init__(argparse_args=parsed)

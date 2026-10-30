@@ -16,7 +16,7 @@ def conda_session_headers():
     from conda.base.context import context
 
     from . import __version__
-    from ._user_agent import is_conda_build_active
+    from .user_agent import is_conda_build_active
 
     if is_conda_build_active():
         yield CondaRequestHeader(
@@ -25,52 +25,52 @@ def conda_session_headers():
 
 
 # lazy-import to avoid nasty import-time side effects when not using conda-build
-def build(args: Sequence[str]) -> int:
-    from .cli.main_build import execute
+def build(args: Sequence[str] | None = None) -> int:
+    from .cli import execute
 
-    return execute(args)
-
-
-def convert(args: Sequence[str]) -> int:
-    from .cli.main_convert import execute
-
-    return execute(args)
+    return execute("build", args)
 
 
-def debug(args: Sequence[str]) -> int:
-    from .cli.main_debug import execute
+def convert(args: Sequence[str] | None = None) -> int:
+    from .cli import execute
 
-    return execute(args)
-
-
-def develop(args: Sequence[str]) -> int:
-    from .cli.main_develop import execute
-
-    return execute(args)
+    return execute("convert", args)
 
 
-def inspect(args: Sequence[str]) -> int:
-    from .cli.main_inspect import execute
+def debug(args: Sequence[str] | None = None) -> int:
+    from .cli import execute
 
-    return execute(args)
-
-
-def metapackage(args: Sequence[str]) -> int:
-    from .cli.main_metapackage import execute
-
-    return execute(args)
+    return execute("debug", args)
 
 
-def render(args: Sequence[str]) -> int:
-    from .cli.main_render import execute
+def develop(args: Sequence[str] | None = None) -> int:
+    from .cli import execute
 
-    return execute(args)
+    return execute("develop", args)
 
 
-def skeleton(args: Sequence[str]) -> int:
-    from .cli.main_skeleton import execute
+def inspect(args: Sequence[str] | None = None) -> int:
+    from .cli import execute
 
-    return execute(args)
+    return execute("inspect", args)
+
+
+def metapackage(args: Sequence[str] | None = None) -> int:
+    from .cli import execute
+
+    return execute("metapackage", args)
+
+
+def render(args: Sequence[str] | None = None) -> int:
+    from .cli import execute
+
+    return execute("render", args)
+
+
+def skeleton(args: Sequence[str] | None = None) -> int:
+    from .cli import execute
+
+    return execute("skeleton", args)
 
 
 @conda.plugins.hookimpl

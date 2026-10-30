@@ -1,8 +1,11 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+import sys
+import tomllib
 from concurrent.futures import ThreadPoolExecutor
 from importlib import import_module
-from threading import Event, current_thread
+from importlib.metadata import EntryPoint
+from pathlib import Path
 
 import pytest
 from conda.base.context import context, reset_context
@@ -19,6 +22,8 @@ def user_agent(session, host="example.invalid"):
 
 @pytest.mark.parametrize("worker", [False, True])
 def test_api_user_agent_cached_sessions(monkeypatch, worker):
+    manager = context.plugin_manager
+    cached_session_headers = manager.get_cached_session_headers
     with ThreadPoolExecutor(max_workers=1) as executor:
 
         def prepare(host="example.invalid"):
@@ -32,12 +37,14 @@ def test_api_user_agent_cached_sessions(monkeypatch, worker):
         assert "conda-build/" not in baseline
 
         def render_recipe(*args, **kwargs):
+            assert manager.get_cached_session_headers is cached_session_headers
             assert prepare() == f"{baseline} conda-build/{__version__}"
             assert prepare("other.invalid") == f"{baseline} conda-build/{__version__}"
             return []
 
         monkeypatch.setattr(render, "render_recipe", render_recipe)
         assert api.render("recipe") == []
+        assert manager.get_cached_session_headers is cached_session_headers
         assert prepare() == baseline
         assert prepare("other.invalid") == baseline
 
@@ -98,75 +105,68 @@ def test_api_user_agent_survives_context_reset(monkeypatch):
     assert user_agent(session) == baseline
 
 
+def command_action(command, entry_point):
+    if entry_point == "plugin":
+        return command.action
+    project = tomllib.loads((Path(__file__).parents[1] / "pyproject.toml").read_text())
+    name = f"conda-{command.name}"
+    return EntryPoint(
+        name=name, value=project["project"]["scripts"][name], group="console_scripts"
+    ).load()
+
+
+@pytest.mark.parametrize("entry_point", ["plugin", "standalone"])
 @pytest.mark.parametrize(
     "command", list(plugin.conda_subcommands()), ids=lambda c: c.name
 )
 @pytest.mark.filterwarnings(
     "ignore:conda_build.cli.main_develop:PendingDeprecationWarning"
 )
-def test_cli_user_agent(monkeypatch, command):
+def test_cli_user_agent(monkeypatch, command, entry_point):
     module = import_module(f"conda_build.cli.main_{command.name}")
     session = CondaSession()
     baseline = user_agent(session)
+    parser_name = "get_parser" if command.name == "debug" else "parse_args"
+    original = getattr(module, parser_name)
 
     def parse_args(*args, **kwargs):
         assert user_agent(session) == f"{baseline} conda-build/{__version__}"
-        raise SystemExit(0)
+        return original(*args, **kwargs)
 
-    # debug constructs its parser directly, the other commands use parse_args.
-    monkeypatch.setattr(
-        module, "get_parser" if command.name == "debug" else "parse_args", parse_args
-    )
-    for execute in (module.execute, command.action):
+    monkeypatch.setattr(module, parser_name, parse_args)
+    monkeypatch.setattr(sys, "argv", [f"conda-{command.name}", "--help"])
+    execute = command_action(command, entry_point)
+    for args in (["--help"], None):
         with pytest.raises(SystemExit) as exc:
-            execute([])
+            if args is None:
+                execute()
+            else:
+                execute(args)
         assert exc.value.code == 0
         assert user_agent(session) == baseline
 
 
-@pytest.mark.parametrize("transition", ["entry", "exit"])
-def test_inflight_session_headers(monkeypatch, transition):
-    manager = context.plugin_manager
-    original = manager.get_hook_results
-    baseline = context.user_agent
-    expected = f"{baseline} conda-build/{__version__}"
-    computed, release = Event(), Event()
-    manager.get_cached_session_headers.cache_clear()
+@pytest.mark.parametrize("entry_point", ["plugin", "standalone"])
+@pytest.mark.parametrize("fail", [False, True])
+def test_cli_user_agent_return_and_exception(monkeypatch, entry_point, fail):
+    module = import_module("conda_build.cli.main_render")
+    command = next(c for c in plugin.conda_subcommands() if c.name == "render")
+    session = CondaSession()
+    baseline = user_agent(session)
+    args = ["recipe"]
 
-    def prepare():
-        return user_agent(CondaSession(), "cache-race.invalid")
+    def render(args):
+        assert args == ["recipe"]
+        assert user_agent(session) == f"{baseline} conda-build/{__version__}"
+        if fail:
+            raise ValueError("stop")
+        return 42
 
-    def delayed(name, **kwargs):
-        result = original(name, **kwargs)
-        if name == "session_headers" and current_thread().name.startswith("cache-race"):
-            computed.set()
-            assert release.wait(10)
-        return result
-
-    monkeypatch.setattr(manager, "get_hook_results", delayed)
-    with ThreadPoolExecutor(max_workers=1, thread_name_prefix="cache-race") as executor:
-        future = None
-        try:
-            if transition == "entry":
-                future = executor.submit(prepare)
-                assert computed.wait(10)
-
-            def render_recipe(*args, **kwargs):
-                nonlocal future
-                if transition == "entry":
-                    release.set()
-                    future.result(timeout=10)
-                    assert prepare() == expected
-                else:
-                    future = executor.submit(prepare)
-                    assert computed.wait(10)
-                return []
-
-            monkeypatch.setattr(render, "render_recipe", render_recipe)
-            api.render("recipe")
-            if transition == "exit":
-                release.set()
-                future.result(timeout=10)
-                assert prepare() == baseline
-        finally:
-            release.set()
+    monkeypatch.setattr(module, "execute", render)
+    execute = command_action(command, entry_point)
+    if fail:
+        with pytest.raises(ValueError, match="stop"):
+            execute(args)
+    else:
+        assert execute(args) == 42
+    assert user_agent(session) == baseline

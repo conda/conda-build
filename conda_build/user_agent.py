@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
-from functools import cache
 from inspect import signature
 from typing import TYPE_CHECKING
 
@@ -24,26 +23,20 @@ def _conda_build_user_agent() -> Iterator[None]:
     Like conda-build's other process-wide settings, this assumes independent
     API calls do not overlap across threads.
     """
+    from conda.base.context import context
+
     global _active
 
     previous = _active
     _active = True
     try:
         if not previous:
-            _reset_session_headers()
+            context.plugin_manager.get_cached_session_headers.cache_clear()
         yield
     finally:
         _active = previous
         if not previous:
-            _reset_session_headers()
-
-
-def _reset_session_headers() -> None:
-    from conda.base.context import context
-
-    manager = context.plugin_manager
-    # In-flight requests may still populate the old cache after a transition.
-    manager.get_cached_session_headers = cache(manager.get_session_headers)
+            context.plugin_manager.get_cached_session_headers.cache_clear()
 
 
 def conda_build_user_agent(func):

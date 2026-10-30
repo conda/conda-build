@@ -20,12 +20,11 @@ from os.path import dirname, expanduser, join
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from ._user_agent import conda_build_user_agent as _conda_build_user_agent
-
 # make the Config class available in the api namespace
 from .config import DEFAULT_PREFIX_LENGTH as _prefix_length
 from .config import Config, get_channel_urls, get_or_merge_config
 from .metadata import MetaData, MetaDataTuple
+from .user_agent import conda_build_user_agent as _conda_build_user_agent
 from .utils import (
     CONDA_PACKAGE_EXTENSIONS,
     LoggingContext,
