@@ -172,7 +172,7 @@ jobs:
 
       - name: Hash + Timestamp
         env:
-          HASH_PREFIX: ${{ runner.os }}-${{ runner.arch }}-Py${{ matrix.python-version }}-${{ matrix.conda-version }}-${{ matrix.test-type }}
+          HASH_PREFIX: ${{ runner.os }}-${{ runner.arch }}-Py${{ matrix.python-version }}-${{ matrix.conda-version }}-${{ matrix.test-type }}-solver${{ matrix.conda-libmamba-solver-version || 'default' }}
         run: echo "HASH=${HASH_PREFIX}-$(date -u "+%Y%m")" >> "$GITHUB_ENV"
 
       - name: Cache Conda
