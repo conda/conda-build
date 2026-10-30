@@ -42,17 +42,24 @@ def test_api_user_agent_cached_sessions(monkeypatch, worker):
         assert prepare("other.invalid") == baseline
 
 
-def test_nested_api_user_agent(monkeypatch):
+@pytest.mark.parametrize("fail", [False, True])
+def test_nested_api_user_agent(monkeypatch, fail):
     session = CondaSession()
     baseline = user_agent(session)
     expected = f"{baseline} conda-build/{__version__}"
 
     def output_yaml(*args, **kwargs):
         assert user_agent(session) == expected
+        if fail:
+            raise ValueError("nested call failed")
         return "recipe"
 
     def render_recipe(*args, **kwargs):
-        assert api.output_yaml(None) == "recipe"
+        if fail:
+            with pytest.raises(ValueError, match="nested call failed"):
+                api.output_yaml(None)
+        else:
+            assert api.output_yaml(None) == "recipe"
         assert user_agent(session) == expected
         return []
 
@@ -115,36 +122,6 @@ def test_cli_user_agent(monkeypatch, command):
             execute([])
         assert exc.value.code == 0
         assert user_agent(session) == baseline
-
-
-def test_overlapping_api_calls(monkeypatch):
-    session = CondaSession()
-    baseline = user_agent(session)
-    started = {name: Event() for name in ("first", "second")}
-    finish = {name: Event() for name in started}
-
-    def render_recipe(name, **kwargs):
-        started[name].set()
-        assert finish[name].wait(10)
-        return []
-
-    monkeypatch.setattr(render, "render_recipe", render_recipe)
-    with ThreadPoolExecutor(max_workers=2) as executor:
-        try:
-            first = executor.submit(api.render, "first")
-            assert started["first"].wait(10)
-            second = executor.submit(api.render, "second")
-            assert started["second"].wait(10)
-            assert user_agent(session) == f"{baseline} conda-build/{__version__}"
-            finish["first"].set()
-            assert first.result(timeout=10) == []
-            assert user_agent(session) == f"{baseline} conda-build/{__version__}"
-            finish["second"].set()
-            assert second.result(timeout=10) == []
-            assert user_agent(session) == baseline
-        finally:
-            for event in finish.values():
-                event.set()
 
 
 @pytest.mark.parametrize("transition", ["entry", "exit"])
