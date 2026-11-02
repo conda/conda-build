@@ -34,6 +34,7 @@ from conda.exceptions import (
     LinkError,
     LockError,
     NoPackagesFoundError,
+    PackagesNotFoundError,
     PaddingError,
     UnsatisfiableError,
 )
@@ -903,6 +904,7 @@ def get_install_actions(
                     PaddingError,
                     LinkError,
                     DependencyNeedsBuildingError,
+                    PackagesNotFoundError,
                     CondaError,
                     AssertionError,
                     BuildLockError,
