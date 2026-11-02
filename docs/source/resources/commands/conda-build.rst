@@ -184,6 +184,12 @@ conda-build
                  conda-package-handling. Defaults to 19. Note that using levels
                  above 19 is not advised due to high memory consumption.
 
+          <B>--zstd-compression-threads</B> ZSTD_COMPRESSION_THREADS
+                 When building v2 packages, set the number of threads used for
+                 zstd compression by conda-package-handling (requires
+                 conda-package-handling >=2.6.0). Use -1 for all CPUs.
+                 Defaults to 1.
+
           <B>--package-format</B> {1,2,.tar.bz2,.conda}
                  Choose which package type(s) are outputted. Accepted inputs:
                  .tar.bz2 or 1 (legacy format), .conda or 2 (modern format).

@@ -418,6 +418,47 @@ def test_tests_failed(testing_metadata: MetaData, tmp_path: Path):
 
 
 @pytest.mark.parametrize(
+    "threads,cph_version,expected,warns",
+    [
+        pytest.param(1, "2.6.0", None, False, id="default"),
+        pytest.param(-1, "2.6.0", -1, False, id="all-cpus"),
+        pytest.param("4", "2.6.0", 4, False, id="condarc-string"),
+        pytest.param(4, "2.5.0", None, True, id="cph-too-old"),
+    ],
+)
+def test_bundle_conda_zstd_compression_threads(
+    testing_metadata: MetaData,
+    mocker: MockerFixture,
+    caplog: pytest.LogCaptureFixture,
+    threads: int | str,
+    cph_version: str,
+    expected: int | None,
+    warns: bool,
+) -> None:
+    testing_metadata.config.zstd_compression_threads = threads
+    mocker.patch.object(build.conda_package_handling, "__version__", cph_version)
+
+    class _Compressed(Exception):
+        pass
+
+    create = mocker.patch(
+        "conda_package_handling.api.create",
+        side_effect=_Compressed,
+    )
+
+    with pytest.raises(_Compressed):
+        build.bundle_conda(
+            output={"name": testing_metadata.name()},
+            metadata=testing_metadata,
+            env={},
+            stats={},
+        )
+
+    assert create.call_args.kwargs.get("compression_threads") == expected
+    assert ("conda-package-handling >=2.6.0" in caplog.text) == warns
+
+
+@pytest.mark.parametrize(
     "numpy_version, requires_numpy, expected_warning",
     [
         ("default", True, True),
