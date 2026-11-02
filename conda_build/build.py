@@ -1960,32 +1960,6 @@ def bundle_conda(
                 tarcheck.check_all(tmp_path, metadata.config)
             output_filename = os.path.basename(tmp_path)
 
-            # we do the import here because we want to respect logger level context
-            try:
-                from conda_verify.verify import Verify
-            except ImportError as exc:
-                Verify = None
-                log.debug(
-                    "Importing conda-verify failed. Skipping extra checks...",
-                    exc_info=exc,
-                )
-            if getattr(metadata.config, "verify", False) and Verify:
-                verifier = Verify()
-                checks_to_ignore = (
-                    utils.ensure_list(metadata.config.ignore_verify_codes)
-                    + metadata.ignore_verify_codes()
-                )
-                try:
-                    verifier.verify_package(
-                        path_to_package=tmp_path,
-                        checks_to_ignore=checks_to_ignore,
-                        exit_on_error=metadata.config.exit_on_verify_error,
-                    )
-                except KeyError as e:
-                    log.warning(
-                        "Package doesn't have necessary files.  It might be too old to inspect."
-                        f"Legacy noarch packages are known to fail.  Full message was {e}"
-                    )
             try:
                 crossed_subdir = metadata.config.target_subdir
             except AttributeError:

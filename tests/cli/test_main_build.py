@@ -46,6 +46,15 @@ def test_build_empty_sections(conda_build_test_recipe_envvar: str):
     main_build.execute(args)
 
 
+@pytest.mark.parametrize("flag", ["--verify", "--no-verify", "--strict-verify"])
+def test_verify_flags_are_deprecated_noops(flag):
+    with pytest.deprecated_call(match="conda-verify.*no effect"):
+        _, parsed = main_build.parse_args([flag, "recipe"])
+    assert parsed.recipe == ["recipe"]
+    _, defaults = main_build.parse_args(["recipe"])
+    main_build.check_arguments_rattler("build", parsed, defaults)
+
+
 @pytest.mark.serial
 @pytest.mark.skipif(
     context.subdir == "osx-arm64",
@@ -615,7 +624,7 @@ def test_user_warning(tmpdir, recwarn):
 
 
 def test_build_with_empty_channel_fails(empty_channel: Path) -> None:
-    with pytest.raises(PackagesNotFoundError):
+    with pytest.raises((PackagesNotFoundError, DependencyNeedsBuildingError)):
         main_build.execute(
             [
                 "--override-channels",

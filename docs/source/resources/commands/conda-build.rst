@@ -209,13 +209,16 @@ conda-build
                  only to this call of conda-build.
 
           <B>--verify</B>
-                 run verification on recipes or packages when building
+                 Deprecated and scheduled for removal in 27.5. This option has
+                 no effect because conda-verify support has been removed.
 
           <B>--no-verify</B>
-                 do not run verification on recipes or packages when building
+                 Deprecated and scheduled for removal in 27.5. This option has
+                 no effect because conda-verify support has been removed.
 
           <B>--strict-verify</B>
-                 Exit if any conda-verify check fail, instead of only printing them
+                 Deprecated and scheduled for removal in 27.5. This option has
+                 no effect because conda-verify support has been removed.
 
           <B>--output-folder</B> OUTPUT_FOLDER
                  folder to dump output package to.  Package  are  moved  here  if

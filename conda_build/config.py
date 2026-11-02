@@ -249,6 +249,7 @@ def _get_default_settings():
         Setting("identity", None),
         Setting("config_file", None),
         Setting("repository", "pypitest"),
+        # Legacy conda-verify settings retained for API compatibility. They have no effect.
         Setting("verify", True),
         Setting(
             "ignore_verify_codes",

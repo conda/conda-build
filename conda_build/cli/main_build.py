@@ -25,6 +25,7 @@ from ..config import (
     get_or_merge_config,
     zstd_compression_level_default,
 )
+from ..deprecations import deprecated
 from ..utils import LoggingContext, is_v0_recipe, is_v1_recipe
 from .actions import KeyValueAction, PackageTypeNormalize
 from .main_render import get_render_parser
@@ -265,27 +266,23 @@ def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
             "to this call of conda-build."
         ),
     )
-    parser.add_argument(
-        "--verify",
-        action="store_true",
-        help="run verification on recipes or packages when building",
-        default=context.conda_build.get("verify", "true").lower() == "true",
-    )
-    parser.add_argument(
-        "--no-verify",
-        action="store_false",
-        dest="verify",
-        help="do not run verification on recipes or packages when building",
-        default=context.conda_build.get("verify", "true").lower() == "true",
-    )
-    parser.add_argument(
-        "--strict-verify",
-        action="store_true",
-        dest="exit_on_verify_error",
-        help="Exit if any conda-verify check fail, instead of only printing them",
-        default=context.conda_build.get("exit_on_verify_error", "false").lower()
-        == "true",
-    )
+    for flag, dest, default in (
+        ("--verify", "verify", True),
+        ("--no-verify", "verify", True),
+        ("--strict-verify", "exit_on_verify_error", False),
+    ):
+        parser.add_argument(
+            flag,
+            action=deprecated.action(
+                "26.11",
+                "27.5",
+                argparse._StoreConstAction,
+                addendum="conda-verify support has been removed. This option has no effect.",
+            ),
+            dest=dest,
+            const=default,
+            default=default,
+        )
     parser.add_argument(
         "--output-folder",
         help=(
@@ -647,7 +644,6 @@ def execute(args: Sequence[str] | None = None) -> int:
             notest=parsed.notest,
             already_built=None,
             config=config,
-            verify=parsed.verify,
             variants=parsed.variants,
             cache_dir=parsed.cache_dir,
         )
