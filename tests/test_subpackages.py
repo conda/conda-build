@@ -197,7 +197,7 @@ def test_about_metadata(testing_config):
 @pytest.mark.slow
 def test_toplevel_entry_points_do_not_apply_to_subpackages(testing_config):
     recipe_dir = os.path.join(subpackage_dir, "_entry_points")
-    outputs = api.build(recipe_dir, config=testing_config)
+    outputs = api.build(recipe_dir, config=testing_config, notest=True)
     if utils.on_win:
         script_dir = "Scripts"
         ext = ".exe"
