@@ -126,6 +126,16 @@ you the rendering for each Python version.
 Environments
 ------------
 
+On macOS, conda-build requests copies of package files in the build, host, and test
+environments instead of hardlinking them from the package cache. This avoids
+macOS loading build tools and libraries through their package-cache paths.
+This also applies when cloning a template environment. It does not change
+the linking settings for other conda installs or for other platforms.
+As with other conda settings, ``#!final`` values in ``.condarc`` take precedence
+over this request.
+Version 1 recipes built with rattler-build use its environment installation
+behavior instead.
+
 To build the package, conda-build will make an environment for you
 and install all of the build and run dependencies in that environment.
 Conda-build will indicate where you can successfully build the package.
