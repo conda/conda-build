@@ -3,7 +3,7 @@
 # This file makes sure that our API has not changed.  Doing so can not be accidental.  Whenever it
 #    happens, we should bump our major build number, because we may have broken someone.
 import sys
-from inspect import getfullargspec as getargspec
+from inspect import Parameter, signature
 
 import pytest
 
@@ -12,172 +12,170 @@ from conda_build import api
 pytestmark = pytest.mark.no_default_testing_config
 
 
+def positional_parameters(func):
+    return [
+        (parameter.name, parameter.default)
+        for parameter in signature(func).parameters.values()
+        if parameter.kind
+        in (Parameter.POSITIONAL_ONLY, Parameter.POSITIONAL_OR_KEYWORD)
+    ]
+
+
 def test_api_config():
     assert hasattr(api, "Config")
     assert hasattr(api, "get_or_merge_config")
 
 
 def test_api_get_or_merge_config():
-    argspec = getargspec(api.get_or_merge_config)
-    assert argspec.args == ["config", "variant"]
-    assert argspec.defaults == (None,)
+    assert positional_parameters(api.get_or_merge_config) == [
+        ("config", Parameter.empty),
+        ("variant", None),
+    ]
 
 
 def test_api_render():
-    argspec = getargspec(api.render)
-    assert argspec.args == [
-        "recipe_path",
-        "config",
-        "variants",
-        "permit_unsatisfiable_variants",
-        "finalize",
-        "bypass_env_check",
+    assert positional_parameters(api.render) == [
+        ("recipe_path", Parameter.empty),
+        ("config", None),
+        ("variants", None),
+        ("permit_unsatisfiable_variants", True),
+        ("finalize", True),
+        ("bypass_env_check", False),
     ]
-    assert argspec.defaults == (None, None, True, True, False)
 
 
 def test_api_output_yaml():
-    argspec = getargspec(api.output_yaml)
-    assert argspec.args == ["metadata", "file_path", "suppress_outputs"]
-    assert argspec.defaults == (None, False)
+    assert positional_parameters(api.output_yaml) == [
+        ("metadata", Parameter.empty),
+        ("file_path", None),
+        ("suppress_outputs", False),
+    ]
 
 
 def test_api_get_output_file_paths():
-    argspec = getargspec(api.get_output_file_paths)
-    assert argspec.args == [
-        "recipe_path_or_metadata",
-        "no_download_source",
-        "config",
-        "variants",
+    assert positional_parameters(api.get_output_file_paths) == [
+        ("recipe_path_or_metadata", Parameter.empty),
+        ("no_download_source", False),
+        ("config", None),
+        ("variants", None),
     ]
-    assert argspec.defaults == (False, None, None)
 
 
 def test_api_check():
-    argspec = getargspec(api.check)
-    assert argspec.args == ["recipe_path", "no_download_source", "config", "variants"]
-    assert argspec.defaults == (False, None, None)
+    assert positional_parameters(api.check) == [
+        ("recipe_path", Parameter.empty),
+        ("no_download_source", False),
+        ("config", None),
+        ("variants", None),
+    ]
 
 
 def test_api_build():
-    argspec = getargspec(api.build)
-    assert argspec.args == [
-        "recipe_paths_or_metadata",
-        "post",
-        "need_source_download",
-        "build_only",
-        "notest",
-        "config",
-        "variants",
-        "stats",
+    assert positional_parameters(api.build) == [
+        ("recipe_paths_or_metadata", Parameter.empty),
+        ("post", None),
+        ("need_source_download", True),
+        ("build_only", False),
+        ("notest", False),
+        ("config", None),
+        ("variants", None),
+        ("stats", None),
     ]
-    assert argspec.defaults == (None, True, False, False, None, None, None)
 
 
 def test_api_test():
-    argspec = getargspec(api.test)
-    assert argspec.args == [
-        "recipedir_or_package_or_metadata",
-        "move_broken",
-        "config",
-        "stats",
+    assert positional_parameters(api.test) == [
+        ("recipedir_or_package_or_metadata", Parameter.empty),
+        ("move_broken", True),
+        ("config", None),
+        ("stats", None),
     ]
-    assert argspec.defaults == (True, None, None)
 
 
 def test_api_list_skeletons():
-    argspec = getargspec(api.list_skeletons)
-    assert argspec.args == []
-    assert argspec.defaults is None
+    assert positional_parameters(api.list_skeletons) == []
 
 
 def test_api_skeletonize():
-    argspec = getargspec(api.skeletonize)
-    assert argspec.args == [
-        "packages",
-        "repo",
-        "output_dir",
-        "version",
-        "recursive",
-        "config",
+    assert positional_parameters(api.skeletonize) == [
+        ("packages", Parameter.empty),
+        ("repo", Parameter.empty),
+        ("output_dir", "."),
+        ("version", None),
+        ("recursive", False),
+        ("config", None),
     ]
-    assert argspec.defaults == (".", None, False, None)
 
 
 def test_api_develop():
-    argspec = getargspec(api.develop)
-    assert argspec.args == [
-        "recipe_dir",
-        "prefix",
-        "no_pth_file",
-        "build_ext",
-        "clean",
-        "uninstall",
+    assert positional_parameters(api.develop) == [
+        ("recipe_dir", Parameter.empty),
+        ("prefix", sys.prefix),
+        ("no_pth_file", False),
+        ("build_ext", False),
+        ("clean", False),
+        ("uninstall", False),
     ]
-    assert argspec.defaults == (sys.prefix, False, False, False, False)
 
 
 def test_api_convert():
-    argspec = getargspec(api.convert)
-    assert argspec.args == [
-        "package_file",
-        "output_dir",
-        "show_imports",
-        "platforms",
-        "force",
-        "dependencies",
-        "verbose",
-        "quiet",
-        "dry_run",
+    assert positional_parameters(api.convert) == [
+        ("package_file", Parameter.empty),
+        ("output_dir", "."),
+        ("show_imports", False),
+        ("platforms", None),
+        ("force", False),
+        ("dependencies", None),
+        ("verbose", False),
+        ("quiet", True),
+        ("dry_run", False),
     ]
-    assert argspec.defaults == (".", False, None, False, None, False, True, False)
 
 
 def test_api_installable():
-    argspec = getargspec(api.test_installable)
-    assert argspec.args == ["channel"]
-    assert argspec.defaults == ("defaults",)
+    assert positional_parameters(api.test_installable) == [
+        ("channel", "defaults"),
+    ]
 
 
 def test_api_inspect_linkages():
-    argspec = getargspec(api.inspect_linkages)
-    assert argspec.args == [
-        "packages",
-        "prefix",
-        "untracked",
-        "all_packages",
-        "show_files",
-        "groupby",
-        "sysroot",
+    assert positional_parameters(api.inspect_linkages) == [
+        ("packages", Parameter.empty),
+        ("prefix", sys.prefix),
+        ("untracked", False),
+        ("all_packages", False),
+        ("show_files", False),
+        ("groupby", "package"),
+        ("sysroot", ""),
     ]
-    assert argspec.defaults == (sys.prefix, False, False, False, "package", "")
 
 
 def test_api_inspect_objects():
-    argspec = getargspec(api.inspect_objects)
-    assert argspec.args == ["packages", "prefix", "groupby"]
-    assert argspec.defaults == (sys.prefix, "filename")
+    assert positional_parameters(api.inspect_objects) == [
+        ("packages", Parameter.empty),
+        ("prefix", sys.prefix),
+        ("groupby", "filename"),
+    ]
 
 
 def test_api_inspect_prefix_length():
-    argspec = getargspec(api.inspect_prefix_length)
-    assert argspec.args == ["packages", "min_prefix_length"]
     # hard-coded prefix length as intentional check here
-    assert argspec.defaults == (255,)
+    assert positional_parameters(api.inspect_prefix_length) == [
+        ("packages", Parameter.empty),
+        ("min_prefix_length", 255),
+    ]
 
 
 def test_api_create_metapackage():
-    argspec = getargspec(api.create_metapackage)
-    assert argspec.args == [
-        "name",
-        "version",
-        "entry_points",
-        "build_string",
-        "build_number",
-        "dependencies",
-        "home",
-        "license_name",
-        "summary",
-        "config",
+    assert positional_parameters(api.create_metapackage) == [
+        ("name", Parameter.empty),
+        ("version", Parameter.empty),
+        ("entry_points", ()),
+        ("build_string", None),
+        ("build_number", 0),
+        ("dependencies", ()),
+        ("home", None),
+        ("license_name", None),
+        ("summary", None),
+        ("config", None),
     ]
-    assert argspec.defaults == ((), None, 0, (), None, None, None, None)

@@ -26,6 +26,7 @@ from ..config import (
     zstd_compression_level_default,
 )
 from ..deprecations import deprecated
+from ..user_agent import conda_build_user_agent
 from ..utils import LoggingContext, is_v0_recipe, is_v1_recipe
 from .actions import KeyValueAction, PackageTypeNormalize
 from .main_render import get_render_parser
@@ -545,7 +546,8 @@ def source_action(recipe: os.PathLike, config: Config):
     :param config: Config object used for various options
     """
     metadata = api.render(recipe, config=config)[0][0]
-    source.provide(metadata)
+    with conda_build_user_agent():
+        source.provide(metadata)
     print("Source tree in:", metadata.config.work_dir)
 
 
