@@ -24,6 +24,7 @@ from ..config import (
     get_channel_urls,
     get_or_merge_config,
     zstd_compression_level_default,
+    zstd_compression_threads_default,
 )
 from ..deprecations import deprecated
 from ..utils import LoggingContext, is_v0_recipe, is_v1_recipe
@@ -198,6 +199,19 @@ def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
         choices=range(1, 23),
         default=context.conda_build.get(
             "zstd_compression_level", zstd_compression_level_default
+        ),
+    )
+    parser.add_argument(
+        "--zstd-compression-threads",
+        help=(
+            "When building v2 packages, set the number of threads used for zstd "
+            "compression by conda-package-handling (requires "
+            "conda-package-handling >=2.6.0). Use -1 for all CPUs. "
+            f"Defaults to {zstd_compression_threads_default}."
+        ),
+        type=int,
+        default=context.conda_build.get(
+            "zstd_compression_threads", zstd_compression_threads_default
         ),
     )
     pypi_grp = parser.add_argument_group("PyPI upload parameters (twine)")
