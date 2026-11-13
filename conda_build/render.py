@@ -1117,7 +1117,10 @@ def render_metadata_tuples(
                                     om,
                                     permit_unsatisfiable_variants=permit_unsatisfiable_variants,
                                 )
-                            except (DependencyNeedsBuildingError, ResolvePackageNotFound):
+                            except (
+                                DependencyNeedsBuildingError,
+                                ResolvePackageNotFound,
+                            ):
                                 if not permit_unsatisfiable_variants:
                                     raise
 
