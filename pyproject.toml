@@ -135,6 +135,12 @@ filterwarnings = [
   # ignore conda trust deprecation
   "ignore:conda.trust:DeprecationWarning",
   "ignore:conda.trust:PendingDeprecationWarning",
+  # TEMPORARY: conda deprecates the pycosat solver stack that conda-index still
+  # imports; remove once conda-index migrated to conda-pycosat-solver
+  "ignore:conda.exports.Resolve is pending deprecation:PendingDeprecationWarning",
+  "ignore:conda.resolve is pending deprecation:PendingDeprecationWarning",
+  "ignore:conda.common.logic is pending deprecation:PendingDeprecationWarning",
+  "ignore:conda.common._logic is pending deprecation:PendingDeprecationWarning",
   # ignore conda link PrefixActions deprecation
   "ignore:conda.core.link.PrefixActions is deprecated and will be removed in 26.3:DeprecationWarning",
   "ignore:conda.core.link.PrefixActions is pending deprecation and will be removed in 26.3:PendingDeprecationWarning",
