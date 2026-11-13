@@ -20,12 +20,12 @@ from os import makedirs
 from os.path import basename, dirname, exists, join
 
 import requests
-from conda.core.index import Index
+from conda.core.subdir_data import SubdirData
 from conda.exceptions import CondaError, CondaHTTPError
 from conda.gateways.connection.download import TmpDownload, download
 from conda.gateways.disk.create import TemporaryDirectory
 from conda.models.match_spec import MatchSpec
-from conda.resolve import Resolve
+from conda.models.version import VersionOrder
 
 from .. import environ
 from ..config import Config, get_or_merge_config
@@ -697,13 +697,13 @@ def latest_pkg_version(pkg):
     """
     :returns: the latest version of the specified conda package available
     """
-    r = Resolve(Index())
     try:
-        pkg_list = sorted(r.get_pkgs(MatchSpec(pkg)))
+        pkg_list = SubdirData.query_all(MatchSpec(pkg))
     except:
         pkg_list = None
     if pkg_list:
-        pkg_version = parse_version(pkg_list[-1].version)
+        latest = max(pkg_list, key=lambda rec: VersionOrder(rec.version))
+        pkg_version = parse_version(latest.version)
     else:
         pkg_version = None
     return pkg_version

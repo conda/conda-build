@@ -61,8 +61,8 @@ from conda.base.context import context
 from conda.cli.common import specs_from_url
 from conda.core.package_cache_data import ProgressiveFetchExtract
 from conda.exceptions import (
-    NoPackagesFoundError,
     PackagesNotFoundError,
+    ResolvePackageNotFound,
     UnsatisfiableError,
 )
 from conda.gateways.disk.create import TemporaryDirectory
@@ -1117,7 +1117,10 @@ def render_metadata_tuples(
                                     om,
                                     permit_unsatisfiable_variants=permit_unsatisfiable_variants,
                                 )
-                            except (DependencyNeedsBuildingError, NoPackagesFoundError):
+                            except (
+                                DependencyNeedsBuildingError,
+                                ResolvePackageNotFound,
+                            ):
                                 if not permit_unsatisfiable_variants:
                                     raise
 
