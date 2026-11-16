@@ -16,4 +16,4 @@
 
 ### Other
 
-* Speed up `test_api_build_transitive_pin_subpackage_regression` by building against local Python packages instead of conda-forge. (#6218)
+* Speed up `test_api_build_transitive_pin_subpackage_regression` by building against local Python packages instead of conda-forge. (#6218 via #6261)
