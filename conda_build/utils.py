@@ -1126,20 +1126,11 @@ def locate_conda_launcher(
         None,
     )
     if path_data is None:
-        if arch != "32":
-            raise FileNotFoundError(
-                f"The installed conda-launchers package does not provide {short_path}."
-            )
-        # defaults does not yet publish 32-bit launchers.
-        package_name = "conda-build"
-        launcher_src = join(dirname(__file__), f"{launcher_type}-32.exe")
-        sha256 = {
-            "cli": "37f0668b6a8f623ace63d19513e23066ee9cddf825251651d5220210f33bbc00",
-            "gui": "44db6ab8ea57335862b7b29510c0e1a80079e7569137c3dbebdec41389faa5b3",
-        }[launcher_type]
-    else:
-        launcher_src = join(sys.prefix, short_path)
-        sha256 = getattr(path_data, "sha256", None)
+        raise FileNotFoundError(
+            f"The installed conda-launchers package does not provide {short_path}."
+        )
+    launcher_src = join(sys.prefix, short_path)
+    sha256 = getattr(path_data, "sha256", None)
     if not sha256 or not isfile(launcher_src):
         raise CondaBuildUserError(
             f"Reinstall {package_name}: {launcher_type}-{arch}.exe "
