@@ -551,7 +551,9 @@ def test_pypi_section_order_preserved(tmp_path: Path):
         REQUIREMENTS_ORDER,
     )
 
-    api.skeletonize(packages="sympy", repo="pypi", output_dir=tmp_path)
+    api.skeletonize(
+        packages="sympy", repo="pypi", version="1.14.0", output_dir=tmp_path
+    )
     # Since we want to check the order of items in the recipe (not whether
     # the metadata values themselves are sensible), read the file as (ordered)
     # yaml, and check the order.
