@@ -101,6 +101,7 @@ ignore_verify_codes_default = []
 exit_on_verify_error_default = False
 conda_pkg_format_default = CondaPkgFormat.V2
 zstd_compression_level_default = 19
+zstd_compression_threads_default = 1
 
 
 # we need this to be accessible to the CLI, so it needs to be more static.
@@ -279,6 +280,12 @@ def _get_default_settings():
             "zstd_compression_level",
             context.conda_build.get(
                 "zstd_compression_level", zstd_compression_level_default
+            ),
+        ),
+        Setting(
+            "zstd_compression_threads",
+            context.conda_build.get(
+                "zstd_compression_threads", zstd_compression_threads_default
             ),
         ),
         Setting(

@@ -20,6 +20,7 @@ from conda_build.cli import main_build, main_render
 from conda_build.config import (
     Config,
     zstd_compression_level_default,
+    zstd_compression_threads_default,
 )
 from conda_build.exceptions import CondaBuildUserError, DependencyNeedsBuildingError
 from conda_build.os_utils.external import find_executable
@@ -605,6 +606,44 @@ def test_zstd_compression_level(
         assert config.zstd_compression_level == zstd_level_condarc
     else:
         assert config.zstd_compression_level == zstd_compression_level_default
+
+
+@pytest.mark.parametrize(
+    "zstd_threads_condarc, zstd_threads_cli",
+    [
+        (None, None),
+        (4, None),
+        (4, -1),
+    ],
+)
+def test_zstd_compression_threads(
+    testing_workdir, request, zstd_threads_condarc, zstd_threads_cli
+):
+    assert zstd_compression_threads_default not in {
+        zstd_threads_condarc,
+        zstd_threads_cli,
+    }
+    if zstd_threads_condarc:
+        with open(os.path.join(testing_workdir, ".condarc"), "w") as f:
+            print(
+                "conda_build:",
+                f"  zstd_compression_threads: {zstd_threads_condarc}",
+                sep="\n",
+                file=f,
+            )
+    request.addfinalizer(_reset_config)
+    _reset_config([os.path.join(testing_workdir, ".condarc")])
+    args = ["non_existing_recipe"]
+    if zstd_threads_cli:
+        args.append(f"--zstd-compression-threads={zstd_threads_cli}")
+    parser, args = main_build.parse_args(args)
+    config = Config(**args.__dict__)
+    if zstd_threads_cli:
+        assert config.zstd_compression_threads == zstd_threads_cli
+    elif zstd_threads_condarc:
+        assert config.zstd_compression_threads == zstd_threads_condarc
+    else:
+        assert config.zstd_compression_threads == zstd_compression_threads_default
 
 
 def test_user_warning(tmpdir, recwarn):
