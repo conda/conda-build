@@ -502,6 +502,40 @@ def offline_cross_python_channel(tmp_path, testing_config):
 
 
 @pytest.fixture
+def offline_python_channel(tmp_path, testing_config):
+    """Installable Python 3.10 and 3.11 packages for the host platform."""
+    channel_dir = tmp_path / "offline-python-channel"
+    # conda_index requires noarch/. conda also injects a pip dependency on python.
+    noarch_path = channel_dir / "noarch"
+    noarch_path.mkdir(parents=True)
+    _write_fake_conda_package_with_files(
+        str(noarch_path),
+        "pip",
+        "24.0",
+        "noarch",
+        build="py_0",
+        depends=[],
+        files={"share/pip-mock/.keep": ""},
+        noarch="generic",
+    )
+    host_subdir = testing_config.host_subdir
+    subdir_path = channel_dir / host_subdir
+    subdir_path.mkdir()
+    for version in ("3.10", "3.11"):
+        _write_fake_conda_package_with_files(
+            str(subdir_path),
+            "python",
+            version,
+            host_subdir,
+            build="h_mock_0",
+            depends=[],
+            files={"share/python-mock/.keep": ""},
+        )
+    update_index(str(channel_dir))
+    return url_path(str(channel_dir))
+
+
+@pytest.fixture
 def offline_mingw_sysroot_channel(tmp_path):
     channel_dir = tmp_path / "offline-mingw-channel"
     noarch_path = channel_dir / "noarch"
