@@ -1264,7 +1264,7 @@ def test_ignore_run_exports_from(testing_metadata, testing_config):
     testing_metadata.meta["build"]["ignore_run_exports_from"] = ["test_has_run_exports"]
     testing_metadata.config.index = None
     m = finalize_metadata(testing_metadata)
-    assert "downstream_pinned_package 1.0" not in m.meta["requirements"].get("run", [])
+    assert "weak_pinned_package 1.0.*" not in m.meta["requirements"].get("run", [])
 
 
 def test_ignore_run_exports_from_substr(testing_metadata, testing_config):
