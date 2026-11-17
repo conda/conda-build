@@ -33,9 +33,9 @@ from conda.exceptions import (
     CondaError,
     LinkError,
     LockError,
-    NoPackagesFoundError,
     PackagesNotFoundError,
     PaddingError,
+    ResolvePackageNotFound,
     UnsatisfiableError,
 )
 from conda.gateways.disk.create import TemporaryDirectory
@@ -897,7 +897,7 @@ def get_install_actions(
                 try:
                     _actions = _install_actions(prefix, index, specs, subdir=subdir)
                     precs = _actions["LINK"]
-                except (NoPackagesFoundError, UnsatisfiableError) as exc:
+                except (ResolvePackageNotFound, UnsatisfiableError) as exc:
                     raise DependencyNeedsBuildingError(exc, subdir=subdir)
                 except (
                     SystemExit,

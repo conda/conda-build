@@ -123,6 +123,11 @@ filterwarnings = [
   "error::DeprecationWarning:conda_build",
   # ignore conda-package-streaming error
   "ignore:conda.core.index._supplement_index_with_system is pending deprecation:PendingDeprecationWarning:conda",
+  # TEMPORARY: conda-index <=0.13.0 imports conda.exports.Resolve (and through it
+  # conda.resolve and conda.common.logic / _logic), which conda 26.10 deprecates.
+  # Fixed by https://github.com/conda/conda-index/pull/380; remove this once a
+  # conda-index release after 0.13.0 is out and required in tests/requirements.txt.
+  'ignore:conda\.(exports\.Resolve|resolve|common\._?logic) is pending deprecation:PendingDeprecationWarning',
   # TEMPORARY: Remove once CLS is released with https://github.com/conda/conda-libmamba-solver/pull/691
   "ignore:conda.plugins.CondaSolver:PendingDeprecationWarning",
   "ignore:conda.plugins.CondaSolver:DeprecationWarning",
