@@ -1247,10 +1247,10 @@ def test_ignore_run_exports(testing_metadata, testing_config):
     )
     # customize our fixture metadata with our desired changes
     testing_metadata.meta["requirements"]["host"] = ["test_has_run_exports"]
-    testing_metadata.meta["build"]["ignore_run_exports"] = ["downstream_pinned_package"]
+    testing_metadata.meta["build"]["ignore_run_exports"] = ["weak_pinned_package"]
     testing_metadata.config.index = None
     m = finalize_metadata(testing_metadata)
-    assert "downstream_pinned_package 1.0" not in m.meta["requirements"].get("run", [])
+    assert "weak_pinned_package 1.0.*" not in m.meta["requirements"].get("run", [])
 
 
 @pytest.mark.sanity
@@ -1264,7 +1264,20 @@ def test_ignore_run_exports_from(testing_metadata, testing_config):
     testing_metadata.meta["build"]["ignore_run_exports_from"] = ["test_has_run_exports"]
     testing_metadata.config.index = None
     m = finalize_metadata(testing_metadata)
-    assert "downstream_pinned_package 1.0" not in m.meta["requirements"].get("run", [])
+    assert "weak_pinned_package 1.0.*" not in m.meta["requirements"].get("run", [])
+
+
+def test_ignore_run_exports_from_substr(testing_metadata, testing_config):
+    api.build(
+        os.path.join(metadata_dir, "_run_exports"), config=testing_config, notest=True
+    )
+    testing_metadata.meta["requirements"]["host"] = ["test_has_run_exports"]
+    testing_metadata.meta["build"]["ignore_run_exports_from"] = [
+        "i-like-test_has_run_exports"
+    ]
+    testing_metadata.config.index = None
+    m = finalize_metadata(testing_metadata)
+    assert "weak_pinned_package 1.0.*" in m.meta["requirements"].get("run", [])
 
 
 @pytest.mark.skipif(
@@ -2119,15 +2132,6 @@ def test_api_build_inject_jinja2_vars_on_first_pass(testing_config):
 
     testing_config.variant = {"python_min": "3.12"}
     api.build(recipe_dir, config=testing_config)
-
-
-def test_ignore_run_exports_from_substr(monkeypatch, tmp_path, capsys, testing_config):
-    monkeypatch.chdir(tmp_path)
-    testing_config.channel_urls = ["conda-forge"]
-    api.build(
-        str(metadata_path / "ignore_run_exports_from_substr"), config=testing_config
-    )
-    assert "- python_abi " in capsys.readouterr().out
 
 
 @pytest.mark.skipif(not on_linux, reason="One platform is enough")
