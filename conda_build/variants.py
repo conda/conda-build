@@ -6,14 +6,15 @@ Each file is preprocessed with YAML line selectors in ``parse_config_file`` befo
 
 from __future__ import annotations
 
+import logging
 import os.path
 import re
 import sys
 from collections import OrderedDict
 from copy import copy
 from functools import cache
-from itertools import chain, product
-from operator import itemgetter
+from itertools import chain, product, repeat
+from operator import itemgetter, ne
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -507,16 +508,21 @@ def _get_explode_keys(spec, passthru_keys=None, zip_keys=None, extend_keys=None)
 def filter_by_key_value(variants, key, values, source_name):
     """variants is the exploded out list of dicts, with one value per key in each dict.
     key and values come from subsequent variants before they are exploded out."""
-    reduced_variants = []
     if hasattr(values, "keys"):
-        reduced_variants = variants
-    else:
-        # break this out into a full loop so that we can show filtering output
+        return variants
+    reduced_variants = [
+        variant
+        for variant in variants
+        if (value := variant.get(key)) is not None and value in values
+    ]
+    # formatting a message for every variant filtered out costs more than the
+    # filtering, so only build them when someone will read them
+    if len(reduced_variants) < len(variants) and get_logger(__name__).isEnabledFor(
+        logging.DEBUG
+    ):
+        log = get_logger(__name__)
         for variant in variants:
-            if variant.get(key) is not None and variant.get(key) in values:
-                reduced_variants.append(variant)
-            else:
-                log = get_logger(__name__)
+            if not (variant.get(key) is not None and variant.get(key) in values):
                 log.debug(
                     f"Filtering variant with key {key} not matching target value(s) "
                     f"({values}) from {source_name}, actual {variant.get(key)}"
@@ -793,8 +799,12 @@ def get_vars(
     if subset is not None:
         to_consider.intersection_update(subset)
     to_consider.difference_update(special_keys)
+    # map() keeps the comparison of every variant in C; each var is
+    # compared across every variant, which is most of the cost on a large matrix
     return {
-        var for var in to_consider if any(first[var] != other[var] for other in others)
+        var
+        for var in to_consider
+        if any(map(ne, repeat(first[var]), map(itemgetter(var), others)))
     }
 
 

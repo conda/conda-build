@@ -16,6 +16,7 @@ from conda_build.utils import ensure_list, package_has_file
 from conda_build.variants import (
     combine_specs,
     dict_of_lists_to_list_of_dicts,
+    filter_by_key_value,
     filter_combined_spec_to_used_keys,
     find_used_variables_in_batch_script,
     find_used_variables_in_shell_script,
@@ -1169,3 +1170,27 @@ def test_list_of_dicts_to_dict_of_lists_uneven_keys():
 
 def test_list_of_dicts_to_dict_of_lists_empty():
     assert list_of_dicts_to_dict_of_lists([]) is None
+
+
+def test_get_vars_compares_mixed_types():
+    variants = [
+        {"python": "3.12", "numpy": 2, "build": "1", "zip_keys": []},
+        {"python": "3.12", "numpy": "2", "build": "1", "zip_keys": []},
+    ]
+    # 2 != "2", whichever side compares
+    assert get_vars(variants) == {"numpy"}
+    assert get_vars(variants, subset={"python", "build"}) == set()
+
+
+def test_filter_by_key_value():
+    variants = [
+        {"python": "3.11"},
+        {"python": "3.12"},
+        {"python": None},
+        {"numpy": "2"},
+    ]
+    assert filter_by_key_value(variants, "python", ["3.12"], "test") == [
+        {"python": "3.12"}
+    ]
+    # a dict of values selects nothing out
+    assert filter_by_key_value(variants, "python", {"3.12": 1}, "test") is variants
