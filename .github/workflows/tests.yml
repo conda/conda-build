@@ -318,11 +318,11 @@ jobs:
         run: conda list --show-channel-urls
 
       - name: Run Benchmarks
-        uses: CodSpeedHQ/action@373d6868929f444bc08d901fd0eb0ad52a8875ea # v5.2.1
+        uses: CodSpeedHQ/action@e2468555258f286b6ea6423deaf092e655ea8f45 # v5.6.3
         with:
           token: ${{ secrets.CODSPEED_TOKEN }}
           run: $CONDA/envs/test/bin/pytest --codspeed
-          mode: instrumentation
+          mode: simulation
 
   # windows test suite
   windows:
