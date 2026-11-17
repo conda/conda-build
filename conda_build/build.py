@@ -30,7 +30,7 @@ from conda import __version__ as conda_version
 from conda.base.constants import PREFIX_PLACEHOLDER
 from conda.base.context import context, reset_context
 from conda.core.prefix_data import PrefixData
-from conda.exceptions import CondaError, NoPackagesFoundError, UnsatisfiableError
+from conda.exceptions import CondaError, ResolvePackageNotFound, UnsatisfiableError
 from conda.gateways.disk.create import TemporaryDirectory
 from conda.models.channel import Channel
 from conda.models.enums import FileMode
@@ -3415,7 +3415,7 @@ def test(
         )
     except (
         DependencyNeedsBuildingError,
-        NoPackagesFoundError,
+        ResolvePackageNotFound,
         UnsatisfiableError,
         CondaError,
         AssertionError,
