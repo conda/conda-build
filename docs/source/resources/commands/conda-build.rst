@@ -185,9 +185,9 @@ conda-build
                  above 19 is not advised due to high memory consumption.
 
           <B>--zstd-compression-threads</B> ZSTD_COMPRESSION_THREADS
-                 When building v2 packages, set the number of threads used for
-                 zstd compression by conda-package-handling (requires
-                 conda-package-handling >=2.6.0). Use -1 for all CPUs.
+                 When building .conda (v2 format) packages, set the number of
+                 threads used for zstd compression by conda-package-handling
+                 (requires conda-package-handling >=2.6.0). Use -1 for all CPUs.
                  Defaults to 1.
 
           <B>--package-format</B> {1,2,.tar.bz2,.conda}

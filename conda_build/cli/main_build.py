@@ -204,8 +204,8 @@ def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
     parser.add_argument(
         "--zstd-compression-threads",
         help=(
-            "When building v2 packages, set the number of threads used for zstd "
-            "compression by conda-package-handling (requires "
+            "When building .conda (v2 format) packages, set the number of threads "
+            "used for zstd compression by conda-package-handling (requires "
             "conda-package-handling >=2.6.0). Use -1 for all CPUs. "
             f"Defaults to {zstd_compression_threads_default}."
         ),
