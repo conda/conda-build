@@ -1247,7 +1247,7 @@ def test_ignore_run_exports(testing_metadata, testing_config):
     )
     # customize our fixture metadata with our desired changes
     testing_metadata.meta["requirements"]["host"] = ["test_has_run_exports"]
-    testing_metadata.meta["build"]["ignore_run_exports"] = ["downstream_pinned_package"]
+    testing_metadata.meta["build"]["ignore_run_exports"] = ["weak_pinned_package"]
     testing_metadata.config.index = None
     m = finalize_metadata(testing_metadata)
     assert "weak_pinned_package 1.0.*" not in m.meta["requirements"].get("run", [])
