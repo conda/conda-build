@@ -140,7 +140,12 @@ def get_default_variant(config):
     return base
 
 
-def parse_config_file(path, config, loader=yaml.loader.BaseLoader):
+# libyaml parses the same documents as the pure-Python parser, many times faster;
+# the global pinning alone is parsed once per platform
+_BaseLoader = getattr(yaml, "CBaseLoader", yaml.loader.BaseLoader)
+
+
+def parse_config_file(path, config, loader=_BaseLoader):
     from .metadata import get_selectors, select_lines
 
     with open(path) as f:
