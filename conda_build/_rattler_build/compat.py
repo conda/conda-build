@@ -40,6 +40,10 @@ if TYPE_CHECKING:
 
 CONFIG_FILES = {"conda_build_config.yaml", "variants.yaml"}
 
+# `.condarc` keys (under `conda_build:`) that are supported for v1 recipes but
+# are named differently from the matching argparse `dest` listed in VALID_ARGS.
+CONDARC_ONLY_KEYS = {"pkg_format"}
+
 log = get_logger(__name__)
 
 
@@ -155,7 +159,9 @@ def check_arguments_rattler(
 
     # check for unsupported condarc values
     condarc_settings = set(context.conda_build.keys())
-    unsupported_condarc_keys = condarc_settings - set().union(*VALID_ARGS.values())
+    unsupported_condarc_keys = (
+        condarc_settings - set().union(*VALID_ARGS.values()) - CONDARC_ONLY_KEYS
+    )
 
     if unsupported_condarc_keys:
         raise ValueError(
