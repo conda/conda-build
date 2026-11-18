@@ -1249,6 +1249,17 @@ def package_has_file(package_path, file_path, refresh_mode="modified"):
         return content
 
 
+def decode_text(data: bytes) -> str:
+    """Decode the bytes of a recipe file, guessing the encoding if not ASCII."""
+    if data.isascii():
+        # every encoding UnicodeDammit could choose agrees on ASCII, and asking
+        # chardet costs more than reading the file
+        return data.decode("ascii")
+    from bs4 import UnicodeDammit
+
+    return UnicodeDammit(data).unicode_markup
+
+
 def ensure_list(arg: T | Iterable[T] | None, include_dict: bool = True) -> list[T]:
     """
     Ensure the object is a list. If not return it in a list.

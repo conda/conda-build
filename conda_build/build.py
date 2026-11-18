@@ -25,7 +25,6 @@ from typing import TYPE_CHECKING
 
 import conda_package_handling.api
 import yaml
-from bs4 import UnicodeDammit
 from conda import __version__ as conda_version
 from conda.base.constants import PREFIX_PLACEHOLDER
 from conda.base.context import context, reset_context
@@ -80,6 +79,7 @@ from .utils import (
     MAX_CHUNK_SIZE,
     chunks,
     create_file_with_permissions,
+    decode_text,
     env_var,
     glob,
     on_mac,
@@ -766,7 +766,7 @@ def copy_recipe(m):
 
         if original_recipe:
             with open(original_recipe, "rb") as f:
-                original_recipe_text = UnicodeDammit(f.read()).unicode_markup
+                original_recipe_text = decode_text(f.read())
 
         if not original_recipe or not original_recipe_text == rendered:
             with open(join(recipe_dir, "meta.yaml"), "w") as f:
