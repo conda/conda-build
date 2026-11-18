@@ -629,20 +629,41 @@ def list_of_dicts_to_dict_of_lists(list_of_dicts):
         for group in groups:
             for item in group:
                 all_zip_keys.add(item)
+    # Accumulate in place: rebuilding each value from scratch for every variant
+    # made this quadratic in the number of variants.  Values of keys outside the
+    # zip groups are deduplicated, so they are collected into a set; ``as_list``
+    # records the keys whose last value was a scalar, which are returned as a
+    # list rather than a set.
+    as_list = set()
     for variant in list_of_dicts:
         for k, v in variant.items():
             if k == "zip_keys":
                 continue
+            existing = squished.get(k)
             if hasattr(v, "keys"):
-                existing_value = squished.get(k, OrderedDict())
-                existing_value.update(v)
-                squished[k] = existing_value
+                if existing is None:
+                    existing = squished[k] = OrderedDict()
+                elif k in as_list:
+                    # a list has no update(); raise as before
+                    existing = list(existing)
+                existing.update(v)
+                as_list.discard(k)
             elif isinstance(v, list):
-                squished[k] = set(squished.get(k, set())) | set(v)
+                if not isinstance(existing, set):
+                    existing = squished[k] = set(existing or ())
+                existing.update(v)
+                as_list.discard(k)
+            elif k in all_zip_keys:
+                if not isinstance(existing, list):
+                    existing = squished[k] = list(existing or ())
+                existing.extend(ensure_list(v))
             else:
-                squished[k] = list(squished.get(k, [])) + ensure_list(v)
-                if k not in all_zip_keys:
-                    squished[k] = list(set(squished[k]))
+                if not isinstance(existing, set):
+                    existing = squished[k] = set(existing or ())
+                existing.update(ensure_list(v))
+                as_list.add(k)
+    for k in as_list:
+        squished[k] = list(squished[k])
     # reduce the combinatoric space of the zipped keys, too:
     if groups:
         for group in groups:
