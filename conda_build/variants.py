@@ -12,7 +12,8 @@ import sys
 from collections import OrderedDict
 from copy import copy
 from functools import cache
-from itertools import product
+from itertools import chain, product
+from operator import itemgetter
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -603,6 +604,59 @@ def explode_variants(spec):
 dict_of_lists_to_list_of_dicts = explode_variants
 
 
+# isinstance rather than type(): YAML loaders such as ruamel.yaml return
+# subclasses of str (ScalarString), and bool is an int
+_SCALAR_TYPES = (str, int, float)
+
+
+def _squish_column(values, is_zip_key):
+    """Squish every value of one key, as list_of_dicts_to_dict_of_lists does."""
+    try:
+        distinct = set(values)
+    except TypeError:
+        # unhashable (list or dict) values: take the general path below
+        pass
+    else:
+        if all(value is None or isinstance(value, _SCALAR_TYPES) for value in distinct):
+            if is_zip_key:
+                # zipped values stay in variant order, duplicates and all
+                if None in distinct:
+                    return [value for value in values if value is not None]
+                return values
+            distinct.discard(None)
+            return list(distinct)
+
+    # Values of keys outside the zip groups are deduplicated, so they are
+    # collected into a set; a key whose last value was a scalar is returned as
+    # a list rather than a set.
+    squished = None
+    as_list = False
+    for v in values:
+        if hasattr(v, "keys"):
+            if squished is None:
+                squished = OrderedDict()
+            elif as_list:
+                # a list has no update(); keep the original's error
+                squished = list(squished)
+            squished.update(v)
+            as_list = False
+        elif isinstance(v, list):
+            if not isinstance(squished, set):
+                squished = set(squished or ())
+            squished.update(v)
+            as_list = False
+        elif is_zip_key:
+            if not isinstance(squished, list):
+                squished = list(squished or ())
+            squished.extend(ensure_list(v))
+        else:
+            if not isinstance(squished, set):
+                squished = set(squished or ())
+            squished.update(ensure_list(v))
+            as_list = True
+    return list(squished) if as_list else squished
+
+
 def list_of_dicts_to_dict_of_lists(list_of_dicts):
     """Opposite of dict_of_lists_to_list_of_dicts function.
 
@@ -629,41 +683,23 @@ def list_of_dicts_to_dict_of_lists(list_of_dicts):
         for group in groups:
             for item in group:
                 all_zip_keys.add(item)
-    # Accumulate in place: rebuilding each value from scratch for every variant
-    # made this quadratic in the number of variants.  Values of keys outside the
-    # zip groups are deduplicated, so they are collected into a set; ``as_list``
-    # records the keys whose last value was a scalar, which are returned as a
-    # list rather than a set.
-    as_list = set()
-    for variant in list_of_dicts:
-        for k, v in variant.items():
-            if k == "zip_keys":
-                continue
-            existing = squished.get(k)
-            if hasattr(v, "keys"):
-                if existing is None:
-                    existing = squished[k] = OrderedDict()
-                elif k in as_list:
-                    # a list has no update(); raise as before
-                    existing = list(existing)
-                existing.update(v)
-                as_list.discard(k)
-            elif isinstance(v, list):
-                if not isinstance(existing, set):
-                    existing = squished[k] = set(existing or ())
-                existing.update(v)
-                as_list.discard(k)
-            elif k in all_zip_keys:
-                if not isinstance(existing, list):
-                    existing = squished[k] = list(existing or ())
-                existing.extend(ensure_list(v))
-            else:
-                if not isinstance(existing, set):
-                    existing = squished[k] = set(existing or ())
-                existing.update(ensure_list(v))
-                as_list.add(k)
-    for k in as_list:
-        squished[k] = list(squished[k])
+    # Each key is squished on its own, a column at a time.  Exploded variants
+    # usually all hold the same keys, and nearly every value is a plain scalar,
+    # so most columns reduce to a single set() or list() over the column.
+    first_keys = list_of_dicts[0].keys()
+    same_keys = all(variant.keys() == first_keys for variant in list_of_dicts)
+    if same_keys:
+        keys = list(first_keys)
+    else:
+        keys = list(dict.fromkeys(chain.from_iterable(list_of_dicts)))
+    for k in keys:
+        if k == "zip_keys":
+            continue
+        if same_keys:
+            column = list(map(itemgetter(k), list_of_dicts))
+        else:
+            column = [variant[k] for variant in list_of_dicts if k in variant]
+        squished[k] = _squish_column(column, k in all_zip_keys)
     # reduce the combinatoric space of the zipped keys, too:
     if groups:
         for group in groups:
