@@ -19,7 +19,15 @@ from typing import TYPE_CHECKING
 import yaml
 from conda.base.context import context
 
-from .utils import ensure_list, get_logger, islist, on_win, trim_empty_keys
+from .utils import (
+    ensure_list,
+    get_logger,
+    islist,
+    normalize_variant_key,
+    on_win,
+    trim_empty_keys,
+    variant_key_separator_re,
+)
 from .version import _parse as parse_version
 
 if TYPE_CHECKING:
@@ -745,6 +753,7 @@ def get_vars(
 def find_used_variables_in_text(variant, recipe_text, selectors_only=False):
     used_variables = set()
     recipe_lines = recipe_text.splitlines()
+    normalized_lines = [normalize_variant_key(line) for line in recipe_lines]
     for v in variant:
         all_res = []
         target_match = re.match(r"(.*?)_(compiler|stdlib)(_version)?$", v)
@@ -765,13 +774,18 @@ def find_used_variables_in_text(variant, recipe_text, selectors_only=False):
             ]
             all_res.append(r"\{{\s*cdt\(")
         else:
+            normalized_v = normalize_variant_key(v)
             variant_lines = [
-                line for line in recipe_lines if v in line.replace("-", "_")
+                line
+                for line, normalized_line in zip(recipe_lines, normalized_lines)
+                if normalized_v in normalized_line
             ]
         if not variant_lines:
             continue
         v_regex = re.escape(v)
-        v_req_regex = "[-_]".join(map(re.escape, v.split("_")))
+        v_req_regex = variant_key_separator_re.pattern.join(
+            map(re.escape, v.split("_"))
+        )
         variant_regex = (
             rf"\{{\s*(?:pin_[a-z]+\(\s*?['\"])?{v_regex}(?:[^_0-9a-zA-Z].*?)?\}}\}}"
         )
