@@ -1,4 +1,6 @@
-﻿# Copyright (C) 2014 Anaconda, Inc
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
+# Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
 """Tests for `.condarc` validation when building v1 (rattler-build) recipes."""
 
