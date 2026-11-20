@@ -22,26 +22,6 @@ from conda_build.utils import (
 from .utils import add_mangling, metadata_dir, subpackage_path
 
 
-@pytest.mark.skipif(
-    sys.version_info >= (3, 10),
-    reason="Python 3.10+, py_compile terminates once it finds an invalid file",
-)
-def test_compile_missing_pyc(testing_workdir):
-    good_files = ["f1.py", "f3.py"]
-    bad_file = "f2_bad.py"
-    tmp = os.path.join(testing_workdir, "tmp")
-    shutil.copytree(
-        os.path.join(
-            os.path.dirname(__file__), "test-recipes", "metadata", "_compile-test"
-        ),
-        tmp,
-    )
-    post.compile_missing_pyc(os.listdir(tmp), cwd=tmp, python_exe=sys.executable)
-    for f in good_files:
-        assert os.path.isfile(os.path.join(tmp, add_mangling(f)))
-    assert not os.path.isfile(os.path.join(tmp, add_mangling(bad_file)))
-
-
 def test_compile_missing_pyc_chunking(tmp_path: Path, monkeypatch, mocker):
     """
     Regression test for the command-line-too-long bug fixed in PR #5780.
@@ -155,7 +135,7 @@ def test_postlink_script_in_output_implicit(testing_config):
 def test_pypi_installer_metadata(testing_config):
     recipe = os.path.join(metadata_dir, "_pypi_installer_metadata")
     pkg = api.build(recipe, config=testing_config, notest=True)[0]
-    expected_installer = "{}/imagesize-1.1.0.dist-info/INSTALLER".format(
+    expected_installer = "{}/conda_build_test_project-1.0.dist-info/INSTALLER".format(
         get_site_packages("", "3.10")
     )
     assert "conda" == (package_has_file(pkg, expected_installer, refresh_mode="forced"))

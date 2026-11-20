@@ -8,6 +8,7 @@ import os
 import pathlib
 import re
 import time
+import tomllib
 from functools import partial
 from io import StringIO, TextIOBase
 from subprocess import CalledProcessError
@@ -32,11 +33,6 @@ from .utils import (
     rm_rf,
 )
 from .variants import DEFAULT_COMPILERS
-
-try:
-    import tomllib  # Python 3.11
-except:
-    import tomli as tomllib
 
 if TYPE_CHECKING:
     from typing import IO, Any
@@ -388,7 +384,7 @@ def pin_subpackage_against_outputs(
                         [
                             sp_m.name(),
                             sp_m.version(),
-                            sp_m.build_id()
+                            sp_m.build_id(force_final_hash=True)
                             if not skip_build_id
                             else str(sp_m.build_number()),
                         ]

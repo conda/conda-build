@@ -9,7 +9,9 @@ import sys
 import sysconfig
 from functools import cache
 from itertools import product
-from os.path import dirname, isdir, isfile, join
+from os.path import isdir, isfile, join
+from pathlib import Path
+from subprocess import list2cmdline
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -35,13 +37,13 @@ from .utils import (
     check_call_env,
     copy_into,
     get_logger,
+    locate_conda_launcher,
     path_prepended,
     write_bat_activation_text,
 )
 from .variants import get_default_variant, set_language_env_vars
 
 VS_VERSION_STRING = {
-    "8.0": "Visual Studio 8 2005",
     "9.0": "Visual Studio 9 2008",
     "10.0": "Visual Studio 10 2010",
     "11.0": "Visual Studio 11 2012",
@@ -50,6 +52,16 @@ VS_VERSION_STRING = {
     "15.0": "Visual Studio 15 2017",
     "16.0": "Visual Studio 16 2019",
     "17.0": "Visual Studio 17 2022",
+}
+
+VS_COMPILERS = {
+    "vs2008": ("9.0", "Visual Studio 9 2008"),
+    "vs2010": ("10.0", "Visual Studio 10 2010"),
+    "vs2015": ("14.0", "Visual Studio 14 2015"),
+    "vs2017": ("15.0", "Visual Studio 15 2017"),
+    "vs2019": ("16.0", "Visual Studio 16 2019"),
+    "vs2022": ("17.0", "Visual Studio 17 2022"),
+    "vs2026": ("18.0", "Visual Studio 18 2026"),
 }
 
 
@@ -77,7 +89,7 @@ def fix_staged_scripts(scripts_dir, config):
                 fo.write(f.read())
             # now create the .exe file
             copy_into(
-                join(dirname(__file__), f"cli-{config.host_arch}.exe"),
+                locate_conda_launcher(str(config.host_arch)),
                 join(scripts_dir, fn + ".exe"),
             )
 
@@ -240,11 +252,12 @@ def msvc_env_cmd(bits, config, override=None):
     if float(version) >= 14.0:
         # For Python 3.5+, ensure that we link with the dynamic runtime.  See
         # http://stevedower.id.au/blog/building-for-python-3-5-part-two/ for more info
-        msvc_env_lines.append(
-            "set PY_VCRUNTIME_REDIST=%LIBRARY_BIN%\\vcruntime{}.dll".format(
-                version.replace(".", "")
-            )
-        )
+
+        # vcruntime140.dll is the correct filename for every VS2015+ toolset
+        # (VS2017/2019/2022/2026 all still ship "vcruntime140.dll" - the
+        # Universal CRT split in VS2015 froze this name; it is NOT keyed to
+        # the VS product/IDE version. Do not template this off `version`.
+        msvc_env_lines.append("set PY_VCRUNTIME_REDIST=%LIBRARY_BIN%\\vcruntime140.dll")
 
     vcvarsall_vs_path = build_vcvarsall_vs_path(version)
 
@@ -359,29 +372,25 @@ def write_build_scripts(m, env, bld_bat):
             )
         else:
             # Set CMAKE_GENERATOR for new-style compiler activation
-            version = m.get_value("build/msvc_compiler", None)
-            if not version:
-                from .variants import get_default_variant
 
-                py_ver = m.config.variant.get(
-                    "python", get_default_variant(m.config)["python"]
+            # On windows the c and cxx compiler should be set as the same value
+            # so getting c_compiler == cxx_compiler.  Should be in the form of vs20xx
+            compiler = m.config.variant.get("c_compiler", None)
+            if compiler in VS_COMPILERS:
+                fo.write(f'set "CMAKE_GENERATOR={VS_COMPILERS[compiler][1]}"\n')
+            elif compiler and m.config.platform == "win":
+                log = get_logger(__name__)
+                log.warning(
+                    "'c_compiler'=%s is not a recognized Windows compiler; "
+                    "CMAKE_GENERATOR left unset (expected one of: %s)",
+                    compiler,
+                    ", ".join(VS_COMPILERS.keys()),
                 )
-                py_ver = tuple([int(x) for x in py_ver.split(".")[:2]])
-                if py_ver >= (3, 6):
-                    version = "17.0"
-                elif py_ver == (3, 5):
-                    version = "15.0"
-                elif py_ver >= (3, 0):
-                    version = "10.0"
-                else:  # 2.x
-                    version = "9.0"
-            if version:
-                fo.write(f'set "CMAKE_GENERATOR={VS_VERSION_STRING[version]}"\n')
         # Reset echo on, because MSVC scripts might have turned it off
         fo.write("@echo on\n")
         fo.write('set "INCLUDE={};%INCLUDE%"\n'.format(env["LIBRARY_INC"]))
         fo.write('set "LIB={};%LIB%"\n'.format(env["LIBRARY_LIB"]))
-        if m.config.activate and m.name() != "conda":
+        if m.activate_build_script:
             write_bat_activation_text(fo, m)
     # bld_bat may have been generated elsewhere with contents of build/script
     work_script = join(m.config.work_dir, "conda_build.bat")
@@ -398,13 +407,7 @@ def write_build_scripts(m, env, bld_bat):
 
 
 def _build_arch(m) -> Literal["AMD64", "ARM64", "x86"]:
-    """
-    If conda-build is run from e.g. a win-64 environment on a win-arm64 machine
-    users may want to build natively by setting build_platform="win-arm64".
-    In those cases, we need to ensure that the CMD process is native ARM64
-    via this `start` wrapper. Otherwise Windows picks the AMD64 slice!
-    This gives you the adequate /machine flag value for `start`.
-    """
+    # See docstring of wrap_script_with_machine()
     build_arch = m.config.build_subdir.split("-")[1].upper()
     return {"64": "AMD64", "32": "x86"}.get(build_arch, build_arch)
 
@@ -430,17 +433,51 @@ def _running_subdir():
 
 
 def build_command_arguments(m, script: str) -> list[str]:
+    """
+    Return list of arguments of the form: ["cmd", "/d", "/c", script].
+
+    Script may be the original one, or a wrapper to choose specific architectures,
+    depending on the configuration set in `m` (metadata object).
+    """
+    from .build import INTERPRETER_BAT
+
     if m.config.build_subdir != _running_subdir():
-        # See docstring of _cmd_machine_flag()
-        wrapper = os.path.join(os.path.dirname(script), "_conda_build_wrapper.bat")
-        with open(wrapper, "w") as f:
-            f.write(
-                "@echo off\r\n"
-                f'start /b /wait /machine {_build_arch(m)} cmd.exe /d /c "{script}"\r\n'
-                "exit /b %ERRORLEVEL%\r\n"
-            )
-        return ["cmd.exe", "/d", "/c", os.path.basename(wrapper)]
-    return ["cmd.exe", "/d", "/c", os.path.basename(script)]
+        wrapper = wrap_script_with_machine(m, script)
+        return [*INTERPRETER_BAT, os.path.basename(wrapper)]
+    return [*INTERPRETER_BAT, os.path.basename(script)]
+
+
+def wrap_script_with_machine(
+    m,
+    script: str | Path,
+    pre_script: tuple[str, ...] | str = (),
+) -> str:
+    """
+    If conda-build is run from e.g. a win-64 environment on a win-arm64 machine
+    users may want to build natively by setting build_platform="win-arm64".
+    In those cases, we need to ensure that the CMD process is native ARM64
+    via this `start` wrapper. Otherwise Windows picks the AMD64 slice!
+    This wraps the script with adequate `start /machine xxx` call.
+
+    Returns full path to wrapped script
+    """
+    from .build import guess_interpreter
+
+    script = Path(script)
+    wrapper = script.parent / (script.name + ".wrapper.bat")
+    if not pre_script:
+        pre_script = guess_interpreter(script.name)
+    if not isinstance(pre_script, str):
+        pre_script = list2cmdline(pre_script)
+    # Wrapper is always a .bat; CMD breaks with Unix line endings, so force CRLF
+    # even when conda-build itself is not running on Windows (e.g. unit tests).
+    with open(wrapper, "w", newline="\r\n") as f:
+        f.write(
+            "@echo off\n"
+            f'start "" /b /wait /machine {_build_arch(m)} {pre_script} "{script}"\n'
+            "exit /b %ERRORLEVEL%\n"
+        )
+    return str(wrapper)
 
 
 def build(m, bld_bat, stats, provision_only=False):
