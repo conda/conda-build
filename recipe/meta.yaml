@@ -58,7 +58,6 @@ requirements:
     - tqdm
   run_constrained:
     - conda-libmamba-solver >=25.11.0
-    - conda-verify  >=3.1.0
 
 test:
   imports:

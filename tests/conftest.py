@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from __future__ import annotations
 
+import hashlib
 import io
 import json
 import os
@@ -34,9 +35,7 @@ from conda_build.config import (
     enable_static_default,
     error_overdepending_default,
     error_overlinking_default,
-    exit_on_verify_error_default,
     filename_hashing_default,
-    ignore_verify_codes_default,
     no_rewrite_stdout_env_default,
 )
 from conda_build.metadata import MetaData
@@ -126,8 +125,6 @@ def testing_config(testing_workdir, warm_package_cache):
         error_overdepending=boolify(error_overdepending_default),
         enable_static=boolify(enable_static_default),
         no_rewrite_stdout_env=boolify(no_rewrite_stdout_env_default),
-        ignore_verify_codes=ignore_verify_codes_default,
-        exit_on_verify_error=exit_on_verify_error_default,
         conda_pkg_format=conda_pkg_format_default,
         # Use template environment for faster test env creation when available
         test_env_template=str(warm_package_cache) if warm_package_cache else None,
@@ -426,6 +423,61 @@ def _write_fake_conda_package(
         tf.addfile(info, io.BytesIO(data))
 
 
+def _write_fake_conda_package_with_files(
+    subdir_path: str,
+    name: str,
+    version: str,
+    subdir: str,
+    *,
+    build: str,
+    depends: list[str],
+    files: dict[str, str],
+    noarch: str | None = None,
+) -> None:
+    """Write a fake ``.tar.bz2`` that conda can install, not only solve against.
+
+    ``files`` maps paths relative to the prefix to their contents.
+    """
+    index_json = {
+        "name": name,
+        "version": version,
+        "build": build,
+        "build_number": 0,
+        "depends": depends,
+        "subdir": subdir,
+        "timestamp": 0,
+    }
+    if noarch:
+        index_json["noarch"] = noarch
+
+    archive_files = {
+        "info/index.json": json.dumps(index_json).encode("utf-8"),
+    }
+    paths = []
+    for relpath, content in files.items():
+        data = content.encode("utf-8")
+        archive_files[relpath] = data
+        paths.append(
+            {
+                "_path": relpath,
+                "path_type": "hardlink",
+                "sha256": hashlib.sha256(data).hexdigest(),
+                "size_in_bytes": len(data),
+            }
+        )
+    archive_files["info/paths.json"] = json.dumps(
+        {"paths_version": 1, "paths": paths}
+    ).encode("utf-8")
+    archive_files["info/files"] = "\n".join(files).encode("utf-8")
+
+    fname = f"{name}-{version}-{build}.tar.bz2"
+    with tarfile.open(os.path.join(subdir_path, fname), "w:bz2") as tf:
+        for archive_path, data in archive_files.items():
+            info = tarfile.TarInfo(name=archive_path)
+            info.size = len(data)
+            tf.addfile(info, io.BytesIO(data))
+
+
 @pytest.fixture
 def offline_cross_python_channel(tmp_path, testing_config):
     """Provide target Python packages and separate build and host dependencies."""
@@ -445,5 +497,69 @@ def offline_cross_python_channel(tmp_path, testing_config):
         _write_fake_conda_package(
             str(channel_dir / target_subdir), "python", version, target_subdir
         )
+    update_index(str(channel_dir))
+    return url_path(str(channel_dir))
+
+
+@pytest.fixture
+def offline_python_channel(tmp_path, testing_config):
+    """Installable Python 3.10 and 3.11 packages for the host platform."""
+    channel_dir = tmp_path / "offline-python-channel"
+    # conda_index requires noarch/. conda also injects a pip dependency on python.
+    noarch_path = channel_dir / "noarch"
+    noarch_path.mkdir(parents=True)
+    _write_fake_conda_package_with_files(
+        str(noarch_path),
+        "pip",
+        "24.0",
+        "noarch",
+        build="py_0",
+        depends=[],
+        files={"share/pip-mock/.keep": ""},
+        noarch="generic",
+    )
+    host_subdir = testing_config.host_subdir
+    subdir_path = channel_dir / host_subdir
+    subdir_path.mkdir()
+    for version in ("3.10", "3.11"):
+        _write_fake_conda_package_with_files(
+            str(subdir_path),
+            "python",
+            version,
+            host_subdir,
+            build="h_mock_0",
+            depends=[],
+            files={"share/python-mock/.keep": ""},
+        )
+    update_index(str(channel_dir))
+    return url_path(str(channel_dir))
+
+
+@pytest.fixture
+def offline_mingw_sysroot_channel(tmp_path):
+    channel_dir = tmp_path / "offline-mingw-channel"
+    noarch_path = channel_dir / "noarch"
+    noarch_path.mkdir(parents=True)
+
+    _write_fake_conda_package_with_files(
+        str(noarch_path),
+        "m2w64-sysroot_win-64",
+        "1.0",
+        "noarch",
+        build="h_unix_0",
+        depends=["__unix"],
+        files={"x86_64-w64-mingw32/.keep": ""},
+        noarch="generic",
+    )
+    _write_fake_conda_package_with_files(
+        str(noarch_path),
+        "m2w64-sysroot_win-64",
+        "1.0",
+        "noarch",
+        build="h_win_0",
+        depends=["__win"],
+        files={"Library/.keep": ""},
+        noarch="generic",
+    )
     update_index(str(channel_dir))
     return url_path(str(channel_dir))

@@ -15,6 +15,7 @@ import sys
 from collections import defaultdict
 from contextlib import nullcontext
 from pathlib import Path
+from types import ModuleType
 from typing import TYPE_CHECKING
 
 import pytest
@@ -22,8 +23,10 @@ from conda.common.compat import on_win
 
 from conda_build import api, build, windows
 from conda_build.build import INTERPRETER_BAT
+from conda_build.config import CondaPkgFormat
 from conda_build.exceptions import CondaBuildUserError
 from conda_build.metadata import MetaData
+from conda_build.utils import package_has_file
 from conda_build.variants import get_default_variant
 
 from .utils import get_noarch_python_meta, metadata_dir
@@ -32,6 +35,27 @@ if TYPE_CHECKING:
     from pytest_mock import MockerFixture
 
     from conda_build.config import Config
+
+
+@pytest.mark.parametrize("package_format", [CondaPkgFormat.V1, CondaPkgFormat.V2])
+def test_build_ignores_installed_conda_verify(
+    testing_metadata, monkeypatch, package_format
+):
+    verify = ModuleType("conda_verify.verify")
+    verify.Verify = lambda: pytest.fail("conda-verify must not run during a build")
+    monkeypatch.setitem(sys.modules, "conda_verify", ModuleType("conda_verify"))
+    monkeypatch.setitem(sys.modules, "conda_verify.verify", verify)
+    testing_metadata.config.conda_pkg_format = package_format
+    testing_metadata.meta["build"]["script"] = (
+        "echo payload > %PREFIX%\\payload.txt"
+        if on_win
+        else 'echo payload > "$PREFIX/payload.txt"'
+    )
+
+    outputs = api.build(testing_metadata, notest=True)
+
+    assert len(outputs) == 1
+    assert package_has_file(outputs[0], "payload.txt").strip() == "payload"
 
 
 def test_build_preserves_PATH(testing_config):

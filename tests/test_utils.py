@@ -634,3 +634,103 @@ def test_max_cmd_line_length_default():
         assert utils.MAX_CHUNK_SIZE == 8190
     else:
         assert utils.MAX_CHUNK_SIZE == 32760
+
+
+def test_env_vars_sets_and_restores(monkeypatch: MonkeyPatch):
+    monkeypatch.setenv("CONDA_BUILD_TEST_EXISTING", "original")
+    monkeypatch.delenv("CONDA_BUILD_TEST_NEW", raising=False)
+
+    with utils.env_vars(
+        {"CONDA_BUILD_TEST_EXISTING": "changed", "CONDA_BUILD_TEST_NEW": "new"}
+    ):
+        assert os.environ["CONDA_BUILD_TEST_EXISTING"] == "changed"
+        assert os.environ["CONDA_BUILD_TEST_NEW"] == "new"
+
+    assert os.environ["CONDA_BUILD_TEST_EXISTING"] == "original"
+    assert "CONDA_BUILD_TEST_NEW" not in os.environ
+
+
+def test_env_vars_restores_on_exception(monkeypatch: MonkeyPatch):
+    monkeypatch.setenv("CONDA_BUILD_TEST_EXISTING", "original")
+    monkeypatch.delenv("CONDA_BUILD_TEST_NEW", raising=False)
+
+    with pytest.raises(RuntimeError):
+        with utils.env_vars(
+            {"CONDA_BUILD_TEST_EXISTING": "changed", "CONDA_BUILD_TEST_NEW": "new"}
+        ):
+            raise RuntimeError
+
+    assert os.environ["CONDA_BUILD_TEST_EXISTING"] == "original"
+    assert "CONDA_BUILD_TEST_NEW" not in os.environ
+
+
+def test_env_vars_preserves_empty_value(monkeypatch: MonkeyPatch):
+    monkeypatch.setenv("CONDA_BUILD_TEST_EMPTY", "")
+
+    with utils.env_vars({"CONDA_BUILD_TEST_EMPTY": "changed"}):
+        assert os.environ["CONDA_BUILD_TEST_EMPTY"] == "changed"
+
+    assert os.environ["CONDA_BUILD_TEST_EMPTY"] == ""
+
+
+def test_env_vars_does_not_exist(monkeypatch: MonkeyPatch):
+    with utils.env_vars({"CONDA_BUILD_TEST_EMPTY": "new"}):
+        assert os.environ["CONDA_BUILD_TEST_EMPTY"] == "new"
+
+    assert os.environ.get("CONDA_BUILD_TEST_EMPTY") is None
+
+
+@pytest.mark.parametrize("var_map", [None, {}])
+def test_env_vars_empty(var_map: dict[str, str] | None):
+    before = dict(os.environ)
+    with utils.env_vars(var_map):
+        assert dict(os.environ) == before
+    assert dict(os.environ) == before
+
+
+def test_env_vars_encodes_values(monkeypatch: MonkeyPatch):
+    monkeypatch.delenv("CONDA_BUILD_TEST_INT", raising=False)
+    monkeypatch.delenv("CONDA_BUILD_TEST_BYTES", raising=False)
+
+    with utils.env_vars({"CONDA_BUILD_TEST_INT": 1, b"CONDA_BUILD_TEST_BYTES": b"b"}):
+        assert os.environ["CONDA_BUILD_TEST_INT"] == "1"
+        assert os.environ["CONDA_BUILD_TEST_BYTES"] == "b"
+
+    assert "CONDA_BUILD_TEST_INT" not in os.environ
+    assert "CONDA_BUILD_TEST_BYTES" not in os.environ
+
+
+def test_env_vars_callbacks(monkeypatch: MonkeyPatch):
+    monkeypatch.delenv("CONDA_BUILD_TEST_NEW", raising=False)
+    calls = []
+
+    def callback():
+        calls.append(("callback", os.environ.get("CONDA_BUILD_TEST_NEW")))
+
+    def stack_callback(entering: bool):
+        calls.append(("stack", entering, os.environ.get("CONDA_BUILD_TEST_NEW")))
+
+    with utils.env_vars(
+        {"CONDA_BUILD_TEST_NEW": "new"},
+        callback=callback,
+        stack_callback=stack_callback,
+    ):
+        assert calls == [("callback", "new"), ("stack", True, "new")]
+
+    assert calls == [
+        ("callback", "new"),
+        ("stack", True, "new"),
+        ("callback", None),
+        ("stack", False, None),
+    ]
+
+
+def test_env_var(monkeypatch: MonkeyPatch):
+    monkeypatch.delenv("CONDA_BUILD_TEST_NEW", raising=False)
+    calls = []
+
+    with utils.env_var("CONDA_BUILD_TEST_NEW", "new", callback=lambda: calls.append(1)):
+        assert os.environ["CONDA_BUILD_TEST_NEW"] == "new"
+
+    assert "CONDA_BUILD_TEST_NEW" not in os.environ
+    assert calls == [1, 1]
