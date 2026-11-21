@@ -16,12 +16,14 @@ from conda_build.utils import ensure_list, package_has_file
 from conda_build.variants import (
     combine_specs,
     dict_of_lists_to_list_of_dicts,
+    filter_by_key_value,
     filter_combined_spec_to_used_keys,
     find_used_variables_in_batch_script,
     find_used_variables_in_shell_script,
     find_used_variables_in_text,
     get_package_variants,
     get_vars,
+    list_of_dicts_to_dict_of_lists,
     validate_spec,
 )
 
@@ -1097,3 +1099,98 @@ def test_combine_specs_zip_lengths():
     )
 
     combine_specs(specs, log_output=True)
+
+
+def test_list_of_dicts_to_dict_of_lists():
+    variants = [
+        {
+            "python": "3.11",
+            "numpy": "2",
+            "c_compiler": "gcc",
+            "channels": ["conda-forge"],
+            "pin_run_as_build": {"python": {"max_pin": "x.x"}},
+            "zip_keys": [["python", "numpy"]],
+        },
+        {
+            "python": "3.12",
+            "numpy": "2",
+            "c_compiler": "gcc",
+            "channels": ["conda-forge", "local"],
+            "pin_run_as_build": {"numpy": {"max_pin": "x"}},
+            "zip_keys": [["python", "numpy"]],
+        },
+        {
+            "python": "3.12",
+            "numpy": "2",
+            "c_compiler": "clang",
+            "channels": ["conda-forge"],
+            "pin_run_as_build": {"python": {"max_pin": "x.x"}},
+            "zip_keys": [["python", "numpy"]],
+        },
+    ]
+    squished = list_of_dicts_to_dict_of_lists(variants)
+    assert list(squished) == [
+        "python",
+        "numpy",
+        "c_compiler",
+        "channels",
+        "pin_run_as_build",
+        "zip_keys",
+    ]
+    # zipped keys are deduplicated together, keeping the pairs
+    assert sorted(zip(squished["python"], squished["numpy"])) == [
+        ("3.11", "2"),
+        ("3.12", "2"),
+    ]
+    assert sorted(squished["c_compiler"]) == ["clang", "gcc"]
+    assert isinstance(squished["c_compiler"], list)
+    assert squished["channels"] == {"conda-forge", "local"}
+    assert squished["pin_run_as_build"] == {
+        "python": {"max_pin": "x.x"},
+        "numpy": {"max_pin": "x"},
+    }
+    assert squished["zip_keys"] == [["python", "numpy"]]
+
+
+def test_list_of_dicts_to_dict_of_lists_uneven_keys():
+    variants = [
+        {"python": "3.11", "cuda": None},
+        {"python": "3.12", "blas": "openblas"},
+        {"python": "3.12", "cuda": "12", "blas": ["mkl"]},
+    ]
+    squished = list_of_dicts_to_dict_of_lists(variants)
+    assert list(squished) == ["python", "cuda", "blas", "zip_keys"]
+    assert sorted(squished["python"]) == ["3.11", "3.12"]
+    # None adds no value
+    assert squished["cuda"] == ["12"]
+    # a list value turns the collected values into a set
+    assert squished["blas"] == {"openblas", "mkl"}
+    assert squished["zip_keys"] == []
+
+
+def test_list_of_dicts_to_dict_of_lists_empty():
+    assert list_of_dicts_to_dict_of_lists([]) is None
+
+
+def test_get_vars_compares_mixed_types():
+    variants = [
+        {"python": "3.12", "numpy": 2, "build": "1", "zip_keys": []},
+        {"python": "3.12", "numpy": "2", "build": "1", "zip_keys": []},
+    ]
+    # 2 != "2", whichever side compares
+    assert get_vars(variants) == {"numpy"}
+    assert get_vars(variants, subset={"python", "build"}) == set()
+
+
+def test_filter_by_key_value():
+    variants = [
+        {"python": "3.11"},
+        {"python": "3.12"},
+        {"python": None},
+        {"numpy": "2"},
+    ]
+    assert filter_by_key_value(variants, "python", ["3.12"], "test") == [
+        {"python": "3.12"}
+    ]
+    # a dict of values selects nothing out
+    assert filter_by_key_value(variants, "python", {"3.12": 1}, "test") is variants
