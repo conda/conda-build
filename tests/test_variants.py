@@ -22,6 +22,7 @@ from conda_build.variants import (
     find_used_variables_in_text,
     get_package_variants,
     get_vars,
+    list_of_dicts_to_dict_of_lists,
     validate_spec,
 )
 
@@ -828,6 +829,43 @@ def test_get_vars():
     ]
 
     assert get_vars(variants) == {"nodejs"}
+
+
+def test_list_of_dicts_to_dict_of_lists():
+    variants = dict_of_lists_to_list_of_dicts(
+        {
+            "python": ["3.11", "3.12", "3.13"],
+            "is_python_min": ["true", "false", "false"],
+            "openjdk": ["17", "21"],
+            "blas_impl": ["openblas", "mkl"],
+            "target_platform": "linux-64",
+            "pin_run_as_build": {"python": {"min_pin": "x.x", "max_pin": "x.x"}},
+            "ignore_build_only_deps": ["python", "numpy"],
+            "zip_keys": [["python", "is_python_min"]],
+        }
+    )
+    assert len(variants) == 12
+
+    squished = list_of_dicts_to_dict_of_lists(variants)
+
+    # zipped keys stay aligned and are deduplicated as tuples
+    assert set(zip(squished["python"], squished["is_python_min"])) == {
+        ("3.11", "true"),
+        ("3.12", "false"),
+        ("3.13", "false"),
+    }
+    assert len(squished["python"]) == 3
+    # unzipped scalar keys become lists of unique values
+    assert isinstance(squished["openjdk"], list)
+    assert sorted(squished["openjdk"]) == ["17", "21"]
+    assert sorted(squished["blas_impl"]) == ["mkl", "openblas"]
+    assert squished["target_platform"] == ["linux-64"]
+    # list values are unioned into a set, dict values are merged
+    assert squished["ignore_build_only_deps"] == {"python", "numpy"}
+    assert squished["pin_run_as_build"] == {
+        "python": {"min_pin": "x.x", "max_pin": "x.x"}
+    }
+    assert squished["zip_keys"] == [["python", "is_python_min"]]
 
 
 @pytest.mark.parametrize(

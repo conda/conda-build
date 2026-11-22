@@ -629,6 +629,9 @@ def list_of_dicts_to_dict_of_lists(list_of_dicts):
         for group in groups:
             for item in group:
                 all_zip_keys.add(item)
+    # Accumulate values in place: rebuilding the containers on every variant
+    # made this quadratic in the number of variants.
+    unique_scalar_keys = set()
     for variant in list_of_dicts:
         for k, v in variant.items():
             if k == "zip_keys":
@@ -638,11 +641,24 @@ def list_of_dicts_to_dict_of_lists(list_of_dicts):
                 existing_value.update(v)
                 squished[k] = existing_value
             elif isinstance(v, list):
-                squished[k] = set(squished.get(k, set())) | set(v)
+                existing_value = squished.get(k)
+                if not isinstance(existing_value, set):
+                    existing_value = squished[k] = set(existing_value or ())
+                existing_value.update(v)
+                unique_scalar_keys.discard(k)
+            elif k in all_zip_keys:
+                existing_value = squished.get(k)
+                if not isinstance(existing_value, list):
+                    existing_value = squished[k] = list(existing_value or ())
+                existing_value.extend(ensure_list(v))
             else:
-                squished[k] = list(squished.get(k, [])) + ensure_list(v)
-                if k not in all_zip_keys:
-                    squished[k] = list(set(squished[k]))
+                existing_value = squished.get(k)
+                if not isinstance(existing_value, set):
+                    existing_value = squished[k] = set(existing_value or ())
+                existing_value.update(ensure_list(v))
+                unique_scalar_keys.add(k)
+    for k in unique_scalar_keys:
+        squished[k] = list(squished[k])
     # reduce the combinatoric space of the zipped keys, too:
     if groups:
         for group in groups:
