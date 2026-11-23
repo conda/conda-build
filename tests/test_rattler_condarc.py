@@ -1,8 +1,6 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
-# Copyright (C) 2014 Anaconda, Inc
-# SPDX-License-Identifier: BSD-3-Clause
-"""Tests for `.condarc` validation when building v1 (rattler-build) recipes."""
+"""Tests for condarc validation when building v1 recipes."""
 
 from __future__ import annotations
 
@@ -12,136 +10,97 @@ from typing import TYPE_CHECKING
 import pytest
 from conda.base.context import Context
 
-# `compat` (and `main_build`, which imports it) require rattler_build
 pytest.importorskip("rattler_build")
 
-from conda_build._rattler_build import compat  # noqa: E402
-from conda_build.cli import main_build  # noqa: E402
-from conda_build.config import CondaPkgFormat  # noqa: E402
+from conda_build._rattler_build import compat
+from conda_build.cli import main_build
+from conda_build.config import CondaPkgFormat
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
-
-    from pytest import MonkeyPatch
+    from pytest import FixtureRequest, MonkeyPatch
 
 
 @pytest.fixture
-def set_condarc(monkeypatch: MonkeyPatch) -> Callable[[dict], None]:
+def condarc(request: FixtureRequest, monkeypatch: MonkeyPatch) -> None:
     """Give the CLI parser and validator the same isolated conda-build settings."""
-
-    def set_condarc(condarc: dict) -> None:
-        monkeypatch.setattr(Context, "conda_build", condarc)
-
-    return set_condarc
-
-
-@pytest.fixture
-def check_condarc(set_condarc: Callable[[dict], None]) -> Callable[..., None]:
-    """Run the condarc validation using only the recipe as a CLI argument."""
-
-    def check_condarc(condarc: dict, command: str = "build") -> None:
-        set_condarc(condarc)
-        parsed = Namespace(recipe=["recipe"])
-        compat.check_arguments_rattler(command, parsed, parsed)
-
-    return check_condarc
-
-
-def test_condarc_only_keys_contains_pkg_format():
-    assert "pkg_format" in compat.CONDARC_ONLY_KEYS
-
-
-def test_condarc_only_keys_do_not_overlap_cli_args():
-    """Keys that are valid CLI dests don't belong in the condarc-only allowlist.
-
-    `pkg_format` differs from the `conda_pkg_format` dest, which is the reason
-    it needs an explicit allowlist entry.
-    """
-    _, parsed = main_build.parse_args(["recipe"])
-    assert not compat.CONDARC_ONLY_KEYS & set(vars(parsed))
-
-
-@pytest.mark.parametrize("value", ["1", "2", ".tar.bz2", ".conda", 1, 2])
-def test_pkg_format_condarc_is_accepted(check_condarc, value):
-    # must not raise
-    check_condarc({"pkg_format": value})
+    monkeypatch.setattr(Context, "conda_build", request.param)
 
 
 @pytest.mark.parametrize("command", ["build", "render", "debug"])
-def test_pkg_format_condarc_is_accepted_for_every_command(check_condarc, command: str):
-    # the condarc check is applied against the union of all commands' keys
-    check_condarc({"pkg_format": "2"}, command=command)
+@pytest.mark.parametrize(
+    "condarc",
+    [
+        pytest.param({}, id="empty"),
+        pytest.param({"pkg_format": "2"}, id="pkg-format"),
+        pytest.param(
+            {"skip_existing": "true", "output_folder": "/tmp/out"},
+            id="supported-keys",
+        ),
+        pytest.param(
+            {"pkg_format": "2", "skip_existing": "true", "croot": "/c"},
+            id="pkg-format-and-supported-keys",
+        ),
+    ],
+    indirect=["condarc"],
+)
+def test_supported_condarc_keys(condarc, command: str):
+    parsed = Namespace(recipe=["recipe"])
+    compat.check_arguments_rattler(command, parsed, parsed)
 
 
-def test_empty_condarc_is_accepted(check_condarc):
-    check_condarc({})
+@pytest.mark.parametrize("command", ["build", "render", "debug"])
+@pytest.mark.parametrize(
+    "condarc, unsupported",
+    [
+        pytest.param({"activate": "false"}, "activate", id="unsupported-key"),
+        pytest.param(
+            {"pkg_format": "2", "activate": "false"},
+            "activate",
+            id="pkg-format-and-unsupported-key",
+        ),
+        pytest.param(
+            {"zzz_bad": 1, "pkg_format": "2", "aaa_bad": 2},
+            "aaa_bad, zzz_bad",
+            id="sorted-unsupported-keys",
+        ),
+    ],
+    indirect=["condarc"],
+)
+def test_unsupported_condarc_keys(condarc, command: str, unsupported: str):
+    parsed = Namespace(recipe=["recipe"])
+    with pytest.raises(ValueError) as exc_info:
+        compat.check_arguments_rattler(command, parsed, parsed)
+
+    assert str(exc_info.value) == (
+        f"Invalid condarc settings for conda-{command}: {unsupported}"
+    )
 
 
-def test_supported_condarc_keys_still_accepted(check_condarc):
-    check_condarc({"skip_existing": "true", "output_folder": "/tmp/out"})
-
-
-def test_supported_condarc_keys_accepted_alongside_pkg_format(check_condarc):
-    check_condarc({"pkg_format": "2", "skip_existing": "true", "croot": "/c"})
-
-
-def test_unsupported_condarc_key_still_rejected(check_condarc):
-    with pytest.raises(ValueError, match="Invalid condarc settings.*activate"):
-        check_condarc({"activate": "false"})
-
-
-def test_unsupported_condarc_key_rejected_next_to_pkg_format(check_condarc):
-    with pytest.raises(ValueError, match="Invalid condarc settings") as exc_info:
-        check_condarc({"pkg_format": "2", "activate": "false"})
-
-    # only the genuinely unsupported key is reported, never `pkg_format`
-    message = str(exc_info.value)
-    assert "activate" in message
-    assert "pkg_format" not in message
-
-
-def test_multiple_unsupported_condarc_keys_reported_sorted(check_condarc):
-    with pytest.raises(ValueError, match="Invalid condarc settings") as exc_info:
-        check_condarc({"zzz_bad": 1, "pkg_format": "2", "aaa_bad": 2})
-
-    message = str(exc_info.value)
-    assert message.endswith("aaa_bad, zzz_bad")
-    assert "pkg_format" not in message
-
-
-def test_condarc_error_names_the_command(check_condarc):
-    with pytest.raises(ValueError, match="conda-render"):
-        check_condarc({"activate": "false"}, command="render")
-
-
-def test_cli_args_validated_before_condarc(set_condarc):
-    """An unsupported CLI argument takes precedence when condarc is invalid too."""
-    set_condarc({"pkg_format": "2", "activate": "false"})
-    only_recipe = Namespace(recipe=["recipe"])
+@pytest.mark.parametrize(
+    "condarc", [{"pkg_format": "2", "activate": "false"}], indirect=["condarc"]
+)
+def test_cli_arguments_validated_before_condarc(condarc):
     parsed = Namespace(recipe=["recipe"], no_such_flag=True)
+    only_recipe = Namespace(recipe=["recipe"])
     with pytest.raises(ValueError, match="Invalid arguments for conda-build"):
         compat.check_arguments_rattler("build", parsed, only_recipe)
 
 
 @pytest.mark.parametrize(
-    "value, expected",
+    "condarc, expected",
     [
-        pytest.param("1", CondaPkgFormat.V1, id="v1-string"),
-        pytest.param("2", CondaPkgFormat.V2, id="v2-string"),
-        pytest.param(".tar.bz2", CondaPkgFormat.V1, id="v1-extension"),
-        pytest.param(".conda", CondaPkgFormat.V2, id="v2-extension"),
-        pytest.param(1, CondaPkgFormat.V1, id="v1-integer"),
-        pytest.param(2, CondaPkgFormat.V2, id="v2-integer"),
+        pytest.param({"pkg_format": "1"}, CondaPkgFormat.V1, id="v1-string"),
+        pytest.param({"pkg_format": "2"}, CondaPkgFormat.V2, id="v2-string"),
+        pytest.param({"pkg_format": ".tar.bz2"}, CondaPkgFormat.V1, id="v1-extension"),
+        pytest.param({"pkg_format": ".conda"}, CondaPkgFormat.V2, id="v2-extension"),
+        pytest.param({"pkg_format": 1}, CondaPkgFormat.V1, id="v1-integer"),
+        pytest.param({"pkg_format": 2}, CondaPkgFormat.V2, id="v2-integer"),
     ],
+    indirect=["condarc"],
 )
-def test_pkg_format_condarc_with_real_cli_parser(
-    set_condarc, value, expected: CondaPkgFormat
-):
-    """Validate using the real argparse namespaces that `conda build` produces."""
-    set_condarc({"pkg_format": value})
-
+def test_pkg_format_condarc_with_real_cli_parser(condarc, expected: CondaPkgFormat):
     _, parsed = main_build.parse_args(["recipe"])
-    _, parsed_only_recipe = main_build.parse_args(["recipe"])
+    _, only_recipe = main_build.parse_args(["recipe"])
 
     assert parsed.conda_pkg_format is expected
-    compat.check_arguments_rattler("build", parsed, parsed_only_recipe)
+    compat.check_arguments_rattler("build", parsed, only_recipe)
