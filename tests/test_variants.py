@@ -5,6 +5,7 @@ import os
 import platform
 import re
 import sys
+from copy import deepcopy
 from pathlib import Path
 
 import pytest
@@ -1170,6 +1171,107 @@ def test_list_of_dicts_to_dict_of_lists_uneven_keys():
 
 def test_list_of_dicts_to_dict_of_lists_empty():
     assert list_of_dicts_to_dict_of_lists([]) is None
+
+
+@pytest.mark.parametrize(
+    "values, expected_type",
+    [
+        pytest.param(["3.11", ["3.12"]], set, id="scalar-list"),
+        pytest.param([["3.11"], "3.12"], list, id="list-scalar"),
+        pytest.param(["3.11", ["3.12"], "3.11"], list, id="scalar-list-scalar"),
+    ],
+)
+def test_list_of_dicts_to_dict_of_lists_mixed_values(values, expected_type):
+    variants = [{"python": value} for value in values]
+
+    squished = list_of_dicts_to_dict_of_lists(variants)
+
+    assert isinstance(squished["python"], expected_type)
+    assert len(squished["python"]) == 2
+    assert set(squished["python"]) == {"3.11", "3.12"}
+
+
+def test_list_of_dicts_to_dict_of_lists_passthrough_values():
+    variants = [
+        {
+            "ignore_build_only_deps": ["python", "numpy"],
+            "pin_run_as_build": {"python": {"max_pin": "x.x"}},
+        },
+        {
+            "ignore_build_only_deps": ["numpy", "setuptools"],
+            "pin_run_as_build": {"numpy": {"max_pin": "x.x"}},
+        },
+        {
+            "ignore_build_only_deps": [],
+            "pin_run_as_build": {"python": {"max_pin": "x"}},
+        },
+    ]
+    original = deepcopy(variants)
+
+    squished = list_of_dicts_to_dict_of_lists(variants)
+
+    assert squished["ignore_build_only_deps"] == {"python", "numpy", "setuptools"}
+    assert squished["pin_run_as_build"] == {
+        "python": {"max_pin": "x"},
+        "numpy": {"max_pin": "x.x"},
+    }
+    assert variants == original
+
+
+def test_list_of_dicts_to_dict_of_lists_multiple_zip_groups():
+    variants = dict_of_lists_to_list_of_dicts(
+        {
+            "python": ["3.11", "3.12", "3.13"],
+            "is_python_min": ["true", "false", "false"],
+            "c_compiler": ["gcc", "clang"],
+            "c_compiler_version": ["14", "19"],
+            "blas_impl": ["openblas", "mkl"],
+            "zip_keys": [
+                ["python", "is_python_min"],
+                ["c_compiler", "c_compiler_version"],
+            ],
+        }
+    )
+    original = deepcopy(variants)
+    assert len(variants) == 12
+
+    squished = list_of_dicts_to_dict_of_lists(variants)
+
+    assert len(squished["python"]) == len(squished["is_python_min"]) == 3
+    assert set(zip(squished["python"], squished["is_python_min"])) == {
+        ("3.11", "true"),
+        ("3.12", "false"),
+        ("3.13", "false"),
+    }
+    assert len(squished["c_compiler"]) == len(squished["c_compiler_version"]) == 2
+    assert set(zip(squished["c_compiler"], squished["c_compiler_version"])) == {
+        ("gcc", "14"),
+        ("clang", "19"),
+    }
+    assert set(squished["blas_impl"]) == {"openblas", "mkl"}
+    assert squished["zip_keys"] == [
+        ["python", "is_python_min"],
+        ["c_compiler", "c_compiler_version"],
+    ]
+    assert variants == original
+
+
+@pytest.mark.benchmark
+@pytest.mark.parametrize("size", [1000, 4000])
+@pytest.mark.parametrize("kind", ["zipped", "scalar", "list"])
+def test_list_of_dicts_to_dict_of_lists_benchmark(size, kind):
+    variants = [{"version": str(i)} for i in range(size)]
+    if kind == "zipped":
+        for i, variant in enumerate(variants):
+            variant["abi"] = str(i % 2)
+            variant["zip_keys"] = [["version", "abi"]]
+    elif kind == "list":
+        for variant in variants:
+            variant["version"] = [variant["version"]]
+
+    squished = list_of_dicts_to_dict_of_lists(variants)
+
+    assert len(squished["version"]) == size
 
 
 def test_get_vars_compares_mixed_types():
