@@ -5,6 +5,7 @@ from concurrent.futures import ThreadPoolExecutor
 from importlib import import_module
 from importlib.metadata import EntryPoint
 from pathlib import Path
+from threading import Event
 
 import pytest
 from conda.base.context import context, reset_context
@@ -13,6 +14,7 @@ from requests import Request
 
 from conda_build import __version__, api, inspect_pkg, plugin, render
 from conda_build.config import Config
+from conda_build.user_agent import conda_build_user_agent
 
 
 def user_agent(session, host="example.invalid"):
@@ -74,6 +76,30 @@ def test_nested_api_user_agent(monkeypatch, fail):
     monkeypatch.setattr(inspect_pkg, "test_installable", test_installable)
     monkeypatch.setattr(render, "render_recipe", render_recipe)
     assert api.render("recipe") == []
+    assert user_agent(session) == baseline
+
+
+def test_overlapping_user_agent(monkeypatch):
+    session = CondaSession()
+    baseline = user_agent(session)
+    entered = Event()
+    release = Event()
+
+    def render_recipe(*args, **kwargs):
+        entered.set()
+        assert release.wait(timeout=10)
+        return []
+
+    monkeypatch.setattr(render, "render_recipe", render_recipe)
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        try:
+            with conda_build_user_agent():
+                future = executor.submit(api.render, "recipe")
+                assert entered.wait(timeout=10)
+            assert user_agent(session) == f"{baseline} conda-build/{__version__}"
+        finally:
+            release.set()
+        assert future.result(timeout=10) == []
     assert user_agent(session) == baseline
 
 

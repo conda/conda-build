@@ -19,7 +19,7 @@ from .test_user_agent import command_action
 
 @pytest.fixture(scope="session")
 def warm_package_cache():
-    # Source rendering does not need an environment or packages from a channel.
+    # Override the autouse fixture used by testing_config to skip package downloads.
     return None
 
 
