@@ -1247,10 +1247,10 @@ def test_ignore_run_exports(testing_metadata, testing_config):
     )
     # customize our fixture metadata with our desired changes
     testing_metadata.meta["requirements"]["host"] = ["test_has_run_exports"]
-    testing_metadata.meta["build"]["ignore_run_exports"] = ["downstream_pinned_package"]
+    testing_metadata.meta["build"]["ignore_run_exports"] = ["weak_pinned_package"]
     testing_metadata.config.index = None
     m = finalize_metadata(testing_metadata)
-    assert "downstream_pinned_package 1.0" not in m.meta["requirements"].get("run", [])
+    assert "weak_pinned_package 1.0.*" not in m.meta["requirements"].get("run", [])
 
 
 @pytest.mark.sanity
@@ -1264,7 +1264,20 @@ def test_ignore_run_exports_from(testing_metadata, testing_config):
     testing_metadata.meta["build"]["ignore_run_exports_from"] = ["test_has_run_exports"]
     testing_metadata.config.index = None
     m = finalize_metadata(testing_metadata)
-    assert "downstream_pinned_package 1.0" not in m.meta["requirements"].get("run", [])
+    assert "weak_pinned_package 1.0.*" not in m.meta["requirements"].get("run", [])
+
+
+def test_ignore_run_exports_from_substr(testing_metadata, testing_config):
+    api.build(
+        os.path.join(metadata_dir, "_run_exports"), config=testing_config, notest=True
+    )
+    testing_metadata.meta["requirements"]["host"] = ["test_has_run_exports"]
+    testing_metadata.meta["build"]["ignore_run_exports_from"] = [
+        "i-like-test_has_run_exports"
+    ]
+    testing_metadata.config.index = None
+    m = finalize_metadata(testing_metadata)
+    assert "weak_pinned_package 1.0.*" in m.meta["requirements"].get("run", [])
 
 
 @pytest.mark.skipif(
@@ -2121,15 +2134,6 @@ def test_api_build_inject_jinja2_vars_on_first_pass(testing_config):
     api.build(recipe_dir, config=testing_config)
 
 
-def test_ignore_run_exports_from_substr(monkeypatch, tmp_path, capsys, testing_config):
-    monkeypatch.chdir(tmp_path)
-    testing_config.channel_urls = ["conda-forge"]
-    api.build(
-        str(metadata_path / "ignore_run_exports_from_substr"), config=testing_config
-    )
-    assert "- python_abi " in capsys.readouterr().out
-
-
 @pytest.mark.skipif(not on_linux, reason="One platform is enough")
 def test_build_strings_glob_match(testing_config: Config) -> None:
     """
@@ -2148,16 +2152,20 @@ def test_build_strings_glob_match(testing_config: Config) -> None:
 
 
 def test_api_build_transitive_pin_subpackage_regression(
-    monkeypatch, tmp_path, testing_config
+    monkeypatch, tmp_path, testing_config, offline_python_channel
 ):
-    """Minimal, fast regression test for the transitive pin_subpackage/variant-merge
-    bug from issues #5645 and #5644 (see PR #5603, #5647, #5651), without needing
-    the real grpc/pytorch recipes, compilers, or network-heavy toolchains.
+    """Regression test for the transitive pin_subpackage/variant-merge bug.
+
+    See issues #5645 and #5644 (PR #5603, #5647, #5651). Uses local Python
+    packages and skips package tests; the assertions below check the pins.
     """
-    testing_config.channel_urls = ["conda-forge"]
+    monkeypatch.setattr(Context, "channels", property(lambda self: ()))
+    testing_config.channel_urls = [offline_python_channel]
     monkeypatch.chdir(tmp_path)
     outputs = api.build(
-        str(metadata_path / "_transitive_pin_variants"), config=testing_config
+        str(metadata_path / "_transitive_pin_variants"),
+        config=testing_config,
+        notest=True,
     )
     records = [
         json.loads(package_has_file(path, "info/index.json")) for path in outputs
@@ -2174,6 +2182,21 @@ def test_api_build_transitive_pin_subpackage_regression(
     for record in records:
         if record["name"] == "pypin":
             assert libpin_spec in record["depends"]
+
+    def python_depend(record):
+        specs = [dep for dep in record["depends"] if dep.split()[0] == "python"]
+        assert len(specs) == 1
+        return specs[0]
+
+    pypin_python = {
+        python_depend(record) for record in records if record["name"] == "pypin"
+    }
+    tools_python = {
+        python_depend(record) for record in records if record["name"] == "pypin-tools"
+    }
+    # Variant rows must keep distinct python pins (#5645).
+    assert len(pypin_python) == 2
+    assert pypin_python == tools_python
 
 
 @pytest.mark.skipif(on_win, reason="file permissions not relevant on Windows")
