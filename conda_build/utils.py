@@ -994,7 +994,10 @@ def path2url(path):
 
 def get_stdlib_dir(prefix, py_ver):
     if on_win:
-        lib_dir = os.path.join(prefix, "Lib")
+        if VersionOrder(py_ver) >= VersionOrder("3.15"):
+            lib_dir = os.path.join(prefix, "lib", "python")
+        else:
+            lib_dir = os.path.join(prefix, "Lib")
     else:
         lib_dir = os.path.join(prefix, "lib")
         python_folder = glob(os.path.join(lib_dir, "python?.*"), recursive=True)
