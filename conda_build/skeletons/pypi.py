@@ -557,18 +557,13 @@ def add_parser(repos):
         "--python-version",
         action="store",
         default=context.default_python,
-        help="""Version of Python to use to run setup.py. Default is %(default)s.""",
+        help="""Version of Python to use. Default is %(default)s.""",
         choices=[
-            "2.7",
-            "3.5",
-            "3.6",
-            "3.7",
-            "3.8",
-            "3.9",
-            "3.10",
             "3.11",
             "3.12",
             "3.13",
+            "3.14",
+            "3.15",
         ],
     )
 
