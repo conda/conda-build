@@ -24,6 +24,7 @@ from typing import TYPE_CHECKING
 from .config import DEFAULT_PREFIX_LENGTH as _prefix_length
 from .config import Config, get_channel_urls, get_or_merge_config
 from .metadata import MetaData, MetaDataTuple
+from .user_agent import conda_build_user_agent as _conda_build_user_agent
 from .utils import (
     CONDA_PACKAGE_EXTENSIONS,
     LoggingContext,
@@ -68,6 +69,7 @@ def _error_if_package_contains_recipe_yaml(pkg_path: str) -> None:
             )
 
 
+@_conda_build_user_agent()
 def render(
     recipe_path: str | os.PathLike | Path,
     config: Config | None = None,
@@ -198,6 +200,7 @@ def check(
     return all(m[0].check_fields() for m in metadata)
 
 
+@_conda_build_user_agent()
 def build(
     recipe_paths_or_metadata: str | os.PathLike | Path | MetaData,
     post: bool | None = None,
@@ -251,6 +254,7 @@ def build(
     )
 
 
+@_conda_build_user_agent()
 def test(
     recipedir_or_package_or_metadata: str | os.PathLike | Path | MetaData,
     move_broken: bool = True,
@@ -347,7 +351,7 @@ def skeletonize(
     for arg in skeletonize.__code__.co_varnames:
         if arg in kwargs:
             del kwargs[arg]
-    with config:
+    with _conda_build_user_agent(), config:
         module.skeletonize(
             packages,
             output_dir=output_dir,
@@ -412,6 +416,7 @@ def convert(
         raise RuntimeError(f"cannot convert: {package_file}")
 
 
+@_conda_build_user_agent()
 def test_installable(channel: str = "defaults") -> bool:
     """Check to make sure that packages in channel are installable.
     This is a consistency check for the channel."""
@@ -512,6 +517,7 @@ def create_metapackage(
     )
 
 
+@_conda_build_user_agent()
 def debug(
     recipe_or_package_path_or_metadata_tuples,
     path=None,
