@@ -1,0 +1,16 @@
+package:
+  name: dll_linking_fail
+  version: 0
+
+source:
+  url: https://anaconda.org/conda-forge/sleef/3.7/download/win-64/sleef-3.7-h7e360cc_0.conda
+
+build:
+  error_overlinking: true
+
+requirements:
+  build:
+    - libarchive
+    - {{ compiler('c') }}
+  host:
+  run:

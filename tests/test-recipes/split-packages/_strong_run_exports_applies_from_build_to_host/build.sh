@@ -1,1 +1,1 @@
-stat $PREFIX/lib/libc++.dylib
+stat $PREFIX/lib/libc++.*dylib

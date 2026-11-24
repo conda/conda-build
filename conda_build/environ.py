@@ -8,24 +8,24 @@ import multiprocessing
 import os
 import platform
 import re
+import shutil
 import subprocess
 import sys
 import warnings
 from collections import defaultdict
+from copy import copy
 from functools import cache
 from glob import glob
 from logging import getLogger
 from os.path import join, normpath
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from conda.base.constants import (
-    CONDA_PACKAGE_EXTENSIONS,
     DEFAULTS_CHANNEL_NAME,
     UNKNOWN_CHANNEL,
 )
 from conda.base.context import context, reset_context
-from conda.common.io import env_vars
-from conda.core.index import LAST_CHANNEL_URLS
 from conda.core.link import PrefixSetup, UnlinkLinkTransaction
 from conda.core.package_cache_data import PackageCacheData, ProgressiveFetchExtract
 from conda.core.prefix_data import PrefixData
@@ -33,12 +33,12 @@ from conda.exceptions import (
     CondaError,
     LinkError,
     LockError,
-    NoPackagesFoundError,
+    PackagesNotFoundError,
     PaddingError,
+    ResolvePackageNotFound,
     UnsatisfiableError,
 )
 from conda.gateways.disk.create import TemporaryDirectory
-from conda.models.channel import Channel, prioritize_channels
 from conda.models.match_spec import MatchSpec
 from conda.models.records import PackageRecord
 
@@ -48,8 +48,10 @@ from .features import feature_list
 from .index import get_build_index
 from .os_utils import external
 from .utils import (
+    CONDA_PACKAGE_EXTENSIONS,
     ensure_list,
     env_var,
+    env_vars,
     on_mac,
     on_win,
     package_record_to_requirement,
@@ -59,8 +61,10 @@ from .variants import get_default_variant
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
-    from pathlib import Path
     from typing import Any, TypedDict
+
+    from conda.core.index import Index
+    from conda.models.channel import Channel
 
     from .config import Config
     from .metadata import MetaData
@@ -411,7 +415,6 @@ def conda_build_vars(prefix, config):
         "SRC_DIR": src_dir,
         "HTTPS_PROXY": os.getenv("HTTPS_PROXY", ""),
         "HTTP_PROXY": os.getenv("HTTP_PROXY", ""),
-        "REQUESTS_CA_BUNDLE": os.getenv("REQUESTS_CA_BUNDLE", ""),
         "DIRTY": "1" if config.dirty else "",
         "ROOT": context.root_prefix,
     }
@@ -744,14 +747,18 @@ def linux_vars(m, get_default, prefix):
     # the GNU triplet is powerpc, not ppc. This matters.
     if build_arch.startswith("ppc"):
         build_arch = build_arch.replace("ppc", "powerpc")
-    if (
-        build_arch.startswith("powerpc")
-        or build_arch.startswith("aarch64")
-        or build_arch.startswith("s390x")
-    ):
-        build_distro = "cos7"
+    # Check if cdt_name is specified in the variant first
+    # Default based on architecture if not specified
+    if build_arch.startswith(("powerpc", "aarch64", "s390x")):
+        default_build_distro = "cos7"
     else:
-        build_distro = "cos6"
+        default_build_distro = "cos6"
+
+    # Override with variant value if provided
+    if m.config.variant:
+        build_distro = m.config.variant.get("cdt_name", default_build_distro)
+    else:
+        build_distro = default_build_distro
     # There is also QEMU_SET_ENV, but that needs to be
     # filtered so it only contains the result of `linux_vars`
     # which, before this change was empty, and after it only
@@ -795,6 +802,7 @@ def os_vars(m, prefix):
     get_default("LANG")
     get_default("LC_ALL")
     get_default("MAKEFLAGS")
+    get_default("REQUESTS_CA_BUNDLE")
     d["SHLIB_EXT"] = get_shlib_ext(m.config.host_platform)
     d["PATH"] = os.environ.copy()["PATH"]
 
@@ -889,13 +897,14 @@ def get_install_actions(
                 try:
                     _actions = _install_actions(prefix, index, specs, subdir=subdir)
                     precs = _actions["LINK"]
-                except (NoPackagesFoundError, UnsatisfiableError) as exc:
+                except (ResolvePackageNotFound, UnsatisfiableError) as exc:
                     raise DependencyNeedsBuildingError(exc, subdir=subdir)
                 except (
                     SystemExit,
                     PaddingError,
                     LinkError,
                     DependencyNeedsBuildingError,
+                    PackagesNotFoundError,
                     CondaError,
                     AssertionError,
                     BuildLockError,
@@ -974,6 +983,103 @@ get_package_records = get_install_actions
 del get_install_actions
 
 
+def _clone_template_env(
+    template_path: str | os.PathLike | Path,
+    target_prefix: str | os.PathLike | Path,
+    specs_or_precs: tuple[str | MatchSpec | PackageRecord, ...],
+    disable_pip: bool = False,
+) -> bool:
+    """Clone a template environment to the target prefix if it matches the specs.
+
+    Uses `conda create --clone` to clone the environment, which properly handles
+    prefix replacement in scripts and metadata files. This is faster than
+    creating an environment from scratch because it avoids the solver.
+
+    The clone is only used when:
+
+    1. The template's installed records match the requested specs (by exact
+       name+version+build for ``PackageRecord`` inputs, or via
+       ``MatchSpec.match`` for string/``MatchSpec`` inputs).
+    2. The template does not contain extra packages that the caller did not ask
+       for. ``conda create --clone`` is all-or-nothing, so extras would leak
+       into the target env. In particular, if ``disable_pip`` is set the
+       template must not contain pip/setuptools/wheel.
+
+    If any of these conditions fail, cloning is skipped and the caller falls
+    back to a normal solve.
+    """
+    log = utils.get_logger(__name__)
+
+    try:
+        template = PrefixData(str(template_path))
+        installed_names = {prec.name for prec in template.iter_records()}
+    except Exception:
+        return False
+
+    if disable_pip and installed_names & {"pip", "setuptools", "wheel"}:
+        log.debug(
+            "Template env contains pip/setuptools/wheel but disable_pip is set, "
+            "skipping clone",
+        )
+        return False
+
+    requested_names: set[str] = set()
+    for item in specs_or_precs:
+        if isinstance(item, PackageRecord):
+            match_spec = MatchSpec(item.spec)
+            name = item.name
+        elif isinstance(item, MatchSpec):
+            match_spec = item
+            name = item.name
+        elif isinstance(item, str):
+            match_spec = MatchSpec(item)
+            name = match_spec.name
+        else:
+            return False
+
+        record = template.get(name, None)
+        if record is None or not match_spec.match(record):
+            log.debug("Template env does not satisfy %r, skipping clone", item)
+            return False
+        requested_names.add(name)
+
+    extra = installed_names - requested_names
+    if extra:
+        log.debug(
+            "Template env has extra packages not requested (%s), skipping clone",
+            sorted(extra),
+        )
+        return False
+
+    try:
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "conda",
+                "create",
+                "--clone",
+                str(template_path),
+                "-p",
+                str(target_prefix),
+                "-y",
+                "-q",
+            ],
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode == 0:
+            return True
+        log.debug("conda clone failed: %s", result.stderr)
+        return False
+    except (OSError, subprocess.SubprocessError) as e:
+        log.debug("Template clone failed: %s", e)
+        target_prefix = Path(target_prefix)
+        if target_prefix.exists():
+            shutil.rmtree(target_prefix, ignore_errors=True)
+        return False
+
+
 def create_env(
     prefix: str | os.PathLike | Path,
     specs_or_precs: Iterable[str | MatchSpec] | Iterable[PackageRecord],
@@ -988,6 +1094,10 @@ def create_env(
 ) -> None:
     """
     Create a conda envrionment for the given prefix and specs.
+
+    If config.test_env_template is set to a valid environment path, this function
+    will first try to clone from that template environment for faster creation,
+    then install any additional packages not in the template.
     """
     if config.debug:
         external_logger_context = utils.LoggingContext(logging.DEBUG)
@@ -997,6 +1107,27 @@ def create_env(
     if os.path.exists(prefix):
         for entry in glob(os.path.join(prefix, "*")):
             utils.rm_rf(entry)
+
+    specs_or_precs_tuple = tuple(ensure_list(specs_or_precs))
+
+    template_env = getattr(config, "test_env_template", None)
+    if template_env and os.path.isdir(template_env) and specs_or_precs_tuple:
+        log = utils.get_logger(__name__)
+        log.debug(
+            "Attempting to clone from template environment: %s",
+            template_env,
+        )
+        if _clone_template_env(
+            template_env,
+            prefix,
+            specs_or_precs_tuple,
+            disable_pip=bool(getattr(config, "disable_pip", False)),
+        ):
+            log.debug(
+                "Successfully cloned template environment to %s",
+                prefix,
+            )
+            return
 
     with external_logger_context:
         log = utils.get_logger(__name__)
@@ -1258,7 +1389,7 @@ def get_pinned_deps(m, section):
 #       checks for this name in the call stack explicitly.
 def install_actions(
     prefix: str | os.PathLike | Path,
-    index,
+    index: Index,
     specs: Iterable[str | MatchSpec],
     subdir: str | None = None,
 ) -> InstallActionsType:
@@ -1276,25 +1407,8 @@ def install_actions(
         },
         callback=reset_context,
     ):
-        # a hack since in conda-build we don't track channel_priority_map
-        channels: tuple[Channel, ...] | None
-        subdirs: tuple[str, ...] | None
-        if LAST_CHANNEL_URLS:
-            channel_priority_map = prioritize_channels(LAST_CHANNEL_URLS)
-            # tuple(dict.fromkeys(...)) removes duplicates while preserving input order.
-            channels = tuple(
-                dict.fromkeys(Channel(url) for url in channel_priority_map)
-            )
-            subdirs = (
-                tuple(
-                    dict.fromkeys(
-                        subdir for channel in channels if (subdir := channel.subdir)
-                    )
-                )
-                or context.subdirs
-            )
-        else:
-            channels = subdirs = None
+        channels: tuple[Channel, ...] | None = tuple(index.expanded_channels) or None
+        subdirs: tuple[str, ...] | None = tuple(index._subdirs) or None
 
         mspecs = tuple(MatchSpec(spec) for spec in specs)
 
@@ -1302,11 +1416,8 @@ def install_actions(
 
         solver_backend = context.plugin_manager.get_cached_solver_backend()
         solver = solver_backend(prefix, channels, subdirs, specs_to_add=mspecs)
-        if index:
-            # Solver can modify the index (e.g., Solver._prepare adds virtual
-            # package) => Copy index (just outer container, not deep copy)
-            # to conserve it.
-            solver._index = index.copy()
+        # Give the solver its own index without realizing the cached records.
+        solver._index = copy(index)
         txn = solver.solve_for_transaction(prune=False, ignore_pinned=False)
         prefix_setup = txn.prefix_setups[prefix]
         return {
@@ -1355,23 +1466,18 @@ def _display_actions(prefix, precs):
 
     show_channel_urls = context.show_channel_urls
 
-    def channel_str(rec):
-        if rec.get("channel_name"):
-            return rec["channel_name"]
-        if rec.get("schannel"):
-            return rec["schannel"]
-        if rec.get("url"):
-            return Channel(rec["url"]).canonical_name
-        if rec.get("channel"):
-            return Channel(rec["channel"]).canonical_name
-        return UNKNOWN_CHANNEL
-
-    def channel_filt(s):
+    def channel_filt(channel):
         if show_channel_urls is False:
             return ""
-        if show_channel_urls is None and s == DEFAULTS_CHANNEL_NAME:
+        if (
+            show_channel_urls is None
+            and channel.canonical_name == DEFAULTS_CHANNEL_NAME
+        ):
             return ""
-        return s
+        # Use the channel name, not the canonical multichannel alias.
+        # This allows to more easily see which channel is used, even if the record
+        # is coming from a multichannel.
+        return channel.name or UNKNOWN_CHANNEL
 
     packages = defaultdict(lambda: "")
     features = defaultdict(lambda: "")
@@ -1380,7 +1486,7 @@ def _display_actions(prefix, precs):
     for prec in precs:
         assert isinstance(prec, PackageRecord)
         pkg = prec["name"]
-        channels[pkg] = channel_filt(channel_str(prec))
+        channels[pkg] = channel_filt(prec.channel)
         packages[pkg] = prec["version"] + "-" + prec["build"]
         features[pkg] = ",".join(prec.get("features") or ())
 

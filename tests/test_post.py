@@ -19,27 +19,65 @@ from conda_build.utils import (
     package_has_file,
 )
 
-from .utils import add_mangling, metadata_dir, raises_after, subpackage_path
+from .utils import add_mangling, metadata_dir, subpackage_path
 
 
-@pytest.mark.skipif(
-    sys.version_info >= (3, 10),
-    reason="Python 3.10+, py_compile terminates once it finds an invalid file",
-)
-def test_compile_missing_pyc(testing_workdir):
-    good_files = ["f1.py", "f3.py"]
-    bad_file = "f2_bad.py"
-    tmp = os.path.join(testing_workdir, "tmp")
-    shutil.copytree(
-        os.path.join(
-            os.path.dirname(__file__), "test-recipes", "metadata", "_compile-test"
-        ),
-        tmp,
+def test_compile_missing_pyc_chunking(tmp_path: Path, monkeypatch, mocker):
+    """
+    Regression test for the command-line-too-long bug fixed in PR #5780.
+
+    compile_missing_pyc() uses chunks() to split the file list into groups that
+    respect MAX_CHUNK_SIZE.  This test verifies that:
+      1. All .py files are compiled even when the limit forces multiple batches.
+      2. The limit is actually respected: no single call receives more arguments
+         than the limit allows.
+    """
+    # Create a large number of short .py files so that even a small limit
+    # forces multiple subprocess invocations.
+    n_files = 30
+    py_files = []
+    for i in range(n_files):
+        name = f"mod_{i:03d}.py"
+        (tmp_path / name).write_text("x = 1\n")
+        py_files.append(name)
+
+    # Compute the fixed prefix length so that small_limit is always larger than
+    # it, regardless of how long sys.executable is on this machine.
+    args_prefix = [sys.executable, "-Wi", "-m", "py_compile"]
+    prefix_len = len(" ".join(args_prefix)) + 1
+
+    # Allow only ~3 short filenames per chunk beyond the prefix (each
+    # "mod_NNN.py" is 10 chars + 1 space = 11 bytes).  Using 35 bytes of
+    # headroom means 3 files per chunk for these filenames, which forces
+    # 10 subprocess calls for 30 files.
+    file_budget = 35
+    small_limit = prefix_len + file_budget
+    monkeypatch.setattr(conda_build.utils, "MAX_CHUNK_SIZE", small_limit)
+    monkeypatch.setattr(post, "MAX_CHUNK_SIZE", small_limit)
+
+    spy_call = mocker.spy(post, "call")
+
+    post.compile_missing_pyc(py_files, cwd=str(tmp_path), python_exe=sys.executable)
+
+    # Every .py file should now have a compiled .pyc counterpart.
+    for name in py_files:
+        pyc_path = tmp_path / add_mangling(name)
+        assert pyc_path.is_file(), f"missing compiled file for {name}"
+
+    assert spy_call.call_count > 1, (
+        "Expected multiple subprocess calls due to chunking, got only one. "
+        "The chunking logic may not be working."
     )
-    post.compile_missing_pyc(os.listdir(tmp), cwd=tmp, python_exe=sys.executable)
-    for f in good_files:
-        assert os.path.isfile(os.path.join(tmp, add_mangling(f)))
-    assert not os.path.isfile(os.path.join(tmp, add_mangling(bad_file)))
+
+    # Each call's total command length must not exceed the limit by more than
+    # one extra filename (chunks() cannot split a single argument).
+    for args in spy_call.call_args_list:
+        file_args = args[len(args_prefix) :]  # strip the fixed prefix
+        cmd_len = prefix_len + sum(len(f) + 1 for f in file_args)
+        max_file_len = len(max(file_args, key=len, default=""))
+        assert cmd_len <= small_limit + max_file_len, (
+            f"A single call exceeded the expected size: {cmd_len}"
+        )
 
 
 def test_hardlinks_to_copies():
@@ -97,8 +135,8 @@ def test_postlink_script_in_output_implicit(testing_config):
 def test_pypi_installer_metadata(testing_config):
     recipe = os.path.join(metadata_dir, "_pypi_installer_metadata")
     pkg = api.build(recipe, config=testing_config, notest=True)[0]
-    expected_installer = "{}/imagesize-1.1.0.dist-info/INSTALLER".format(
-        get_site_packages("", "3.9")
+    expected_installer = "{}/conda_build_test_project-1.0.dist-info/INSTALLER".format(
+        get_site_packages("", "3.10")
     )
     assert "conda" == (package_has_file(pkg, expected_installer, refresh_mode="forced"))
 
@@ -130,13 +168,9 @@ def test_menuinst_validation_fails_bad_input(testing_config, caplog, tmp_path):
     bad_data = json.loads(menu_json_contents)
     bad_data["menu_items"][0]["osx"] = ["bad", "input"]
     menu_json.write_text(json.dumps(bad_data, indent=2))
-    with caplog.at_level(logging.WARNING), raises_after((2025, 10, 10), Exception):
-        api.build(str(recipe_tmp), config=testing_config, notest=True)
 
-    captured_text = caplog.text
-    assert "Found 'Menu/*.json' files but couldn't validate:" not in captured_text
-    assert "not a valid menuinst JSON document" in captured_text
-    assert "ValidationError" in captured_text
+    with pytest.raises(Exception, match="Invalid menuinst JSON document"):
+        api.build(str(recipe_tmp), config=testing_config, notest=True)
 
 
 def test_menuinst_validation_fails_bad_schema_url(testing_config, caplog, tmp_path):
@@ -153,12 +187,9 @@ def test_menuinst_validation_fails_bad_schema_url(testing_config, caplog, tmp_pa
         "7e1aa1fc445935d25f7d22cf808b68d41fa6956c/menuinst/data/menuinst-1-1-0.schema.json"
     )
     menu_json.write_text(json.dumps(bad_data, indent=2))
-    with caplog.at_level(logging.WARNING), raises_after((2025, 10, 10), Exception):
-        api.build(str(recipe_tmp), config=testing_config, notest=True)
 
-    captured_text = caplog.text
-    assert "Found 'Menu/*.json' files but couldn't validate:" not in captured_text
-    assert "URL doesn't match any of the valid locations:" in captured_text
+    with pytest.raises(Exception, match="URL doesn't match any of the valid locations"):
+        api.build(str(recipe_tmp), config=testing_config, notest=True)
 
 
 def test_menuinst_validation_fails_bad_json(testing_config, monkeypatch, tmp_path):
@@ -189,17 +220,8 @@ def test_menuinst_validation_fails_bad_json(testing_config, monkeypatch, tmp_pat
     # a module-level global that we could easily patch.
     monkeypatch.setattr(conda_build.utils, "get_logger", get_monkey_logger)
 
-    with raises_after((2025, 10, 10), Exception):
+    with pytest.raises(Exception, match="Invalid menuinst JSON document"):
         api.build(str(recipe_tmp), config=testing_config, notest=True)
-
-    # without %s substitution
-    messages = [record[0] for record in records]
-
-    assert any("'%s' is not a valid menuinst JSON document!" in msg for msg in messages)
-    assert any(
-        isinstance(record[-1].get("exc_info"), json.JSONDecodeError)
-        for record in records
-    )
 
 
 def test_file_hash(testing_config, caplog, tmp_path):
@@ -236,3 +258,90 @@ def test_rpath_symlink(mocker, testing_config):
     )
     # Should only be called on the actual binary, not its symlinks. (once per variant)
     assert mk_relative.call_count == 2
+
+
+@pytest.mark.skipif(not on_mac, reason="macOS-only test")
+def test_duplicate_rpath_macos(testing_config, caplog):
+    api.build(
+        os.path.join(metadata_dir, "_rpath_macos"),
+        config=testing_config,
+    )
+
+    captured_text = caplog.text
+    # The library has only one duplicate rpath
+    assert captured_text.count("Removing duplicate rpath") == 1
+
+
+@pytest.mark.parametrize(
+    "legacy_constant, allowlist_constant",
+    [
+        ("DEFAULT_MAC_WHITELIST", "DEFAULT_MAC_ALLOWLIST"),
+        ("DEFAULT_WIN_WHITELIST", "DEFAULT_WIN_ALLOWLIST"),
+    ],
+)
+def test_default_whitelist_constant_is_deprecated(legacy_constant, allowlist_constant):
+    with pytest.warns(
+        (PendingDeprecationWarning, DeprecationWarning), match=legacy_constant
+    ):
+        assert getattr(post, legacy_constant) is getattr(post, allowlist_constant)
+
+
+@pytest.mark.parametrize(
+    "kwarg, value",
+    [
+        ("missing_dso_whitelist", ["libfoo.so"]),
+        ("runpath_whitelist", ["/opt/foo"]),
+    ],
+)
+def test_check_overlinking_impl_whitelist_kwarg_is_deprecated(kwarg, value):
+    with pytest.warns((PendingDeprecationWarning, DeprecationWarning), match=kwarg):
+        with pytest.raises(TypeError):
+            post.check_overlinking_impl(**{kwarg: value})
+
+
+@pytest.fixture
+def bypass_check_overlinking_impl(monkeypatch):
+    monkeypatch.setattr(post, "check_overlinking_impl", lambda **kwargs: None)
+
+
+@pytest.mark.parametrize(
+    "legacy_key, value",
+    [
+        ("missing_dso_whitelist", ["libfoo.so"]),
+        ("runpath_whitelist", ["/opt/foo"]),
+    ],
+)
+def test_check_overlinking_whitelist_recipe_key_is_deprecated(
+    testing_metadata, bypass_check_overlinking_impl, legacy_key, value
+):
+    testing_metadata.meta.setdefault("build", {})[legacy_key] = value
+    with pytest.warns(
+        (PendingDeprecationWarning, DeprecationWarning),
+        match=f"build/{legacy_key}",
+    ):
+        post.check_overlinking(testing_metadata, files=[])
+
+
+@pytest.mark.parametrize(
+    "legacy_key, preferred_key, legacy_value, preferred_value",
+    [
+        ("missing_dso_whitelist", "missing_dso_allowlist", ["legacy"], ["preferred"]),
+        ("runpath_whitelist", "runpath_allowlist", ["/legacy"], ["/preferred"]),
+    ],
+)
+def test_check_overlinking_allowlist_takes_precedence(
+    testing_metadata,
+    bypass_check_overlinking_impl,
+    recwarn,
+    legacy_key,
+    preferred_key,
+    legacy_value,
+    preferred_value,
+):
+    build = testing_metadata.meta.setdefault("build", {})
+    build[legacy_key] = legacy_value
+    build[preferred_key] = preferred_value
+
+    post.check_overlinking(testing_metadata, files=[])
+
+    assert not [w for w in recwarn.list if legacy_key in str(w.message)]

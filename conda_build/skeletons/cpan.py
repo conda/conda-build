@@ -6,7 +6,6 @@ Tools for converting CPAN packages to conda recipes.
 
 from __future__ import annotations
 
-import codecs
 import gzip
 import hashlib
 import json
@@ -21,23 +20,18 @@ from os import makedirs
 from os.path import basename, dirname, exists, join
 
 import requests
+from conda.core.subdir_data import SubdirData
 from conda.exceptions import CondaError, CondaHTTPError
 from conda.gateways.connection.download import TmpDownload, download
 from conda.gateways.disk.create import TemporaryDirectory
 from conda.models.match_spec import MatchSpec
-from conda.resolve import Resolve
+from conda.models.version import VersionOrder
 
 from .. import environ
 from ..config import Config, get_or_merge_config
 from ..utils import check_call_env, on_linux, on_win
 from ..variants import get_default_variant
 from ..version import _parse as parse_version
-
-try:
-    from conda.core.index import Index
-except ImportError:
-    # FUTURE: remove for `conda >=24.9`
-    from conda_build.index import Index
 
 CPAN_META = """\
 {{% set name = "{packagename}" %}}
@@ -269,7 +263,8 @@ def get_cpan_api_url(url, colons):
                 output = output.decode("utf-8-sig")
             rel_dict = json.loads(output)
         except OSError:
-            rel_dict = json.loads(codecs.open(json_path, encoding="utf-8").read())
+            with open(json_path, encoding="utf-8") as fp:
+                rel_dict = json.load(fp)
         except CondaHTTPError:
             rel_dict = None
     return rel_dict
@@ -355,9 +350,11 @@ def install_perl_get_core_modules(version):
             args = [
                 f"{join(tmpdir, *subdirs[1:])}",
                 "-e",
-                "use Module::CoreList; "
-                "my @modules = grep {Module::CoreList::is_core($_)} Module::CoreList->find_modules(qr/.*/); "
-                'print join "\n", @modules;',
+                (
+                    "use Module::CoreList; "
+                    "my @modules = grep {Module::CoreList::is_core($_)} Module::CoreList->find_modules(qr/.*/); "
+                    'print join "\n", @modules;'
+                ),
             ]
             try:
                 all_core_modules = (
@@ -700,13 +697,13 @@ def latest_pkg_version(pkg):
     """
     :returns: the latest version of the specified conda package available
     """
-    r = Resolve(Index())
     try:
-        pkg_list = sorted(r.get_pkgs(MatchSpec(pkg)))
+        pkg_list = SubdirData.query_all(MatchSpec(pkg))
     except:
         pkg_list = None
     if pkg_list:
-        pkg_version = parse_version(pkg_list[-1].version)
+        latest = max(pkg_list, key=lambda rec: VersionOrder(rec.version))
+        pkg_version = parse_version(latest.version)
     else:
         pkg_version = None
     return pkg_version

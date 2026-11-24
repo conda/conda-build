@@ -14,7 +14,9 @@ import pytest
 from conda.base.context import reset_context
 from conda.common.compat import on_mac
 
+from conda_build.exceptions import CondaBuildUserError
 from conda_build.metadata import MetaData
+from conda_build.utils import locate_conda_launcher
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -57,6 +59,15 @@ def is_valid_dir(*parts: Path | str) -> bool:
 
 def get_valid_recipes(*parts: Path | str) -> Generator[Path, None, None]:
     yield from filter(is_valid_dir, Path(*parts).iterdir())
+
+
+def launcher_available(arch: str, *, launcher_type: str = "cli") -> bool:
+    """Return whether a verified Windows launcher is available for arch."""
+    try:
+        locate_conda_launcher(arch, launcher_type=launcher_type)
+    except (FileNotFoundError, CondaBuildUserError):
+        return False
+    return True
 
 
 def add_mangling(filename):

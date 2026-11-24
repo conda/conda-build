@@ -2,17 +2,28 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from __future__ import annotations
 
+import hashlib
+import io
+import json
 import os
+import shutil
 import subprocess
 import sys
+import tarfile
 import tempfile
+import warnings
 from collections import defaultdict
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
+from conda.base.context import context, reset_context
 from conda.common.compat import on_mac, on_win
+from conda.testing.fixtures import http_test_server as http_test_server
+from conda.testing.fixtures import path_factory as path_factory
+from conda.utils import url_path
 from conda_index.api import update_index
+from filelock import FileLock, Timeout
 
 import conda_build
 import conda_build.config
@@ -24,9 +35,7 @@ from conda_build.config import (
     enable_static_default,
     error_overdepending_default,
     error_overlinking_default,
-    exit_on_verify_error_default,
     filename_hashing_default,
-    ignore_verify_codes_default,
     no_rewrite_stdout_env_default,
 )
 from conda_build.metadata import MetaData
@@ -69,6 +78,15 @@ def testing_workdir(monkeypatch: MonkeyPatch, tmp_path: Path) -> Iterator[str]:
             copy_into(str(file), str(saved_path / "prof" / file.name))
 
 
+@pytest.fixture
+def local_python_source(tmp_path: Path) -> Path:
+    """Provide a writable Python project for packaging tests without PyPI."""
+    source = tmp_path / "python-source"
+    shutil.copytree(Path(__file__).parent / "test-recipes" / "test-package", source)
+    shutil.copyfile(Path(__file__).parents[1] / "LICENSE", source / "LICENSE")
+    return source
+
+
 @pytest.fixture(scope="function")
 def testing_homedir() -> Iterator[Path]:
     """Create a temporary testing directory in the users home directory; cd into dir before test, cd out after."""
@@ -88,7 +106,7 @@ def testing_homedir() -> Iterator[Path]:
 
 
 @pytest.fixture(scope="function")
-def testing_config(testing_workdir):
+def testing_config(testing_workdir, warm_package_cache):
     def boolify(v):
         return v == "true"
 
@@ -107,9 +125,9 @@ def testing_config(testing_workdir):
         error_overdepending=boolify(error_overdepending_default),
         enable_static=boolify(enable_static_default),
         no_rewrite_stdout_env=boolify(no_rewrite_stdout_env_default),
-        ignore_verify_codes=ignore_verify_codes_default,
-        exit_on_verify_error=exit_on_verify_error_default,
         conda_pkg_format=conda_pkg_format_default,
+        # Use template environment for faster test env creation when available
+        test_env_template=str(warm_package_cache) if warm_package_cache else None,
     )
 
     if on_mac and "CONDA_BUILD_SYSROOT" in os.environ:
@@ -251,6 +269,102 @@ def variants_conda_build_sysroot(monkeypatch, request):
 
 
 @pytest.fixture(scope="session")
+def worker_package_cache(
+    request: FixtureRequest, tmp_path_factory: pytest.TempPathFactory
+) -> Iterator[None]:
+    """Give parallel workers private primary package caches for repodata."""
+    if not hasattr(request.config, "workerinput"):
+        yield
+        return
+
+    pkgs_dirs = (str(tmp_path_factory.mktemp("pkgs")), *context.pkgs_dirs)
+    try:
+        # The monkeypatch fixture is function-scoped, so this session-scoped
+        # fixture needs its own patcher to restore the environment at teardown.
+        with pytest.MonkeyPatch.context() as monkeypatch:
+            monkeypatch.setenv("CONDA_PKGS_DIRS", ",".join(pkgs_dirs))
+            reset_context()
+            yield
+    finally:
+        reset_context()
+
+
+@pytest.fixture(scope="session", autouse=True)
+def warm_package_cache(
+    tmp_path_factory: pytest.TempPathFactory, worker_package_cache
+) -> Path | None:
+    """Pre-warm the conda package cache and create a template environment.
+
+    Creates a persistent template environment with commonly-used packages
+    (Python, pip, setuptools, expat) that ``create_env`` can clone from via
+    ``conda create --clone`` instead of running a full solve.
+
+    Under pytest-xdist, every worker enters this session-scoped fixture; the
+    template is therefore created under the *shared* xdist base directory
+    (``tmp_path_factory.getbasetemp().parent``) and guarded by a file lock so
+    only the first worker actually invokes ``conda create``. The remaining
+    workers wait on the lock and reuse the leader's template. Each worker's
+    primary writable package cache is isolated by ``worker_package_cache`` before
+    template creation.
+
+    Returns:
+        Path to the template environment, or None if creation failed.
+    """
+    shared_base = tmp_path_factory.getbasetemp().parent
+    shared_base.mkdir(parents=True, exist_ok=True)
+    template_env = shared_base / "warm_template_env"
+    lock_path = shared_base / "warm_template_env.lock"
+    ready_marker = template_env / ".conda-build-template-ready"
+
+    def _have_ready_template() -> bool:
+        return template_env.is_dir() and ready_marker.is_file()
+
+    try:
+        with FileLock(str(lock_path), timeout=600):
+            if _have_ready_template():
+                return template_env
+
+            if template_env.exists():
+                shutil.rmtree(template_env, ignore_errors=True)
+
+            try:
+                subprocess.run(
+                    [
+                        sys.executable,
+                        "-m",
+                        "conda",
+                        "create",
+                        "-p",
+                        str(template_env),
+                        "python",
+                        "pip",
+                        "setuptools",
+                        "expat",
+                        "-y",
+                        "-q",
+                        "--no-shortcuts",
+                    ],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                )
+            except subprocess.CalledProcessError as e:
+                warnings.warn(f"Failed to create template environment: {e.stderr}")
+                return None
+
+            ready_marker.touch()
+            return template_env
+    except Timeout:
+        if _have_ready_template():
+            return template_env
+        warnings.warn(
+            "Timed out waiting for warm_package_cache template; "
+            "tests will create envs from scratch.",
+        )
+        return None
+
+
+@pytest.fixture(scope="session")
 def conda_build_test_recipe_path(tmp_path_factory: pytest.TempPathFactory) -> Path:
     """Clone conda_build_test_recipe.
 
@@ -282,3 +396,170 @@ def empty_channel(tmp_path_factory: pytest.TempPathFactory) -> Path:
     channel = tmp_path_factory.mktemp("empty_channel", numbered=False)
     update_index(channel)
     return channel
+
+
+def _write_fake_conda_package(
+    subdir_path: str, name: str, version: str, subdir: str
+) -> None:
+    """Write a minimal, fake ``.tar.bz2`` conda package containing nothing but an
+    ``info/index.json``. conda-build's dependency resolution during render/finalize
+    only ever inspects package *metadata* to compute variant hashes/pins -- it never
+    downloads or extracts the resulting packages -- so a real interpreter, compiler,
+    or payload of any kind is unnecessary here."""
+    index_json = {
+        "name": name,
+        "version": version,
+        "build": "h_mock_0",
+        "build_number": 0,
+        "depends": [],
+        "subdir": subdir,
+        "timestamp": 0,
+    }
+    data = json.dumps(index_json).encode("utf-8")
+    fname = f"{name}-{version}-h_mock_0.tar.bz2"
+    with tarfile.open(os.path.join(subdir_path, fname), "w:bz2") as tf:
+        info = tarfile.TarInfo(name="info/index.json")
+        info.size = len(data)
+        tf.addfile(info, io.BytesIO(data))
+
+
+def _write_fake_conda_package_with_files(
+    subdir_path: str,
+    name: str,
+    version: str,
+    subdir: str,
+    *,
+    build: str,
+    depends: list[str],
+    files: dict[str, str],
+    noarch: str | None = None,
+) -> None:
+    """Write a fake ``.tar.bz2`` that conda can install, not only solve against.
+
+    ``files`` maps paths relative to the prefix to their contents.
+    """
+    index_json = {
+        "name": name,
+        "version": version,
+        "build": build,
+        "build_number": 0,
+        "depends": depends,
+        "subdir": subdir,
+        "timestamp": 0,
+    }
+    if noarch:
+        index_json["noarch"] = noarch
+
+    archive_files = {
+        "info/index.json": json.dumps(index_json).encode("utf-8"),
+    }
+    paths = []
+    for relpath, content in files.items():
+        data = content.encode("utf-8")
+        archive_files[relpath] = data
+        paths.append(
+            {
+                "_path": relpath,
+                "path_type": "hardlink",
+                "sha256": hashlib.sha256(data).hexdigest(),
+                "size_in_bytes": len(data),
+            }
+        )
+    archive_files["info/paths.json"] = json.dumps(
+        {"paths_version": 1, "paths": paths}
+    ).encode("utf-8")
+    archive_files["info/files"] = "\n".join(files).encode("utf-8")
+
+    fname = f"{name}-{version}-{build}.tar.bz2"
+    with tarfile.open(os.path.join(subdir_path, fname), "w:bz2") as tf:
+        for archive_path, data in archive_files.items():
+            info = tarfile.TarInfo(name=archive_path)
+            info.size = len(data)
+            tf.addfile(info, io.BytesIO(data))
+
+
+@pytest.fixture
+def offline_cross_python_channel(tmp_path, testing_config):
+    """Provide target Python packages and separate build and host dependencies."""
+    channel_dir = tmp_path / "offline-cross-channel"
+    # conda_index expects a channel root that at least contains `noarch/`
+    noarch_path = channel_dir / "noarch"
+    noarch_path.mkdir(parents=True)
+    _write_fake_conda_package(str(noarch_path), "pip", "24.0", "noarch")
+
+    build_subdir = testing_config.build_subdir
+    target_subdir = "osx-64" if build_subdir.startswith("linux-") else "linux-64"
+    for subdir, name in ((build_subdir, "build-only"), (target_subdir, "host-only")):
+        subdir_path = channel_dir / subdir
+        subdir_path.mkdir()
+        _write_fake_conda_package(str(subdir_path), name, "1.0", subdir)
+    for version in ("3.10", "3.11"):
+        _write_fake_conda_package(
+            str(channel_dir / target_subdir), "python", version, target_subdir
+        )
+    update_index(str(channel_dir))
+    return url_path(str(channel_dir))
+
+
+@pytest.fixture
+def offline_python_channel(tmp_path, testing_config):
+    """Installable Python 3.10 and 3.11 packages for the host platform."""
+    channel_dir = tmp_path / "offline-python-channel"
+    # conda_index requires noarch/. conda also injects a pip dependency on python.
+    noarch_path = channel_dir / "noarch"
+    noarch_path.mkdir(parents=True)
+    _write_fake_conda_package_with_files(
+        str(noarch_path),
+        "pip",
+        "24.0",
+        "noarch",
+        build="py_0",
+        depends=[],
+        files={"share/pip-mock/.keep": ""},
+        noarch="generic",
+    )
+    host_subdir = testing_config.host_subdir
+    subdir_path = channel_dir / host_subdir
+    subdir_path.mkdir()
+    for version in ("3.10", "3.11"):
+        _write_fake_conda_package_with_files(
+            str(subdir_path),
+            "python",
+            version,
+            host_subdir,
+            build="h_mock_0",
+            depends=[],
+            files={"share/python-mock/.keep": ""},
+        )
+    update_index(str(channel_dir))
+    return url_path(str(channel_dir))
+
+
+@pytest.fixture
+def offline_mingw_sysroot_channel(tmp_path):
+    channel_dir = tmp_path / "offline-mingw-channel"
+    noarch_path = channel_dir / "noarch"
+    noarch_path.mkdir(parents=True)
+
+    _write_fake_conda_package_with_files(
+        str(noarch_path),
+        "m2w64-sysroot_win-64",
+        "1.0",
+        "noarch",
+        build="h_unix_0",
+        depends=["__unix"],
+        files={"x86_64-w64-mingw32/.keep": ""},
+        noarch="generic",
+    )
+    _write_fake_conda_package_with_files(
+        str(noarch_path),
+        "m2w64-sysroot_win-64",
+        "1.0",
+        "noarch",
+        build="h_win_0",
+        depends=["__win"],
+        files={"Library/.keep": ""},
+        noarch="generic",
+    )
+    update_index(str(channel_dir))
+    return url_path(str(channel_dir))

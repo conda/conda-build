@@ -129,15 +129,9 @@ html_theme_options = {
             "type": "fontawesome",
         },
         {
-            "name": "Element",
-            "url": "https://matrix.to/#/#conda-build:matrix.org",
-            "icon": "_static/element_logo.svg",
-            "type": "local",
-        },
-        {
-            "name": "Discourse",
-            "url": "https://conda.discourse.group/",
-            "icon": "fa-brands fa-discourse",
+            "name": "Zulip",
+            "url": "https://conda.zulipchat.com",
+            "icon": "fa-custom fa-zulip",
             "type": "fontawesome",
         },
     ],

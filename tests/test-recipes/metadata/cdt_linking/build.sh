@@ -2,7 +2,32 @@
 
 set -x
 
-echo -e "#include <GL/gl.h>\nint main() { glBegin(GL_TRIANGLES); glEnd(); return 0; }">gl.c
-${CC} -o ${PREFIX}/bin/links-to-opengl-cdt -x c $(pkg-config --libs gl) -Wl,-rpath-link,${PREFIX}/lib gl.c
-find ${PREFIX} -name "libGL*"
+# Simple test that CDT packages can be linked
+# Compile a minimal program that links against PAM and libselinux from CDT packages.
+# This works on main channel currently, 2025-11-11. It may be worth creating another
+# test that uses conda-forge.
+cat > cdt_test.c << 'EOF'
+#include <stddef.h>
+#include <security/pam_appl.h>
+#include <selinux/selinux.h>
+
+int main() {
+    // Test PAM - just check that the header is available
+    const char *pam_strerror_result = pam_strerror(NULL, 0);
+    (void)pam_strerror_result;  // Suppress unused variable warning
+
+    // Test libselinux - check if SELinux is enabled
+    int selinux_enabled = is_selinux_enabled();
+    (void)selinux_enabled;  // Suppress unused variable warning
+
+    return 0;
+}
+EOF
+
+${CC} -o ${PREFIX}/bin/links-to-cdt -I${PREFIX}/include -L${PREFIX}/lib \
+    -lpam -lselinux -Wl,-rpath-link,${PREFIX}/lib cdt_test.c
+
+# Verify the libraries are present
+find ${PREFIX} -name "libpam*"
+find ${PREFIX} -name "libselinux*"
 find ${PREFIX} -name "libc.so*"

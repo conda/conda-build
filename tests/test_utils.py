@@ -1,5 +1,6 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+import json
 import os
 import subprocess
 import sys
@@ -8,6 +9,7 @@ from typing import NamedTuple
 
 import filelock
 import pytest
+from conda.core.prefix_data import PrefixData
 from pytest import MonkeyPatch
 
 import conda_build.utils as utils
@@ -23,6 +25,64 @@ def test_get_site_packages():
     crazy_path = os.path.join("/dummy", "lib", "python8.2", "site-packages")
     site_packages = utils.get_site_packages("/dummy", "8.2")
     assert site_packages == crazy_path
+
+
+def _write_python_record(prefix: Path, site_packages_path: str | None) -> None:
+    """Install a fake python into ``prefix`` so PrefixData can read it back."""
+    (prefix / "conda-meta").mkdir(parents=True, exist_ok=True)
+    record = {
+        "name": "python",
+        "version": "3.15.0",
+        "build": "h1234567_0_cp315",
+        "build_number": 0,
+        "channel": "conda-forge",
+        "subdir": "noarch",
+        "fn": "python-3.15.0-h1234567_0_cp315.conda",
+        "files": [],
+        "paths_data": {"paths_version": 1, "paths": []},
+    }
+    if site_packages_path is not None:
+        record["python_site_packages_path"] = site_packages_path
+    (prefix / "conda-meta" / "python-3.15.0-h1234567_0_cp315.json").write_text(
+        json.dumps(record)
+    )
+
+
+@pytest.mark.parametrize(
+    "site_packages_path",
+    [
+        # python >=3.15 on Windows, and any relocated layout
+        "lib/python/site-packages",
+        # free-threaded builds
+        "lib/python3.15t/site-packages",
+    ],
+)
+def test_get_site_packages_honors_python_record(
+    tmp_path: Path, site_packages_path: str
+) -> None:
+    """python declares its own site-packages; the version alone cannot imply it."""
+    _write_python_record(tmp_path, site_packages_path)
+    PrefixData._cache_.clear()
+
+    assert utils.get_site_packages(tmp_path, "3.15") == os.path.join(
+        tmp_path, *site_packages_path.split("/")
+    )
+
+
+def test_get_site_packages_falls_back_without_python_record(tmp_path: Path) -> None:
+    """Pythons predating the field, and prefixes without python, keep the old layout."""
+    _write_python_record(tmp_path, None)
+    PrefixData._cache_.clear()
+
+    assert utils.get_site_packages(tmp_path, "3.15") == os.path.join(
+        utils.get_stdlib_dir(tmp_path, "3.15"), "site-packages"
+    )
+
+
+def test_get_site_packages_missing_prefix() -> None:
+    """A prefix that does not exist yet must not raise."""
+    assert utils.get_site_packages("", "3.15")
+    assert utils.get_site_packages(os.path.join("/dummy", "nope"), "3.15")
 
 
 def test_prepend_sys_path():
@@ -479,3 +539,198 @@ def test_prefix_files(tmp_path: Path):
 
     paths = {str(path.relative_to(prefix)) for path in (file1, file2, file3, link1)}
     assert paths == utils.prefix_files(str(prefix))
+
+
+def test_chunks_empty():
+    """chunks() on an empty list returns an empty list."""
+    assert utils.chunks([], 100) == []
+
+
+def test_chunks_all_fit_in_one():
+    """When all items fit within the limit, a single chunk is returned."""
+    items = ["ab", "cd", "ef"]  # each 2 chars + 3 padding = 5 per item, total 15
+    result = utils.chunks(items, 100)
+    assert result == [["ab", "cd", "ef"]]
+
+
+def test_chunks_exact_limit():
+    """Items that exactly fill the limit end up in one chunk."""
+    # 1 char + 3 padding = 4 per item; 3 items = 12; limit = 12
+    items = ["a", "b", "c"]
+    result = utils.chunks(items, 12)
+    assert result == [["a", "b", "c"]]
+
+
+def test_chunks_splits_correctly():
+    """Items are split into multiple chunks when the limit is exceeded."""
+    # each item is 4 chars + 3 padding = 7; limit 14 fits exactly 2 per chunk
+    items = ["aaaa", "bbbb", "cccc", "dddd"]
+    result = utils.chunks(items, 14)
+    assert result == [["aaaa", "bbbb"], ["cccc", "dddd"]]
+
+
+def test_chunks_no_chunk_exceeds_limit():
+    """Every chunk produced must have a total padded length <= n."""
+    items = [f"file_{i:04d}.py" for i in range(200)]
+    limit = 100
+    result = utils.chunks(items, limit)
+    for chunk in result:
+        total = sum(len(f) + 3 for f in chunk)
+        assert total <= limit, f"chunk exceeded limit: {total} > {limit}"
+
+
+def test_chunks_all_items_present():
+    """The union of all chunks must equal the original list (order preserved)."""
+    items = [f"path/to/file_{i}.pyc" for i in range(50)]
+    result = utils.chunks(items, 80)
+    flattened = [item for chunk in result for item in chunk]
+    assert flattened == items
+
+
+def test_chunks_single_item_larger_than_limit():
+    """A single item that exceeds the limit goes into its own chunk."""
+    long_item = "x" * 200
+    result = utils.chunks([long_item], 50)
+    assert result == [[long_item]]
+
+
+def test_chunks_mixed_sizes():
+    """Items of varying sizes are chunked correctly."""
+    items = ["a", "b" * 50, "c", "d" * 50, "e"]
+    result = utils.chunks(items, 60)
+    flattened = [item for chunk in result for item in chunk]
+    assert flattened == items
+    for chunk in result:
+        # Each chunk that has more than one large item must be within limit
+        # (single oversized items are allowed in their own chunk)
+        if len(chunk) > 1:
+            total = sum(len(f) + 3 for f in chunk)
+            assert total <= 60
+
+
+def test_chunks_old_bug_regression():
+    """
+    Regression test for the bug in the original chunks() implementation (PR #5780).
+
+    The old algorithm had a fencepost error: when a chunk reached the limit it
+    would yield line[start : i+1], then set start = i (not i+1), causing the
+    item at index i to appear in BOTH the yielded chunk and the next one.
+
+    Verify that no item appears more than once across all chunks.
+    """
+    items = [f"file_{i}.py" for i in range(30)]
+    limit = 50
+    result = utils.chunks(items, limit)
+    flattened = [item for chunk in result for item in chunk]
+    # No duplicates
+    assert len(flattened) == len(set(flattened))
+    # All original items present
+    assert sorted(flattened) == sorted(items)
+
+
+def test_max_cmd_line_length_default():
+    """MAX_CMD_LINE_LENGTH has the correct platform default."""
+    if utils.on_win:
+        assert utils.MAX_CHUNK_SIZE == 8190
+    else:
+        assert utils.MAX_CHUNK_SIZE == 32760
+
+
+def test_env_vars_sets_and_restores(monkeypatch: MonkeyPatch):
+    monkeypatch.setenv("CONDA_BUILD_TEST_EXISTING", "original")
+    monkeypatch.delenv("CONDA_BUILD_TEST_NEW", raising=False)
+
+    with utils.env_vars(
+        {"CONDA_BUILD_TEST_EXISTING": "changed", "CONDA_BUILD_TEST_NEW": "new"}
+    ):
+        assert os.environ["CONDA_BUILD_TEST_EXISTING"] == "changed"
+        assert os.environ["CONDA_BUILD_TEST_NEW"] == "new"
+
+    assert os.environ["CONDA_BUILD_TEST_EXISTING"] == "original"
+    assert "CONDA_BUILD_TEST_NEW" not in os.environ
+
+
+def test_env_vars_restores_on_exception(monkeypatch: MonkeyPatch):
+    monkeypatch.setenv("CONDA_BUILD_TEST_EXISTING", "original")
+    monkeypatch.delenv("CONDA_BUILD_TEST_NEW", raising=False)
+
+    with pytest.raises(RuntimeError):
+        with utils.env_vars(
+            {"CONDA_BUILD_TEST_EXISTING": "changed", "CONDA_BUILD_TEST_NEW": "new"}
+        ):
+            raise RuntimeError
+
+    assert os.environ["CONDA_BUILD_TEST_EXISTING"] == "original"
+    assert "CONDA_BUILD_TEST_NEW" not in os.environ
+
+
+def test_env_vars_preserves_empty_value(monkeypatch: MonkeyPatch):
+    monkeypatch.setenv("CONDA_BUILD_TEST_EMPTY", "")
+
+    with utils.env_vars({"CONDA_BUILD_TEST_EMPTY": "changed"}):
+        assert os.environ["CONDA_BUILD_TEST_EMPTY"] == "changed"
+
+    assert os.environ["CONDA_BUILD_TEST_EMPTY"] == ""
+
+
+def test_env_vars_does_not_exist(monkeypatch: MonkeyPatch):
+    with utils.env_vars({"CONDA_BUILD_TEST_EMPTY": "new"}):
+        assert os.environ["CONDA_BUILD_TEST_EMPTY"] == "new"
+
+    assert os.environ.get("CONDA_BUILD_TEST_EMPTY") is None
+
+
+@pytest.mark.parametrize("var_map", [None, {}])
+def test_env_vars_empty(var_map: dict[str, str] | None):
+    before = dict(os.environ)
+    with utils.env_vars(var_map):
+        assert dict(os.environ) == before
+    assert dict(os.environ) == before
+
+
+def test_env_vars_encodes_values(monkeypatch: MonkeyPatch):
+    monkeypatch.delenv("CONDA_BUILD_TEST_INT", raising=False)
+    monkeypatch.delenv("CONDA_BUILD_TEST_BYTES", raising=False)
+
+    with utils.env_vars({"CONDA_BUILD_TEST_INT": 1, b"CONDA_BUILD_TEST_BYTES": b"b"}):
+        assert os.environ["CONDA_BUILD_TEST_INT"] == "1"
+        assert os.environ["CONDA_BUILD_TEST_BYTES"] == "b"
+
+    assert "CONDA_BUILD_TEST_INT" not in os.environ
+    assert "CONDA_BUILD_TEST_BYTES" not in os.environ
+
+
+def test_env_vars_callbacks(monkeypatch: MonkeyPatch):
+    monkeypatch.delenv("CONDA_BUILD_TEST_NEW", raising=False)
+    calls = []
+
+    def callback():
+        calls.append(("callback", os.environ.get("CONDA_BUILD_TEST_NEW")))
+
+    def stack_callback(entering: bool):
+        calls.append(("stack", entering, os.environ.get("CONDA_BUILD_TEST_NEW")))
+
+    with utils.env_vars(
+        {"CONDA_BUILD_TEST_NEW": "new"},
+        callback=callback,
+        stack_callback=stack_callback,
+    ):
+        assert calls == [("callback", "new"), ("stack", True, "new")]
+
+    assert calls == [
+        ("callback", "new"),
+        ("stack", True, "new"),
+        ("callback", None),
+        ("stack", False, None),
+    ]
+
+
+def test_env_var(monkeypatch: MonkeyPatch):
+    monkeypatch.delenv("CONDA_BUILD_TEST_NEW", raising=False)
+    calls = []
+
+    with utils.env_var("CONDA_BUILD_TEST_NEW", "new", callback=lambda: calls.append(1)):
+        assert os.environ["CONDA_BUILD_TEST_NEW"] == "new"
+
+    assert "CONDA_BUILD_TEST_NEW" not in os.environ
+    assert calls == [1, 1]

@@ -30,22 +30,24 @@ from conda import __version__ as conda_version
 from conda.base.constants import PREFIX_PLACEHOLDER
 from conda.base.context import context, reset_context
 from conda.core.prefix_data import PrefixData
-from conda.exceptions import CondaError, NoPackagesFoundError, UnsatisfiableError
+from conda.exceptions import CondaError, ResolvePackageNotFound, UnsatisfiableError
 from conda.gateways.disk.create import TemporaryDirectory
 from conda.models.channel import Channel
-from conda.models.enums import FileMode, PathType
-from conda.models.match_spec import MatchSpec
-from conda.utils import url_path
+from conda.models.enums import FileMode
 
 try:
-    from conda.common.serialize.json import CondaJSONEncoder
+    from conda.models.enums import PathEnum as PathType
 except ImportError:
-    # FUTURE: remove for `conda>=25.9`
-    from conda.auxlib.entity import EntityEncoder as CondaJSONEncoder
+    # FUTURE: remove for `conda>=26.9`
+    from conda.models.enums import PathType
+from conda.common.serialize.json import CondaJSONEncoder
+from conda.models.match_spec import MatchSpec
+from conda.models.version import VersionOrder
+from conda.utils import url_path
 
 from . import __version__ as conda_build_version
 from . import environ, noarch_python, source, tarcheck, utils
-from .config import CondaPkgFormat, Config
+from .config import CondaPkgFormat, Config, zstd_compression_threads_default
 from .create_test import create_all_test_files
 from .exceptions import (
     BuildScriptException,
@@ -76,6 +78,8 @@ from .render import (
 )
 from .utils import (
     CONDA_PACKAGE_EXTENSIONS,
+    MAX_CHUNK_SIZE,
+    chunks,
     create_file_with_permissions,
     env_var,
     glob,
@@ -87,9 +91,38 @@ from .utils import (
 )
 from .variants import (
     dict_of_lists_to_list_of_dicts,
+    get_default_variant,
     get_package_variants,
     set_language_env_vars,
 )
+
+
+def _warn_implicit_numpy_variant(m: MetaData) -> None:
+    """Log when build/host need numpy but the matrix numpy pin still matches conda-build's default.
+
+    If ``variant['numpy']`` differs from :func:`~conda_build.variants.get_default_variant`,
+    assume an intentional pin and stay quiet.
+
+    Matching the default can still mean it was set but this should be rare.
+    """
+
+    default_np = get_default_variant(m.config)["numpy"]
+    pinned = m.config.variant.get("numpy")
+    if pinned is not None and pinned != default_np:
+        return
+    if not any(
+        ms.name == "numpy"
+        for section in ("build", "host")
+        for ms in m.ms_depends(section)
+    ):
+        return
+    utils.get_logger(__name__).warning(
+        "numpy is required by this recipe under requirements build/host but the numpy "
+        "variant is still conda-build's default (%s). Prefer setting numpy in "
+        "conda_build_config.yaml (or equivalent) when you depend on numpy at build time.",
+        default_np,
+    )
+
 
 if on_win:
     from . import windows
@@ -193,26 +226,6 @@ def prefix_replacement_excluded(path):
     return False
 
 
-# It may be that when using the list form of passing args to subprocess
-# what matters is the number of arguments rather than the accumulated
-# string length. In that case, len(l[i]) should become 1, and we should
-# pass this in instead. It could also depend on the platform. We should
-# test this!
-def chunks(line, n):
-    # For item i in a range that is a length of l,
-    size = 0
-    start = 0
-    for i in range(0, len(line)):
-        # + 3 incase a shell is used: 1 space and 2 quotes.
-        size = size + len(line[i]) + 3
-        if i == len(line) - 1:
-            yield line[start : i + 1]
-        elif size > n:
-            yield line[start : i + 1]
-            start = i
-            size = 0
-
-
 def get_bytes_or_text_as_bytes(parent):
     if "bytes" in parent:
         return parent["bytes"]
@@ -248,9 +261,8 @@ def regex_files_rg(
         os.path.join(pu, f.replace("/", os.sep).encode("utf-8")) for f in files
     ]
     args_len = len(b" ".join(args_base))
-    file_lists = list(
-        chunks(prefix_files, (32760 if utils.on_win else 131071) - args_len)
-    )
+    # chunk them to avoid too long comand lines:
+    file_lists = chunks(prefix_files, MAX_CHUNK_SIZE - args_len)
     for file_list in file_lists:
         args = args_base[:] + file_list
         # This will not work now our args are binary strings:
@@ -1792,10 +1804,23 @@ def bundle_conda(
         if activate_script:
             _write_activation_text(dest_file, metadata)
 
+        args_to_run = [*args, dest_file]
+        if on_win and dest_file.endswith((".bat", ".ps1")):
+            from .windows import _running_subdir, wrap_script_with_machine
+
+            if metadata.config.build_subdir != _running_subdir():
+                # Support native build platform on emulated Python interpreter
+                # Need to ensure subprocess runs on the adequate architecture
+                # See conda_build.windows. wrap_script_with_machine for more info.
+                args_to_run = [
+                    *INTERPRETER_BAT,
+                    wrap_script_with_machine(metadata, dest_file, tuple(args)),
+                ]
+
         bundle_stats = {}
         try:
             utils.check_call_env(
-                [*args, dest_file],
+                args_to_run,
                 cwd=metadata.config.work_dir,
                 env=env_output,
                 stats=bundle_stats,
@@ -1920,6 +1945,18 @@ def bundle_conda(
             "zstd",
             f"zstd:compression-level={metadata.config.zstd_compression_level}",
         )
+        threads = int(metadata.config.zstd_compression_threads)
+        if threads != zstd_compression_threads_default:
+            # create() only accepts compression_threads since conda-package-handling 2.6.0
+            cph_version = conda_package_handling.__version__
+            if VersionOrder(cph_version) < VersionOrder("2.6.0"):
+                log.warning(
+                    "zstd_compression_threads requires conda-package-handling "
+                    ">=2.6.0 (found %s); compressing with a single thread.",
+                    cph_version,
+                )
+            else:
+                cph_kwargs["compression_threads"] = threads
     with TemporaryDirectory() as tmp:
         conda_package_handling.api.create(
             metadata.config.host_prefix,
@@ -1936,32 +1973,6 @@ def bundle_conda(
                 tarcheck.check_all(tmp_path, metadata.config)
             output_filename = os.path.basename(tmp_path)
 
-            # we do the import here because we want to respect logger level context
-            try:
-                from conda_verify.verify import Verify
-            except ImportError:
-                Verify = None
-                log.warning(
-                    "Importing conda-verify failed.  Please be sure to test your packages.  "
-                    "conda install conda-verify to make this message go away."
-                )
-            if getattr(metadata.config, "verify", False) and Verify:
-                verifier = Verify()
-                checks_to_ignore = (
-                    utils.ensure_list(metadata.config.ignore_verify_codes)
-                    + metadata.ignore_verify_codes()
-                )
-                try:
-                    verifier.verify_package(
-                        path_to_package=tmp_path,
-                        checks_to_ignore=checks_to_ignore,
-                        exit_on_error=metadata.config.exit_on_verify_error,
-                    )
-                except KeyError as e:
-                    log.warning(
-                        "Package doesn't have necessary files.  It might be too old to inspect."
-                        f"Legacy noarch packages are known to fail.  Full message was {e}"
-                    )
             try:
                 crossed_subdir = metadata.config.target_subdir
             except AttributeError:
@@ -2447,6 +2458,8 @@ def build(
                         r"|".join(rf"(?:^{exc}(?:\s|$|\Z))" for exc in excludes)
                     )
             add_upstream_pins(m, False, exclude_pattern, [])
+
+        _warn_implicit_numpy_variant(top_level_pkg)
 
         create_build_envs(top_level_pkg, notest)
 
@@ -3201,21 +3214,20 @@ def write_test_scripts(
             tf.write(f"set {trace}-e\n")
         if metadata.config.activate and not metadata.name() == "conda":
             if utils.on_win:
+                # conda.bat expands "%CONDA_EXE%" %_CE_M% %_CE_CONDA%.
+                ce_m = (
+                    "-I -m"
+                    if os.environ.get("_CONDA_BUILD_ISOLATED_ACTIVATION")
+                    else "-m"
+                )
                 tf.write(
                     'set "CONDA_SHLVL=" '
-                    "&& @CALL {}\\condabin\\conda_hook.bat {}"
-                    "&& set CONDA_EXE={python_exe}"
-                    "&& set CONDA_PYTHON_EXE={python_exe}"
-                    "&& set _CE_I={}"
-                    "&& set _CE_M=-m"
-                    "&& set _CE_CONDA=conda\n".format(
-                        sys.prefix,
-                        "--dev" if metadata.config.debug else "",
-                        "-i"
-                        if os.environ.get("_CONDA_BUILD_ISOLATED_ACTIVATION")
-                        else "",
-                        python_exe=sys.executable,
-                    )
+                    f"&& @CALL {sys.prefix}\\condabin\\conda_hook.bat"
+                    f"{' --dev' if metadata.config.debug else ''}"
+                    f"&& set CONDA_EXE={sys.executable}"
+                    f"&& set CONDA_PYTHON_EXE={sys.executable}"
+                    f"&& set _CE_M={ce_m}"
+                    "&& set _CE_CONDA=conda\n"
                 )
             else:
                 py_flags = (
@@ -3260,6 +3272,12 @@ def test(
     :param m: Package's metadata.
     :type m: Metadata
     """
+    # Delegate v1 packages to rattler-build
+    from ._rattler_build.compat import is_v1_package, test_v1_package
+
+    if is_v1_package(recipedir_or_package_or_metadata):
+        return test_v1_package(recipedir_or_package_or_metadata, config)
+
     log = utils.get_logger(__name__)
     # we want to know if we're dealing with package input.  If so, we can move the input on success.
     hash_input = {}
@@ -3410,7 +3428,7 @@ def test(
         )
     except (
         DependencyNeedsBuildingError,
-        NoPackagesFoundError,
+        ResolvePackageNotFound,
         UnsatisfiableError,
         CondaError,
         AssertionError,

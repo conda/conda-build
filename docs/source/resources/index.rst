@@ -20,6 +20,7 @@ documentation.
    package-spec
    use-shared-libraries
    variants
+   configuration
    commands/index
    add-win-start-menu-items
    style-guide

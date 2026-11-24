@@ -26,7 +26,9 @@ from conda_build.metadata import (
     OSModuleSubset,
     _hash_dependencies,
     check_bad_chrs,
+    check_package_name,
     eval_selector,
+    get_output_dicts_from_metadata,
     get_selectors,
     sanitize,
     select_lines,
@@ -275,6 +277,12 @@ def test_disallow_leading_period_in_version(testing_metadata):
         testing_metadata.version()
 
 
+def test_disallow_negative_build_number(testing_metadata):
+    testing_metadata.meta["build"]["number"] = -1
+    with pytest.raises(ValueError, match="non-negative"):
+        testing_metadata.build_number()
+
+
 def test_disallow_dash_in_features(testing_metadata):
     testing_metadata.meta["build"]["features"] = ["abc"]
     testing_metadata.parse_again()
@@ -356,14 +364,9 @@ def test_build_bootstrap_env_by_path(testing_metadata):
         ("win", "x86_64", "3.2", {"vs2008_win-x86_64"}),
         ("win", "x86_64", "3.3", {"vs2010_win-x86_64"}),
         ("win", "x86_64", "3.4", {"vs2010_win-x86_64"}),
-        ("win", "x86_64", "3.5", {"vs2017_win-x86_64"}),
-        ("win", "x86_64", "3.6", {"vs2017_win-x86_64"}),
-        ("win", "x86_64", "3.7", {"vs2017_win-x86_64"}),
-        ("win", "x86_64", "3.8", {"vs2017_win-x86_64"}),
-        ("win", "x86_64", "3.9", {"vs2017_win-x86_64"}),
-        ("win", "x86_64", "3.10", {"vs2017_win-x86_64"}),
-        ("win", "x86_64", "3.11", {"vs2017_win-x86_64"}),
-        ("win", "x86_64", "3.12", {"vs2017_win-x86_64"}),
+        ("win", "x86_64", "3.5", {"vs2022_win-x86_64"}),
+        ("win", "x86_64", "3.6", {"vs2022_win-x86_64"}),
+        ("win", "x86_64", "3.14", {"vs2022_win-x86_64"}),
         ("linux", "32", "3.12", {"gcc_linux-32", "gxx_linux-32"}),
         ("linux", "64", "3.12", {"gcc_linux-64", "gxx_linux-64"}),
         ("osx", "32", "3.12", {"clang_osx-32", "clangxx_osx-32"}),
@@ -437,7 +440,6 @@ def test_native_stdlib_metadata(
 def test_hash_build_id(testing_metadata):
     testing_metadata.config.variant["zlib"] = "1.2"
     testing_metadata.meta["requirements"]["host"] = ["zlib"]
-    testing_metadata.final = True
     hash_contents = testing_metadata.get_hash_contents()
     assert hash_contents["zlib"] == "1.2"
     hdeps = testing_metadata.hash_dependencies()
@@ -454,6 +456,15 @@ def test_hash_build_id(testing_metadata):
     assert found, (
         f"Did not find build that matched {hdeps} when testing each of DEFAULT_SUBDIRS"
     )
+    assert testing_metadata.build_id() == "1"
+    assert testing_metadata.build_id(force_final_hash=True) == hdeps + "_1"
+    assert not testing_metadata.final
+
+    testing_metadata.config.filename_hashing = False
+    assert testing_metadata.build_id(force_final_hash=True) == "1"
+
+    testing_metadata.config.filename_hashing = True
+    testing_metadata.final = True
     assert testing_metadata.build_id() == hdeps + "_1"
 
 
@@ -724,6 +735,41 @@ def test_check_bad_chrs(value: str, field: str, invalid: str) -> None:
         check_bad_chrs(value, field)
 
 
+@pytest.mark.parametrize(
+    "name",
+    [
+        "numpy",
+        "my-package",
+        "my_package",
+        "my.package",
+        "r-base",
+        "python-dateutil",
+        "_openmp_mutex",
+        "_pkg",
+        "__glibc",
+        "__unix",
+    ],
+)
+def test_check_package_name_valid(name: str) -> None:
+    check_package_name(name)
+
+
+@pytest.mark.parametrize(
+    "name,match",
+    [
+        ("pack@ge", "invalid characters"),
+        ("pkg..name", "CEP-26"),
+        ("pkg--name", "CEP-26"),
+        (".pkg", "CEP-26"),
+        ("-pkg", "CEP-26"),
+        ("UPPER", "invalid characters"),
+    ],
+)
+def test_check_package_name_invalid(name: str, match: str) -> None:
+    with pytest.raises(CondaBuildUserError, match=match):
+        check_package_name(name)
+
+
 def test_parse_until_resolved(testing_metadata: MetaData, tmp_path: Path) -> None:
     (recipe := tmp_path / (name := "meta.yaml")).write_text("{{ UNDEFINED[:2] }}")
     testing_metadata._meta_path = recipe
@@ -827,3 +873,57 @@ def test_extract_single_output_text_with_jinja_is_broken():
     # We of course want to obtain output3, but the buggy behaviour gave us output2.
     assert "output3" not in output
     assert "output2" in output
+
+
+@pytest.mark.parametrize(
+    "meta_yaml",
+    [
+        # Case 1: Top-level only recipe
+        textwrap.dedent("""
+        package:
+          name: foo
+          version: 1.0
+          requirements:
+            build:
+              - {{ compiler('c') }}
+        """),
+        # Case 2: Recipe with a single outputs section
+        textwrap.dedent("""
+        package:
+          name: foo
+          version: 1.0
+
+        outputs:
+          - name: foo
+            requirements:
+              build:
+                - {{ compiler('c') }}
+        """),
+    ],
+)
+def test_extract_single_output_text_logging_warning(meta_yaml, caplog, tmp_path):
+    """
+    Verify that the parsed outputs warning will not be printed when parsing single-output recipes
+    """
+
+    # create a temporary test recipe
+    recipe_dir = tmp_path / "recipe"
+    recipe_dir.mkdir()
+    (recipe_dir / "meta.yaml").write_text(meta_yaml)
+
+    metadata = MetaData(recipe_dir)
+    output = get_output_dicts_from_metadata(metadata)
+
+    with caplog.at_level("WARNING"):
+        metadata.extract_single_output_text(output, getattr(metadata, "type", None))
+
+    expected_message = (
+        "Number of parsed outputs does not match detected raw metadata blocks. "
+        "Identified output block may be wrong! "
+        "If you are using Jinja conditionals to include or exclude outputs, "
+        "consider using `skip: true  # [condition]` instead."
+    )
+
+    # Check if the specific warning message is in logs
+    for record in caplog.records:
+        assert expected_message not in caplog.text

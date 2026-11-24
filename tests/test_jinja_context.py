@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from __future__ import annotations
 
+import copy
 from typing import TYPE_CHECKING
 
 import pytest
@@ -93,16 +94,32 @@ def test_pin_none_max(testing_metadata, mocker):
     assert pin == "test >=1.2.3"
 
 
-def test_pin_subpackage_exact(testing_metadata):
+def test_pin_subpackage_exact(testing_metadata, mocker):
     name = testing_metadata.name()
     output_dict = {"name": name}
     testing_metadata.meta["outputs"] = [output_dict]
     fm = testing_metadata.get_output_metadata(output_dict)
+    original_meta = copy.deepcopy(fm.meta)
+    final_fm = fm.copy()
+    final_fm.final = True
     testing_metadata.other_outputs = {
         (name, deepfreeze(testing_metadata.config.variant)): (output_dict, fm)
     }
+    build_id = mocker.spy(fm, "build_id")
     pin = jinja_context.pin_subpackage(testing_metadata, name, exact=True)
-    assert len(pin.split()) == 3
+    assert pin == f"{fm.name()} {fm.version()} {final_fm.build_id()}"
+    build_id.assert_called_once_with(force_final_hash=True)
+    assert fm.meta == original_meta
+    assert not fm.final
+
+    build_id.reset_mock()
+    pin = jinja_context.pin_subpackage(
+        testing_metadata, name, exact=True, skip_build_id=True
+    )
+    assert pin == f"{fm.name()} {fm.version()} {fm.build_number()}"
+    build_id.assert_not_called()
+    assert fm.meta == original_meta
+    assert not fm.final
 
 
 def test_pin_subpackage_expression(testing_metadata):

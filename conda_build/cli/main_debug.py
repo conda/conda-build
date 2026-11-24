@@ -4,12 +4,15 @@ from __future__ import annotations
 
 import logging
 import sys
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from conda.base.context import context
 
 from .. import api
-from ..utils import on_win
+from .._rattler_build.compat import check_arguments_rattler, run_rattler
+from ..config import get_or_merge_config
+from ..utils import is_v1_recipe, on_win
 from . import validators as valid
 from .main_render import get_render_parser
 
@@ -98,12 +101,29 @@ def execute(args: Sequence[str] | None = None) -> int:
     parsed = parser.parse_args(args)
     context.__init__(argparse_args=parsed)
 
-    try:
-        activation_string = api.debug(
-            parsed.recipe_or_package_file_path,
-            verbose=(not parsed.activate_string_only),
-            **parsed.__dict__,
+    # mixed recipe formats found, error out
+    if (Path(parsed.recipe_or_package_file_path) / "recipe.yaml").is_file() and (
+        Path(parsed.recipe_or_package_file_path) / "meta.yaml"
+    ).is_file():
+        print(
+            "Cannot process several recipe versions at the same time!", file=sys.stderr
         )
+        return 1
+
+    try:
+        if is_v1_recipe(parsed.recipe_or_package_file_path):
+            config = get_or_merge_config(None, **parsed.__dict__)
+            parsed_only_recipe = parser.parse_args([parsed.recipe_or_package_file_path])
+            check_arguments_rattler(parser.prog.split()[-1], parsed, parsed_only_recipe)
+            parsed.recipe = parsed.recipe_or_package_file_path
+            command = parser.prog.split()[-1]
+            activation_string = run_rattler(command, parsed, config)
+        else:
+            activation_string = api.debug(
+                parsed.recipe_or_package_file_path,
+                verbose=(not parsed.activate_string_only),
+                **parsed.__dict__,
+            )
 
         if not parsed.activate_string_only:
             print("#" * 80)
@@ -113,7 +133,11 @@ def execute(args: Sequence[str] | None = None) -> int:
 
         print(activation_string)
         if not parsed.activate_string_only:
-            test_file = "conda_test_runner.bat" if on_win else "conda_test_runner.sh"
+            test_file = (
+                f"conda_{'build' if is_v1_recipe(parsed.recipe_or_package_file_path) else 'test_runner'}."
+                f"{'bat' if on_win else 'sh'}"
+            )
+
             print(
                 f"To run your tests, you might want to start with running the {test_file} file."
             )

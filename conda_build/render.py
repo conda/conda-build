@@ -1,5 +1,38 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+"""Recipe on disk → finalized :class:`~conda_build.metadata.MetaData`.
+
+**Pipeline**
+
+- **Variant discovery**
+  - Merge or stack ``conda_build_config.yaml`` and other variant inputs, then expand the build
+    matrix (see :mod:`conda_build.variants`).
+  - Line-filter CBC text before each file loads before ``meta.yaml`` is rendered for a cell.
+
+- **Recipe render**
+  - ``render_recipe`` builds :class:`~conda_build.metadata.MetaData`.
+  - Jinja expands ``{{ ... }}`` in ``meta.yaml`` and includes (``MetaData._get_contents``). The
+    recipe selector map from ``get_selectors`` is available as Jinja globals (and for
+    line-filtering loaded snippets).
+  - ``parse`` runs after that: it applies YAML line selectors (``# [...]`` comments) to the
+    rendered text, then loads YAML, still using the same selector map (this is not another Jinja
+    step).
+
+- **Multi-variant / outputs:** ``distribute_variants`` and ``render_metadata_tuples`` for extra
+  variant columns and subpackages.
+
+**CLI** (user-facing entry points that use this module)
+
+- **conda build** — ``conda_build.cli.main_build`` → ``conda_build.api.build`` →
+  ``conda_build.build.build_tree`` → ``render_recipe``, then compile/test. Some paths call
+  ``conda_build.api.render`` only.
+- **conda render** — ``conda_build.cli.main_render`` builds ``Config``, then
+  ``conda_build.api.render`` (see that module for ``--file`` and other flags).
+
+**Programmatic:** ``conda_build.api.render``, ``conda_build.api.build``. **Paths:** ``bldpkg_path``
+and helpers in this file.
+"""
+
 from __future__ import annotations
 
 import functools
@@ -27,15 +60,18 @@ import yaml
 from conda.base.context import context
 from conda.cli.common import specs_from_url
 from conda.core.package_cache_data import ProgressiveFetchExtract
-from conda.exceptions import NoPackagesFoundError, UnsatisfiableError
+from conda.exceptions import (
+    PackagesNotFoundError,
+    ResolvePackageNotFound,
+    UnsatisfiableError,
+)
 from conda.gateways.disk.create import TemporaryDirectory
 from conda.models.records import PackageRecord
 from conda.models.version import VersionOrder
 
 from . import environ, exceptions, source, utils
 from .config import CondaPkgFormat
-from .exceptions import CondaBuildUserError, DependencyNeedsBuildingError
-from .index import get_build_index
+from .exceptions import CondaBuildUserError, DependencyNeedsBuildingError, RecipeError
 from .metadata import MetaData, MetaDataTuple, combine_top_level_metadata_with_output
 from .utils import (
     CONDA_PACKAGE_EXTENSION_V1,
@@ -174,10 +210,14 @@ def get_env_dependencies(
                 output_folder=m.config.output_folder,
                 channel_urls=tuple(m.config.channel_urls),
             )
-        except (UnsatisfiableError, DependencyNeedsBuildingError) as e:
+        except (
+            UnsatisfiableError,
+            DependencyNeedsBuildingError,
+            PackagesNotFoundError,
+        ) as e:
             # we'll get here if the environment is unsatisfiable
             if hasattr(e, "packages"):
-                unsat = ", ".join(e.packages)
+                unsat = ", ".join(map(str, e.packages))
             else:
                 unsat = e.message
             if permit_unsatisfiable_variants:
@@ -330,30 +370,6 @@ def _read_specs_from_package(pkg_loc, pkg_dist):
 
 
 def execute_download_actions(m, precs, env, package_subset=None, require_files=False):
-    subdir = getattr(m.config, f"{env}_subdir")
-    index, _, _ = get_build_index(
-        subdir=subdir,
-        bldpkgs_dir=m.config.bldpkgs_dir,
-        output_folder=m.config.output_folder,
-        clear_cache=False,
-        omit_defaults=False,
-        channel_urls=m.config.channel_urls,
-        debug=m.config.debug,
-        verbose=m.config.verbose,
-    )
-
-    # this should be just downloading packages.  We don't need to extract them -
-
-    # NOTE: The following commented execute_actions is defunct
-    # (FETCH/EXTRACT were replaced by PROGRESSIVEFETCHEXTRACT).
-    #
-    # download_actions = {
-    #     k: v for k, v in actions.items() if k in (FETCH, EXTRACT, PREFIX)
-    # }
-    # if FETCH in actions or EXTRACT in actions:
-    #     # this is to force the download
-    #     execute_actions(download_actions, index, verbose=m.config.debug)
-
     pkg_files = {}
 
     if isinstance(package_subset, PackageRecord):
@@ -381,17 +397,8 @@ def execute_download_actions(m, precs, env, package_subset=None, require_files=F
             pkg_dist, m, files_only=require_files
         )
 
-        # ran through all pkgs_dirs, and did not find package or folder.  Download it.
-        # TODO: this is a vile hack reaching into conda's internals. Replace with
-        #    proper conda API when available.
         if not pkg_loc:
-            link_prec = [
-                rec
-                for rec in index
-                if (rec.name, rec.version, rec.build)
-                == (prec.name, prec.version, prec.build)
-            ][0]
-            pfe = ProgressiveFetchExtract(link_prefs=(link_prec,))
+            pfe = ProgressiveFetchExtract(link_prefs=(prec,))
             with utils.LoggingContext():
                 pfe.execute()
             for pkg_dir in context.pkgs_dirs:
@@ -563,7 +570,7 @@ def add_upstream_pins(
         ("run_constrained", run_constrained_deps),
     ):
         if deps:
-            requirements[section] = list(deps)
+            requirements[section] = sorted(deps)
 
     m.meta["requirements"] = requirements
     return build_unsat, host_unsat
@@ -764,8 +771,8 @@ def finalize_metadata(
         versioned_run_deps = [
             utils.ensure_valid_spec(spec, warn=True) for spec in versioned_run_deps
         ]
-        requirements[pinning_env] = full_build_deps
-        requirements["run"] = versioned_run_deps
+        requirements[pinning_env] = sorted(full_build_deps)
+        requirements["run"] = sorted(versioned_run_deps)
 
         m.meta["requirements"] = requirements
 
@@ -898,13 +905,14 @@ def distribute_variants(
     #     used mostly, and can be reduced
     metadata.config.input_variants = variants
 
+    metadata.config.variant = variants[0]
+
     recipe_requirements = metadata.extract_requirements_text()
     recipe_package_and_build_text = metadata.extract_package_and_build_text()
     recipe_text = recipe_package_and_build_text + recipe_requirements
     if hasattr(recipe_text, "decode"):
         recipe_text = recipe_text.decode()
 
-    metadata.config.variant = variants[0]
     used_variables = metadata.get_used_loop_vars(force_global=False)
     top_loop = metadata.get_reduced_variant_set(used_variables)
 
@@ -1048,6 +1056,8 @@ def render_recipe(
             m = MetaData(str(recipe), config=config)
         except exceptions.YamlParsingError as e:
             sys.exit(e.error_msg())
+        except OSError as e:
+            raise RecipeError(str(e)) from e
 
         # important: set build id *before* downloading source.  Otherwise source goes into a different
         #    build folder.
@@ -1107,7 +1117,10 @@ def render_metadata_tuples(
                                     om,
                                     permit_unsatisfiable_variants=permit_unsatisfiable_variants,
                                 )
-                            except (DependencyNeedsBuildingError, NoPackagesFoundError):
+                            except (
+                                DependencyNeedsBuildingError,
+                                ResolvePackageNotFound,
+                            ):
                                 if not permit_unsatisfiable_variants:
                                     raise
 
@@ -1202,6 +1215,16 @@ class CustomDumper(yaml.Dumper):
         Xref: https://github.com/yaml/pyyaml/issues/535
         """
         return True
+
+
+def sorted_set_representer(dumper, data):
+    # not dependencies, tends to be items like {'ignore_version',
+    # 'ignore_build_only_deps', 'pin_run_as_build', 'extend_keys'}
+    return dumper.represent_list(sorted(data))
+
+
+# Add to CustomDumper instead of global yaml.add_representer(...)
+CustomDumper.add_representer(set, sorted_set_representer)
 
 
 def output_yaml(

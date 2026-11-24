@@ -12,7 +12,7 @@ from conda_build.os_utils.pyldd import DLLfile, EXEfile, elffile, machofile
 from conda_build.os_utils.pyldd import codefile_class as pyldd_codefile_class
 
 if TYPE_CHECKING:
-    from typing import Callable
+    from collections.abc import Callable
 
 LDD = Path(__file__).parent.parent / "data" / "ldd"
 

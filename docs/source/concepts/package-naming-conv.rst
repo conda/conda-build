@@ -46,6 +46,9 @@ Conda supports both ``.conda`` and ``.tar.bz2`` package extensions. The ``.conda
 format (default since 25.1) is generally smaller and more efficient than ``.tar.bz2``
 packages. Read our `blog post`_ about it to learn more.
 
+For more information on configuring package formats, see :ref:`configuration`.
+For detailed information about conda package formats and specifications, see :doc:`package specification <../resources/package-spec>`.
+
 The build string is created as the package is built. Things that
 contribute to it are the variants specified either by the command
 line or the configuration from the ``conda_build_config.yaml``, and the

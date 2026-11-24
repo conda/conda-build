@@ -658,7 +658,7 @@ def _ssl_no_verify():
 
 def get_session(output_dir, verbose=True):
     session = requests.Session()
-    session.verify = _ssl_no_verify()
+    session.verify = not _ssl_no_verify()
     try:
         import cachecontrol
         import cachecontrol.caches

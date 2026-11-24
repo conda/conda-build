@@ -11,3 +11,4 @@ build:
 requirements:
   build:
     - python
+    - setuptools

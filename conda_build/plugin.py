@@ -5,9 +5,23 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import conda.plugins
+from conda.plugins.types import CondaRequestHeader, CondaSubcommand
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+
+
+@conda.plugins.hookimpl
+def conda_session_headers():
+    from conda.base.context import context
+
+    from . import __version__
+    from .user_agent import is_conda_build_active
+
+    if is_conda_build_active():
+        yield CondaRequestHeader(
+            name="User-Agent", value=f"{context.user_agent} conda-build/{__version__}"
+        )
 
 
 # lazy-import to avoid nasty import-time side effects when not using conda-build
@@ -61,22 +75,22 @@ def skeleton(args: Sequence[str]) -> int:
 
 @conda.plugins.hookimpl
 def conda_subcommands():
-    yield conda.plugins.CondaSubcommand(
+    yield CondaSubcommand(
         name="build",
         summary="Build conda packages from a conda recipe.",
         action=build,
     )
-    yield conda.plugins.CondaSubcommand(
+    yield CondaSubcommand(
         name="convert",
         summary="Convert pure Python packages to other platforms (a.k.a., subdirs).",
         action=convert,
     )
-    yield conda.plugins.CondaSubcommand(
+    yield CondaSubcommand(
         name="debug",
         summary="Debug the build or test phases of conda recipes.",
         action=debug,
     )
-    yield conda.plugins.CondaSubcommand(
+    yield CondaSubcommand(
         name="develop",
         summary=(
             "Install a Python package in 'development mode'. "
@@ -84,22 +98,22 @@ def conda_subcommands():
         ),
         action=develop,
     )
-    yield conda.plugins.CondaSubcommand(
+    yield CondaSubcommand(
         name="inspect",
         summary="Tools for inspecting conda packages.",
         action=inspect,
     )
-    yield conda.plugins.CondaSubcommand(
+    yield CondaSubcommand(
         name="metapackage",
         summary="Specialty tool for generating conda metapackage.",
         action=metapackage,
     )
-    yield conda.plugins.CondaSubcommand(
+    yield CondaSubcommand(
         name="render",
         summary="Expand a conda recipe into a platform-specific recipe.",
         action=render,
     )
-    yield conda.plugins.CondaSubcommand(
+    yield CondaSubcommand(
         name="skeleton",
         summary="Generate boilerplate conda recipes.",
         action=skeleton,

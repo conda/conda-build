@@ -37,9 +37,6 @@ Other considerations
   the first place via the Miniconda or Anaconda installers). For example, on
   Windows that might mean an account with administrator privileges.
 
-* `conda-verify`_ is a useful package that can also be added to the base
-  environment in order to remove some warnings generated when conda-build runs.
-
 * For critical CI/CD projects, you might want to pin to an explicit (but recent)
   version of conda-build, i.e. only update to a newer version of conda-build
   and conda once they have been first verified "offline".
@@ -77,5 +74,4 @@ page <https://github.com/conda/conda-build/releases>`_.
 
 
 .. _`Conda Managing Environments`:                      https://conda.io/projects/conda/en/latest/user-guide/getting-started.html#managing-environments
-.. _`conda-verify`:                                     https://github.com/conda/conda-verify
 .. _`Must conda-build be installed in the base env?`:  https://github.com/conda/conda-build/issues/4995

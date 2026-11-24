@@ -1,0 +1,15 @@
+package:
+  name: install-broken-libopenblas
+  version: "1.0.0"
+
+source:
+  - url: https://conda.anaconda.org/conda-forge/osx-arm64/libopenblas-0.3.33-pthreads_hddb8425_0.conda # [osx and arm64]
+    sha256: e1ec1db8ab19f1eddab1d99aba0e30d573e6f33c568fda7cab46390cb0f9bd5a # [osx and arm64]
+    target_directory: source  # [osx and arm64]
+  - url: https://conda.anaconda.org/conda-forge/osx-64/libopenblas-0.3.33-pthreads_h705a207_0.conda # [osx and x86_64]
+    sha256: 15f5cf916c8fb749741dd49ac39e73b50ede76a9fc63bcce736517f409b2d0ee # [osx and x86_64]
+    target_directory: source  # [osx and x86_64]
+
+build:
+  number: 0
+  skip: true  # [not osx]

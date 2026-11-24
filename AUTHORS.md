@@ -37,6 +37,7 @@ Authors are sorted alphabetically.
 * Carsten Haubold
 * Casey Clements
 * Catherine
+* Charles Bousseau
 * Cheng H. Lee
 * Chris Hogan
 * Chris Osborn
@@ -45,12 +46,14 @@ Authors are sorted alphabetically.
 * Christopher Burr
 * Christopher J. Wright
 * Christopher Whelan
+* ColemanTom
 * Conda Bot
 * Connor Martin
 * Cornelius Roemer
 * Crystal Soja
 * Dan Blanchard
 * Dan Lovell
+* Dan Yeaw
 * Daniel Bast
 * Daniel Ching
 * Daniel Damiani
@@ -61,6 +64,7 @@ Authors are sorted alphabetically.
 * Dave Hirschfeld
 * Dave Karetnyk
 * David Froger
+* David Laehnemann
 * David Li
 * Derek Ludwig
 * Devon Ryan
@@ -99,6 +103,7 @@ Authors are sorted alphabetically.
 * Jack Olivieri
 * Jacob Walls
 * Jaime Rodríguez-Guerra
+* Jakov Smolić
 * James Abbott
 * James Lamb
 * James Sexton
@@ -107,6 +112,7 @@ Authors are sorted alphabetically.
 * Jannis Leidel
 * Jasmine Sandhu
 * Jayaramchandar Pazhanikumar
+* Jean-Christophe Morin
 * Jillian Rowe
 * Jinzhe Zeng
 * Joe Hartshorn
@@ -165,13 +171,17 @@ Authors are sorted alphabetically.
 * Michael Cormier
 * Michael Maltese
 * Michael Sarahan
+* Michał Górny
+* Mike Taves
 * Min RK
 * Morten Enemark Lund
 * Morten Lund
+* NIKIL PAUL
 * Nehal J Wani
 * Nicola Soranzo
 * Oleg Alexandrov
 * Oleksandr Pavlyk
+* Orion Poplawski
 * Patrick Snape
 * Patrick Sodré
 * Paul Madden
@@ -195,6 +205,7 @@ Authors are sorted alphabetically.
 * Robert T. McGibbon
 * Robert Wall
 * Rolando (Max) Espinoza
+* Rory Yorke
 * Ruben Vorderman
 * Ryan Dale
 * Ryan Grout
@@ -208,6 +219,7 @@ Authors are sorted alphabetically.
 * Serhii Kupriienko
 * Shaun Walbridge
 * Shaun Walbridge
+* Sherman Siu
 * Siu Kwan Lam
 * Sophia Castellarin
 * Sophian Guidara
@@ -226,6 +238,7 @@ Authors are sorted alphabetically.
 * Thomas Holder
 * Thomas Kluyver
 * Thomas Lam
+* Tianxiang Bian
 * Tim Paine
 * Tim Snyder
 * Tobias Fischer
@@ -256,6 +269,7 @@ Authors are sorted alphabetically.
 * Yu Feng
 * Zane Dufour
 * dependabot[bot]
+* pb01ka
 * peter1000
 * pre-commit CI
 * pwwang

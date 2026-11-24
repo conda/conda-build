@@ -306,6 +306,13 @@ Build the package using the recipe you just created::
 
     $ conda build sep
 
+.. note::
+
+   By default, conda-build creates packages in the modern `.conda` format.
+   If you need legacy `.tar.bz2` format compatibility, use the
+   `--package-format=1` option. For more information on package formats,
+   see :ref:`configuration`.
+
 
 Check the output
 ----------------
@@ -385,6 +392,13 @@ To build a GDAL package:
 #. Use conda-build to build the ``gdal-feedstock``::
 
     $ conda build gdal-feedstock
+
+   .. note::
+
+      By default, conda-build creates packages in the modern `.conda` format.
+      If you need legacy `.tar.bz2` format compatibility, use the
+      `--package-format=1` option. For more information on package formats,
+      see :ref:`configuration`.
 
 #. Check the output to make sure that the build completed
    successfully. The output also contains the location of the
