@@ -15,6 +15,7 @@ from subprocess import PIPE, Popen
 
 from conda.models.version import VersionOrder
 
+from ..deprecations import deprecated
 from ..utils import on_mac, on_win, rec_glob
 from .external import find_executable
 
@@ -159,8 +160,16 @@ def get_libraries(file):
     return result
 
 
+def _get_dynamic_tags(binary):
+    return [
+        dynamic_entry
+        for dynamic_entry in binary.dynamic_entries
+        if isinstance(dynamic_entry.tag, ELF_DYNAMIC_TAGS)
+    ]
+
+
 def _get_elf_rpathy_thing(binary, attribute, dyn_tag):
-    dynamic_entries = binary.dynamic_entries
+    dynamic_entries = _get_dynamic_tags(binary)
     rpaths_colons = [getattr(e, attribute) for e in dynamic_entries if e.tag == dyn_tag]
     rpaths = []
     for rpath in rpaths_colons:
@@ -169,7 +178,7 @@ def _get_elf_rpathy_thing(binary, attribute, dyn_tag):
 
 
 def _set_elf_rpathy_thing(binary, old_matching, new_rpath, set_rpath, set_runpath):
-    dynamic_entries = binary.dynamic_entries
+    dynamic_entries = _get_dynamic_tags(binary)
     changed = False
     for e in dynamic_entries:
         if (
@@ -295,6 +304,11 @@ def get_rpaths(file, exe_dirname, envroot, windows_root=""):
 
 # TODO :: Consider memoizing instead of repeatedly scanning
 # TODO :: libc.so/libSystem.dylib when inspect_linkages(recurse=True)
+@deprecated(
+    "27.3",
+    "27.9",
+    addendum="Unused helper. Use get_libraries() or inspect_linkages_lief() instead.",
+)
 def _inspect_linkages_this(filename, sysroot="", arch="native"):
     """
 
@@ -377,7 +391,7 @@ def get_uniqueness_key(filename, file):
     elif binary.format == EXE_FORMATS.ELF and (  # noqa
         binary.type == ELF32 or binary.type == ELF64
     ):
-        dynamic_entries = binary.dynamic_entries
+        dynamic_entries = _get_dynamic_tags(binary)
         result = [e.name for e in dynamic_entries if e.tag == ELF_DYNAMIC_TAGS.SONAME]
         if result:
             return result[0]

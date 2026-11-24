@@ -1,6 +1,8 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
 import os
+import re
+from pathlib import Path
 
 import pytest
 
@@ -13,6 +15,17 @@ def test_skeleton_pypi(testing_workdir, testing_config):
     args = ["pypi", "peppercorn"]
     main_skeleton.execute(args)
     assert os.path.isdir("peppercorn")
+
+    # add setuptools to host dependencies
+    path = Path("peppercorn/meta.yaml")
+    path.write_text(
+        re.sub(
+            r"(  host:\n(?:    - .*\n)*?)(  run:\n)",
+            r"\1    - setuptools\n\2",
+            path.read_text(),
+            count=1,
+        )
+    )
 
     # ensure that recipe generated is buildable
     main_build.execute(("peppercorn",))

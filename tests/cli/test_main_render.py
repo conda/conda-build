@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
 import yaml
-from conda.exceptions import PackagesNotFoundError
+from conda.base.context import context
 
 from conda_build import api
 from conda_build.cli import main_render
@@ -15,13 +16,15 @@ from conda_build.cli import main_render
 from ..utils import metadata_dir
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from pytest import CaptureFixture
 
     from conda_build.metadata import MetaData
 
 
+@pytest.mark.skipif(
+    context.subdir == "osx-arm64",
+    reason="conda_build_test channel does not support osx-arm64",
+)
 def test_render_add_channel(tmp_path: Path) -> None:
     """This recipe requires the conda_build_test_requirement package, which is
     only on the conda_build_test channel. This verifies that the -c argument
@@ -52,16 +55,24 @@ def test_render_add_channel(tmp_path: Path) -> None:
     )
 
 
-def test_render_with_empty_channel_fails(tmp_path: Path, empty_channel: Path) -> None:
-    with pytest.raises(PackagesNotFoundError):
-        main_render.execute(
-            [
-                "--override-channels",
-                f"--channel={empty_channel}",
-                os.path.join(metadata_dir, "_recipe_requiring_external_channel"),
-                f"--file={tmp_path / 'out.yaml'}",
-            ]
-        )
+def test_render_with_empty_channel_is_not_final(
+    tmp_path: Path, empty_channel: Path
+) -> None:
+    """Rendering permits unsatisfiable variants, so a missing dependency yields a
+    non-final recipe instead of an error."""
+    rendered_filename = tmp_path / "out.yaml"
+    main_render.execute(
+        [
+            "--override-channels",
+            f"--channel={empty_channel}",
+            os.path.join(metadata_dir, "_recipe_requiring_external_channel"),
+            f"--file={rendered_filename}",
+        ]
+    )
+
+    rendered_meta = yaml.safe_load(rendered_filename.read_text())
+    # the dependency could not be resolved, so it is left unpinned
+    assert "conda_build_test_requirement" in rendered_meta["requirements"]["build"]
 
 
 def test_render_output_build_path(
@@ -163,3 +174,40 @@ def test_render_with_python_arg_CLI_reduces_subspace(capfd):
     main_render.execute(args)
     out, err = capfd.readouterr()
     assert len(out.splitlines()) == 1
+
+
+def test_render_with_v1_recipe() -> None:
+    """Test rendering a v1 recipe (recipe.yaml)"""
+    recipe = os.path.join(metadata_dir, "..", "variants", "32_v1_recipe")
+
+    args = [recipe]
+    assert main_render.execute(args) == 0
+
+
+def test_render_sorted_dependencies(tmp_path: Path) -> None:
+    """Test that dependencies are sorted in the rendered output."""
+    rendered = tmp_path / "out.yaml"
+    recipe = Path(metadata_dir, "_sort_rendered_deps")
+    args = [str(recipe), "--file", str(rendered)]
+    main_render.execute(args)
+
+    with (recipe / "meta.yaml").open() as recipe_file:
+        recipe_meta = yaml.safe_load(recipe_file)
+
+    with rendered.open() as rendered_file:
+        rendered_meta = yaml.safe_load(rendered_file)
+
+    unsorted_requirements = recipe_meta.get("requirements", {})
+    requirements = rendered_meta.get("requirements", {})
+    for section in ["build", "host", "run"]:
+        deps_orig = unsorted_requirements.get(section, [])
+        deps = requirements.get(section, [])
+        assert deps_orig == ["f", "e", "d", "c", "b", "a"]
+        assert deps == ["a", "b", "c", "d", "e", "f"]
+        if deps:
+            # Check that dependencies are sorted
+            sorted_deps = sorted(deps)
+            assert deps == sorted_deps, (
+                f"Dependencies in '{section}' section are not sorted. "
+                f"Expected {sorted_deps}, but got {deps}"
+            )

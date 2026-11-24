@@ -12,6 +12,7 @@ requirements:
   build:
     - {{ deps[0].replace("=", " =") }}
     - pip
+    - setuptools
 
   run:
   {% for dep in deps -%}

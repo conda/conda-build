@@ -8,6 +8,7 @@ import os
 import pathlib
 import re
 import time
+import tomllib
 from functools import partial
 from io import StringIO, TextIOBase
 from subprocess import CalledProcessError
@@ -32,11 +33,6 @@ from .utils import (
     rm_rf,
 )
 from .variants import DEFAULT_COMPILERS
-
-try:
-    import tomllib  # Python 3.11
-except:
-    import tomli as tomllib
 
 if TYPE_CHECKING:
     from typing import IO, Any
@@ -388,7 +384,7 @@ def pin_subpackage_against_outputs(
                         [
                             sp_m.name(),
                             sp_m.version(),
-                            sp_m.build_id()
+                            sp_m.build_id(force_final_hash=True)
                             if not skip_build_id
                             else str(sp_m.build_number()),
                         ]
@@ -558,11 +554,15 @@ def cdt(package_name, config, permit_undefined_jinja=False):
 
     cdt_name = "cos6"
     arch = config.host_arch or config.arch
-    if arch == "ppc64le" or arch == "aarch64" or arch == "ppc64" or arch == "s390x":
-        cdt_name = "cos7"
-        cdt_arch = arch
+    if arch == "64":
+        cdt_arch = "x86_64"
+        cdt_name = "cos6"
+    elif arch == "32":
+        cdt_arch = "i686"
+        cdt_name = "cos6"
     else:
-        cdt_arch = "x86_64" if arch == "64" else "i686"
+        cdt_arch = arch
+        cdt_name = "cos7"
     if config.variant:
         cdt_name = config.variant.get("cdt_name", cdt_name)
         cdt_arch = config.variant.get("cdt_arch", cdt_arch)

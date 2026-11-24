@@ -1,13 +1,31 @@
 name: CLA
 
 on:
-  issue_comment:
+  issue_comment: # zizmor: ignore[dangerous-triggers] CLA check only; no untrusted code is checked out.
     types:
       - created
-  pull_request_target:
+  pull_request_target: # zizmor: ignore[dangerous-triggers] Required to react to new PRs for CLA verification; no untrusted code is checked out.
+
+concurrency:
+  # Only share a concurrency group with runs that can actually perform the check
+  # (a `pull_request_target` event, or an `issue_comment` that is a `@conda-bot check`
+  # request). Every other `issue_comment` (bot noise, unrelated comments, etc.) is
+  # skipped by the job's `if:` below anyway, but without this it would still join the
+  # same group and cancel an in-progress, legitimate CLA check.
+  group: >-
+    ${{ github.workflow }}-${{
+      (github.event_name == 'pull_request_target' || github.event.comment.body == '@conda-bot check')
+      && (github.event.pull_request.number || github.event.issue.number)
+      || github.run_id
+    }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
   check:
+    name: Check CLA
     if: >-
       !github.event.repository.fork
       && (
@@ -15,16 +33,20 @@ jobs:
         && github.event.comment.body == '@conda-bot check'
         || github.event_name == 'pull_request_target'
       )
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
+    permissions:
+      contents: read
+      pull-requests: write # Required to update labels and comments on pull requests.
+      statuses: write # Required to publish the CLA commit status.
     steps:
       - name: Check CLA
-        uses: conda/actions/check-cla@f05161c6e6e37a49b17c8e0b436197b53830318a # v25.9.2
+        uses: conda/actions/check-cla@8153f7f73472ac36d654d5111be19abaecc48cc6 # v26.10.0
         with:
           # [required]
           # A token with ability to comment, label, and modify the commit status
           # (`pull_request: write` and `statuses: write` for fine-grained PAT; `repo` for classic PAT)
           # (default: secrets.GITHUB_TOKEN)
-          token: ${{ secrets.CLA_ACTION_TOKEN }}
+          token: ${{ secrets.CLA_ACTION_TOKEN }} # zizmor: ignore[secrets-outside-env] CLA action token; environment policy unchanged.
           # [required]
           # Label to apply to contributor's PR once CLA is signed
           label: cla-signed

@@ -24,6 +24,7 @@ from typing import TYPE_CHECKING
 from .config import DEFAULT_PREFIX_LENGTH as _prefix_length
 from .config import Config, get_channel_urls, get_or_merge_config
 from .metadata import MetaData, MetaDataTuple
+from .user_agent import conda_build_user_agent as _conda_build_user_agent
 from .utils import (
     CONDA_PACKAGE_EXTENSIONS,
     LoggingContext,
@@ -40,6 +41,35 @@ if TYPE_CHECKING:
     StatsDict = dict[str, Any]
 
 
+def _error_if_package_contains_recipe_yaml(pkg_path: str) -> None:
+    from contextlib import redirect_stdout
+    from io import StringIO
+
+    import conda_package_handling.api
+
+    buffer = StringIO()
+    with redirect_stdout(buffer):
+        conda_package_handling.api.list_contents(
+            pkg_path,
+            components=["info"],
+        )
+
+    pkg_contents = [
+        line.strip() for line in buffer.getvalue().splitlines() if line.strip()
+    ]
+
+    for recipe_yaml_file in (
+        "info/recipe/recipe.yaml",
+        "info/recipe/rendered_recipe.yaml",
+    ):
+        if recipe_yaml_file in pkg_contents:
+            raise ValueError(
+                f"Package '{pkg_path}' contains v1 '{recipe_yaml_file.rsplit('/', 1)[-1]}' file, "
+                "which is currently not supported by conda debug."
+            )
+
+
+@_conda_build_user_agent()
 def render(
     recipe_path: str | os.PathLike | Path,
     config: Config | None = None,
@@ -52,7 +82,10 @@ def render(
     """Given path to a recipe, return the MetaData object(s) representing that recipe, with jinja2
        templates evaluated.
 
-    Returns a list of (metadata, need_download, need_reparse in env) tuples"""
+    Returns a list of (metadata, need_download, need_reparse in env) tuples.
+
+    See :mod:`conda_build.render`.
+    """
     from .render import render_metadata_tuples, render_recipe
 
     config = get_or_merge_config(config, **kwargs)
@@ -167,7 +200,7 @@ def check(
     return all(m[0].check_fields() for m in metadata)
 
 
-# UP007 can be exception can be dropped when Python 3.10 is minimum version.
+@_conda_build_user_agent()
 def build(
     recipe_paths_or_metadata: str | os.PathLike | Path | MetaData,
     post: bool | None = None,
@@ -221,6 +254,7 @@ def build(
     )
 
 
+@_conda_build_user_agent()
 def test(
     recipedir_or_package_or_metadata: str | os.PathLike | Path | MetaData,
     move_broken: bool = True,
@@ -317,7 +351,7 @@ def skeletonize(
     for arg in skeletonize.__code__.co_varnames:
         if arg in kwargs:
             del kwargs[arg]
-    with config:
+    with _conda_build_user_agent(), config:
         module.skeletonize(
             packages,
             output_dir=output_dir,
@@ -382,6 +416,7 @@ def convert(
         raise RuntimeError(f"cannot convert: {package_file}")
 
 
+@_conda_build_user_agent()
 def test_installable(channel: str = "defaults") -> bool:
     """Check to make sure that packages in channel are installable.
     This is a consistency check for the channel."""
@@ -482,6 +517,7 @@ def create_metapackage(
     )
 
 
+@_conda_build_user_agent()
 def debug(
     recipe_or_package_path_or_metadata_tuples,
     path=None,
@@ -656,6 +692,9 @@ def debug(
             )
         else:
             test_input = recipe_or_package_path_or_metadata_tuples
+
+        _error_if_package_contains_recipe_yaml(test_input)
+
         # use the package to create an env and extract the test files.  Stop short of running the tests.
         # tell people what steps to take next
         with log_context:

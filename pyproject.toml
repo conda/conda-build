@@ -1,20 +1,18 @@
 [build-system]
 build-backend = "hatchling.build"
 requires = [
-  "hatchling >=1.12.2",
+  "hatchling >=1.27.0",
   "hatch-vcs >=0.2.0",
 ]
 
 [project]
-authors = [{name = "Anaconda, Inc.", email = "conda@continuum.io"}]
+authors = [{ name = "Anaconda, Inc.", email = "conda@continuum.io" }]
 classifiers = [
   "Development Status :: 5 - Production/Stable",
   "Intended Audience :: Developers",
   "Operating System :: OS Independent",
-  "License :: OSI Approved :: BSD License",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3 :: Only",
-  "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
@@ -24,9 +22,10 @@ classifiers = [
 dependencies = [
   "beautifulsoup4",
   "chardet",
-  "conda >=24.11.0",
-  # Disabled due to conda-index not being available on PyPI
+  "conda >=26.1.0",
+  # Disabled: not available on PyPI
   # "conda-index >=0.4.0",
+  # "conda-launchers >=24.7.1",
   "conda-package-handling >=2.2.0",
   "filelock",
   "frozendict >=2.4.2",
@@ -36,19 +35,18 @@ dependencies = [
   "packaging",
   "pkginfo",
   "psutil",
-  "pytz",
   "pyyaml",
   "requests",
   "evalidate >=2,<3",
-  "tomli ; python_version<'3.11'",
   "tqdm",
 ]
 description = "tools for building conda packages"
 dynamic = ["version"]
-license = {file = "LICENSE"}
+license = "BSD-3-Clause"
+license-files = ["LICENSE", "AUTHORS.md"]
 name = "conda-build"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 
 [project.entry-points.conda]
 conda-build = "conda_build.plugin"
@@ -82,7 +80,7 @@ sort = "Miss"
 relative_files = true
 
 [tool.hatch.build]
-include = ["conda_build", "conda_build/templates/*", "conda_build/cli-*.exe"]
+include = ["conda_build", "conda_build/templates/*"]
 
 [tool.hatch.build.hooks.vcs]
 version-file = "conda_build/_version.py"
@@ -103,8 +101,9 @@ addopts = [
   "--cov-report=xml",  # for codecov/codecov-action upload
   "--durations=16",  # show 16 slowest tests
   "--junitxml=junit.xml",
-  # "--splitting-algorithm=least_duration",  # not available yet
-  # "--store-durations",  # not available yet
+  # "--splitting-algorithm=least_duration",  # not used
+  "--store-durations",  # pytest-split, update duration cache
+  "--clean-durations",  # pytest-split, remove duration for tests no longer present
   "--strict-markers",
   "--tb=native",
   "-vv",
@@ -122,29 +121,14 @@ filterwarnings = [
   # elevate conda-build's deprecated warning to an error
   "error::PendingDeprecationWarning:conda_build",
   "error::DeprecationWarning:conda_build",
-  # ignore numpy.distutils error
-  'ignore:\s+`numpy.distutils` is deprecated:DeprecationWarning:conda_build._load_setup_py_data',
-  # ignore conda-package-streaming error
-  "ignore:conda.core.index._supplement_index_with_system is pending deprecation:PendingDeprecationWarning:conda",
-  # ignore tarfile Python 3.14 warning
-  "ignore:Python 3.14 will, by default, filter extracted tar archives:DeprecationWarning",
-  # TEMPORARY: Remove once CLS is released with https://github.com/conda/conda-libmamba-solver/pull/691
-  "ignore:conda.plugins.CondaSolver:PendingDeprecationWarning",
-  "ignore:conda.plugins.CondaSolver:DeprecationWarning",
-  # ignore conda prefix data deprecation
-  "ignore:conda.core.prefix_data:DeprecationWarning",
-  # ignore conda prefix data pending deprecation (including pip_interop_enabled)
-  "ignore:conda.core.prefix_data:PendingDeprecationWarning",
-  # ignore conda index deprecation
-  "ignore:conda.core.index._supplement_index_with_system is deprecated:DeprecationWarning",
-  # ignore conda trust deprecation
-  "ignore:conda.trust:DeprecationWarning",
-  "ignore:conda.trust:PendingDeprecationWarning",
-  # ignore conda link PrefixActions deprecation
+  # TEMPORARY: conda deprecates the pycosat solver stack that conda-index imports
+  # https://github.com/conda/conda-index/pull/380
+  "ignore:conda.exports.Resolve is pending deprecation:PendingDeprecationWarning",
+  "ignore:conda.resolve is pending deprecation:PendingDeprecationWarning",
+  "ignore:conda.common.logic is pending deprecation:PendingDeprecationWarning",
+  "ignore:conda.common._logic is pending deprecation:PendingDeprecationWarning",
+  # ignore conda PrefixActions deprecation (conda instantiates it internally until 26.3)
   "ignore:conda.core.link.PrefixActions is deprecated and will be removed in 26.3:DeprecationWarning",
-  "ignore:conda.core.link.PrefixActions is pending deprecation and will be removed in 26.3:PendingDeprecationWarning",
-  # ignore conda context restore_free_channel deprecation
-  "ignore:conda.base.context.Context.restore_free_channel is deprecated:DeprecationWarning",
 ]
 markers = [
   "serial: execute test serially (to avoid race conditions)",
@@ -160,16 +144,16 @@ testpaths = ["tests"]
 
 [tool.ruff]
 show-fixes = true
-target-version = "py39"
+target-version = "py311"
 
 [tool.ruff.lint]
-flake8-type-checking = {exempt-modules = [], strict = true}
+flake8-type-checking = { exempt-modules = [], strict = true }
 ignore = [
   "E402",  # module level import not at top of file
   "E722",  # do not use bare 'except'
   "E731",  # do not assign a lambda expression, use a def
 ]
-pycodestyle = {max-line-length = 120}
+pycodestyle = { max-line-length = 120 }
 # see https://docs.astral.sh/ruff/rules/
 select = [
   "E",  # pycodestyle errors

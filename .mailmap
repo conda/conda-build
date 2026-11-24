@@ -48,6 +48,7 @@ C. E. Ball <ceball@gmail.com>
 Carsten Haubold <carstenhaubold@googlemail.com>
 Casey Clements <casey.clements@continuum.io>
 Catherine <whitequark@whitequark.org> whitequark <whitequark@whitequark.org>
+Charles Bousseau <16641587+cbouss@users.noreply.github.com>
 Cheng H. Lee <chenghlee@users.noreply.github.com> Cheng H. Lee <clee@anaconda.com>
 Chris Hogan <c096h800@gmail.com>
 Chris Osborn <csosborn@users.noreply.github.com>
@@ -69,6 +70,7 @@ Dan Blanchard <dan.blanchard@gmail.com> Daniel Blanchard <dan@parsely.com>
 Dan Blanchard <dan.blanchard@gmail.com> Dan Blanchard <dblanchard@ets.org>
 Dan Blanchard <dan.blanchard@gmail.com> Dan Blanchard <dan@parsely.com>
 Dan Lovell <dlovell@gmail.com> dlovell <dlovell@gmail.com>
+Dan Yeaw <dan@yeaw.me>
 Daniel Bast <2790401+dbast@users.noreply.github.com>
 Daniel Ching <carterbox@users.noreply.github.com> Daniel Ching <9604511+carterbox@users.noreply.github.com>
 Daniel Damiani <ddamiani@slac.stanford.edu>
@@ -79,6 +81,7 @@ Dave Clements <tnabtaf@gmail.com>
 Dave Hirschfeld <dhirschfeld@users.noreply.github.com> David Hirschfeld <david.hirschfeld@gazprom-mt.com>
 Dave Karetnyk <Dave.Karetnyk@gmail.com>
 David Froger <david.froger@mailoo.org>
+David Laehnemann <1379875+dlaehnemann@users.noreply.github.com>
 David Li <li.davidm96@gmail.com>
 Derek Ludwig <dludwig@continuum.io>
 Devon Ryan <dpryan79@gmail.com> dpryan79 <dpryan79@gmail.com>
@@ -118,7 +121,7 @@ Ivan Kalev <ivan.kalev@gmail.com> ikalev <ivan.kalev@gmail.com>
 Jack Olivieri <boldorider4@gmail.com>
 Jacob Walls <jacobtylerwalls@gmail.com>
 Jaime Rodríguez-Guerra <jaimergp@users.noreply.github.com>
-Jakov Smolić <jsmolic@gentoo.org>
+Jakov Smolić <jsmolic@quansight.com> Jakov Smolić <jsmolic@gentoo.org>
 James Abbott <j.abbott@dundee.ac.uk>
 James Lamb <jaylamb20@gmail.com>
 James Sexton <TwistedLadder@gmail.com>
@@ -127,6 +130,7 @@ Jan-Hendrik Prinz <jan.prinz@gmx.de>
 Jannis Leidel <jannis@leidel.info>
 Jasmine Sandhu <jsandhu@continuum.io>
 Jayaramchandar Pazhanikumar <jayaramchandar@gmail.com>
+Jean-Christophe Morin <38703886+JeanChristopheMorinPerso@users.noreply.github.com>
 Jillian Rowe <jillian.e.rowe@gmail.com> jerowe <jillian.e.rowe@gmail.com>
 Jinzhe Zeng <jinzhe.zeng@rutgers.edu>
 Joe Hartshorn <joe.hartshorn@swiftcover.com> joe-hartshorn <joe.hartshorn@swiftcover.com>
@@ -201,13 +205,17 @@ Michael Sarahan <msarahan@continuum.io> Mike Sarahan <msarahan@nvidia.com>
 Michael Sarahan <msarahan@continuum.io> Michael Sarahan <msarahan@continuum.io>
 Michael Sarahan <msarahan@continuum.io> Michael Sarahan <msarahan@gmail.com>
 Michael Sarahan <msarahan@continuum.io> Michael Sarahan <msarahan@nvidia.com>
+Michał Górny <mgorny@gentoo.org>
+Mike Taves <mwtoews@gmail.com>
 Min RK <benjaminrk@gmail.com> MinRK <benjaminrk@gmail.com>
 Morten Enemark Lund <mel@anybodytech.com> mel <mel@anybodytech.com>
 Morten Lund <melund@gmail.com>
+NIKIL PAUL <snikilpaul@gmail.com>
 Nehal J Wani <nehaljw.kkd1@gmail.com>
 Nicola Soranzo <nicola.soranzo@earlham.ac.uk>
 Oleg Alexandrov <oleg.alexandrov@gmail.com>
 Oleksandr Pavlyk <oleksandr.pavlyk@intel.com>
+Orion Poplawski <orion@nwra.com>
 Patrick Snape <patricksnape@gmail.com> Patrick Snape <patrick.snape08@imperial.ac.uk>
 Patrick Sodré <psodre@gmail.com>
 Paul Madden <maddenp@colorado.edu>
@@ -252,6 +260,7 @@ Sergio Oller <sergioller@gmail.com>
 Serhii Kupriienko <79282962+skupr-anaconda@users.noreply.github.com>
 Shaun Walbridge <shaun.walbridge@gmail.com>
 Shaun Walbridge <46331011+scdub@users.noreply.github.com>
+Sherman Siu <sherman.siu@uwaterloo.ca>
 Siu Kwan Lam <michael.lam.sk@gmail.com>
 Sophia Castellarin <scastellarin@quansight.com> sophia <scastellarin95@gmail.com>
 Sophia Castellarin <scastellarin@quansight.com> sophia <scastellarin@anaconda.com>
@@ -273,6 +282,7 @@ Thomas A Caswell <tcaswell@gmail.com> Thomas A Caswell <tcaswell@bnl.gov>
 Thomas Holder <thomas.holder@schrodinger.com>
 Thomas Kluyver <takowl@gmail.com>
 Thomas Lam <79589038+tl-hbk@users.noreply.github.com>
+Tianxiang Bian <bigbits@hackx.cc>
 Tim Paine <3105306+timkpaine@users.noreply.github.com>
 Tim Snyder <snyder.tim@gmail.com>
 Tobias Fischer <info@tobiasfischer.info>
@@ -304,6 +314,7 @@ Yoav Ram <yoavram+github@gmail.com>
 Yu Feng <rainwoodman@gmail.com>
 Zane Dufour <zane.dufour@gmail.com> zdog234 <zane.dufour@gmail.com>
 dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>
+pb01ka <gaganpb08singh@gmail.com>
 peter1000 <peter.margo@gmx.de>
 pre-commit CI <66853113+pre-commit-ci[bot]@users.noreply.github.com> pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
 pwwang <pwwang@pwwang.com>

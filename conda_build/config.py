@@ -18,14 +18,12 @@ from enum import Enum
 from os.path import abspath, expanduser, expandvars, join
 from typing import TYPE_CHECKING
 
-from conda.base.constants import (
-    CONDA_PACKAGE_EXTENSION_V1,
-    CONDA_PACKAGE_EXTENSION_V2,  # noqa: F401
-)
 from conda.base.context import context
 from conda.utils import url_path
 
 from .utils import (
+    CONDA_PACKAGE_EXTENSION_V1,
+    CONDA_PACKAGE_EXTENSION_V2,
     get_build_folders,
     get_conda_operation_locks,
     get_logger,
@@ -103,6 +101,7 @@ ignore_verify_codes_default = []
 exit_on_verify_error_default = False
 conda_pkg_format_default = CondaPkgFormat.V2
 zstd_compression_level_default = 19
+zstd_compression_threads_default = 1
 
 
 # we need this to be accessible to the CLI, so it needs to be more static.
@@ -165,6 +164,15 @@ def _get_default_settings():
             if (cache_dir := context.conda_build.get("cache_dir"))
             else _src_cache_root_default,
         ),
+        # Template environment for faster test environment creation.
+        # When set to a valid conda environment path, create_env will clone
+        # from this template instead of creating from scratch, then install
+        # any additional required packages. This can significantly speed up
+        # test runs by avoiding repeated package extraction.
+        Setting(
+            "test_env_template",
+            os.environ.get("CONDA_BUILD_TEST_ENV_TEMPLATE"),
+        ),
         Setting("copy_test_source_files", True),
         # should rendering cut out any skipped metadata?
         Setting("trim_skip", True),
@@ -179,7 +187,7 @@ def _get_default_settings():
         #    (GNU ld: -as-needed, Apple ld64: -dead_strip_dylibs -no_implicit_dylibs)
         # 2. A missing package in reqs/run (maybe that package is missing run_exports?)
         # 3. A missing (or broken) CDT package in reqs/build or (on systems without CDTs)
-        # 4. .. a missing value in the hard-coded but metadata-augmentable library whitelist
+        # 4. .. a missing value in the hard-coded but metadata-augmentable library allowlist
         # It is important that packages do not suffer from 2 because uninstalling that missing
         # package leads to an inability to run this package.
         #
@@ -242,6 +250,7 @@ def _get_default_settings():
         Setting("identity", None),
         Setting("config_file", None),
         Setting("repository", "pypitest"),
+        # Legacy conda-verify settings retained for API compatibility. They have no effect.
         Setting("verify", True),
         Setting(
             "ignore_verify_codes",
@@ -271,6 +280,12 @@ def _get_default_settings():
             "zstd_compression_level",
             context.conda_build.get(
                 "zstd_compression_level", zstd_compression_level_default
+            ),
+        ),
+        Setting(
+            "zstd_compression_threads",
+            context.conda_build.get(
+                "zstd_compression_threads", zstd_compression_threads_default
             ),
         ),
         Setting(

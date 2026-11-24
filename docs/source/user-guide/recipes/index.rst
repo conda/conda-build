@@ -10,3 +10,4 @@ conda-build recipes.
 
    sample-recipes
    debugging
+   ../v1-recipes

@@ -1,21 +1,25 @@
 name: Add to Project
 
 on:
-  issues:
-    types:
-      - opened
-  pull_request_target:
+  pull_request_target: # zizmor: ignore[dangerous-triggers] Adds PRs to a project board only; no untrusted code is checked out.
     types:
       - opened
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
 jobs:
   add_to_project:
+    name: Add pull request to project
     if: '!github.event.repository.fork'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     steps:
-      - uses: actions/add-to-project@244f685bbc3b7adfa8466e08b698b5577571133e # v1.0.2
+      - uses: actions/add-to-project@f2c1f1fa649a891be84948ea89b5dfba1526ef05 # v2.0.1
         with:
-          # issues are added to the Planning project
           # PRs are added to the Review project
-          project-url: https://github.com/orgs/conda/projects/${{ github.event_name == 'issues' && 2 || 16 }}
-          github-token: ${{ secrets.PROJECT_TOKEN }}
+          project-url: https://github.com/orgs/conda/projects/16
+          github-token: ${{ secrets.PROJECT_TOKEN }} # zizmor: ignore[secrets-outside-env] Project board token; environment policy unchanged.

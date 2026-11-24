@@ -8,6 +8,7 @@ from os.path import abspath, exists, expanduser, isdir, join
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from .deprecations import deprecated
 from .exceptions import CondaBuildUserError
 from .os_utils.external import find_executable
 from .post import mk_relative_osx
@@ -15,6 +16,15 @@ from .utils import check_call_env, get_site_packages, on_mac, rec_glob
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+deprecated.module(
+    "27.3",
+    "27.9",
+    addendum=(
+        "Migrate to the `conda-pypi` editable install workflow. "
+        "See https://conda.github.io/conda-pypi/features/#editable-package-support"
+    ),
+)
 
 
 def relink_sharedobjects(pkg_path, build_prefix):

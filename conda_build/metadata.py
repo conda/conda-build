@@ -9,11 +9,10 @@ import os
 import re
 import sys
 import time
-import warnings
 from collections import OrderedDict
 from functools import cache, lru_cache
 from os.path import isdir, isfile, join
-from typing import TYPE_CHECKING, NamedTuple, overload
+from typing import TYPE_CHECKING, Any, NamedTuple, overload
 
 import jinja2
 import yaml
@@ -143,22 +142,22 @@ class OSModuleSubset:
     sep = os.sep
 
 
-def get_selectors(config: Config) -> dict[str, bool]:
-    """Aggregates selectors for use in recipe templating.
+def get_selectors(config: Config) -> dict[str, Any]:
+    """Build the mapping used for YAML line selectors and Jinja.
 
-    Derives selectors from the config and variants to be injected
-    into the Jinja environment prior to templating.
+    Gather selectors from the config, variant, environment variables, and feature list for
+    use in YAML line selectors and Jinja.
 
     Args:
-        config (Config): The config object
+        config (Config): The build config object
 
     Returns:
-        dict[str, bool]: Dictionary of on/off selectors for Jinja
+        A mixed-type dict (booleans, ints, strings, …) for YAML ``# [...]`` line selectors
+        and Jinja, not only boolean flags.
     """
-    # Remember to update the docs of any of this changes
     plat = config.host_subdir
 
-    d = dict(
+    d: dict[str, Any] = dict(
         linux32=bool(plat == "linux-32"),
         linux64=bool(plat == "linux-64"),
         arm=plat.startswith("linux-arm"),
@@ -190,6 +189,7 @@ def get_selectors(config: Config) -> dict[str, bool]:
             d["x86"] = plat.endswith(("-32", "-64"))
 
     defaults = get_default_variant(config)
+
     py = config.variant.get("python", defaults["python"])
     # there are times when python comes in as a tuple
     if not hasattr(py, "split"):
@@ -197,32 +197,27 @@ def get_selectors(config: Config) -> dict[str, bool]:
     # go from "3.6 *_cython" -> "36"
     # or from "3.6.9" -> "36"
     py_major, py_minor, *_ = py.split(" ")[0].split(".")
-    py = int(f"{py_major}{py_minor}")
+    py_ver_int = int(f"{py_major}{py_minor}")
 
     d["build_platform"] = config.build_subdir
 
     d.update(
         dict(
-            py=py,
+            py=py_ver_int,
             py3k=bool(py_major == "3"),
             py2k=bool(py_major == "2"),
-            py26=bool(py == 26),
-            py27=bool(py == 27),
-            py33=bool(py == 33),
-            py34=bool(py == 34),
-            py35=bool(py == 35),
-            py36=bool(py == 36),
+            py26=bool(py_ver_int == 26),
+            py27=bool(py_ver_int == 27),
+            py33=bool(py_ver_int == 33),
+            py34=bool(py_ver_int == 34),
+            py35=bool(py_ver_int == 35),
+            py36=bool(py_ver_int == 36),
         )
     )
 
     np = config.variant.get("numpy")
     if not np:
         np = defaults["numpy"]
-        if config.verbose:
-            utils.get_logger(__name__).warning(
-                "No numpy version specified in conda_build_config.yaml.  "
-                "Falling back to default numpy value of {}".format(defaults["numpy"])
-            )
     d["np"] = int("".join(np.split(".")[:2]))
 
     pl = config.variant.get("perl", defaults["perl"])
@@ -234,7 +229,8 @@ def get_selectors(config: Config) -> dict[str, bool]:
 
     for feature, value in feature_list:
         d[feature] = value
-    d.update(os.environ)
+
+    d.update(OSModuleSubset.environ)
 
     # here we try to do some type conversion for more intuitive usage.  Otherwise,
     #    values like 35 are strings by default, making relational operations confusing.
@@ -248,15 +244,6 @@ def get_selectors(config: Config) -> dict[str, bool]:
                     v = v.lower() == "true"
                 d[k] = v
     return d
-
-
-def ns_cfg(config: Config) -> dict[str, bool]:
-    warnings.warn(
-        "`conda_build.metadata.ns_cfg` is pending deprecation and will be removed in a "
-        "future release. Please use `conda_build.metadata.get_selectors` instead.",
-        PendingDeprecationWarning,
-    )
-    return get_selectors(config)
 
 
 # Selectors must be either:
@@ -694,6 +681,9 @@ FIELDS = {
         "post-link": str,
         "pre-unlink": str,
         "missing_dso_whitelist": None,
+        "missing_dso_allowlist": None,  # preferred alias for missing_dso_whitelist
+        "runpath_whitelist": None,
+        "runpath_allowlist": None,  # preferred alias for runpath_whitelist
         "error_overdepending": None,
         "error_overlinking": None,
         "overlinking_ignore_patterns": [],
@@ -832,6 +822,33 @@ def _str_version(package_meta):
     if "msvc_compiler" in package_meta:
         package_meta["msvc_compiler"] = str(package_meta.get("msvc_compiler", ""))
     return package_meta
+
+
+_CEP26_NAME_RE: re.Pattern[str] = re.compile(
+    r"^(([a-z0-9])|([a-z0-9_](?!_)))[._-]?([a-z0-9]+(\.|-|_|$))*$"
+)
+_CEP26_VIRTUAL_NAME_RE: re.Pattern[str] = re.compile(
+    r"^__[a-z0-9][._-]?([a-z0-9]+(\.|-|_|$))*$"
+)
+
+
+def check_package_name(name: str) -> None:
+    """Validate a package name against CEP-26 naming conventions.
+
+    See https://conda.org/learn/ceps/cep-0026
+    """
+    if not name:
+        return
+    if not (_CEP26_NAME_RE.match(name) or _CEP26_VIRTUAL_NAME_RE.match(name)):
+        if invalid := re.findall(r"[^a-z0-9._-]", name):
+            raise CondaBuildUserError(
+                f"package/name contains invalid characters "
+                f"({''.join(dict.fromkeys(invalid))}): {name}"
+            )
+        raise CondaBuildUserError(
+            f"package/name does not follow CEP-26 naming conventions: {name}. "
+            f"See https://conda.org/learn/ceps/cep-0026"
+        )
 
 
 def check_bad_chrs(value: str, field: str) -> None:
@@ -1590,7 +1607,7 @@ class MetaData:
         name = str(name)
         if name != name.lower():
             sys.exit(f"Error: package/name must be lowercase, got: {name!r}")
-        check_bad_chrs(name, "package/name")
+        check_package_name(name)
         return name
 
     def version(self) -> str:
@@ -1613,11 +1630,16 @@ class MetaData:
             return 0
 
         try:
-            return int(number)
+            n = int(number)
         except (ValueError, TypeError):
             raise ValueError(
                 f"Build number was invalid value '{number}'. Must be an integer."
             )
+        if n < 0:
+            raise ValueError(
+                f"Build number must be a non-negative integer, got '{number}'."
+            )
+        return n
 
     def get_depends_top_and_out(self, typ):
         meta_requirements = ensure_list(self.get_value("requirements/" + typ, []))[:]
@@ -1793,7 +1815,8 @@ class MetaData:
             return _hash_dependencies(hashing_dependencies, self.config.hash_length)
         return hash_
 
-    def build_id(self):
+    def build_id(self, *, force_final_hash: bool = False):
+        """Return the build ID, optionally hashing non-final metadata."""
         manual_build_string = self.get_value("build/string")
         # we need the raw recipe for this metadata (possibly an output), so that we can say whether
         #    PKG_HASH is used for anything.
@@ -1813,7 +1836,7 @@ class MetaData:
         else:
             # default; build/string not set or uses PKG_HASH variable, so we should fill in the hash
             out = build_string_from_metadata(self)
-            if self.config.filename_hashing and self.final:
+            if self.config.filename_hashing and (self.final or force_final_hash):
                 hash_ = self.hash_dependencies()
                 if not re.findall(f"h[0-9a-f]{{{self.config.hash_length}}}", out):
                     ret = out.rsplit("_", 1)
@@ -1966,6 +1989,7 @@ class MetaData:
         return expand_globs(files, self.config.host_prefix)
 
     def ignore_verify_codes(self):
+        """Return legacy conda-verify codes, which no longer affect builds."""
         return ensure_list(self.get_value("build/ignore_verify_codes", []))
 
     def binary_relocation(self):

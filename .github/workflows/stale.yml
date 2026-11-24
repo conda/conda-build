@@ -14,14 +14,21 @@ on:
   schedule:
     - cron: 0 4 * * *
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.repository }}
+  cancel-in-progress: true
+
 permissions:
-  issues: write
-  pull-requests: write
+  contents: read
 
 jobs:
   stale:
+    name: Mark stale threads
     if: '!github.event.repository.fork'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
+    permissions:
+      issues: write # Required to mark and close stale issues.
+      pull-requests: write # Required to mark and close stale pull requests.
     strategy:
       matrix:
         include:
@@ -33,12 +40,13 @@ jobs:
             days-before-issue-stale: 90
             days-before-issue-close: 21
     steps:
-      - uses: conda/actions/read-yaml@f05161c6e6e37a49b17c8e0b436197b53830318a # v25.9.2
-        id: read_yaml
+      - uses: conda/actions/read-file@8153f7f73472ac36d654d5111be19abaecc48cc6 # v26.10.0
+        id: read_messages
         with:
           path: https://raw.githubusercontent.com/conda/infra/main/.github/messages.yml
+          parser: yaml
 
-      - uses: actions/stale@5f858e3efba33a5ca4407a664cc011ad407f2008 # v10.1.0
+      - uses: actions/stale@4391f3da665fdf50b6810c1a66712fb9ba21aa93 # v11.0.0
         id: stale
         with:
           # Only issues with these labels are checked whether they are stale
@@ -54,7 +62,7 @@ jobs:
           days-before-pr-close: 30
 
           # Comment on the staled issues
-          stale-issue-message: ${{ fromJSON(steps.read_yaml.outputs.value)['stale-issue'] }}
+          stale-issue-message: ${{ fromJSON(steps.read_messages.outputs.content)['stale-issue'] }}
           # Label to apply on staled issues
           stale-issue-label: stale
           # Label to apply on closed issues
@@ -63,7 +71,7 @@ jobs:
           close-issue-reason: not_planned
 
           # Comment on the staled PRs
-          stale-pr-message: ${{ fromJSON(steps.read_yaml.outputs.value)['stale-pr'] }}
+          stale-pr-message: ${{ fromJSON(steps.read_messages.outputs.content)['stale-pr'] }}
           # Label to apply on staled PRs
           stale-pr-label: stale
           # Label to apply on closed PRs
@@ -77,7 +85,7 @@ jobs:
           labels-to-remove-when-unstale: stale,stale::closed
 
           # Max number of operations per run
-          operations-per-run: ${{ secrets.STALE_OPERATIONS_PER_RUN || 100 }}
+          operations-per-run: ${{ secrets.STALE_OPERATIONS_PER_RUN || 100 }} # zizmor: ignore[secrets-outside-env] Repo secret for stale bot automation; environment policy unchanged.
           # Dry-run
           debug-only: ${{ github.event.inputs.dryrun || false }}
           # Order to get issues/PRs
@@ -95,4 +103,4 @@ jobs:
           exempt-assignees: mingwandroid
 
       - name: Print outputs
-        run: echo ${{ join(steps.stale.outputs.*, ',') }}
+        run: echo ${{ join(steps.stale.outputs.*, ',') }} # zizmor: ignore[template-injection] Outputs come from the stale action, not attacker-controlled input.

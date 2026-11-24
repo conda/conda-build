@@ -2,12 +2,17 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from __future__ import annotations
 
+import hashlib
 import os
 import re
+import tarfile
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import conda_package_handling
 import pytest
+import yaml
+from conda.base.context import context
 from conda.exceptions import PackagesNotFoundError
 
 from conda_build import api
@@ -15,12 +20,13 @@ from conda_build.cli import main_build, main_render
 from conda_build.config import (
     Config,
     zstd_compression_level_default,
+    zstd_compression_threads_default,
 )
 from conda_build.exceptions import CondaBuildUserError, DependencyNeedsBuildingError
 from conda_build.os_utils.external import find_executable
-from conda_build.utils import get_build_folders, on_win, package_has_file
+from conda_build.utils import get_build_folders, on_mac, on_win, package_has_file
 
-from ..utils import metadata_dir
+from ..utils import metadata_dir, variants_dir
 from ..utils import reset_config as _reset_config
 
 if TYPE_CHECKING:
@@ -41,7 +47,20 @@ def test_build_empty_sections(conda_build_test_recipe_envvar: str):
     main_build.execute(args)
 
 
+@pytest.mark.parametrize("flag", ["--verify", "--no-verify", "--strict-verify"])
+def test_verify_flags_are_deprecated_noops(flag):
+    with pytest.deprecated_call(match="conda-verify.*no effect"):
+        _, parsed = main_build.parse_args([flag, "recipe"])
+    assert parsed.recipe == ["recipe"]
+    _, defaults = main_build.parse_args(["recipe"])
+    main_build.check_arguments_rattler("build", parsed, defaults)
+
+
 @pytest.mark.serial
+@pytest.mark.skipif(
+    context.subdir == "osx-arm64",
+    reason="conda_build_test channel does not support osx-arm64",
+)
 def test_build_add_channel():
     """This recipe requires the conda_build_test_requirement package, which is
     only on the conda_build_test channel. This verifies that the -c argument
@@ -109,6 +128,50 @@ def test_build_output_build_path(
     )
     output, error = capfd.readouterr()
     assert test_path == output.rstrip(), error
+    assert error == ""
+
+
+@pytest.mark.parametrize(
+    "variants, expected_outputs",
+    [
+        (
+            None,
+            {
+                "some_output_using_abc_ghi",
+                "some_output_using_abc_jkl",
+                "some_output_using_def_ghi",
+                "some_output_using_def_jkl",
+            },
+        ),
+        (
+            "something: abc",
+            {
+                "some_output_using_abc_ghi",
+                "some_output_using_abc_jkl",
+            },
+        ),
+    ],
+)
+def test_build_output_build_path_variants(
+    variants, expected_outputs, testing_config, capfd
+):
+    testing_config.verbose = False
+    testing_config.debug = False
+    args = ["--output", os.path.join(variants_dir, "11_variant_output_names")]
+    if variants:
+        args.extend(("--variants", variants))
+
+    main_build.execute(args)
+
+    output, error = capfd.readouterr()
+    names = [os.path.basename(path) for path in output.rstrip().splitlines()]
+    # The hash includes platform-specific variant inputs, so assert its shape rather
+    # than a value that would only be correct for one CI runner.
+    pattern = re.compile(r"(.+)-1\.0-h[0-9a-f]+_0\.conda")
+    assert {
+        match.group(1) for name in names if (match := pattern.fullmatch(name))
+    } == expected_outputs, error or output
+    assert len(names) == len(expected_outputs)
     assert error == ""
 
 
@@ -234,9 +297,24 @@ def test_build_output_folder(testing_workdir: str, testing_metadata: MetaData):
     ).is_file()
 
 
-def test_build_source(testing_workdir: str):
+def test_build_source(
+    testing_workdir: str,
+    testing_metadata: MetaData,
+    local_python_source,
+    http_test_server,
+):
+    # Keep HTTP download and archive extraction coverage without relying on PyPI.
+    archive = http_test_server.directory / "source.tar.gz"
+    with tarfile.open(archive, "w:gz") as tar:
+        tar.add(local_python_source, arcname="source")
+    testing_metadata.meta["source"] = {
+        "url": http_test_server.get_url(archive.name),
+        "sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),
+    }
+    recipe = Path(testing_workdir, "meta.yaml")
+    api.output_yaml(testing_metadata, recipe)
     args = [
-        os.path.join(metadata_dir, "_pyyaml_find_header"),
+        str(recipe),
         "--source",
         "--no-build-id",
         "--croot",
@@ -245,7 +323,10 @@ def test_build_source(testing_workdir: str):
         "--no-anaconda-upload",
     ]
     main_build.execute(args)
-    assert Path(testing_workdir, "work", "setup.py").is_file()
+    assert (
+        Path(testing_workdir, "work", "setup.py").read_bytes()
+        == (local_python_source / "setup.py").read_bytes()
+    )
 
 
 @pytest.mark.serial
@@ -322,11 +403,11 @@ def test_no_force_upload(
 
 @pytest.mark.slow
 def test_conda_py_no_period(testing_workdir, testing_metadata, monkeypatch):
-    monkeypatch.setenv("CONDA_PY", "36")
+    monkeypatch.setenv("CONDA_PY", "313")
     testing_metadata.meta["requirements"] = {"host": ["python"], "run": ["python"]}
     api.output_yaml(testing_metadata, "meta.yaml")
     outputs = api.build(testing_workdir, notest=True)
-    assert any("py36" in output for output in outputs)
+    assert any("py313" in output for output in outputs)
 
 
 def test_build_skip_existing(
@@ -459,6 +540,10 @@ def test_relative_path_test_artifact(
     main_build.execute(args)
 
 
+@pytest.mark.skipif(
+    context.subdir == "osx-arm64",
+    reason="imagesize<1.0 package not available on osx-arm64",
+)
 def test_test_extra_dep(testing_metadata):
     testing_metadata.meta["test"]["imports"] = ["imagesize"]
     api.output_yaml(testing_metadata, "meta.yaml")
@@ -523,6 +608,44 @@ def test_zstd_compression_level(
         assert config.zstd_compression_level == zstd_compression_level_default
 
 
+@pytest.mark.parametrize(
+    "zstd_threads_condarc, zstd_threads_cli",
+    [
+        (None, None),
+        (4, None),
+        (4, -1),
+    ],
+)
+def test_zstd_compression_threads(
+    testing_workdir, request, zstd_threads_condarc, zstd_threads_cli
+):
+    assert zstd_compression_threads_default not in {
+        zstd_threads_condarc,
+        zstd_threads_cli,
+    }
+    if zstd_threads_condarc:
+        with open(os.path.join(testing_workdir, ".condarc"), "w") as f:
+            print(
+                "conda_build:",
+                f"  zstd_compression_threads: {zstd_threads_condarc}",
+                sep="\n",
+                file=f,
+            )
+    request.addfinalizer(_reset_config)
+    _reset_config([os.path.join(testing_workdir, ".condarc")])
+    args = ["non_existing_recipe"]
+    if zstd_threads_cli:
+        args.append(f"--zstd-compression-threads={zstd_threads_cli}")
+    parser, args = main_build.parse_args(args)
+    config = Config(**args.__dict__)
+    if zstd_threads_cli:
+        assert config.zstd_compression_threads == zstd_threads_cli
+    elif zstd_threads_condarc:
+        assert config.zstd_compression_threads == zstd_threads_condarc
+    else:
+        assert config.zstd_compression_threads == zstd_compression_threads_default
+
+
 def test_user_warning(tmpdir, recwarn):
     dir_recipe_path = tmpdir.mkdir("recipe-path")
     recipe = dir_recipe_path.join("meta.yaml")
@@ -540,7 +663,7 @@ def test_user_warning(tmpdir, recwarn):
 
 
 def test_build_with_empty_channel_fails(empty_channel: Path) -> None:
-    with pytest.raises(PackagesNotFoundError):
+    with pytest.raises((PackagesNotFoundError, DependencyNeedsBuildingError)):
         main_build.execute(
             [
                 "--override-channels",
@@ -548,3 +671,239 @@ def test_build_with_empty_channel_fails(empty_channel: Path) -> None:
                 os.path.join(metadata_dir, "_recipe_requiring_external_channel"),
             ]
         )
+
+
+def test_build_v1_recipe() -> None:
+    """Test building a v1 recipe"""
+    recipe = os.path.join(metadata_dir, "..", "variants", "32_v1_recipe")
+
+    args = [recipe, "-c", "conda-forge", "--override-channels"]
+    assert main_build.execute(args) == 0
+
+    # check if 'defaults' multichannel will be handled properly
+
+    args = [recipe, "-c", "conda-forge", "-c", "defaults", "--override-channels"]
+    assert main_build.execute(args) == 0
+
+
+def test_build_v1_recipe_with_downstream_test(
+    mocker: MockerFixture, tmp_path: Path
+) -> None:
+    """Build a v1 recipe and execute its downstream package test."""
+    recipe = tmp_path / "recipe"
+    recipe.mkdir()
+    (recipe / "recipe.yaml").write_text(
+        """
+package:
+  name: mylib
+  version: "1.0.0"
+
+build:
+  number: 0
+  script:
+    - mkdir -p $PREFIX
+
+tests:
+  - downstream: libmambapy
+""",
+        encoding="utf-8",
+    )
+
+    output = tmp_path / "out"
+    assert (
+        main_build.execute(
+            [
+                str(recipe),
+                "--output-folder",
+                str(output),
+                "--override-channels",
+                "--channel",
+                "conda-forge",
+            ]
+        )
+        == 0
+    )
+    packages = list(output.rglob("mylib-1.0.0-*.conda"))
+    assert packages
+
+
+@pytest.mark.parametrize(
+    ("selector", "expected_build_number"),
+    [
+        pytest.param(
+            "linux",
+            1,
+            marks=pytest.mark.skipif(on_mac or on_win, reason="Linux selector"),
+        ),
+        pytest.param(
+            "win", 2, marks=pytest.mark.skipif(not on_win, reason="Windows selector")
+        ),
+        pytest.param(
+            "osx", 3, marks=pytest.mark.skipif(not on_mac, reason="macOS selector")
+        ),
+    ],
+)
+def test_build_v1_recipe_with_legacy_cbc_selectors(
+    tmp_path: Path, selector: str, expected_build_number: int
+) -> None:
+    """Build a v1 recipe with selectors in conda_build_config.yaml."""
+    recipe = tmp_path / "recipe"
+    recipe.mkdir()
+    (recipe / "recipe.yaml").write_text(
+        """
+schema_version: 1
+
+package:
+  name: test-legacy-cbc-selectors
+  version: "1.0"
+
+build:
+  number: ${{ build_number }}
+""",
+        encoding="utf-8",
+    )
+    (recipe / "conda_build_config.yaml").write_text(
+        f"""
+build_number:
+  - {expected_build_number}  # [{selector}]
+""",
+        encoding="utf-8",
+    )
+
+    assert (
+        main_build.execute([str(recipe), "--output-folder", str(tmp_path / "out")]) == 0
+    )
+    packages = list((tmp_path / "out").rglob("*.conda"))
+    assert len(packages) == 1
+    assert packages[0].name.endswith(f"_{expected_build_number}.conda")
+
+
+def test_build_v1_recipe_multi_output(testing_workdir: str) -> None:
+    """Test building a multi-output v1 recipe"""
+    recipe = os.path.join(metadata_dir, "..", "variants", "33_v1_recipe_multi_output")
+
+    out = Path(testing_workdir, "out")
+    out.mkdir(parents=True)
+
+    args = [
+        recipe,
+        "--output-folder",
+        str(out),
+        "-c",
+        "conda-forge",
+        "--override-channels",
+    ]
+    assert main_build.execute(args) == 0
+
+    conda_packages = sorted(out.rglob("*.conda"))
+    assert len(conda_packages) == 2
+
+    assert main_build.execute(["--test", str(conda_packages[0])]) == 0
+
+
+@pytest.mark.parametrize(
+    "target_platform, variant_name",
+    [
+        ("linux-aarch64", "cbc_aarch64.yml"),
+        ("osx-arm64", "cbc_osx_arm64.yml"),
+    ],
+    ids=["linux-aarch64", "osx-arm64"],
+)
+def test_v1_recipe_platform_config(
+    testing_workdir: str, target_platform: str, variant_name: str
+) -> None:
+    """Verify platform configuration settings in v1 recipes"""
+    recipe = os.path.join(metadata_dir, "..", "variants", "33_v1_recipe_multi_output")
+
+    out = Path(testing_workdir, "out")
+    out.mkdir(parents=True)
+
+    variant = os.path.join(recipe, "variants", variant_name)
+    args = [
+        recipe,
+        "-m",
+        variant,
+        "--output-folder",
+        str(out),
+    ]
+    main_build.execute(args)
+
+    conda_packages = sorted(out.rglob("*.conda"))
+
+    for pkg in conda_packages:
+        extract_dir = Path(testing_workdir, "extracted", pkg.stem)
+        extract_dir.mkdir(parents=True, exist_ok=True)
+
+        conda_package_handling.api.extract(str(pkg), dest_dir=str(extract_dir))
+
+        rendered_recipe = extract_dir / "info" / "recipe" / "rendered_recipe.yaml"
+
+        with rendered_recipe.open() as f:
+            recipe_data = yaml.safe_load(f)
+
+        # target_platform is in build_configuration.target_platform
+        build_config = recipe_data.get("build_configuration", {})
+        assert build_config, f"missing build_configuration in {pkg}"
+
+        assert build_config.get("target_platform") == target_platform, (
+            f"expected target_platform={target_platform} in build_configuration, "
+            f"got {build_config.get('target_platform')}"
+        )
+
+
+def test_build_v1_recipe_result_report(capsys) -> None:
+    """Test for checking build summary report when building multiple recipes"""
+    recipe1 = os.path.join(metadata_dir, "..", "variants", "32_v1_recipe")
+    recipe2 = os.path.join(metadata_dir, "..", "variants", "33_v1_recipe_multi_output")
+
+    args = [recipe1, recipe2, "-c", "conda-forge", "--override-channels"]
+    assert main_build.execute(args) == 0
+
+    captured = capsys.readouterr()
+    output = captured.out + captured.err
+
+    assert "Tried to build 2 recipe files, resulting in 3 outputs." in output
+    assert "pytest: Succeeded" in output
+    assert "myproject-lib: Succeeded" in output
+    assert "myproject-tools: Succeeded" in output
+
+
+def test_build_v1_no_anaconda_upload(capsys) -> None:
+    """Verify that we respect --no-anaconda-upload flag"""
+    recipe = os.path.join(metadata_dir, "..", "variants", "32_v1_recipe")
+
+    args = [recipe, "-c", "conda-forge", "--override-channels", "--no-anaconda-upload"]
+    assert main_build.execute(args) == 0
+
+    captured = capsys.readouterr()
+    output = captured.out + captured.err
+
+    assert "# Automatic uploading is disabled" in output
+
+
+def test_error_on_mixed_v0_v1_recipes(testing_workdir: str, capsys) -> None:
+    """
+    Ensure conda-build errors when both meta.yaml and recipe.yaml
+    are present in the same directory.
+    """
+
+    recipe = Path(testing_workdir) / "mixed_recipe"
+    recipe.mkdir()
+
+    # Create empty meta.yaml and recipe.yaml
+    (recipe / "meta.yaml").touch()
+    (recipe / "recipe.yaml").touch()
+
+    args = [str(recipe)]
+    assert main_build.execute(args) == 1
+
+    captured = capsys.readouterr()
+    assert "Cannot process several recipe versions at the same time!" in captured.err
+
+
+def test_build_no_recipe_files(testing_workdir: str) -> None:
+    recipe = Path(testing_workdir, "empty_recipe")
+    recipe.mkdir()
+
+    with pytest.raises(ValueError, match="No valid recipes found for input"):
+        main_build.execute([str(recipe)])
