@@ -22,12 +22,8 @@ if False:
 
 THIS_DIR = dirname(__file__)
 PREFIX = normpath(sys.prefix)
-if sys.platform == "win32":
-    BIN_DIR = join(PREFIX, "Scripts")
-    SITE_PACKAGES = "Lib/site-packages"
-else:
-    BIN_DIR = join(PREFIX, "bin")
-    SITE_PACKAGES = f"lib/python{sys.version[:3]}/site-packages"
+BIN_DIR = join(PREFIX, "Scripts" if sys.platform == "win32" else "bin")
+SITE_PACKAGES = Path(sysconfig.get_path("purelib")).relative_to(PREFIX).as_posix()
 
 # the list of these files is going to be store in info/_files
 FILES = []
