@@ -995,18 +995,14 @@ def path2url(path):
 def get_stdlib_dir(prefix, py_ver):
     if on_win:
         if VersionOrder(py_ver) >= VersionOrder("3.15"):
-            lib_dir = os.path.join(prefix, "lib", "python")
-        else:
-            lib_dir = os.path.join(prefix, "Lib")
-    else:
-        lib_dir = os.path.join(prefix, "lib")
-        python_folder = glob(os.path.join(lib_dir, "python?.*"), recursive=True)
-        python_folder = sorted(filterfalse(islink, python_folder))
-        if python_folder:
-            lib_dir = os.path.join(lib_dir, python_folder[0])
-        else:
-            lib_dir = os.path.join(lib_dir, f"python{py_ver}")
-    return lib_dir
+            return os.path.join(prefix, "lib", "python")
+        return os.path.join(prefix, "Lib")
+    lib_dir = os.path.join(prefix, "lib")
+    python_folder = glob(os.path.join(lib_dir, "python?.*"), recursive=True)
+    python_folder = sorted(filterfalse(islink, python_folder))
+    if python_folder:
+        return os.path.join(lib_dir, python_folder[0])
+    return os.path.join(lib_dir, f"python{py_ver}")
 
 
 def _get_python_site_packages_path(prefix):
