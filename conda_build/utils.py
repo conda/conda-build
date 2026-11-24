@@ -50,14 +50,11 @@ import conda_package_handling.api
 import filelock
 import libarchive
 import yaml
-from conda.base.constants import (
-    CONDA_PACKAGE_EXTENSION_V1,
-    CONDA_PACKAGE_EXTENSION_V2,
-    KNOWN_SUBDIRS,
-)
+from conda.base.constants import KNOWN_SUBDIRS
 from conda.base.context import context
-from conda.common.path import unix_path_to_win, win_path_to_unix
-from conda.exceptions import CondaHTTPError
+from conda.common.path import unix_path_to_win, win_path_backout, win_path_to_unix
+from conda.core.prefix_data import PrefixData
+from conda.exceptions import CondaError, CondaHTTPError
 from conda.gateways.connection.download import download
 from conda.gateways.disk.create import TemporaryDirectory
 from conda.gateways.disk.read import compute_sum
@@ -66,17 +63,20 @@ from conda.models.match_spec import MatchSpec
 from conda.models.records import PackageRecord
 from conda.models.version import VersionOrder
 
-from .exceptions import BuildLockError
+from .exceptions import BuildLockError, CondaBuildUserError
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
-    from typing import TypeVar
+    from collections.abc import Callable, Generator, Mapping
+    from typing import Final, Literal, TypeVar
 
     from .metadata import MetaData
 
     T = TypeVar("T")
     K = TypeVar("K")
     V = TypeVar("V")
+
+CONDA_PACKAGE_EXTENSION_V1: Final = ".tar.bz2"
+CONDA_PACKAGE_EXTENSION_V2: Final = ".conda"
 
 CONDA_PACKAGE_EXTENSIONS = (CONDA_PACKAGE_EXTENSION_V2, CONDA_PACKAGE_EXTENSION_V1)
 
@@ -1006,7 +1006,29 @@ def get_stdlib_dir(prefix, py_ver):
     return lib_dir
 
 
+def _get_python_site_packages_path(prefix):
+    """The ``python_site_packages_path`` recorded for the python installed in ``prefix``.
+
+    Returns ``None`` when there is no prefix, no python in it, or a python old
+    enough not to record the field.
+    """
+    if not prefix or not isdir(prefix):
+        return None
+    try:
+        record = PrefixData(str(prefix)).get("python", default=None)
+    except CondaError:
+        return None
+    return getattr(record, "python_site_packages_path", None) or None
+
+
 def get_site_packages(prefix, py_ver):
+    # python declares where its site-packages lives, which is the only way to get
+    # this right for layouts that are not derivable from the version alone -- e.g.
+    # free-threaded builds (lib/python3.14t/site-packages) and, per CFEP-27,
+    # python >=3.15 on Windows (lib/python/site-packages, not Lib/site-packages).
+    # https://github.com/conda-forge/cfep/blob/main/cfep-27.md
+    if site_packages_path := _get_python_site_packages_path(prefix):
+        return os.path.join(prefix, *site_packages_path.split("/"))
     return os.path.join(get_stdlib_dir(prefix, py_ver), "site-packages")
 
 
@@ -1081,6 +1103,46 @@ def iter_entry_points(items):
         yield m.groups()
 
 
+def locate_conda_launcher(
+    arch: Literal["32", "64", "arm64"], *, launcher_type: Literal["cli", "gui"] = "cli"
+) -> str:
+    """Locate and verify the packaged launcher for a Windows target architecture."""
+    if arch not in ("32", "64", "arm64") or launcher_type not in ("cli", "gui"):
+        raise ValueError(f"Unsupported Windows launcher: {launcher_type}-{arch}")
+
+    package_name = "conda-launchers"
+    short_path = f"share/conda-launchers/{launcher_type}-{arch}.exe"
+    record = PrefixData(sys.prefix).get("conda-launchers", None)
+    if record is None or getattr(record, "paths_data", None) is None:
+        raise CondaBuildUserError(
+            "Install conda-launchers >=24.7.1 in the environment running conda-build."
+        )
+    path_data = next(
+        (
+            path
+            for path in record.paths_data.paths
+            if win_path_backout(path.path) == short_path
+        ),
+        None,
+    )
+    if path_data is None:
+        raise FileNotFoundError(
+            f"The installed conda-launchers package does not provide {short_path}."
+        )
+    launcher_src = join(sys.prefix, short_path)
+    sha256 = getattr(path_data, "sha256", None)
+    if not sha256 or not isfile(launcher_src):
+        raise CondaBuildUserError(
+            f"Reinstall {package_name}: {launcher_type}-{arch}.exe "
+            "or its SHA256 is missing."
+        )
+    if compute_sum(launcher_src, "sha256") != sha256:
+        raise CondaBuildUserError(
+            f"Reinstall {package_name}: SHA256 mismatch for {launcher_type}-{arch}.exe."
+        )
+    return launcher_src
+
+
 def create_entry_point(path, module, func, config):
     """Creates an entry point for legacy noarch_python builds"""
     import_name = func.split(".")[0]
@@ -1091,7 +1153,7 @@ def create_entry_point(path, module, func, config):
                 fo.write("#!python_d\n")
             fo.write(pyscript)
             copy_into(
-                join(dirname(__file__), f"cli-{str(config.host_arch)}.exe"),
+                locate_conda_launcher(str(config.host_arch)),
                 path + ".exe",
                 config.timeout,
             )
@@ -1361,11 +1423,18 @@ def find_recipe(path: str) -> str:
 
 
 def is_v1_recipe(recipe_dir: Path) -> bool:
-    """Check if recipe.yaml exists"""
+    """Check if recipe.yaml exists."""
     recipe_dir = Path(recipe_dir)
-    return (recipe_dir / "recipe.yaml").exists() and not any(
-        (recipe_dir / meta).exists() for meta in VALID_METAS
-    )
+    return (recipe_dir / "recipe.yaml").is_file()
+
+
+def is_v0_recipe(recipe_dir: Path) -> bool:
+    """Check if meta.yaml or any of the valid v0 recipe filenames exist."""
+    try:
+        find_recipe(recipe_dir)
+        return True
+    except OSError:
+        return False
 
 
 class LoggingContext:
@@ -1462,25 +1531,79 @@ def capture():
         out[1] = out[1].getvalue()
 
 
-# copied from conda; added in 4.3, not currently part of exported functionality
+def encode_for_env_var(value) -> str:
+    """Environment names and values need to be string."""
+    if isinstance(value, str):
+        return value
+    elif isinstance(value, bytes):
+        return value.decode()
+    return str(value)
+
+
+def encode_environment(env):
+    return {encode_for_env_var(k): encode_for_env_var(v) for k, v in env.items()}
+
+
 @contextlib.contextmanager
-def env_var(name, value, callback=None):
-    # NOTE: will likely want to call reset_context() when using this function, so pass
-    #       it as callback
-    name, value = str(name), str(value)
-    saved_env_var = os.environ.get(name)
-    try:
+def env_vars(
+    var_map: dict[str, str] | None = None,
+    callback: Callable[[], None] | None = None,
+    stack_callback: Callable[[bool], None] | None = None,
+) -> Generator[None, None, None]:
+    """Temporarily set environment variables.
+
+    Args:
+        var_map: Dictionary of environment variable names to values.
+        callback: Optional callback invoked when entering and exiting the context.
+        stack_callback: Optional callback invoked with True when entering, False when exiting.
+    """
+    if var_map is None:
+        var_map = {}
+
+    new_var_map = encode_environment(var_map)
+    saved_vars = {}
+    for name, value in new_var_map.items():
+        saved_vars[name] = os.environ.get(name)
         os.environ[name] = value
+    try:
         if callback:
             callback()
+        if stack_callback:
+            stack_callback(True)
         yield
     finally:
-        if saved_env_var:
-            os.environ[name] = saved_env_var
-        else:
-            del os.environ[name]
+        for name, value in saved_vars.items():
+            if value is None:
+                del os.environ[name]
+            else:
+                os.environ[name] = value
         if callback:
             callback()
+        if stack_callback:
+            stack_callback(False)
+
+
+# copied from conda; added in 4.3, not currently part of exported functionality
+@contextlib.contextmanager
+def env_var(
+    name: str,
+    value: str,
+    callback: Callable[[], None] | None = None,
+):
+    """Temporarily set a single environment variable.
+
+    Users will likely want to call reset_context() when using this function,
+    so pass it as callback.
+
+    Args:
+        name: Environment variable name.
+        value: Environment variable value.
+        callback: Optional callback invoked when entering and exiting the context.
+        stack_callback: Optional callback invoked with True when entering, False when exiting.
+    """
+    d = {name: value}
+    with env_vars(d, callback=callback) as es:
+        yield es
 
 
 def trim_empty_keys(dict_):
@@ -2129,6 +2252,15 @@ def write_bat_activation_text(file_handle, m):
     file_handle.write(f'call "{context.root_prefix}\\condabin\\conda_hook.bat"\n')
     for key, value in context.conda_exe_vars_dict.items():
         file_handle.write(f'set "{key}={value or ""}"\n')
+    # Opt-in isolated activation: run via `python -I -m conda` so a recipe named
+    # conda (or PYTHONPATH) cannot shadow the outer conda used for activation.
+    # Matches Unix `_write_sh_activation_text`. conda.bat expands
+    # "%CONDA_EXE%" %_CE_M% %_CE_CONDA%.
+    if os.environ.get("_CONDA_BUILD_ISOLATED_ACTIVATION"):
+        file_handle.write(f'set "CONDA_EXE={sys.executable}"\n')
+        file_handle.write(f'set "_CONDA_EXE={sys.executable}"\n')
+        file_handle.write('set "_CE_M=-I -m"\n')
+        file_handle.write('set "_CE_CONDA=conda"\n')
     if m.is_cross:
         # HACK: we need both build and host envs "active" - i.e. on PATH,
         #     and with their activate.d scripts sourced. Conda only

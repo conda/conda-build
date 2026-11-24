@@ -11,6 +11,7 @@ import os
 import re
 import shutil
 import sys
+import sysconfig
 from os.path import dirname, exists, isdir, join, normpath
 from pathlib import Path
 
@@ -111,8 +112,13 @@ def create_script(fn):
     if sys.platform == "win32":
         shutil.copy2(src, dst + "-script.py")
         FILES.append(f"Scripts/{fn}-script.py")
+        arch = (
+            "arm64"
+            if sysconfig.get_platform() == "win-arm64"
+            else str(8 * tuple.__itemsize__)
+        )
         shutil.copy2(
-            join(THIS_DIR, "cli-%d.exe" % (8 * tuple.__itemsize__)),  # noqa: UP031
+            join(THIS_DIR, f"cli-{arch}.exe"),
             dst + ".exe",
         )
         FILES.append(f"Scripts/{fn}.exe")

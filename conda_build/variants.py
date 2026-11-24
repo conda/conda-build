@@ -6,13 +6,15 @@ Each file is preprocessed with YAML line selectors in ``parse_config_file`` befo
 
 from __future__ import annotations
 
+import logging
 import os.path
 import re
 import sys
 from collections import OrderedDict
 from copy import copy
 from functools import cache
-from itertools import product
+from itertools import chain, product, repeat
+from operator import itemgetter, ne
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -66,22 +68,19 @@ DEFAULT_COMPILERS = {
             "2.7": "vs2008",
             "3.3": "vs2010",
             "3.4": "vs2010",
-            "3.5": "vs2017",
-            "3.6": "vs2022",
+            "3.5": "vs2022",  # was vs2017 — covers all py >= 3.5 via the clamp
         },
         "cxx": {
             "2.7": "vs2008",
             "3.3": "vs2010",
             "3.4": "vs2010",
-            "3.5": "vs2017",
-            "3.6": "vs2022",
+            "3.5": "vs2022",  # was vs2017 — covers all py >= 3.5 via the clamp
         },
         "vc": {
             "2.7": "9",
             "3.3": "10",
             "3.4": "10",
             "3.5": "14",
-            "3.6": "17",
         },
         "fortran": "gfortran",
     },
@@ -141,7 +140,12 @@ def get_default_variant(config):
     return base
 
 
-def parse_config_file(path, config, loader=yaml.loader.BaseLoader):
+# libyaml parses the same documents as the pure-Python parser, many times faster;
+# the global pinning alone is parsed once per platform
+_BaseLoader = getattr(yaml, "CBaseLoader", yaml.loader.BaseLoader)
+
+
+def parse_config_file(path, config, loader=_BaseLoader):
     from .metadata import get_selectors, select_lines
 
     with open(path) as f:
@@ -509,16 +513,21 @@ def _get_explode_keys(spec, passthru_keys=None, zip_keys=None, extend_keys=None)
 def filter_by_key_value(variants, key, values, source_name):
     """variants is the exploded out list of dicts, with one value per key in each dict.
     key and values come from subsequent variants before they are exploded out."""
-    reduced_variants = []
     if hasattr(values, "keys"):
-        reduced_variants = variants
-    else:
-        # break this out into a full loop so that we can show filtering output
+        return variants
+    reduced_variants = [
+        variant
+        for variant in variants
+        if (value := variant.get(key)) is not None and value in values
+    ]
+    # formatting a message for every variant filtered out costs more than the
+    # filtering, so only build them when someone will read them
+    if len(reduced_variants) < len(variants) and get_logger(__name__).isEnabledFor(
+        logging.DEBUG
+    ):
+        log = get_logger(__name__)
         for variant in variants:
-            if variant.get(key) is not None and variant.get(key) in values:
-                reduced_variants.append(variant)
-            else:
-                log = get_logger(__name__)
+            if not (variant.get(key) is not None and variant.get(key) in values):
                 log.debug(
                     f"Filtering variant with key {key} not matching target value(s) "
                     f"({values}) from {source_name}, actual {variant.get(key)}"
@@ -606,6 +615,59 @@ def explode_variants(spec):
 dict_of_lists_to_list_of_dicts = explode_variants
 
 
+# isinstance rather than type(): YAML loaders such as ruamel.yaml return
+# subclasses of str (ScalarString), and bool is an int
+_SCALAR_TYPES = (str, int, float)
+
+
+def _squish_column(values, is_zip_key):
+    """Squish every value of one key, as list_of_dicts_to_dict_of_lists does."""
+    try:
+        distinct = set(values)
+    except TypeError:
+        # unhashable (list or dict) values: take the general path below
+        pass
+    else:
+        if all(value is None or isinstance(value, _SCALAR_TYPES) for value in distinct):
+            if is_zip_key:
+                # zipped values stay in variant order, duplicates and all
+                if None in distinct:
+                    return [value for value in values if value is not None]
+                return values
+            distinct.discard(None)
+            return list(distinct)
+
+    # Values of keys outside the zip groups are deduplicated, so they are
+    # collected into a set; a key whose last value was a scalar is returned as
+    # a list rather than a set.
+    squished = None
+    as_list = False
+    for v in values:
+        if hasattr(v, "keys"):
+            if squished is None:
+                squished = OrderedDict()
+            elif as_list:
+                # a list has no update(); keep the original's error
+                squished = list(squished)
+            squished.update(v)
+            as_list = False
+        elif isinstance(v, list):
+            if not isinstance(squished, set):
+                squished = set(squished or ())
+            squished.update(v)
+            as_list = False
+        elif is_zip_key:
+            if not isinstance(squished, list):
+                squished = list(squished or ())
+            squished.extend(ensure_list(v))
+        else:
+            if not isinstance(squished, set):
+                squished = set(squished or ())
+            squished.update(ensure_list(v))
+            as_list = True
+    return list(squished) if as_list else squished
+
+
 def list_of_dicts_to_dict_of_lists(list_of_dicts):
     """Opposite of dict_of_lists_to_list_of_dicts function.
 
@@ -632,20 +694,23 @@ def list_of_dicts_to_dict_of_lists(list_of_dicts):
         for group in groups:
             for item in group:
                 all_zip_keys.add(item)
-    for variant in list_of_dicts:
-        for k, v in variant.items():
-            if k == "zip_keys":
-                continue
-            if hasattr(v, "keys"):
-                existing_value = squished.get(k, OrderedDict())
-                existing_value.update(v)
-                squished[k] = existing_value
-            elif isinstance(v, list):
-                squished[k] = set(squished.get(k, set())) | set(v)
-            else:
-                squished[k] = list(squished.get(k, [])) + ensure_list(v)
-                if k not in all_zip_keys:
-                    squished[k] = list(set(squished[k]))
+    # Each key is squished on its own, a column at a time.  Exploded variants
+    # usually all hold the same keys, and nearly every value is a plain scalar,
+    # so most columns reduce to a single set() or list() over the column.
+    first_keys = list_of_dicts[0].keys()
+    same_keys = all(variant.keys() == first_keys for variant in list_of_dicts)
+    if same_keys:
+        keys = list(first_keys)
+    else:
+        keys = list(dict.fromkeys(chain.from_iterable(list_of_dicts)))
+    for k in keys:
+        if k == "zip_keys":
+            continue
+        if same_keys:
+            column = list(map(itemgetter(k), list_of_dicts))
+        else:
+            column = [variant[k] for variant in list_of_dicts if k in variant]
+        squished[k] = _squish_column(column, k in all_zip_keys)
     # reduce the combinatoric space of the zipped keys, too:
     if groups:
         for group in groups:
@@ -739,8 +804,12 @@ def get_vars(
     if subset is not None:
         to_consider.intersection_update(subset)
     to_consider.difference_update(special_keys)
+    # map() keeps the comparison of every variant in C; each var is
+    # compared across every variant, which is most of the cost on a large matrix
     return {
-        var for var in to_consider if any(first[var] != other[var] for other in others)
+        var
+        for var in to_consider
+        if any(map(ne, repeat(first[var]), map(itemgetter(var), others)))
     }
 
 

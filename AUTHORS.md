@@ -112,6 +112,7 @@ Authors are sorted alphabetically.
 * Jannis Leidel
 * Jasmine Sandhu
 * Jayaramchandar Pazhanikumar
+* Jean-Christophe Morin
 * Jillian Rowe
 * Jinzhe Zeng
 * Joe Hartshorn
@@ -170,9 +171,12 @@ Authors are sorted alphabetically.
 * Michael Cormier
 * Michael Maltese
 * Michael Sarahan
+* Michał Górny
+* Mike Taves
 * Min RK
 * Morten Enemark Lund
 * Morten Lund
+* NIKIL PAUL
 * Nehal J Wani
 * Nicola Soranzo
 * Oleg Alexandrov
@@ -265,6 +269,7 @@ Authors are sorted alphabetically.
 * Yu Feng
 * Zane Dufour
 * dependabot[bot]
+* pb01ka
 * peter1000
 * pre-commit CI
 * pwwang

@@ -13,7 +13,7 @@ from conda_build import api
 from conda_build.exceptions import CondaBuildUserError
 from conda_build.utils import on_win, package_has_file
 
-from .utils import assert_package_consistency, metadata_dir
+from .utils import assert_package_consistency, launcher_available, metadata_dir
 
 
 def test_convert_wheel_raises():
@@ -180,6 +180,8 @@ def test_convert_platform_to_others(base_platform, package):
     on_win, reason="we create the pkg to be converted in *nix; don't run on win."
 )
 def test_convert_from_unix_to_win_creates_entry_points(testing_config, request):
+    if not launcher_available("32"):
+        pytest.skip("This conda-launchers build does not provide cli-32.exe")
     testing_config.conda_pkg_format = 1
     recipe_dir = os.path.join(metadata_dir, "entry_points")
     # Recipe "entry_points" is used in other test -> add test-specific variant

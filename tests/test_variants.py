@@ -5,6 +5,7 @@ import os
 import platform
 import re
 import sys
+from copy import deepcopy
 from pathlib import Path
 
 import pytest
@@ -16,12 +17,14 @@ from conda_build.utils import ensure_list, package_has_file
 from conda_build.variants import (
     combine_specs,
     dict_of_lists_to_list_of_dicts,
+    filter_by_key_value,
     filter_combined_spec_to_used_keys,
     find_used_variables_in_batch_script,
     find_used_variables_in_shell_script,
     find_used_variables_in_text,
     get_package_variants,
     get_vars,
+    list_of_dicts_to_dict_of_lists,
     validate_spec,
 )
 
@@ -84,14 +87,23 @@ def test_python_variants(testing_workdir, testing_config, as_yaml):
 
     # we should have one package/metadata per python version
     assert len(metadata_tuples) == 2
-    # there should only be one run requirement for each package/metadata
-    assert len(metadata_tuples[0][0].meta["requirements"]["run"]) == 1
-    assert len(metadata_tuples[1][0].meta["requirements"]["run"]) == 1
-    # the run requirements should be python ranges
-    assert {
-        *metadata_tuples[0][0].meta["requirements"]["run"],
-        *metadata_tuples[1][0].meta["requirements"]["run"],
-    } == {"python >=3.11,<3.12.0a0", "python >=3.12,<3.13.0a0"}
+
+    # Extract *python* run requirements (allow python_abi to exist)
+    python_reqs = []
+    for meta, _, _ in metadata_tuples:
+        run_reqs = meta.meta["requirements"]["run"]
+        python_reqs.extend([r for r in run_reqs if r.startswith("python ")])
+
+    # We expect exactly two python requirements, one per variant
+    assert len(python_reqs) == 2, f"Expected 2 python requirements, got {python_reqs}"
+
+    # Check that the python requirements match the expected ranges
+    expected = {
+        "python >=3.11,<3.12.0a0",
+        "python >=3.12,<3.13.0a0",
+    }
+    python_reqs_set = set(python_reqs)
+    assert python_reqs_set == expected
 
 
 def test_use_selectors_in_variants(testing_workdir, testing_config):
@@ -1088,3 +1100,199 @@ def test_combine_specs_zip_lengths():
     )
 
     combine_specs(specs, log_output=True)
+
+
+def test_list_of_dicts_to_dict_of_lists():
+    variants = [
+        {
+            "python": "3.11",
+            "numpy": "2",
+            "c_compiler": "gcc",
+            "channels": ["conda-forge"],
+            "pin_run_as_build": {"python": {"max_pin": "x.x"}},
+            "zip_keys": [["python", "numpy"]],
+        },
+        {
+            "python": "3.12",
+            "numpy": "2",
+            "c_compiler": "gcc",
+            "channels": ["conda-forge", "local"],
+            "pin_run_as_build": {"numpy": {"max_pin": "x"}},
+            "zip_keys": [["python", "numpy"]],
+        },
+        {
+            "python": "3.12",
+            "numpy": "2",
+            "c_compiler": "clang",
+            "channels": ["conda-forge"],
+            "pin_run_as_build": {"python": {"max_pin": "x.x"}},
+            "zip_keys": [["python", "numpy"]],
+        },
+    ]
+    squished = list_of_dicts_to_dict_of_lists(variants)
+    assert list(squished) == [
+        "python",
+        "numpy",
+        "c_compiler",
+        "channels",
+        "pin_run_as_build",
+        "zip_keys",
+    ]
+    # zipped keys are deduplicated together, keeping the pairs
+    assert sorted(zip(squished["python"], squished["numpy"])) == [
+        ("3.11", "2"),
+        ("3.12", "2"),
+    ]
+    assert sorted(squished["c_compiler"]) == ["clang", "gcc"]
+    assert isinstance(squished["c_compiler"], list)
+    assert squished["channels"] == {"conda-forge", "local"}
+    assert squished["pin_run_as_build"] == {
+        "python": {"max_pin": "x.x"},
+        "numpy": {"max_pin": "x"},
+    }
+    assert squished["zip_keys"] == [["python", "numpy"]]
+
+
+def test_list_of_dicts_to_dict_of_lists_uneven_keys():
+    variants = [
+        {"python": "3.11", "cuda": None},
+        {"python": "3.12", "blas": "openblas"},
+        {"python": "3.12", "cuda": "12", "blas": ["mkl"]},
+    ]
+    squished = list_of_dicts_to_dict_of_lists(variants)
+    assert list(squished) == ["python", "cuda", "blas", "zip_keys"]
+    assert sorted(squished["python"]) == ["3.11", "3.12"]
+    # None adds no value
+    assert squished["cuda"] == ["12"]
+    # a list value turns the collected values into a set
+    assert squished["blas"] == {"openblas", "mkl"}
+    assert squished["zip_keys"] == []
+
+
+def test_list_of_dicts_to_dict_of_lists_empty():
+    assert list_of_dicts_to_dict_of_lists([]) is None
+
+
+@pytest.mark.parametrize(
+    "values, expected_type",
+    [
+        pytest.param(["3.11", ["3.12"]], set, id="scalar-list"),
+        pytest.param([["3.11"], "3.12"], list, id="list-scalar"),
+        pytest.param(["3.11", ["3.12"], "3.11"], list, id="scalar-list-scalar"),
+    ],
+)
+def test_list_of_dicts_to_dict_of_lists_mixed_values(values, expected_type):
+    variants = [{"python": value} for value in values]
+
+    squished = list_of_dicts_to_dict_of_lists(variants)
+
+    assert isinstance(squished["python"], expected_type)
+    assert len(squished["python"]) == 2
+    assert set(squished["python"]) == {"3.11", "3.12"}
+
+
+def test_list_of_dicts_to_dict_of_lists_passthrough_values():
+    variants = [
+        {
+            "ignore_build_only_deps": ["python", "numpy"],
+            "pin_run_as_build": {"python": {"max_pin": "x.x"}},
+        },
+        {
+            "ignore_build_only_deps": ["numpy", "setuptools"],
+            "pin_run_as_build": {"numpy": {"max_pin": "x.x"}},
+        },
+        {
+            "ignore_build_only_deps": [],
+            "pin_run_as_build": {"python": {"max_pin": "x"}},
+        },
+    ]
+    original = deepcopy(variants)
+
+    squished = list_of_dicts_to_dict_of_lists(variants)
+
+    assert squished["ignore_build_only_deps"] == {"python", "numpy", "setuptools"}
+    assert squished["pin_run_as_build"] == {
+        "python": {"max_pin": "x"},
+        "numpy": {"max_pin": "x.x"},
+    }
+    assert variants == original
+
+
+def test_list_of_dicts_to_dict_of_lists_multiple_zip_groups():
+    variants = dict_of_lists_to_list_of_dicts(
+        {
+            "python": ["3.11", "3.12", "3.13"],
+            "is_python_min": ["true", "false", "false"],
+            "c_compiler": ["gcc", "clang"],
+            "c_compiler_version": ["14", "19"],
+            "blas_impl": ["openblas", "mkl"],
+            "zip_keys": [
+                ["python", "is_python_min"],
+                ["c_compiler", "c_compiler_version"],
+            ],
+        }
+    )
+    original = deepcopy(variants)
+    assert len(variants) == 12
+
+    squished = list_of_dicts_to_dict_of_lists(variants)
+
+    assert len(squished["python"]) == len(squished["is_python_min"]) == 3
+    assert set(zip(squished["python"], squished["is_python_min"])) == {
+        ("3.11", "true"),
+        ("3.12", "false"),
+        ("3.13", "false"),
+    }
+    assert len(squished["c_compiler"]) == len(squished["c_compiler_version"]) == 2
+    assert set(zip(squished["c_compiler"], squished["c_compiler_version"])) == {
+        ("gcc", "14"),
+        ("clang", "19"),
+    }
+    assert set(squished["blas_impl"]) == {"openblas", "mkl"}
+    assert squished["zip_keys"] == [
+        ["python", "is_python_min"],
+        ["c_compiler", "c_compiler_version"],
+    ]
+    assert variants == original
+
+
+@pytest.mark.benchmark
+@pytest.mark.parametrize("size", [1000, 4000])
+@pytest.mark.parametrize("kind", ["zipped", "scalar", "list"])
+def test_list_of_dicts_to_dict_of_lists_benchmark(size, kind):
+    variants = [{"version": str(i)} for i in range(size)]
+    if kind == "zipped":
+        for i, variant in enumerate(variants):
+            variant["abi"] = str(i % 2)
+            variant["zip_keys"] = [["version", "abi"]]
+    elif kind == "list":
+        for variant in variants:
+            variant["version"] = [variant["version"]]
+
+    squished = list_of_dicts_to_dict_of_lists(variants)
+
+    assert len(squished["version"]) == size
+
+
+def test_get_vars_compares_mixed_types():
+    variants = [
+        {"python": "3.12", "numpy": 2, "build": "1", "zip_keys": []},
+        {"python": "3.12", "numpy": "2", "build": "1", "zip_keys": []},
+    ]
+    # 2 != "2", whichever side compares
+    assert get_vars(variants) == {"numpy"}
+    assert get_vars(variants, subset={"python", "build"}) == set()
+
+
+def test_filter_by_key_value():
+    variants = [
+        {"python": "3.11"},
+        {"python": "3.12"},
+        {"python": None},
+        {"numpy": "2"},
+    ]
+    assert filter_by_key_value(variants, "python", ["3.12"], "test") == [
+        {"python": "3.12"}
+    ]
+    # a dict of values selects nothing out
+    assert filter_by_key_value(variants, "python", {"3.12": 1}, "test") is variants

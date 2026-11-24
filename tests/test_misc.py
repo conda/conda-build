@@ -4,12 +4,7 @@ import json
 from pathlib import Path
 
 import pytest
-
-try:
-    from conda.common.serialize.json import CondaJSONEncoder
-except ImportError:
-    # FUTURE: remove for `conda>=25.9`
-    from conda.auxlib.entity import EntityEncoder as CondaJSONEncoder
+from conda.common.serialize.json import CondaJSONEncoder
 
 try:
     from conda.models.enums import PathEnum as PathType

@@ -15,6 +15,7 @@ from subprocess import PIPE, Popen
 
 from conda.models.version import VersionOrder
 
+from ..deprecations import deprecated
 from ..utils import on_mac, on_win, rec_glob
 from .external import find_executable
 
@@ -303,6 +304,11 @@ def get_rpaths(file, exe_dirname, envroot, windows_root=""):
 
 # TODO :: Consider memoizing instead of repeatedly scanning
 # TODO :: libc.so/libSystem.dylib when inspect_linkages(recurse=True)
+@deprecated(
+    "27.3",
+    "27.9",
+    addendum="Unused helper. Use get_libraries() or inspect_linkages_lief() instead.",
+)
 def _inspect_linkages_this(filename, sysroot="", arch="native"):
     """
 

@@ -25,16 +25,17 @@ requirements:
   host:
     - python
     - pip
-    - hatchling >=1.12.2
+    - hatchling >=1.27.0
     - hatch-vcs >=0.2.0
     - wheel
   run:
     - beautifulsoup4
     - chardet
-    - conda >=25.11.0
+    - conda >=26.1.0
     - conda-index >=0.4.0
+    - conda-launchers >=24.7.1
     - conda-package-handling >=2.2.0
-    - conda-recipe-manager  # [py>=311]
+    - conda-recipe-manager
     - evalidate >=2,<3.0a0
     - filelock
     - frozendict >=2.4.2
@@ -43,10 +44,9 @@ requirements:
     - m2-patch >=2.6               # [win]
     - packaging
     - patch >=2.6                  # [not win]
-    # Cap to avoid bug where ELF load command is garbled.
+    # patchelf 0.18.* is buggy: ELF load command is garbled.
     # xref: https://github.com/conda/conda-build/issues/4881
-    # xref: https://github.com/NixOS/patchelf/issues/492
-    - patchelf <0.18               # [linux]
+    - patchelf >=0.17,!=0.18.*,<0.20  # [unix]
     - pkginfo
     - psutil
     - py-lief
@@ -55,11 +55,9 @@ requirements:
     - python-libarchive-c
     - pyyaml
     - requests
-    - tomli                        # [py<311]
     - tqdm
   run_constrained:
     - conda-libmamba-solver >=25.11.0
-    - conda-verify  >=3.1.0
 
 test:
   imports:

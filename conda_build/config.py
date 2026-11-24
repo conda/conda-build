@@ -18,14 +18,12 @@ from enum import Enum
 from os.path import abspath, expanduser, expandvars, join
 from typing import TYPE_CHECKING
 
-from conda.base.constants import (
-    CONDA_PACKAGE_EXTENSION_V1,
-    CONDA_PACKAGE_EXTENSION_V2,  # noqa: F401
-)
 from conda.base.context import context
 from conda.utils import url_path
 
 from .utils import (
+    CONDA_PACKAGE_EXTENSION_V1,
+    CONDA_PACKAGE_EXTENSION_V2,
     get_build_folders,
     get_conda_operation_locks,
     get_logger,
@@ -103,6 +101,7 @@ ignore_verify_codes_default = []
 exit_on_verify_error_default = False
 conda_pkg_format_default = CondaPkgFormat.V2
 zstd_compression_level_default = 19
+zstd_compression_threads_default = 1
 
 
 # we need this to be accessible to the CLI, so it needs to be more static.
@@ -251,6 +250,7 @@ def _get_default_settings():
         Setting("identity", None),
         Setting("config_file", None),
         Setting("repository", "pypitest"),
+        # Legacy conda-verify settings retained for API compatibility. They have no effect.
         Setting("verify", True),
         Setting(
             "ignore_verify_codes",
@@ -280,6 +280,12 @@ def _get_default_settings():
             "zstd_compression_level",
             context.conda_build.get(
                 "zstd_compression_level", zstd_compression_level_default
+            ),
+        ),
+        Setting(
+            "zstd_compression_threads",
+            context.conda_build.get(
+                "zstd_compression_threads", zstd_compression_threads_default
             ),
         ),
         Setting(

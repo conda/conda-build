@@ -1,5 +1,148 @@
 [//]: # (current developments)
 
+## 26.9.1 (2026-10-05)
+
+### Bug fixes
+
+* Recognize Windows launcher paths recorded with backslashes by older micromamba versions. (#6193)
+
+### Contributors
+
+* @jezdez
+
+
+
+## 26.9.0 (2026-10-01)
+
+### Enhancements
+
+* Validate package names against CEP-26 naming conventions, rejecting names with invalid characters or structure. (#5976)
+* ``REQUESTS_CA_BUNDLE`` can now also be supplied via the build variant (``conda_build_config.yaml``). (#6063 via #6083)
+* Use the published ``conda-launchers >=24.7.1`` package for Windows entry point executables, select the native target architecture, and verify each launcher's SHA256 before copying it. Retain the bundled 32-bit launchers for packages that do not provide them, and require ``conda >=26.1.0`` so installed package records preserve those checksums. (#6075)
+* Add support for running tests in conda packages built from v1 recipes as well as running downstream v1 recipe tests. (#6076 via #6113)
+
+### Bug fixes
+
+* Determine `SP_DIR` from the `python_site_packages_path` recorded by the python installed in the prefix, rather than deriving it from the python version and platform. Fixes site-packages missing the ABI suffix for free-threaded builds (`lib/python3.14t/site-packages`), and being reported as `%PREFIX%\Lib\site-packages` on Windows for python 3.15, which [CFEP-27](https://github.com/conda-forge/cfep/blob/main/cfep-27.md) relocates to `%PREFIX%\lib\python\site-packages`. Prefixes whose python does not record the field keep the previous behaviour. (#5563)
+* Fix Windows compiler selection to use vs2022 for Python 3.5 and later. (#6025 via #6162)
+* Add support for missing `conda_build.root-dir` setting in `.condarc` and `--croot` CLI argument for v1 recipes. (#6043 via #6044)
+* Only pass through ``REQUESTS_CA_BUNDLE`` when it is set in the environment, matching ``SSL_CERT_FILE``. Setting it to an empty string broke TLS clients such as botocore. (#6063 via #6083)
+* Activate the host and build environments in Windows build scripts when packaging a recipe named `conda`, matching Unix. Previously `build_env_setup.bat` omitted activation entirely for such recipes, so host `etc/conda/activate.d` scripts never ran. (#6069)
+* Honor `build/activate_in_script: false` in Windows build scripts, matching Unix build scripts and Windows output scripts, which already respected it. (#6069)
+* Honor `_CONDA_BUILD_ISOLATED_ACTIVATION` in Windows build activation by invoking `python -I -m conda` via `CONDA_EXE` / `_CE_M` / `_CE_CONDA`, matching Unix. Also fix Windows test activation, which previously set unused `_CE_I` instead of putting `-I` in `_CE_M`. (#6069)
+* Honor `--variants` when using `conda-build --output`. (#6072)
+* Handle unavailable version metadata when `packaging` raises `InvalidVersion` during deprecation checks. (#6091)
+* Preserve final build IDs, including dependency hashes, in exact `pin_subpackage()` references. (#5572, #6078 via #6100)
+* Ensure `conda-build` will error out if both v0 and v1 recipe files are present in the same directory. (#6102)
+* Support `conda_build_config` files with legacy syntax when processing v1 recipes. (#6101 via #6103)
+* Preserve lazy package indexes when passing them to the solver during builds. (#6125)
+* Require Hatchling 1.27.0 or newer to support the package's license metadata. (#6174)
+
+### Deprecations
+
+* Mark `build/missing_dso_whitelist` as deprecated to be removed in 27.3. Use `build/missing_dso_allowlist` instead. (#5902)
+* Mark `build/runpath_whitelist` as deprecated to be removed in 27.3. Use `build/runpath_allowlist` instead. (#5902)
+* Mark `conda_build.post.check_overlinking_impl(missing_dso_whitelist)` as deprecated to be removed in 27.3. Use `missing_dso_allowlist` instead. (#5902)
+* Mark `conda_build.post.check_overlinking_impl(runpath_whitelist)` as deprecated to be removed in 27.3. Use `runpath_allowlist` instead. (#5902)
+* Mark `conda_build.post.DEFAULT_MAC_WHITELIST` as deprecated to be removed in 27.3. Use `conda_build.post.DEFAULT_MAC_ALLOWLIST` instead. (#5902)
+* Mark `conda_build.post.DEFAULT_WIN_WHITELIST` as deprecated to be removed in 27.3. Use `conda_build.post.DEFAULT_WIN_ALLOWLIST` instead. (#5902)
+* Mark unused `liefldd._inspect_linkages_this` as pending deprecation. (#6089 via #6090)
+
+### Docs
+
+* Document support for `conda_build.root-dir` and `--croot` options for building v1 recipes. (#6044)
+* Document ``REQUESTS_CA_BUNDLE`` as an inherited build environment variable. (#6063 via #6083)
+
+### Other
+
+* Allow patchelf 0.19 while excluding the broken 0.18 releases. (#4881 via #6077)
+* Add fast, synthetic regression tests for the transitive `pin_subpackage`/variant-merge
+  bug (#5645, #5644) that run an order of magnitude faster than previous tests (#6054 and #6053 via #6117).
+
+### Contributors
+
+* @chrisburr
+* @conda-bot
+* @danyeaw
+* @jaimergp
+* @jsmolic
+* @jezdez
+* @JeanChristopheMorinPerso made their first contribution in #6072
+* @kenodegard
+* @mwtoews made their first contribution in #6060
+* @ryanskeith
+* @travishathaway
+* @dependabot[bot]
+* @pre-commit-ci[bot]
+
+
+
+## 26.7.1 (2026-08-18)
+
+### Bug fixes
+
+* Make multi-output script subprocesses match `build_platform` architecture when running emulated Python processes too. Previous fix only dealt with top-level build scripts. (#6080)
+* Forward `win-arm64` entry point launchers to `cli-64.exe`. (#6081)
+
+### Contributors
+
+* @jaimergp
+
+
+
+## 26.7.0 (2026-07-24)
+
+### Enhancements
+
+* Add support for v1 recipes to `conda-debug`. (#5950)
+* Add various UX improvements to the v1 recipe support. (#6020)
+* When rendering a recipe with `conda render`, sort dependencies instead of following unpredictable `set()` ordering. (#6014)
+
+### Bug fixes
+
+* Remove redundant dependency on rattler-build. (#5986)
+* Add a check to prevent duplicate rpaths on macOS. (#5671 via #5987)
+* Raise `ValueError` for negative build numbers in `meta.yaml` at metadata validation time, before any build scripts run. (#5332, #5997)
+* Fix platform config settings when building v1 recipes by checking `VariantConfig()` instead of `config.variant`. (#6015)
+* Fix finding used variables that do not feature spaces, e.g. `{{python_min}}`. (#6036)
+* Make CMD subprocesses match `build_platform` architecture when running emulated Python processes. (#6048 via #6047)
+* `recipe.yaml` build/host platform handling now behaves in the same way as `meta.yaml`. Accidentally allowed `{build,host}_platform` settings in `conda_build_config.yaml` are no longer valid. Users can export `CONDA_SUBDIR` and define the `target_platform` setting, respectively. (#6047)
+
+### Deprecations
+
+* Mark `conda develop` as pending deprecation to be removed in 27.9. The [conda-pypi](https://conda.github.io/conda-pypi/) plugin provides a modern alternative via the [`conda pypi install --editable <path>`](https://conda.github.io/conda-pypi/quickstart/#development-and-editable-installations) command. (#4251 via #6005)
+* Remove usage of deprecated `conda.auxlib.entity.EntityEncoder`. It is replaced by `conda.common.serialize.json.CondaJSONEncoder`. (#6029 via #6045)
+
+### Docs
+
+* Add `conda-debug` command to v1 recipe docs. (#5950)
+* Clarify that `build/number` must be a non-negative integer. (#5997)
+* Add v1 recipe user docs. (#5896 via #6002)
+
+### Other
+
+* Remove obsolete support for `numpy.distutils`. (#5911 via #6006)
+* Enable infrastructure-managed Dependabot configuration via conda/infrastructure templates. (#6018)
+
+### Contributors
+
+* @conda-bot
+* @danyeaw
+* @dholth
+* @jaimergp
+* @jsmolic
+* @jezdez
+* @kenodegard
+* @ForgottenProgramme
+* @mgorny made their first contribution in #6036
+* @Nikil-D-Gr8 made their first contribution in #6000
+* @travishathaway
+* @dependabot[bot]
+* @pb01ka made their first contribution in #5997
+* @pre-commit-ci[bot]
+
+
+
 ## 26.5.0 (2026-05-20)
 
 ### Enhancements

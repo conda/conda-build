@@ -30,7 +30,7 @@ from conda import __version__ as conda_version
 from conda.base.constants import PREFIX_PLACEHOLDER
 from conda.base.context import context, reset_context
 from conda.core.prefix_data import PrefixData
-from conda.exceptions import CondaError, NoPackagesFoundError, UnsatisfiableError
+from conda.exceptions import CondaError, ResolvePackageNotFound, UnsatisfiableError
 from conda.gateways.disk.create import TemporaryDirectory
 from conda.models.channel import Channel
 from conda.models.enums import FileMode
@@ -40,18 +40,14 @@ try:
 except ImportError:
     # FUTURE: remove for `conda>=26.9`
     from conda.models.enums import PathType
+from conda.common.serialize.json import CondaJSONEncoder
 from conda.models.match_spec import MatchSpec
+from conda.models.version import VersionOrder
 from conda.utils import url_path
-
-try:
-    from conda.common.serialize.json import CondaJSONEncoder
-except ImportError:
-    # FUTURE: remove for `conda>=25.9`
-    from conda.auxlib.entity import EntityEncoder as CondaJSONEncoder
 
 from . import __version__ as conda_build_version
 from . import environ, noarch_python, source, tarcheck, utils
-from .config import CondaPkgFormat, Config
+from .config import CondaPkgFormat, Config, zstd_compression_threads_default
 from .create_test import create_all_test_files
 from .exceptions import (
     BuildScriptException,
@@ -1808,10 +1804,23 @@ def bundle_conda(
         if activate_script:
             _write_activation_text(dest_file, metadata)
 
+        args_to_run = [*args, dest_file]
+        if on_win and dest_file.endswith((".bat", ".ps1")):
+            from .windows import _running_subdir, wrap_script_with_machine
+
+            if metadata.config.build_subdir != _running_subdir():
+                # Support native build platform on emulated Python interpreter
+                # Need to ensure subprocess runs on the adequate architecture
+                # See conda_build.windows. wrap_script_with_machine for more info.
+                args_to_run = [
+                    *INTERPRETER_BAT,
+                    wrap_script_with_machine(metadata, dest_file, tuple(args)),
+                ]
+
         bundle_stats = {}
         try:
             utils.check_call_env(
-                [*args, dest_file],
+                args_to_run,
                 cwd=metadata.config.work_dir,
                 env=env_output,
                 stats=bundle_stats,
@@ -1936,6 +1945,18 @@ def bundle_conda(
             "zstd",
             f"zstd:compression-level={metadata.config.zstd_compression_level}",
         )
+        threads = int(metadata.config.zstd_compression_threads)
+        if threads != zstd_compression_threads_default:
+            # create() only accepts compression_threads since conda-package-handling 2.6.0
+            cph_version = conda_package_handling.__version__
+            if VersionOrder(cph_version) < VersionOrder("2.6.0"):
+                log.warning(
+                    "zstd_compression_threads requires conda-package-handling "
+                    ">=2.6.0 (found %s); compressing with a single thread.",
+                    cph_version,
+                )
+            else:
+                cph_kwargs["compression_threads"] = threads
     with TemporaryDirectory() as tmp:
         conda_package_handling.api.create(
             metadata.config.host_prefix,
@@ -1952,32 +1973,6 @@ def bundle_conda(
                 tarcheck.check_all(tmp_path, metadata.config)
             output_filename = os.path.basename(tmp_path)
 
-            # we do the import here because we want to respect logger level context
-            try:
-                from conda_verify.verify import Verify
-            except ImportError as exc:
-                Verify = None
-                log.debug(
-                    "Importing conda-verify failed. Skipping extra checks...",
-                    exc_info=exc,
-                )
-            if getattr(metadata.config, "verify", False) and Verify:
-                verifier = Verify()
-                checks_to_ignore = (
-                    utils.ensure_list(metadata.config.ignore_verify_codes)
-                    + metadata.ignore_verify_codes()
-                )
-                try:
-                    verifier.verify_package(
-                        path_to_package=tmp_path,
-                        checks_to_ignore=checks_to_ignore,
-                        exit_on_error=metadata.config.exit_on_verify_error,
-                    )
-                except KeyError as e:
-                    log.warning(
-                        "Package doesn't have necessary files.  It might be too old to inspect."
-                        f"Legacy noarch packages are known to fail.  Full message was {e}"
-                    )
             try:
                 crossed_subdir = metadata.config.target_subdir
             except AttributeError:
@@ -3219,21 +3214,20 @@ def write_test_scripts(
             tf.write(f"set {trace}-e\n")
         if metadata.config.activate and not metadata.name() == "conda":
             if utils.on_win:
+                # conda.bat expands "%CONDA_EXE%" %_CE_M% %_CE_CONDA%.
+                ce_m = (
+                    "-I -m"
+                    if os.environ.get("_CONDA_BUILD_ISOLATED_ACTIVATION")
+                    else "-m"
+                )
                 tf.write(
                     'set "CONDA_SHLVL=" '
-                    "&& @CALL {}\\condabin\\conda_hook.bat {}"
-                    "&& set CONDA_EXE={python_exe}"
-                    "&& set CONDA_PYTHON_EXE={python_exe}"
-                    "&& set _CE_I={}"
-                    "&& set _CE_M=-m"
-                    "&& set _CE_CONDA=conda\n".format(
-                        sys.prefix,
-                        "--dev" if metadata.config.debug else "",
-                        "-i"
-                        if os.environ.get("_CONDA_BUILD_ISOLATED_ACTIVATION")
-                        else "",
-                        python_exe=sys.executable,
-                    )
+                    f"&& @CALL {sys.prefix}\\condabin\\conda_hook.bat"
+                    f"{' --dev' if metadata.config.debug else ''}"
+                    f"&& set CONDA_EXE={sys.executable}"
+                    f"&& set CONDA_PYTHON_EXE={sys.executable}"
+                    f"&& set _CE_M={ce_m}"
+                    "&& set _CE_CONDA=conda\n"
                 )
             else:
                 py_flags = (
@@ -3278,6 +3272,12 @@ def test(
     :param m: Package's metadata.
     :type m: Metadata
     """
+    # Delegate v1 packages to rattler-build
+    from ._rattler_build.compat import is_v1_package, test_v1_package
+
+    if is_v1_package(recipedir_or_package_or_metadata):
+        return test_v1_package(recipedir_or_package_or_metadata, config)
+
     log = utils.get_logger(__name__)
     # we want to know if we're dealing with package input.  If so, we can move the input on success.
     hash_input = {}
@@ -3428,7 +3428,7 @@ def test(
         )
     except (
         DependencyNeedsBuildingError,
-        NoPackagesFoundError,
+        ResolvePackageNotFound,
         UnsatisfiableError,
         CondaError,
         AssertionError,

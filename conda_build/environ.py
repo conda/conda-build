@@ -13,6 +13,7 @@ import subprocess
 import sys
 import warnings
 from collections import defaultdict
+from copy import copy
 from functools import cache
 from glob import glob
 from logging import getLogger
@@ -25,7 +26,6 @@ from conda.base.constants import (
     UNKNOWN_CHANNEL,
 )
 from conda.base.context import context, reset_context
-from conda.common.io import env_vars
 from conda.core.link import PrefixSetup, UnlinkLinkTransaction
 from conda.core.package_cache_data import PackageCacheData, ProgressiveFetchExtract
 from conda.core.prefix_data import PrefixData
@@ -33,12 +33,12 @@ from conda.exceptions import (
     CondaError,
     LinkError,
     LockError,
-    NoPackagesFoundError,
+    PackagesNotFoundError,
     PaddingError,
+    ResolvePackageNotFound,
     UnsatisfiableError,
 )
 from conda.gateways.disk.create import TemporaryDirectory
-from conda.models.channel import Channel
 from conda.models.match_spec import MatchSpec
 from conda.models.records import PackageRecord
 
@@ -51,6 +51,7 @@ from .utils import (
     CONDA_PACKAGE_EXTENSIONS,
     ensure_list,
     env_var,
+    env_vars,
     on_mac,
     on_win,
     package_record_to_requirement,
@@ -63,6 +64,7 @@ if TYPE_CHECKING:
     from typing import Any, TypedDict
 
     from conda.core.index import Index
+    from conda.models.channel import Channel
 
     from .config import Config
     from .metadata import MetaData
@@ -413,7 +415,6 @@ def conda_build_vars(prefix, config):
         "SRC_DIR": src_dir,
         "HTTPS_PROXY": os.getenv("HTTPS_PROXY", ""),
         "HTTP_PROXY": os.getenv("HTTP_PROXY", ""),
-        "REQUESTS_CA_BUNDLE": os.getenv("REQUESTS_CA_BUNDLE", ""),
         "DIRTY": "1" if config.dirty else "",
         "ROOT": context.root_prefix,
     }
@@ -801,6 +802,7 @@ def os_vars(m, prefix):
     get_default("LANG")
     get_default("LC_ALL")
     get_default("MAKEFLAGS")
+    get_default("REQUESTS_CA_BUNDLE")
     d["SHLIB_EXT"] = get_shlib_ext(m.config.host_platform)
     d["PATH"] = os.environ.copy()["PATH"]
 
@@ -895,13 +897,14 @@ def get_install_actions(
                 try:
                     _actions = _install_actions(prefix, index, specs, subdir=subdir)
                     precs = _actions["LINK"]
-                except (NoPackagesFoundError, UnsatisfiableError) as exc:
+                except (ResolvePackageNotFound, UnsatisfiableError) as exc:
                     raise DependencyNeedsBuildingError(exc, subdir=subdir)
                 except (
                     SystemExit,
                     PaddingError,
                     LinkError,
                     DependencyNeedsBuildingError,
+                    PackagesNotFoundError,
                     CondaError,
                     AssertionError,
                     BuildLockError,
@@ -1413,11 +1416,8 @@ def install_actions(
 
         solver_backend = context.plugin_manager.get_cached_solver_backend()
         solver = solver_backend(prefix, channels, subdirs, specs_to_add=mspecs)
-        if index:
-            # Solver can modify the index (e.g., Solver._prepare adds virtual
-            # package) => Copy index (just outer container, not deep copy)
-            # to conserve it.
-            solver._index = index.copy()
+        # Give the solver its own index without realizing the cached records.
+        solver._index = copy(index)
         txn = solver.solve_for_transaction(prune=False, ignore_pinned=False)
         prefix_setup = txn.prefix_setups[prefix]
         return {
@@ -1466,23 +1466,18 @@ def _display_actions(prefix, precs):
 
     show_channel_urls = context.show_channel_urls
 
-    def channel_str(rec):
-        if rec.get("channel_name"):
-            return rec["channel_name"]
-        if rec.get("schannel"):
-            return rec["schannel"]
-        if rec.get("url"):
-            return Channel(rec["url"]).canonical_name
-        if rec.get("channel"):
-            return Channel(rec["channel"]).canonical_name
-        return UNKNOWN_CHANNEL
-
-    def channel_filt(s):
+    def channel_filt(channel):
         if show_channel_urls is False:
             return ""
-        if show_channel_urls is None and s == DEFAULTS_CHANNEL_NAME:
+        if (
+            show_channel_urls is None
+            and channel.canonical_name == DEFAULTS_CHANNEL_NAME
+        ):
             return ""
-        return s
+        # Use the channel name, not the canonical multichannel alias.
+        # This allows to more easily see which channel is used, even if the record
+        # is coming from a multichannel.
+        return channel.name or UNKNOWN_CHANNEL
 
     packages = defaultdict(lambda: "")
     features = defaultdict(lambda: "")
@@ -1491,7 +1486,7 @@ def _display_actions(prefix, precs):
     for prec in precs:
         assert isinstance(prec, PackageRecord)
         pkg = prec["name"]
-        channels[pkg] = channel_filt(channel_str(prec))
+        channels[pkg] = channel_filt(prec.channel)
         packages[pkg] = prec["version"] + "-" + prec["build"]
         features[pkg] = ",".join(prec.get("features") or ())
 
