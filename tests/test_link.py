@@ -20,9 +20,13 @@ def reload_link():
 
 def test_site_packages_matches_sysconfig(reload_link):
     importlib.reload(_link)
-    expected = Path(sysconfig.get_path("purelib")).relative_to(normpath(sys.prefix)).as_posix()
+    expected = (
+        Path(sysconfig.get_path("purelib")).relative_to(normpath(sys.prefix)).as_posix()
+    )
     assert _link.SITE_PACKAGES == expected
-    assert _link.BIN_DIR == join(normpath(sys.prefix), "Scripts" if sys.platform == "win32" else "bin")
+    assert _link.BIN_DIR == join(
+        normpath(sys.prefix), "Scripts" if sys.platform == "win32" else "bin"
+    )
 
 
 def test_site_packages_py315_windows(reload_link, monkeypatch):
@@ -41,7 +45,9 @@ def test_site_packages_free_threaded(reload_link, monkeypatch):
     monkeypatch.setattr(
         _link.sysconfig,
         "get_path",
-        lambda name: str(Path(_link.sys.prefix) / "lib" / "python3.14t" / "site-packages"),
+        lambda name: str(
+            Path(_link.sys.prefix) / "lib" / "python3.14t" / "site-packages"
+        ),
     )
     importlib.reload(_link)
     assert _link.SITE_PACKAGES == "lib/python3.14t/site-packages"
@@ -50,12 +56,21 @@ def test_site_packages_free_threaded(reload_link, monkeypatch):
 def test_generated_link_runs_standalone(tmp_path, monkeypatch):
     # stage a fake prefix: link.py + site-packages payload + conda-meta
     link_py = tmp_path / "link.py"
-    data = {"dist": "x-0-0", "site-packages": ["pkg/mod.py"], "python-scripts": [], "Examples": []}
+    data = {
+        "dist": "x-0-0",
+        "site-packages": ["pkg/mod.py"],
+        "python-scripts": [],
+        "Examples": [],
+    }
     payload = tmp_path / "site-packages" / "pkg" / "mod.py"
     payload.parent.mkdir(parents=True)
     payload.write_text("value = 1\n")
     (tmp_path / "conda-meta").mkdir()
-    source = Path(_link.__file__).read_text().replace("from __future__ import annotations\n", "")
+    source = (
+        Path(_link.__file__)
+        .read_text()
+        .replace("from __future__ import annotations\n", "")
+    )
     link_py.write_text("DATA = " + json.dumps(data) + "\n## END DATA\n\n" + source)
 
     monkeypatch.setattr(sys, "prefix", str(tmp_path))
@@ -64,7 +79,10 @@ def test_generated_link_runs_standalone(tmp_path, monkeypatch):
         "get_path",
         lambda _name: str(Path(tmp_path) / _link.SITE_PACKAGES),
     )
-    exec(compile(link_py.read_text(), str(link_py), "exec"), {"__name__": "__main__", "__file__": str(link_py)})
+    exec(
+        compile(link_py.read_text(), str(link_py), "exec"),
+        {"__name__": "__main__", "__file__": str(link_py)},
+    )
 
     placed = Path(join(str(tmp_path), _link.SITE_PACKAGES, "pkg", "mod.py"))
     assert placed.read_text() == "value = 1\n"
