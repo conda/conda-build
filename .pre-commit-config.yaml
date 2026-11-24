@@ -70,12 +70,18 @@ repos:
     hooks:
       - id: pretty-format-toml
         args: [--autofix, --trailing-commas]
-  - repo: https://github.com/jumanjihouse/pre-commit-hook-yamlfmt
-    rev: 0.2.3
+  - repo: https://github.com/conda-incubator/pre-commit-mirrors-prettier
+    rev: 3.9.6
     hooks:
-      - id: yamlfmt
-        # ruamel.yaml doesn't line wrap correctly (?) so set width to 1M to avoid issues
-        args: [--mapping=2, --offset=2, --sequence=4, --width=1000000, --implicit_start]
+      - id: prettier-conda
+        types_or: [yaml]
+        args:
+          - --write
+          - --list-different
+          - --ignore-unknown
+          - --single-quote
+          - --end-of-line
+          - auto
         exclude: |
           (?x)^(
             .authors.yml |
@@ -83,10 +89,7 @@ repos:
             conda_build/templates/setuptools.yaml |
             docs/click/meta.yaml |
             docs/source/user-guide/tutorials/meta.yaml |
-            recipe/meta.yaml |
-            .github/workflows/build.yml |
-            .github/workflows/slow-tests.yml |
-            tests/
+            recipe/meta.yaml
           )
   - repo: https://github.com/python-jsonschema/check-jsonschema
     rev: 0.39.0

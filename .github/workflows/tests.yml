@@ -1,7 +1,7 @@
 name: Tests
 
 permissions:
-  contents: read  # Check out the source for tests.
+  contents: read # Check out the source for tests.
 
 on:
   # https://docs.github.com/en/webhooks-and-events/webhooks/webhook-events-and-payloads#push
@@ -9,8 +9,8 @@ on:
     branches:
       - main
       - feature/**
-      - '[0-9].*.x'  # e.g., 3.24.x
-      - '[0-9][0-9].*.x'  # e.g., 23.3.x
+      - '[0-9].*.x' # e.g., 3.24.x
+      - '[0-9][0-9].*.x' # e.g., 23.3.x
 
   # https://docs.github.com/en/webhooks-and-events/webhooks/webhook-events-and-payloads#pull_request
   pull_request:
@@ -26,7 +26,7 @@ on:
 
   # no payload
   schedule:
-      # https://crontab.guru/#37_18_*_*_*
+    # https://crontab.guru/#37_18_*_*_*
     - cron: 37 18 * * *
 
 concurrency:
@@ -48,8 +48,8 @@ jobs:
     runs-on: ubuntu-slim
     permissions:
       # https://github.com/dorny/paths-filter#supported-workflows
-      contents: read  # Check out the source for non-PR events.
-      pull-requests: read  # Read the changed files in a PR.
+      contents: read # Check out the source for non-PR events.
+      pull-requests: read # Read the changed files in a PR.
     outputs:
       code: ${{ steps.filter.outputs.code }}
     steps:
@@ -131,7 +131,7 @@ jobs:
 
     steps:
       - name: Free Disk Space
-        uses: endersonmenezes/free-disk-space@8b8cd4e2277836962939a8f3b4ea0ee4bc006156  # v4.0.1
+        uses: endersonmenezes/free-disk-space@8b8cd4e2277836962939a8f3b4ea0ee4bc006156 # v4.0.1
         with:
           remove_android: true
           remove_dotnet: true
@@ -189,7 +189,7 @@ jobs:
         uses: conda-incubator/setup-miniconda@be893c923ea9cf1cf7cd510fbdde27c7e18cbdcb # v4.1.0
         with:
           condarc-file: .github/condarc
-          run-post: false  # skip post cleanup
+          run-post: false # skip post cleanup
 
       - name: Conda Install
         env:
@@ -240,7 +240,7 @@ jobs:
             .coverage
             durations/${{ runner.os }}.json
             test-report.xml
-          retention-days: 1  # temporary, combined in aggregate below
+          retention-days: 1 # temporary, combined in aggregate below
 
   # linux benchmarks
   linux-benchmarks:
@@ -250,12 +250,11 @@ jobs:
       (needs.changes.outputs.code == 'true') &&
       (github.event_name != 'workflow_dispatch' || github.event.inputs.os == 'all' || github.event.inputs.os == 'linux')
 
-
     runs-on: ubuntu-latest
     defaults:
       run:
         # https://github.com/conda-incubator/setup-miniconda#use-a-default-shell
-        shell: bash -el {0}  # bash exit immediately on error + login shell
+        shell: bash -el {0} # bash exit immediately on error + login shell
     strategy:
       fail-fast: false
       matrix:
@@ -289,7 +288,7 @@ jobs:
         uses: conda-incubator/setup-miniconda@be893c923ea9cf1cf7cd510fbdde27c7e18cbdcb # v4.1.0
         with:
           condarc-file: .github/condarc
-          run-post: false  # skip post cleanup
+          run-post: false # skip post cleanup
 
       - name: Conda Install
         env:
@@ -332,7 +331,6 @@ jobs:
       (github.event_name == 'schedule' || needs.changes.outputs.code == 'true') &&
       (github.event_name != 'workflow_dispatch' || github.event.inputs.os == 'all' || github.event.inputs.os == 'windows')
 
-
     runs-on: ${{ matrix.runs-on && matrix.runs-on || 'windows-2022' }}
     defaults:
       run:
@@ -361,7 +359,7 @@ jobs:
             pytest-expression: test_build_command_win_arm64_wrapper or test_win_arm64_build_on_emulated_win_64
             runs-on: windows-11-arm
     env:
-      ErrorActionPreference: Stop  # powershell exit on first error
+      ErrorActionPreference: Stop # powershell exit on first error
       TEST_PYTHON_VERSION: ${{ matrix.python-version }}
       CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'defaults' }}
       # Exclude benchmark and slow tests from Windows parallel runs
@@ -375,7 +373,7 @@ jobs:
           persist-credentials: false
 
       - name: Hash + Timestamp
-        shell: bash  # use bash to run date command
+        shell: bash # use bash to run date command
         env:
           HASH_PREFIX: ${{ runner.os }}-${{ runner.arch }}-Py${{ matrix.python-version }}-${{ matrix.conda-version }}-${{ matrix.test-type }}
         run: echo "HASH=${HASH_PREFIX}-$(date -u "+%Y%m")" >> "$GITHUB_ENV"
@@ -396,7 +394,7 @@ jobs:
         uses: conda-incubator/setup-miniconda@be893c923ea9cf1cf7cd510fbdde27c7e18cbdcb # v4.1.0
         with:
           condarc-file: .github\condarc
-          run-post: false  # skip post cleanup
+          run-post: false # skip post cleanup
           pkgs-dirs: ${{ runner.arch == 'ARM64' && 'C' || 'D'}}:\conda_pkgs_dir
           installation-dir: ${{ runner.arch == 'ARM64' && 'C' || 'D'}}:\conda
           # force x64 even on ARM64 to test emulation
@@ -462,7 +460,7 @@ jobs:
             .coverage
             durations\${{ runner.os }}.json
             test-report.xml
-          retention-days: 1  # temporary, combined in aggregate below
+          retention-days: 1 # temporary, combined in aggregate below
 
   # macos test suite
   macos:
@@ -485,20 +483,20 @@ jobs:
           - python-version: '3.11'
             conda-version: release
             test-type: serial
-            runs-on: macos-15-intel  # osx-64
+            runs-on: macos-15-intel # osx-64
           - python-version: '3.11'
             conda-version: release
             test-type: parallel
-            runs-on: macos-15-intel  # osx-64
+            runs-on: macos-15-intel # osx-64
           # upper version (w/ osx-arm64 & canary conda)
           - python-version: '3.14'
             conda-version: canary
             test-type: serial
-            runs-on: macos-latest  # osx-arm64
+            runs-on: macos-latest # osx-arm64
           - python-version: '3.14'
             conda-version: canary
             test-type: parallel
-            runs-on: macos-latest  # osx-arm64
+            runs-on: macos-latest # osx-arm64
     env:
       # Test copy mode for https://github.com/conda-forge/cmake-feedstock/issues/230.
       CONDA_ALWAYS_COPY: 'true'
@@ -536,7 +534,7 @@ jobs:
         uses: conda-incubator/setup-miniconda@be893c923ea9cf1cf7cd510fbdde27c7e18cbdcb # v4.1.0
         with:
           condarc-file: .github/condarc
-          run-post: false  # skip post cleanup
+          run-post: false # skip post cleanup
 
       - name: SDK Download
         # SDK needed for cross-compilation tests
@@ -612,7 +610,7 @@ jobs:
             .coverage
             durations/${{ runner.os }}.json
             test-report.xml
-          retention-days: 1  # temporary, combined in aggregate below
+          retention-days: 1 # temporary, combined in aggregate below
 
   # aggregate and upload
   aggregate:
@@ -637,7 +635,7 @@ jobs:
           name: test-results-${{ github.sha }}-all
           include-hidden-files: true
           path: test-results-*
-          retention-days: 7  # for combine-durations in update.yml
+          retention-days: 7 # for combine-durations in update.yml
 
       - name: Test Summary
         uses: test-summary/action@37b508cfee6d4d080eedd00b5bb240a6a784a6a5 # v2.6

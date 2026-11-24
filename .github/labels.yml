@@ -1,9 +1,9 @@
 # Builds
-  - name: build::review
-    description: trigger a build for this PR
-    color: '#7b4052'
+- name: build::review
+  description: trigger a build for this PR
+  color: '#7b4052'
 
 # Tags
-  - name: tag::noarch
-    description: related to noarch builds
-    color: '#86c579'
+- name: tag::noarch
+  description: related to noarch builds
+  color: '#86c579'

@@ -38,7 +38,7 @@ jobs:
         uses: conda-incubator/setup-miniconda@be893c923ea9cf1cf7cd510fbdde27c7e18cbdcb # v4.1.0
         with:
           condarc-file: .github/condarc
-          run-post: false  # skip post cleanup
+          run-post: false # skip post cleanup
       - name: Setup
         run: |
           make env-docs
