@@ -91,6 +91,37 @@ repos:
             docs/source/user-guide/tutorials/meta.yaml |
             recipe/meta.yaml
           )
+  - repo: https://github.com/conda-incubator/pre-commit-mirrors-yamllint
+    rev: 1.38.0
+    hooks:
+      - id: yamllint-conda
+        args:
+          - --config-data
+          - |
+            extends: default
+            rules:
+              line-length: disable
+              document-start: disable
+              comments-indentation: disable
+              new-lines: disable
+              braces:
+                min-spaces-inside: 1
+                max-spaces-inside: 1
+                min-spaces-inside-empty: 0
+                max-spaces-inside-empty: 0
+              comments:
+                min-spaces-from-content: 1
+              truthy:
+                check-keys: false
+        exclude: |
+          (?x)^(
+            .authors.yml |
+            conda_build/templates/npm.yaml |
+            conda_build/templates/setuptools.yaml |
+            docs/click/meta.yaml |
+            docs/source/user-guide/tutorials/meta.yaml |
+            recipe/meta.yaml
+          )
   - repo: https://github.com/python-jsonschema/check-jsonschema
     rev: 0.39.0
     hooks:
