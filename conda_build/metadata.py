@@ -16,7 +16,6 @@ from typing import TYPE_CHECKING, Any, NamedTuple, overload
 
 import jinja2
 import yaml
-from bs4 import UnicodeDammit
 from conda.base.context import locate_prefix_by_name
 from conda.gateways.disk.read import compute_sum
 from conda.models.match_spec import GlobLowerStrMatch, MatchSpec
@@ -36,6 +35,7 @@ from .features import feature_list
 from .license_family import ensure_valid_license_family
 from .utils import (
     DEFAULT_SUBDIRS,
+    decode_text,
     ensure_list,
     expand_globs,
     find_recipe,
@@ -1159,7 +1159,7 @@ def _filter_recipe_text(text, extract_pattern=None):
 @cache
 def read_meta_file(meta_path):
     with open(meta_path, "rb") as f:
-        recipe_text = UnicodeDammit(f.read()).unicode_markup
+        recipe_text = decode_text(f.read())
     if hasattr(recipe_text, "decode"):
         recipe_text = recipe_text.decode()
     return recipe_text
@@ -2167,7 +2167,7 @@ class MetaData:
         meta_text = ""
         if self.meta_path:
             with open(self.meta_path, "rb") as f:
-                meta_text = UnicodeDammit(f.read()).unicode_markup
+                meta_text = decode_text(f.read())
         return "load_setup_py_data" in meta_text or "load_setuptools" in meta_text
 
     @property
@@ -2175,7 +2175,7 @@ class MetaData:
         meta_text = ""
         if self.meta_path:
             with open(self.meta_path, "rb") as f:
-                meta_text = UnicodeDammit(f.read()).unicode_markup
+                meta_text = decode_text(f.read())
         return "load_file_regex" in meta_text
 
     @property
@@ -2183,7 +2183,7 @@ class MetaData:
         meta_text = ""
         if self.meta_path:
             with open(self.meta_path, "rb") as f:
-                meta_text = UnicodeDammit(f.read()).unicode_markup
+                meta_text = decode_text(f.read())
         return "load_file_data" in meta_text
 
     @property
@@ -2200,7 +2200,7 @@ class MetaData:
         if not self.meta_path:
             return False
         with open(self.meta_path, "rb") as f:
-            meta_text = UnicodeDammit(f.read()).unicode_markup
+            meta_text = decode_text(f.read())
             matches = re.findall(r"{{.*}}", meta_text)
         return len(matches) > 0
 
@@ -2214,7 +2214,7 @@ class MetaData:
         # We would get here if we use Jinja2 templating, but specify source with path.
         if self.meta_path:
             with open(self.meta_path, "rb") as f:
-                meta_text = UnicodeDammit(f.read()).unicode_markup
+                meta_text = decode_text(f.read())
                 for _vcs in vcs_types:
                     matches = re.findall(rf"{_vcs.upper()}_[^\.\s\'\"]+", meta_text)
                     if len(matches) > 0 and _vcs != self.get_value("package/name"):
@@ -2233,7 +2233,7 @@ class MetaData:
             if os.path.isfile(recipe_file):
                 vcs_types = ["git", "svn", "hg"]
                 with open(self.meta_path, "rb") as f:
-                    build_script = UnicodeDammit(f.read()).unicode_markup
+                    build_script = decode_text(f.read())
                     for vcs in vcs_types:
                         # commands are assumed to have 3 parts:
                         #   1. the vcs command, optionally with an exe extension
