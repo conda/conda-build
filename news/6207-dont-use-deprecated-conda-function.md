@@ -4,7 +4,8 @@
 
 ### Bug fixes
 
-* Honor `--variants` when using `conda-build --output`. (#6072)
+* Don't use deprecated function `conda.common.io.env_vars`.
+(#6207)
 
 ### Deprecations
 

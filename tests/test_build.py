@@ -15,6 +15,7 @@ import sys
 from collections import defaultdict
 from contextlib import nullcontext
 from pathlib import Path
+from types import ModuleType
 from typing import TYPE_CHECKING
 
 import pytest
@@ -22,8 +23,10 @@ from conda.common.compat import on_win
 
 from conda_build import api, build, windows
 from conda_build.build import INTERPRETER_BAT
+from conda_build.config import CondaPkgFormat
 from conda_build.exceptions import CondaBuildUserError
 from conda_build.metadata import MetaData
+from conda_build.utils import package_has_file
 from conda_build.variants import get_default_variant
 
 from .utils import get_noarch_python_meta, metadata_dir
@@ -32,6 +35,27 @@ if TYPE_CHECKING:
     from pytest_mock import MockerFixture
 
     from conda_build.config import Config
+
+
+@pytest.mark.parametrize("package_format", [CondaPkgFormat.V1, CondaPkgFormat.V2])
+def test_build_ignores_installed_conda_verify(
+    testing_metadata, monkeypatch, package_format
+):
+    verify = ModuleType("conda_verify.verify")
+    verify.Verify = lambda: pytest.fail("conda-verify must not run during a build")
+    monkeypatch.setitem(sys.modules, "conda_verify", ModuleType("conda_verify"))
+    monkeypatch.setitem(sys.modules, "conda_verify.verify", verify)
+    testing_metadata.config.conda_pkg_format = package_format
+    testing_metadata.meta["build"]["script"] = (
+        "echo payload > %PREFIX%\\payload.txt"
+        if on_win
+        else 'echo payload > "$PREFIX/payload.txt"'
+    )
+
+    outputs = api.build(testing_metadata, notest=True)
+
+    assert len(outputs) == 1
+    assert package_has_file(outputs[0], "payload.txt").strip() == "payload"
 
 
 def test_build_preserves_PATH(testing_config):
@@ -391,6 +415,47 @@ def test_tests_failed(testing_metadata: MetaData, tmp_path: Path):
             broken_dir=tmp_path,
             config=testing_metadata.config,
         )
+
+
+@pytest.mark.parametrize(
+    "threads,cph_version,expected,warns",
+    [
+        pytest.param(1, "2.6.0", None, False, id="default"),
+        pytest.param(-1, "2.6.0", -1, False, id="all-cpus"),
+        pytest.param("4", "2.6.0", 4, False, id="condarc-string"),
+        pytest.param(4, "2.5.0", None, True, id="cph-too-old"),
+    ],
+)
+def test_bundle_conda_zstd_compression_threads(
+    testing_metadata: MetaData,
+    mocker: MockerFixture,
+    caplog: pytest.LogCaptureFixture,
+    threads: int | str,
+    cph_version: str,
+    expected: int | None,
+    warns: bool,
+) -> None:
+    testing_metadata.config.zstd_compression_threads = threads
+    mocker.patch.object(build.conda_package_handling, "__version__", cph_version)
+
+    class _Compressed(Exception):
+        pass
+
+    create = mocker.patch(
+        "conda_package_handling.api.create",
+        side_effect=_Compressed,
+    )
+
+    with pytest.raises(_Compressed):
+        build.bundle_conda(
+            output={"name": testing_metadata.name()},
+            metadata=testing_metadata,
+            env={},
+            stats={},
+        )
+
+    assert create.call_args.kwargs.get("compression_threads") == expected
+    assert ("conda-package-handling >=2.6.0" in caplog.text) == warns
 
 
 @pytest.mark.parametrize(

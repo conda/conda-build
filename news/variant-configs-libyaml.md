@@ -1,6 +1,6 @@
 ### Enhancements
 
-* Validate package names against CEP-26 naming conventions, rejecting names with invalid characters or structure. (#5976)
+* Parse variant config files (`conda_build_config.yaml`) with libyaml when PyYAML has it. (#6267)
 
 ### Bug fixes
 

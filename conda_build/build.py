@@ -30,7 +30,7 @@ from conda import __version__ as conda_version
 from conda.base.constants import PREFIX_PLACEHOLDER
 from conda.base.context import context, reset_context
 from conda.core.prefix_data import PrefixData
-from conda.exceptions import CondaError, NoPackagesFoundError, UnsatisfiableError
+from conda.exceptions import CondaError, ResolvePackageNotFound, UnsatisfiableError
 from conda.gateways.disk.create import TemporaryDirectory
 from conda.models.channel import Channel
 from conda.models.enums import FileMode
@@ -42,11 +42,12 @@ except ImportError:
     from conda.models.enums import PathType
 from conda.common.serialize.json import CondaJSONEncoder
 from conda.models.match_spec import MatchSpec
+from conda.models.version import VersionOrder
 from conda.utils import url_path
 
 from . import __version__ as conda_build_version
 from . import environ, noarch_python, source, tarcheck, utils
-from .config import CondaPkgFormat, Config
+from .config import CondaPkgFormat, Config, zstd_compression_threads_default
 from .create_test import create_all_test_files
 from .exceptions import (
     BuildScriptException,
@@ -1944,6 +1945,18 @@ def bundle_conda(
             "zstd",
             f"zstd:compression-level={metadata.config.zstd_compression_level}",
         )
+        threads = int(metadata.config.zstd_compression_threads)
+        if threads != zstd_compression_threads_default:
+            # create() only accepts compression_threads since conda-package-handling 2.6.0
+            cph_version = conda_package_handling.__version__
+            if VersionOrder(cph_version) < VersionOrder("2.6.0"):
+                log.warning(
+                    "zstd_compression_threads requires conda-package-handling "
+                    ">=2.6.0 (found %s); compressing with a single thread.",
+                    cph_version,
+                )
+            else:
+                cph_kwargs["compression_threads"] = threads
     with TemporaryDirectory() as tmp:
         conda_package_handling.api.create(
             metadata.config.host_prefix,
@@ -1960,32 +1973,6 @@ def bundle_conda(
                 tarcheck.check_all(tmp_path, metadata.config)
             output_filename = os.path.basename(tmp_path)
 
-            # we do the import here because we want to respect logger level context
-            try:
-                from conda_verify.verify import Verify
-            except ImportError as exc:
-                Verify = None
-                log.debug(
-                    "Importing conda-verify failed. Skipping extra checks...",
-                    exc_info=exc,
-                )
-            if getattr(metadata.config, "verify", False) and Verify:
-                verifier = Verify()
-                checks_to_ignore = (
-                    utils.ensure_list(metadata.config.ignore_verify_codes)
-                    + metadata.ignore_verify_codes()
-                )
-                try:
-                    verifier.verify_package(
-                        path_to_package=tmp_path,
-                        checks_to_ignore=checks_to_ignore,
-                        exit_on_error=metadata.config.exit_on_verify_error,
-                    )
-                except KeyError as e:
-                    log.warning(
-                        "Package doesn't have necessary files.  It might be too old to inspect."
-                        f"Legacy noarch packages are known to fail.  Full message was {e}"
-                    )
             try:
                 crossed_subdir = metadata.config.target_subdir
             except AttributeError:
@@ -3441,7 +3428,7 @@ def test(
         )
     except (
         DependencyNeedsBuildingError,
-        NoPackagesFoundError,
+        ResolvePackageNotFound,
         UnsatisfiableError,
         CondaError,
         AssertionError,

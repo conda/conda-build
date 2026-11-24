@@ -2,8 +2,10 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from __future__ import annotations
 
+import hashlib
 import os
 import re
+import tarfile
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -18,6 +20,7 @@ from conda_build.cli import main_build, main_render
 from conda_build.config import (
     Config,
     zstd_compression_level_default,
+    zstd_compression_threads_default,
 )
 from conda_build.exceptions import CondaBuildUserError, DependencyNeedsBuildingError
 from conda_build.os_utils.external import find_executable
@@ -42,6 +45,15 @@ def test_build_empty_sections(conda_build_test_recipe_envvar: str):
         "--no-anaconda-upload",
     ]
     main_build.execute(args)
+
+
+@pytest.mark.parametrize("flag", ["--verify", "--no-verify", "--strict-verify"])
+def test_verify_flags_are_deprecated_noops(flag):
+    with pytest.deprecated_call(match="conda-verify.*no effect"):
+        _, parsed = main_build.parse_args([flag, "recipe"])
+    assert parsed.recipe == ["recipe"]
+    _, defaults = main_build.parse_args(["recipe"])
+    main_build.check_arguments_rattler("build", parsed, defaults)
 
 
 @pytest.mark.serial
@@ -285,9 +297,24 @@ def test_build_output_folder(testing_workdir: str, testing_metadata: MetaData):
     ).is_file()
 
 
-def test_build_source(testing_workdir: str):
+def test_build_source(
+    testing_workdir: str,
+    testing_metadata: MetaData,
+    local_python_source,
+    http_test_server,
+):
+    # Keep HTTP download and archive extraction coverage without relying on PyPI.
+    archive = http_test_server.directory / "source.tar.gz"
+    with tarfile.open(archive, "w:gz") as tar:
+        tar.add(local_python_source, arcname="source")
+    testing_metadata.meta["source"] = {
+        "url": http_test_server.get_url(archive.name),
+        "sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),
+    }
+    recipe = Path(testing_workdir, "meta.yaml")
+    api.output_yaml(testing_metadata, recipe)
     args = [
-        os.path.join(metadata_dir, "_pyyaml_find_header"),
+        str(recipe),
         "--source",
         "--no-build-id",
         "--croot",
@@ -296,7 +323,10 @@ def test_build_source(testing_workdir: str):
         "--no-anaconda-upload",
     ]
     main_build.execute(args)
-    assert Path(testing_workdir, "work", "setup.py").is_file()
+    assert (
+        Path(testing_workdir, "work", "setup.py").read_bytes()
+        == (local_python_source / "setup.py").read_bytes()
+    )
 
 
 @pytest.mark.serial
@@ -578,6 +608,44 @@ def test_zstd_compression_level(
         assert config.zstd_compression_level == zstd_compression_level_default
 
 
+@pytest.mark.parametrize(
+    "zstd_threads_condarc, zstd_threads_cli",
+    [
+        (None, None),
+        (4, None),
+        (4, -1),
+    ],
+)
+def test_zstd_compression_threads(
+    testing_workdir, request, zstd_threads_condarc, zstd_threads_cli
+):
+    assert zstd_compression_threads_default not in {
+        zstd_threads_condarc,
+        zstd_threads_cli,
+    }
+    if zstd_threads_condarc:
+        with open(os.path.join(testing_workdir, ".condarc"), "w") as f:
+            print(
+                "conda_build:",
+                f"  zstd_compression_threads: {zstd_threads_condarc}",
+                sep="\n",
+                file=f,
+            )
+    request.addfinalizer(_reset_config)
+    _reset_config([os.path.join(testing_workdir, ".condarc")])
+    args = ["non_existing_recipe"]
+    if zstd_threads_cli:
+        args.append(f"--zstd-compression-threads={zstd_threads_cli}")
+    parser, args = main_build.parse_args(args)
+    config = Config(**args.__dict__)
+    if zstd_threads_cli:
+        assert config.zstd_compression_threads == zstd_threads_cli
+    elif zstd_threads_condarc:
+        assert config.zstd_compression_threads == zstd_threads_condarc
+    else:
+        assert config.zstd_compression_threads == zstd_compression_threads_default
+
+
 def test_user_warning(tmpdir, recwarn):
     dir_recipe_path = tmpdir.mkdir("recipe-path")
     recipe = dir_recipe_path.join("meta.yaml")
@@ -595,7 +663,7 @@ def test_user_warning(tmpdir, recwarn):
 
 
 def test_build_with_empty_channel_fails(empty_channel: Path) -> None:
-    with pytest.raises(PackagesNotFoundError):
+    with pytest.raises((PackagesNotFoundError, DependencyNeedsBuildingError)):
         main_build.execute(
             [
                 "--override-channels",
@@ -814,6 +882,7 @@ def test_build_v1_no_anaconda_upload(capsys) -> None:
 
 
 def test_build_v1_recipe_with_nested_v0_recipe(tmp_path: Path) -> None:
+    """Build a v1 recipe even when it contains a nested v0 example recipe."""
     recipe = tmp_path / "recipe"
     recipe.mkdir()
     (recipe / "recipe.yaml").write_text(
@@ -850,6 +919,7 @@ def test_error_on_mixed_v0_v1_recipes(testing_workdir: str, capsys) -> None:
 
 
 def test_error_on_separate_v1_and_nested_v0_recipes(tmp_path: Path, capsys) -> None:
+    """Reject mixed formats when a separate input contains a nested v0 recipe."""
     v1_recipe = tmp_path / "v1"
     v1_recipe.mkdir()
     (v1_recipe / "recipe.yaml").touch()

@@ -1989,6 +1989,7 @@ class MetaData:
         return expand_globs(files, self.config.host_prefix)
 
     def ignore_verify_codes(self):
+        """Return legacy conda-verify codes, which no longer affect builds."""
         return ensure_list(self.get_value("build/ignore_verify_codes", []))
 
     def binary_relocation(self):

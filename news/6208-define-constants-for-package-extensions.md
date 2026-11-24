@@ -4,7 +4,7 @@
 
 ### Bug fixes
 
-* Support `conda_build_config` files with legacy syntax when processing v1 recipes (#6101 via #6103).
+* Define constants for v1 and v2 conda package extension. (#6208)
 
 ### Deprecations
 

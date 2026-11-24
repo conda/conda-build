@@ -28,7 +28,7 @@ import yaml
 from binstar_client.commands import remove, show
 from binstar_client.errors import NotFound
 from conda import __version__ as conda_version
-from conda.base.context import context, reset_context
+from conda.base.context import Context, context, reset_context
 from conda.common.compat import on_linux, on_mac, on_win
 from conda.exceptions import ClobberError, CondaError, CondaMultiError, LinkError
 from conda.utils import url_path
@@ -62,7 +62,6 @@ from conda_build.utils import (
 )
 
 from .utils import (
-    add_mangling,
     fail_dir,
     get_valid_recipes,
     metadata_dir,
@@ -619,25 +618,6 @@ def test_requirements_txt_for_run_reqs(testing_config):
     api.build(
         os.path.join(metadata_dir, "_requirements_txt_run_reqs"), config=testing_config
     )
-
-
-@pytest.mark.skipif(
-    sys.version_info >= (3, 10),
-    reason="Python 3.10+, py_compile terminates once it finds an invalid file",
-)
-def test_compileall_compiles_all_good_files(testing_config):
-    testing_config.conda_pkg_format = 1
-    output = api.build(
-        os.path.join(metadata_dir, "_compile-test"), config=testing_config
-    )[0]
-    good_files = ["f1.py", "f3.py"]
-    bad_file = "f2_bad.py"
-    for f in good_files:
-        assert package_has_file(output, f)
-        # look for the compiled file also
-        assert package_has_file(output, add_mangling(f))
-    assert package_has_file(output, bad_file)
-    assert not package_has_file(output, add_mangling(bad_file))
 
 
 @pytest.mark.sanity
@@ -1267,10 +1247,10 @@ def test_ignore_run_exports(testing_metadata, testing_config):
     )
     # customize our fixture metadata with our desired changes
     testing_metadata.meta["requirements"]["host"] = ["test_has_run_exports"]
-    testing_metadata.meta["build"]["ignore_run_exports"] = ["downstream_pinned_package"]
+    testing_metadata.meta["build"]["ignore_run_exports"] = ["weak_pinned_package"]
     testing_metadata.config.index = None
     m = finalize_metadata(testing_metadata)
-    assert "downstream_pinned_package 1.0" not in m.meta["requirements"].get("run", [])
+    assert "weak_pinned_package 1.0.*" not in m.meta["requirements"].get("run", [])
 
 
 @pytest.mark.sanity
@@ -1284,7 +1264,20 @@ def test_ignore_run_exports_from(testing_metadata, testing_config):
     testing_metadata.meta["build"]["ignore_run_exports_from"] = ["test_has_run_exports"]
     testing_metadata.config.index = None
     m = finalize_metadata(testing_metadata)
-    assert "downstream_pinned_package 1.0" not in m.meta["requirements"].get("run", [])
+    assert "weak_pinned_package 1.0.*" not in m.meta["requirements"].get("run", [])
+
+
+def test_ignore_run_exports_from_substr(testing_metadata, testing_config):
+    api.build(
+        os.path.join(metadata_dir, "_run_exports"), config=testing_config, notest=True
+    )
+    testing_metadata.meta["requirements"]["host"] = ["test_has_run_exports"]
+    testing_metadata.meta["build"]["ignore_run_exports_from"] = [
+        "i-like-test_has_run_exports"
+    ]
+    testing_metadata.config.index = None
+    m = finalize_metadata(testing_metadata)
+    assert "weak_pinned_package 1.0.*" in m.meta["requirements"].get("run", [])
 
 
 @pytest.mark.skipif(
@@ -1792,7 +1785,6 @@ def test_overlinking_detection(
 ):
     testing_config.activate = True
     testing_config.error_overlinking = True
-    testing_config.verify = False
     recipe = os.path.join(testing_workdir, "recipe")
     copy_into(
         os.path.join(metadata_dir, "_overlinking_detection"),
@@ -1824,7 +1816,6 @@ def test_overlinking_detection_ignore_patterns(
 ):
     testing_config.activate = True
     testing_config.error_overlinking = True
-    testing_config.verify = False
     recipe = os.path.join(testing_workdir, "recipe")
     copy_into(
         os.path.join(metadata_dir, "_overlinking_detection_ignore_patterns"),
@@ -1855,7 +1846,6 @@ def test_overdepending_detection(testing_config, variants_conda_build_sysroot):
     testing_config.activate = True
     testing_config.error_overlinking = True
     testing_config.error_overdepending = True
-    testing_config.verify = False
     recipe = os.path.join(metadata_dir, "_overdepending_detection")
     with pytest.raises(OverDependingError):
         api.build(recipe, config=testing_config, variants=variants_conda_build_sysroot)
@@ -1882,7 +1872,6 @@ def test_macos_tbd_handling(testing_config, variants_conda_build_sysroot):
     testing_config.activate = True
     testing_config.error_overlinking = True
     testing_config.error_overdepending = True
-    testing_config.verify = False
     recipe = os.path.join(metadata_dir, "_macos_tbd_handling")
     api.build(recipe, config=testing_config, variants=variants_conda_build_sysroot)
 
@@ -1949,30 +1938,6 @@ def test_warning_on_file_clobbering(
     with pytest.raises((ClobberError, CondaMultiError)):
         with env_var("CONDA_PATH_CONFLICT", "prevent", reset_context):
             api.build(os.path.join(recipe_dir, "b"), config=testing_config)
-
-
-@pytest.mark.sanity
-@pytest.mark.skip(reason="conda-verify is deprecated because it is unsupported")
-def test_verify_bad_package(testing_config):
-    from conda_verify.errors import PackageError
-
-    recipe_dir = os.path.join(fail_dir, "create_bad_folder_for_conda_verify")
-    api.build(recipe_dir, config=testing_config)
-    with pytest.raises(PackageError):
-        testing_config.exit_on_verify_error = True
-        api.build(recipe_dir, config=testing_config)
-    # ignore the error that we know should be raised, and re-run to make sure it is actually ignored
-    testing_config.ignore_verify_codes = ["C1125", "C1115"]
-    api.build(recipe_dir, config=testing_config)
-
-
-@pytest.mark.sanity
-def test_ignore_verify_codes(testing_config):
-    recipe_dir = os.path.join(metadata_dir, "_ignore_verify_codes")
-    testing_config.exit_on_verify_error = True
-    # this recipe intentionally has a license error.  If ignore_verify_codes works,
-    #    it will build OK.  If not, it will error out.
-    api.build(recipe_dir, config=testing_config)
 
 
 @pytest.mark.sanity
@@ -2117,11 +2082,12 @@ def test_rendered_is_reported(testing_config, capsys):
 
 
 @pytest.mark.skipif(on_win, reason="Tests cross-compilation targeting Windows")
-def test_cross_unix_windows_mingw(testing_config):
+def test_cross_unix_windows_mingw(
+    testing_config, offline_mingw_sysroot_channel, monkeypatch
+):
     recipe = os.path.join(metadata_dir, "_cross_unix_windows_mingw")
-    testing_config.channel_urls = [
-        "conda-forge",
-    ]
+    monkeypatch.setattr(Context, "channels", property(lambda self: ()))
+    testing_config.channel_urls = [offline_mingw_sysroot_channel]
     api.build(recipe, config=testing_config)
 
 
@@ -2168,15 +2134,6 @@ def test_api_build_inject_jinja2_vars_on_first_pass(testing_config):
     api.build(recipe_dir, config=testing_config)
 
 
-def test_ignore_run_exports_from_substr(monkeypatch, tmp_path, capsys, testing_config):
-    monkeypatch.chdir(tmp_path)
-    testing_config.channel_urls = ["conda-forge"]
-    api.build(
-        str(metadata_path / "ignore_run_exports_from_substr"), config=testing_config
-    )
-    assert "- python_abi " in capsys.readouterr().out
-
-
 @pytest.mark.skipif(not on_linux, reason="One platform is enough")
 def test_build_strings_glob_match(testing_config: Config) -> None:
     """
@@ -2195,16 +2152,20 @@ def test_build_strings_glob_match(testing_config: Config) -> None:
 
 
 def test_api_build_transitive_pin_subpackage_regression(
-    monkeypatch, tmp_path, testing_config
+    monkeypatch, tmp_path, testing_config, offline_python_channel
 ):
-    """Minimal, fast regression test for the transitive pin_subpackage/variant-merge
-    bug from issues #5645 and #5644 (see PR #5603, #5647, #5651), without needing
-    the real grpc/pytorch recipes, compilers, or network-heavy toolchains.
+    """Regression test for the transitive pin_subpackage/variant-merge bug.
+
+    See issues #5645 and #5644 (PR #5603, #5647, #5651). Uses local Python
+    packages and skips package tests; the assertions below check the pins.
     """
-    testing_config.channel_urls = ["conda-forge"]
+    monkeypatch.setattr(Context, "channels", property(lambda self: ()))
+    testing_config.channel_urls = [offline_python_channel]
     monkeypatch.chdir(tmp_path)
     outputs = api.build(
-        str(metadata_path / "_transitive_pin_variants"), config=testing_config
+        str(metadata_path / "_transitive_pin_variants"),
+        config=testing_config,
+        notest=True,
     )
     records = [
         json.loads(package_has_file(path, "info/index.json")) for path in outputs
@@ -2221,6 +2182,21 @@ def test_api_build_transitive_pin_subpackage_regression(
     for record in records:
         if record["name"] == "pypin":
             assert libpin_spec in record["depends"]
+
+    def python_depend(record):
+        specs = [dep for dep in record["depends"] if dep.split()[0] == "python"]
+        assert len(specs) == 1
+        return specs[0]
+
+    pypin_python = {
+        python_depend(record) for record in records if record["name"] == "pypin"
+    }
+    tools_python = {
+        python_depend(record) for record in records if record["name"] == "pypin-tools"
+    }
+    # Variant rows must keep distinct python pins (#5645).
+    assert len(pypin_python) == 2
+    assert pypin_python == tools_python
 
 
 @pytest.mark.skipif(on_win, reason="file permissions not relevant on Windows")

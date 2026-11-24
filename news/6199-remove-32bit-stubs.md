@@ -16,4 +16,4 @@
 
 ### Other
 
-* Skip `patchelf 0.18` instead of adding an upper bound (`<0.18`), since 0.19 is fixed. (#4881)
+* Remove vendored 32-bit launchers cli-32.exe and gui-32.exe, since they are now provided by the conda-launchers package. (#6199)

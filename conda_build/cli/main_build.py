@@ -24,7 +24,10 @@ from ..config import (
     get_channel_urls,
     get_or_merge_config,
     zstd_compression_level_default,
+    zstd_compression_threads_default,
 )
+from ..deprecations import deprecated
+from ..user_agent import conda_build_user_agent
 from ..utils import LoggingContext, is_v0_recipe, is_v1_recipe
 from .actions import KeyValueAction, PackageTypeNormalize
 from .main_render import get_render_parser
@@ -199,6 +202,19 @@ def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
             "zstd_compression_level", zstd_compression_level_default
         ),
     )
+    parser.add_argument(
+        "--zstd-compression-threads",
+        help=(
+            "When building .conda (v2 format) packages, set the number of threads "
+            "used for zstd compression by conda-package-handling (requires "
+            "conda-package-handling >=2.6.0). Use -1 for all CPUs. "
+            f"Defaults to {zstd_compression_threads_default}."
+        ),
+        type=int,
+        default=context.conda_build.get(
+            "zstd_compression_threads", zstd_compression_threads_default
+        ),
+    )
     pypi_grp = parser.add_argument_group("PyPI upload parameters (twine)")
     pypi_grp.add_argument(
         "--password",
@@ -265,27 +281,23 @@ def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
             "to this call of conda-build."
         ),
     )
-    parser.add_argument(
-        "--verify",
-        action="store_true",
-        help="run verification on recipes or packages when building",
-        default=context.conda_build.get("verify", "true").lower() == "true",
-    )
-    parser.add_argument(
-        "--no-verify",
-        action="store_false",
-        dest="verify",
-        help="do not run verification on recipes or packages when building",
-        default=context.conda_build.get("verify", "true").lower() == "true",
-    )
-    parser.add_argument(
-        "--strict-verify",
-        action="store_true",
-        dest="exit_on_verify_error",
-        help="Exit if any conda-verify check fail, instead of only printing them",
-        default=context.conda_build.get("exit_on_verify_error", "false").lower()
-        == "true",
-    )
+    for flag, dest, default in (
+        ("--verify", "verify", True),
+        ("--no-verify", "verify", True),
+        ("--strict-verify", "exit_on_verify_error", False),
+    ):
+        parser.add_argument(
+            flag,
+            action=deprecated.action(
+                "26.11",
+                "27.5",
+                argparse._StoreConstAction,
+                addendum="conda-verify support has been removed. This option has no effect.",
+            ),
+            dest=dest,
+            const=default,
+            default=default,
+        )
     parser.add_argument(
         "--output-folder",
         help=(
@@ -548,7 +560,8 @@ def source_action(recipe: os.PathLike, config: Config):
     :param config: Config object used for various options
     """
     metadata = api.render(recipe, config=config)[0][0]
-    source.provide(metadata)
+    with conda_build_user_agent():
+        source.provide(metadata)
     print("Source tree in:", metadata.config.work_dir)
 
 
@@ -583,8 +596,8 @@ def execute(args: Sequence[str] | None = None) -> int:
             n_v0_recipes += any(
                 Path(recipe, meta).is_file() for meta in utils.VALID_METAS
             )
-        else:
-            n_v0_recipes += is_v0_recipe(recipe)
+            continue
+        n_v0_recipes += is_v0_recipe(recipe)
 
     if n_v1_recipes > 0 and n_v0_recipes == 0:  # all are v1, proceed with rattler-build
         # check cli arguments
@@ -654,7 +667,6 @@ def execute(args: Sequence[str] | None = None) -> int:
             notest=parsed.notest,
             already_built=None,
             config=config,
-            verify=parsed.verify,
             variants=parsed.variants,
             cache_dir=parsed.cache_dir,
         )

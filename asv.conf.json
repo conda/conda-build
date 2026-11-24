@@ -10,7 +10,6 @@
     "pythons": ["3.6"],
     "matrix": {
         "conda": [],
-        "conda-verify": [],
         "pytest": [],
         "pytest-mock": [],
     },

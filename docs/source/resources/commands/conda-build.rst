@@ -184,6 +184,12 @@ conda-build
                  conda-package-handling. Defaults to 19. Note that using levels
                  above 19 is not advised due to high memory consumption.
 
+          <B>--zstd-compression-threads</B> ZSTD_COMPRESSION_THREADS
+                 When building .conda (v2 format) packages, set the number of
+                 threads used for zstd compression by conda-package-handling
+                 (requires conda-package-handling >=2.6.0). Use -1 for all CPUs.
+                 Defaults to 1.
+
           <B>--package-format</B> {1,2,.tar.bz2,.conda}
                  Choose which package type(s) are outputted. Accepted inputs:
                  .tar.bz2 or 1 (legacy format), .conda or 2 (modern format).
@@ -209,13 +215,16 @@ conda-build
                  only to this call of conda-build.
 
           <B>--verify</B>
-                 run verification on recipes or packages when building
+                 Deprecated and scheduled for removal in 27.5. This option has
+                 no effect because conda-verify support has been removed.
 
           <B>--no-verify</B>
-                 do not run verification on recipes or packages when building
+                 Deprecated and scheduled for removal in 27.5. This option has
+                 no effect because conda-verify support has been removed.
 
           <B>--strict-verify</B>
-                 Exit if any conda-verify check fail, instead of only printing them
+                 Deprecated and scheduled for removal in 27.5. This option has
+                 no effect because conda-verify support has been removed.
 
           <B>--output-folder</B> OUTPUT_FOLDER
                  folder to dump output package to.  Package  are  moved  here  if
