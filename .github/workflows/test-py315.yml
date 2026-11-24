@@ -98,7 +98,7 @@ jobs:
         with:
           fetch-depth: 0
           repository: conda/conda
-          path: conda  
+          path: conda
           ref: python-3.15-ci
 
       - name: Hash + Timestamp
@@ -136,7 +136,7 @@ jobs:
         run: |
           conda pypi install -e ./conda
           conda install conda-index
-      
+
       - name: Install Self
         working-directory: conda-build
         run: pip install -e . --no-deps --no-build-isolation --break-system-packages
