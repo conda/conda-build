@@ -42,11 +42,12 @@ except ImportError:
     from conda.models.enums import PathType
 from conda.common.serialize.json import CondaJSONEncoder
 from conda.models.match_spec import MatchSpec
+from conda.models.version import VersionOrder
 from conda.utils import url_path
 
 from . import __version__ as conda_build_version
 from . import environ, noarch_python, source, tarcheck, utils
-from .config import CondaPkgFormat, Config
+from .config import CondaPkgFormat, Config, zstd_compression_threads_default
 from .create_test import create_all_test_files
 from .exceptions import (
     BuildScriptException,
@@ -1944,6 +1945,18 @@ def bundle_conda(
             "zstd",
             f"zstd:compression-level={metadata.config.zstd_compression_level}",
         )
+        threads = int(metadata.config.zstd_compression_threads)
+        if threads != zstd_compression_threads_default:
+            # create() only accepts compression_threads since conda-package-handling 2.6.0
+            cph_version = conda_package_handling.__version__
+            if VersionOrder(cph_version) < VersionOrder("2.6.0"):
+                log.warning(
+                    "zstd_compression_threads requires conda-package-handling "
+                    ">=2.6.0 (found %s); compressing with a single thread.",
+                    cph_version,
+                )
+            else:
+                cph_kwargs["compression_threads"] = threads
     with TemporaryDirectory() as tmp:
         conda_package_handling.api.create(
             metadata.config.host_prefix,
