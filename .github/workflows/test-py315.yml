@@ -164,7 +164,7 @@ jobs:
             /etc/apt/sources.list /etc/apt/sources.list.d/*.sources 2>/dev/null || true
           sudo apt-get update -o Acquire::Retries=3
           sudo apt-get install -y --no-install-recommends \
-            -o Acquire::Retries=3 ash csh fish tcsh zsh
+            -o Acquire::Retries=3 csh fish tcsh zsh
           # xonsh is installed with conda in step above
           # Initialize all shells
           python -m conda init --all
