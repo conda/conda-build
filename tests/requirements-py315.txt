@@ -18,7 +18,7 @@ pip
 pkginfo
 psutil
 py-lief
-py-rattler-build >=0.65.1 # v1 recipe support
+py-rattler-build >=0.65.1,<=0.76.1  # v1 recipe support; 0.77.0 hangs in run_build()
 pytest-rerunfailures  # for handling flaky tests
 python >=3.11
 python-libarchive-c
