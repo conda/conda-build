@@ -12,6 +12,8 @@ import pytest
 
 from conda_build.utils import locate_conda_launcher, on_win
 
+from .utils import launcher_available
+
 HERE = os.path.abspath(os.path.dirname(__file__))
 REPO_ROOT = (Path(HERE) / "..").resolve().absolute()
 
@@ -89,6 +91,8 @@ def signtool_unsupported() -> bool:
 @pytest.mark.parametrize("kind", ["cli", "gui"])
 def test_stub_exe_signatures(arch: str, kind: str) -> None:
     """Verify that signtool verifies the signature of the stub exes"""
+    if not launcher_available(arch, launcher_type=kind):
+        pytest.skip(f"This conda-launchers build does not provide {kind}-{arch}.exe")
     stub_file = locate_conda_launcher(arch, launcher_type=kind)
     signtool_exe = find_signtool()
     completed_process = run([signtool_exe, "verify", "/pa", "/v", stub_file])

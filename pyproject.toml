@@ -121,27 +121,14 @@ filterwarnings = [
   # elevate conda-build's deprecated warning to an error
   "error::PendingDeprecationWarning:conda_build",
   "error::DeprecationWarning:conda_build",
-  # ignore conda-package-streaming error
-  "ignore:conda.core.index._supplement_index_with_system is pending deprecation:PendingDeprecationWarning:conda",
-  # TEMPORARY: Remove once CLS is released with https://github.com/conda/conda-libmamba-solver/pull/691
-  "ignore:conda.plugins.CondaSolver:PendingDeprecationWarning",
-  "ignore:conda.plugins.CondaSolver:DeprecationWarning",
-  # ignore conda prefix data deprecation
-  "ignore:conda.core.prefix_data:DeprecationWarning",
-  # ignore conda prefix data pending deprecation (including pip_interop_enabled)
-  "ignore:conda.core.prefix_data:PendingDeprecationWarning",
-  # ignore conda index deprecation
-  "ignore:conda.core.index._supplement_index_with_system is deprecated:DeprecationWarning",
-  # ignore conda trust deprecation
-  "ignore:conda.trust:DeprecationWarning",
-  "ignore:conda.trust:PendingDeprecationWarning",
-  # ignore conda link PrefixActions deprecation
+  # TEMPORARY: conda deprecates the pycosat solver stack that conda-index imports
+  # https://github.com/conda/conda-index/pull/380
+  "ignore:conda.exports.Resolve is pending deprecation:PendingDeprecationWarning",
+  "ignore:conda.resolve is pending deprecation:PendingDeprecationWarning",
+  "ignore:conda.common.logic is pending deprecation:PendingDeprecationWarning",
+  "ignore:conda.common._logic is pending deprecation:PendingDeprecationWarning",
+  # ignore conda PrefixActions deprecation (conda instantiates it internally until 26.3)
   "ignore:conda.core.link.PrefixActions is deprecated and will be removed in 26.3:DeprecationWarning",
-  "ignore:conda.core.link.PrefixActions is pending deprecation and will be removed in 26.3:PendingDeprecationWarning",
-  # ignore conda PathType -> PathEnum rename deprecation
-  "ignore:conda.models.enums.PathType is pending deprecation:PendingDeprecationWarning",
-  # ignore conda CONDA_PACKAGE_EXTENSIONS deprecation (use plugin_manager.get_package_extractors() instead)
-  "ignore:conda.base.constants.CONDA_PACKAGE_EXTENSIONS is pending deprecation:PendingDeprecationWarning",
 ]
 markers = [
   "serial: execute test serially (to avoid race conditions)",

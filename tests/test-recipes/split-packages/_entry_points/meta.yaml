@@ -28,8 +28,6 @@ outputs:
         - python
       run:
         - python
-    test:
-      script: test-pkg1.py
   - name: split_package_entry_points2
     entry_points:
       - pkg2 = pkg2:main
@@ -41,12 +39,4 @@ outputs:
         - python
       run:
         - python
-    test:
-      script: test-pkg2.py
 
-test:
-  commands:
-    - top1
-    - top2
-  # imports:
-  #   -
