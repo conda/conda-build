@@ -18,7 +18,7 @@ exclude: |
 repos:
   # generic verification and formatting
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v6.0.0
+    rev: 3e8a8703264a2f4a69428a0aa4dcb512790b2c8c  # frozen: v6.0.0
     hooks:
       # standard end of line/end of file cleanup
       - id: mixed-line-ending
@@ -46,19 +46,19 @@ repos:
         args: [--unique]
   # Python verification and formatting
   - repo: https://github.com/Lucas-C/pre-commit-hooks
-    rev: v1.5.6
+    rev: ad1b27d73581aa16cca06fc4a0761fc563ffe8e8  # frozen: v1.5.6
     hooks:
       # auto inject license blurb
       - id: insert-license
         files: \.py$
         args: [--license-filepath, .github/disclaimer.txt, --no-extra-eol]
   - repo: https://github.com/asottile/blacken-docs
-    rev: 1.20.0
+    rev: dda8db18cfc68df532abf33b185ecd12d5b7b326  # frozen: 1.20.0
     hooks:
       # auto format Python codes within docstrings
       - id: blacken-docs
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.17.6
+    rev: 9026c9127e153371d7a78dfcb0c45ae2046a3d10  # frozen: v0.17.6
     hooks:
       # lint & attempt to correct failures (e.g. pyupgrade)
       - id: ruff-check
@@ -66,12 +66,12 @@ repos:
       # compatible replacement for black
       - id: ruff-format
   - repo: https://github.com/macisamuele/language-formatters-pre-commit-hooks
-    rev: v2.16.0
+    rev: 4380fbb73a154b5f5624794c1c78d9719ccc860f  # frozen: v2.16.0
     hooks:
       - id: pretty-format-toml
         args: [--autofix, --trailing-commas]
   - repo: https://github.com/conda-incubator/pre-commit-mirrors-prettier
-    rev: 3.9.6
+    rev: 24c47c999b0f35f38084bf4967a1f697f834bf16  # frozen: 3.9.6
     hooks:
       - id: prettier-conda
         types_or: [yaml]
@@ -92,7 +92,7 @@ repos:
             recipe/meta.yaml
           )
   - repo: https://github.com/conda-incubator/pre-commit-mirrors-yamllint
-    rev: 1.38.0
+    rev: 8faf172c477aada1c62ad2f22ec4a9e9a2a9af79  # frozen: 1.38.0
     hooks:
       - id: yamllint-conda
         args:
@@ -123,7 +123,7 @@ repos:
             recipe/meta.yaml
           )
   - repo: https://github.com/python-jsonschema/check-jsonschema
-    rev: 0.39.0
+    rev: 39478bf2c099a58683d3f1aedf675105318b078d  # frozen: 0.39.0
     hooks:
       # verify github syntaxes
       - id: check-github-workflows
