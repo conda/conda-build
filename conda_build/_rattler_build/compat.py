@@ -121,6 +121,7 @@ def check_arguments_rattler(
             "include_recipe",
             "conda_pkg_format",
             "zstd_compression_level",
+            "zstd_compression_threads",
             "channel",
             "override_channels",
             "build_only",
