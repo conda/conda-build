@@ -61,6 +61,15 @@ supported:
 - ``--recipe``
 - ``--variant-config-files``
 
+Variant configuration files
+===========================
+
+Variant files passed with ``--variant-config-files`` or
+``--exclusive-config-file`` can use any filename. They support legacy
+``# [selector]`` comments and scalar values as well as native ``if``/``then``
+conditionals and ``${{ ... }}`` expressions. Scalar variant values are treated
+as lists containing one value. Selectors use the configured target platform.
+
 Package upload
 ==============
 
