@@ -13,6 +13,7 @@ import yaml
 from conda.common.compat import on_mac
 
 from conda_build import api, exceptions
+from conda_build.metadata import MetaData
 from conda_build.utils import ensure_list, package_has_file
 from conda_build.variants import (
     combine_specs,
@@ -1296,3 +1297,180 @@ def test_filter_by_key_value():
     ]
     # a dict of values selects nothing out
     assert filter_by_key_value(variants, "python", {"3.12": 1}, "test") is variants
+
+
+def _used_projection(variants, used_vars):
+    return sorted(
+        json.dumps({k: v for k, v in variant.items() if k in used_vars}, sort_keys=True)
+        for variant in variants
+    )
+
+
+@pytest.mark.parametrize(
+    "specs, used_vars, varying_vars",
+    [
+        pytest.param(
+            {
+                "internal_defaults": {"python": "3.12"},
+                "config": {
+                    "python": ["3.11", "3.12"],
+                    "unused_1": ["a", "b", "c"],
+                    "unused_2": ["1", "2"],
+                },
+            },
+            {"python"},
+            {"python"},
+            id="basic",
+        ),
+        pytest.param(
+            {
+                "internal_defaults": {},
+                "config": {
+                    "used": ["1", "2"],
+                    "zipped": ["x", "y"],
+                    "unused_1": ["a", "b"],
+                    "unused_2": ["c", "d"],
+                    "zip_keys": [["used", "zipped"], ["unused_1", "unused_2"]],
+                },
+            },
+            {"used"},
+            {"used", "zipped"},
+            id="zip_keys",
+        ),
+        pytest.param(
+            {
+                "internal_defaults": {},
+                "low_prio": {
+                    "used": ["1", "2"],
+                    "unused_1": ["a", "b", "c"],
+                    "unused_2": ["1", "2", "3"],
+                    "zip_keys": [["unused_1", "unused_2"]],
+                },
+                # selects a subspace of the zipped unused keys
+                "high_prio": {"unused_1": ["c"]},
+            },
+            {"used"},
+            {"used"},
+            id="subspace_of_unused_zip_keys",
+        ),
+        pytest.param(
+            {
+                "internal_defaults": {},
+                "config": {"unused_1": ["a", "b"], "unused_2": ["c", "d"]},
+            },
+            set(),
+            set(),
+            id="nothing_used",
+        ),
+    ],
+)
+def test_filter_combined_spec_to_used_keys_reduces_unused_keys(
+    specs, used_vars, varying_vars
+):
+    combined_spec = combine_specs(specs, log_output=False)
+    full = filter_combined_spec_to_used_keys(combined_spec, specs=specs)
+    reduced = filter_combined_spec_to_used_keys(
+        combined_spec, specs=specs, used_vars=used_vars
+    )
+
+    # the same variants of the used keys (and those zipped with them), without
+    # duplicates
+    assert _used_projection(reduced, varying_vars) == sorted(
+        set(_used_projection(full, varying_vars))
+    )
+    assert len(reduced) == len(set(_used_projection(full, varying_vars)))
+    # every variant has all keys, unused keys keep their value from the full matrix
+    assert reduced[0] == full[0]
+    unused = {k: v for k, v in full[0].items() if k not in varying_vars}
+    for variant in reduced:
+        assert variant.keys() == full[0].keys()
+        assert {k: variant[k] for k in unused} == unused
+
+
+def test_get_possibly_used_vars(testing_config):
+    recipe = os.path.join(variants_dir, "24_test_used_vars_in_scripts")
+    keys = [
+        "BASH_VAR1",
+        "BASH_VAR2",
+        "BAT_VAR",
+        "OUTPUT_VAR",
+        "SELECTOR_VAR",
+        "OUTPUT_SELECTOR_VAR",
+        "python",
+        "target_platform",
+        "channel_sources",
+        "c_compiler",
+        "cdt_name",
+        "unused_var",
+    ]
+    for platform_ in ("linux", "win"):
+        testing_config.platform = platform_
+        metadata = api.render(
+            recipe, config=testing_config, finalize=False, bypass_env_check=True
+        )[0][0]
+        possibly_used = metadata.get_possibly_used_vars(keys)
+        for metadata_ in (
+            om
+            for _, om in metadata.get_output_metadata_set(
+                permit_undefined_jinja=True, bypass_env_check=True
+            )
+        ):
+            assert metadata_.get_used_vars() & set(keys) <= possibly_used
+        assert possibly_used == set(keys) - {
+            "c_compiler",
+            "cdt_name",
+            "unused_var",
+            "channel_sources",
+        }
+
+        # callers can ask for keys to be exploded regardless of the recipe
+        metadata.config.explode_variant_keys = ["channel_sources", "unused_var"]
+        assert metadata.get_possibly_used_vars(keys) == possibly_used | {
+            "channel_sources",
+            "unused_var",
+        }
+
+
+def test_unused_variant_keys_not_exploded(testing_config):
+    recipe = os.path.join(variants_dir, "24_test_used_vars_in_scripts")
+    variants = {"unused_1": ["a", "b", "c"], "unused_2": ["1", "2", "3"]}
+    metadata_tuples = api.render(
+        recipe,
+        config=testing_config,
+        variants=variants,
+        finalize=False,
+        bypass_env_check=True,
+    )
+    for metadata, _, _ in metadata_tuples:
+        assert {
+            (variant["unused_1"], variant["unused_2"])
+            for variant in metadata.config.input_variants
+        } == {("a", "1")}
+
+    # the same as when the full matrix is exploded
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setattr(MetaData, "get_possibly_used_vars", lambda self, keys: None)
+        full_tuples = api.render(
+            recipe,
+            config=testing_config,
+            variants=variants,
+            finalize=False,
+            bypass_env_check=True,
+        )
+    assert len(full_tuples[0][0].config.input_variants) == 9 * len(
+        metadata_tuples[0][0].config.input_variants
+    )
+
+    def _summary(tuples):
+        return sorted(
+            (
+                om.dist(),
+                tuple(sorted((k, om.config.variant[k]) for k in om.get_used_vars())),
+            )
+            for m, _, _ in tuples
+            for _, om in m.get_output_metadata_set(
+                permit_undefined_jinja=True, bypass_env_check=True
+            )
+        )
+
+    assert _summary(metadata_tuples) == _summary(full_tuples)

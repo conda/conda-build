@@ -355,8 +355,9 @@ def test_setting_condarc_vars_with_env_var_expansion(testing_workdir, mocker):
     )[0][0]
     # this one should have gotten clobbered by the values in the recipe
     assert metadata.config.variant["python"] not in python_versions
-    # this confirms that we loaded the config file correctly
-    assert len(metadata.config.squished_variants["bzip2"]) == 2
+    # this confirms that we loaded the config file correctly; bzip2 is not used by
+    # the recipe, so it is not looped over and only keeps its first value
+    assert metadata.config.squished_variants["bzip2"] == ["0.9"]
 
 
 def test_self_reference_run_exports_pin_subpackage_picks_up_version_correctly():

@@ -80,6 +80,8 @@ from .utils import (
 )
 from .variants import (
     filter_by_key_value,
+    filter_combined_spec_to_used_keys,
+    get_package_combined_spec,
     get_package_variants,
     list_of_dicts_to_dict_of_lists,
 )
@@ -1081,7 +1083,14 @@ def render_recipe(
             return [MetaDataTuple(m, False, False)]
         else:
             # merge any passed-in variants with any files found
-            variants = get_package_variants(m, variants=variants)
+            combined_spec, specs = get_package_combined_spec(m, variants=variants)
+            # only explode the keys this recipe may use; the full matrix of all keys
+            #    can be huge, and unused keys cannot change the rendered result
+            variants = filter_combined_spec_to_used_keys(
+                combined_spec,
+                specs=specs,
+                used_vars=m.get_possibly_used_vars(combined_spec),
+            )
 
             # when building, we don't want to fully expand all outputs into metadata, only expand
             #    whatever variants we have (i.e. expand top-level variants, not output-only variants)

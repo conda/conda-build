@@ -55,6 +55,7 @@ from .variants import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
     from typing import Any, Literal, Self
 
     OutputDict = dict[str, Any]
@@ -1227,6 +1228,16 @@ def _hash_dependencies(hashing_dependencies, hash_length):
     #    enough, since these only need to be unique within one version
     # plus one is for the h - zero pad on the front, trim to match HASH_LENGTH
     return f"h{hash_.hexdigest()}"[: hash_length + 1]
+
+
+# Variant keys which conda-build itself reads from ``config.variants`` regardless of
+# whether the recipe uses them, so they are always exploded in full: get_used_vars
+# always reports target_platform and channel_targets, and python is needed to pick
+# the newest python for noarch recipes.  Callers can add their own keys with
+# ``Config.explode_variant_keys``.
+KEYS_USED_REGARDLESS_OF_RECIPE = frozenset(
+    {"target_platform", "channel_targets", "python"}
+)
 
 
 class MetaData:
@@ -2903,6 +2914,79 @@ class MetaData:
     @property
     def force_use_keys(self):
         return ensure_list(self.get_value("build/force_use_keys"))
+
+    def get_possibly_used_vars(self, keys: Iterable[str]) -> set[str] | None:
+        """Return the subset of ``keys`` that ``get_used_vars`` might report as used.
+
+        This holds for any variant and for every output of the recipe, so that keys
+        outside of it can be left out of the variant matrix before it is exploded.
+        ``get_used_vars`` only finds variables by searching the recipe text and the
+        build and output scripts for their names, so a plain substring search of
+        those files is an upper bound.  Returns ``None`` if no bound can be found.
+        """
+        meta_path = self.meta_path
+        if not meta_path or not isfile(meta_path):
+            return None
+        recipe_text = read_meta_file(meta_path)
+        texts = [recipe_text]
+
+        def _read(path):
+            try:
+                with open(path, "rb") as fh:
+                    return fh.read().decode("utf-8", errors="ignore")
+            except OSError:
+                return ""
+
+        # build.sh, bld.bat and output scripts; only .sh and .bat files are searched
+        seen_dirs = set()
+        for root, dirs, files in os.walk(self.path, followlinks=True):
+            real_root = os.path.realpath(root)
+            if real_root in seen_dirs:
+                dirs.clear()
+                continue
+            seen_dirs.add(real_root)
+            texts.extend(
+                _read(join(root, fn)) for fn in files if fn.endswith((".sh", ".bat"))
+            )
+        # output scripts may also live outside of the recipe directory
+        for match in re.finditer(
+            r"^\s*(?:-\s+)?script:[ \t]*([^#\n]*)", recipe_text, flags=re.M
+        ):
+            script = match.group(1).strip().strip("'\"")
+            if not script.endswith((".sh", ".bat")):
+                continue
+            if "{" in script:
+                if ".." in script or script.startswith(("{", "/", "\\")):
+                    # templated path that may point anywhere
+                    return None
+            else:
+                texts.append(_read(join(self.path, script)))
+
+        text = "\n".join(texts)
+        text_underscored = text.replace("-", "_")
+
+        def _possibly_used(key):
+            if key in text or key in text_underscored:
+                return True
+            # used through the compiler(), stdlib() and cdt() jinja functions
+            if key.startswith("cdt_") and "cdt(" in text:
+                return True
+            if target_match := re.match(r"(.*?)_(compiler|stdlib)(_version)?$", key):
+                lang, kind = target_match.group(1, 2)
+                pattern = rf"{kind}\(\s*['\"]{re.escape(lang)}['\"]"
+                return bool(re.search(pattern, text))
+            return False
+
+        keys = set(keys)
+        used = {key for key in keys if _possibly_used(key)}
+        if used & {"c_compiler", "cxx_compiler", "c_stdlib"}:
+            used.add("CONDA_BUILD_SYSROOT")
+        # always used by get_used_vars, or read regardless of the recipe
+        used.update(KEYS_USED_REGARDLESS_OF_RECIPE)
+        used.update(ensure_list(getattr(self.config, "explode_variant_keys", ())))
+        used.update(self.force_use_keys)
+        used.update(getattr(self.config, "used_vars", ()))
+        return used & keys
 
     def get_used_vars(self, force_top_level=False, force_global=False):
         global used_vars_cache

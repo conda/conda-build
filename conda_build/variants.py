@@ -753,15 +753,11 @@ def get_package_combined_spec(recipedir_or_metadata, config=None, variants=None)
     return combined_spec, specs
 
 
-def filter_combined_spec_to_used_keys(combined_spec, specs):
-    extend_keys = _get_extend_keys(combined_spec)
-
-    # delete the default specs, so that they don't unnecessarily limit the matrix
-    specs = specs.copy()
-    del specs["internal_defaults"]
-
-    # TODO: act here?
-    combined_spec = explode_variants(combined_spec)
+def _explode_and_filter(spec, specs, extend_keys):
+    variants = explode_variants(spec)
+    # Filtering by a key that is not in the variants removes every variant, which
+    # is then ignored below, so only the keys that were exploded need checking.
+    keys = set(variants[0]) if variants else set()
     # seen_keys makes sure that a setting from a lower-priority spec doesn't clobber
     # the same setting that has been redefined in a higher-priority spec.
     seen_keys = set()
@@ -769,15 +765,94 @@ def filter_combined_spec_to_used_keys(combined_spec, specs):
     for source, source_specs in reversed(specs.items()):
         for k, vs in source_specs.items():
             if k not in extend_keys and k not in seen_keys:
-                # when filtering ends up killing off all variants, we just ignore that.  Generally,
-                #    this arises when a later variant config overrides, rather than selects a
-                #    subspace of earlier configs
-                combined_spec = (
-                    filter_by_key_value(combined_spec, k, vs, source_name=source)
-                    or combined_spec
-                )
+                if k in keys:
+                    # when filtering ends up killing off all variants, we just ignore that.
+                    #    Generally, this arises when a later variant config overrides, rather
+                    #    than selects a subspace of earlier configs
+                    variants = (
+                        filter_by_key_value(variants, k, vs, source_name=source)
+                        or variants
+                    )
                 seen_keys.add(k)
-    return combined_spec
+    return variants
+
+
+def _split_spec_by_used_keys(spec, used_vars):
+    """Split ``spec`` into the part that has to be exploded and the parts that do not.
+
+    The keys which are exploded are grouped into independent sets: a key on its own,
+    or all keys that are (transitively) zipped together.  A set is kept in the
+    first (used) spec if any of its keys is in ``used_vars``; every other set is
+    returned as a separate spec of its own.  Keys that are not exploded at all
+    (``zip_keys``, ``extend_keys``, ...) stay in the used spec.
+    """
+    zip_keys = _get_zip_keys(spec)
+    passthru_keys = _get_passthru_keys(spec, zip_keys)
+    explode_keys = _get_explode_keys(spec, passthru_keys)
+
+    groups = [{k} for k in explode_keys.difference(*zip_keys)]
+    zip_groups = []
+    for group in zip_keys:
+        group = set(group)
+        for other in [g for g in zip_groups if g & group]:
+            zip_groups.remove(other)
+            group |= other
+        zip_groups.append(group)
+    groups.extend(zip_groups)
+
+    used_spec = {k: spec[k] for k in passthru_keys}
+    used_spec.pop("zip_keys", None)
+    used_zip_keys = []
+    unused_specs = []
+    for group in groups:
+        group_zip_keys = [list(zg) for zg in zip_keys if zg <= group]
+        if group & used_vars:
+            used_spec.update((k, spec[k]) for k in group)
+            used_zip_keys.extend(group_zip_keys)
+        else:
+            unused_spec = {k: spec[k] for k in group}
+            if group_zip_keys:
+                unused_spec["zip_keys"] = group_zip_keys
+            unused_specs.append(unused_spec)
+    if used_zip_keys:
+        used_spec["zip_keys"] = used_zip_keys
+    return used_spec, unused_specs
+
+
+def filter_combined_spec_to_used_keys(combined_spec, specs, used_vars=None):
+    """Explode ``combined_spec`` into the list of variants, restricted by ``specs``.
+
+    If ``used_vars`` is given, only the keys in it (and those zipped with them) are
+    exploded into the full matrix.  All other keys are assumed not to affect the
+    result and are set to the value they have in the first variant of the full
+    matrix, so the variants still contain every key.  Because each key is only ever
+    filtered on its own, this gives the same variants as exploding the full matrix,
+    except that variants that only differ in unused keys are merged.
+    """
+    extend_keys = _get_extend_keys(combined_spec)
+
+    # delete the default specs, so that they don't unnecessarily limit the matrix
+    specs = specs.copy()
+    del specs["internal_defaults"]
+
+    if used_vars is None:
+        return _explode_and_filter(combined_spec, specs, extend_keys)
+
+    used_spec, unused_specs = _split_spec_by_used_keys(combined_spec, set(used_vars))
+    variants = _explode_and_filter(used_spec, specs, extend_keys)
+    # the full matrix is the product of the used and unused parts, and its first
+    # variant combines the first variant of each part
+    unused_values = {}
+    for unused_spec in unused_specs:
+        unused_variants = _explode_and_filter(unused_spec, specs, extend_keys)
+        unused_values.update(unused_variants[0] if unused_variants else {})
+    unused_values.pop("zip_keys", None)
+    zip_keys = combined_spec.get("zip_keys")
+    for variant in variants:
+        variant.update(unused_values)
+        if zip_keys:
+            variant["zip_keys"] = copy(zip_keys)
+    return variants
 
 
 def get_package_variants(recipedir_or_metadata, config=None, variants=None):
