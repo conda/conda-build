@@ -763,6 +763,7 @@ def test_check_package_name_valid(name: str) -> None:
         (".pkg", "CEP-26"),
         ("-pkg", "CEP-26"),
         ("UPPER", "invalid characters"),
+        ("♥", "invalid characters"),
     ],
 )
 def test_check_package_name_invalid(name: str, match: str) -> None:
