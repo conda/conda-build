@@ -6,6 +6,7 @@ import sys
 
 import pytest
 import yaml
+from conda.base.context import context, reset_context
 
 from conda_build import api
 from conda_build.cli import main_inspect
@@ -18,6 +19,19 @@ from ..utils import metadata_dir
 def test_inspect_installable(testing_workdir):
     args = ["channels", "--test-installable", "conda-team"]
     main_inspect.execute(args)
+
+
+def test_inspect_channels_does_not_pollute_context():
+    # Guard against the positional being named `channel`, which collides with
+    # conda's `_channels` config alias and leaks a string into the global context.
+    try:
+        _, parsed = main_inspect.parse_args(
+            ["channels", "--test-installable", "conda-team"]
+        )
+        context.__init__(argparse_args=parsed)
+        assert isinstance(context.channels, tuple)
+    finally:
+        reset_context()
 
 
 def test_inspect_linkages(testing_workdir, capfd):
