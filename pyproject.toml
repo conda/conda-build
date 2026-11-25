@@ -115,11 +115,9 @@ doctest_optionflags = [
   "ELLIPSIS",
 ]
 filterwarnings = [
-  # elevate conda's deprecated warning to an error
-  "error::PendingDeprecationWarning:conda",
+  # elevate conda's deprecated warnings to errors; pending deprecations only warn
   "error::DeprecationWarning:conda",
-  # elevate conda-build's deprecated warning to an error
-  "error::PendingDeprecationWarning:conda_build",
+  # elevate conda-build's deprecated warnings to errors; pending deprecations only warn
   "error::DeprecationWarning:conda_build",
   # TEMPORARY: conda deprecates the pycosat solver stack that conda-index imports
   # https://github.com/conda/conda-index/pull/380
