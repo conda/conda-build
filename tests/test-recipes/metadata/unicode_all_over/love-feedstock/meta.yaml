@@ -1,7 +1,8 @@
 {% set name='♥' %}
+{% set package_name='unicode_all_over' %}
 
 package:
-  name: {{ name }}
+  name: {{ package_name }}
   version: 1
 
 build:
