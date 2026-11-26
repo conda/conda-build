@@ -153,9 +153,10 @@ Tools for investigating conda channels.
         ),
     )
     channels.add_argument(
-        "channel",
+        "channel_name",
         nargs="?",
         default="defaults",
+        metavar="channel",
         help="The channel to test. The default is %(default)s.",
     )
 
@@ -202,7 +203,7 @@ def execute(args: Sequence[str] | None = None) -> int:
         parser.print_help()
         sys.exit(0)
     elif parsed.subcommand == "channels":
-        print(api.test_installable(parsed.channel))
+        print(api.test_installable(parsed.channel_name))
     elif parsed.subcommand == "linkages":
         print(
             api.inspect_linkages(
