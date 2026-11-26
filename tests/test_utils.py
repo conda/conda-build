@@ -85,6 +85,38 @@ def test_get_site_packages_missing_prefix() -> None:
     assert utils.get_site_packages(os.path.join("/dummy", "nope"), "3.15")
 
 
+def test_get_stdlib_dir_windows_py315_plus(mocker):
+    """Windows Python >=3.15 uses lib/python per CFEP-27."""
+    mocker.patch.object(utils, "on_win", True)
+    assert utils.get_stdlib_dir("/prefix", "3.15") == os.path.join(
+        "/prefix", "lib", "python"
+    )
+    assert utils.get_stdlib_dir("/prefix", "3.16") == os.path.join(
+        "/prefix", "lib", "python"
+    )
+    assert utils.get_stdlib_dir("/prefix", "3.14") == os.path.join("/prefix", "Lib")
+
+
+def test_get_site_packages_windows_fallback_py315_plus(tmp_path: Path, mocker):
+    """Windows Python >=3.15 falls back to lib/python/site-packages without python record."""
+    mocker.patch.object(utils, "on_win", True)
+    _write_python_record(tmp_path, None)
+    PrefixData._cache_.clear()
+
+    # Python 3.15+
+    assert utils.get_site_packages(tmp_path, "3.15") == os.path.join(
+        tmp_path, "lib", "python", "site-packages"
+    )
+    assert utils.get_site_packages(tmp_path, "3.16") == os.path.join(
+        tmp_path, "lib", "python", "site-packages"
+    )
+
+    # Python 3.14 (regression: unchanged)
+    assert utils.get_site_packages(tmp_path, "3.14") == os.path.join(
+        tmp_path, "Lib", "site-packages"
+    )
+
+
 def test_prepend_sys_path():
     path = sys.path[:]
     with utils.sys_path_prepended(sys.prefix):
