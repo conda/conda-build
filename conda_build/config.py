@@ -234,6 +234,10 @@ def _get_default_settings():
         #    Config files in recipes are still respected, and they override this file.
         Setting("exclusive_config_files", []),
         Setting("ignore_system_variants", False),
+        # variant keys whose full set of values is always exploded into the variant
+        #    matrix, even if the recipe does not appear to use them (e.g. because a
+        #    downstream tool reads them from the rendered variants)
+        Setting("explode_variant_keys", ()),
         Setting("hash_length", 7),
         # append/clobber metadata section data (for global usage.  Can also add files to
         #    recipe.)
